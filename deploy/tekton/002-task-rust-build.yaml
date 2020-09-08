@@ -9,10 +9,9 @@ spec:
       default: "latest"
   workspaces:
     - name: source
-      mountPath: /workspace/src/
   steps:
     - name: cargo-build
       image: docker.io/library/rust:$(params.version)
       workingDir: $(workspaces.source.path)
-      command:
-        - cargo build --release
+      command: [ "cargo" ]
+      args: [ "build", "--release" ]

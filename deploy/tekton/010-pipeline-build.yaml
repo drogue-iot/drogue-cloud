@@ -28,11 +28,26 @@ spec:
           value: $(params.repo-url)
         - name: revision
           value: $(params.branch-name)
+        - name: deleteExisting
+          value: "true"
 
     - name: cargo-build
       runAfter: ["checkout"]
       taskRef:
         name: rust-build
+      workspaces:
+        - name: source
+          workspace: shared-data
+
+    - name: container-build
+      runAfter: ["cargo-build"]
+      taskRef:
+        name: buildah
+      params:
+        - name: DOCKERFILE
+          value: web-test/Dockerfile
+        - name: IMAGE
+          value: web-test
       workspaces:
         - name: source
           workspace: shared-data
