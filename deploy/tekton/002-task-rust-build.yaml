@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: rust-build
+spec:
+  params:
+    - name: version
+      description: Rust version to use for building
+      default: "latest"
+  workspaces:
+    - name: source
+      mountPath: /workspace/src/
+  steps:
+    - name: cargo-build
+      image: docker.io/library/rust:$(params.version)
+      workingDir: $(workspaces.source.path)
+      command:
+        - cargo build --release

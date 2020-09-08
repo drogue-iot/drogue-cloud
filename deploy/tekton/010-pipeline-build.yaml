@@ -1,0 +1,38 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-rust-pipeline
+spec:
+
+  params:
+    - name: repo-url
+      type: string
+      description: The git repository URL to clone from.
+    - name: branch-name
+      type: string
+      description: The git branch to clone.
+
+  workspaces:
+    - name: shared-data
+
+  tasks:
+    - name: checkout
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      workspaces:
+        - name: output
+          workspace: shared-data
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.branch-name)
+
+    - name: cargo-build
+      runAfter: ["checkout"]
+      taskRef:
+        name: rust-build
+      workspaces:
+        - name: source
+          workspace: shared-data
