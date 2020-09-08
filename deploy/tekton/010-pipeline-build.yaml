@@ -16,6 +16,11 @@ spec:
     - name: shared-data
 
   tasks:
+
+    - name: init
+      taskRef:
+        name: build-metadata
+
     - name: checkout
       taskRef:
         name: git-clone
@@ -40,14 +45,16 @@ spec:
           workspace: shared-data
 
     - name: container-build
-      runAfter: ["cargo-build"]
+      runAfter: ["cargo-build", "init"]
       taskRef:
         name: buildah
       params:
         - name: DOCKERFILE
           value: web-test/Dockerfile
         - name: IMAGE
-          value: web-test
+          value: "image-registry.openshift-image-registry.svc:5000/$(tasks.init.results.namespace)/web-test:latest"
+        - name: TLSVERIFY
+          value: "false" # required for now, to push to internal registry
       workspaces:
         - name: source
           workspace: shared-data
