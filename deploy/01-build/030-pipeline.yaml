@@ -1,0 +1,65 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-drogue-cloud
+spec:
+
+  params:
+    - name: repo-owner
+      type: string
+      description: The GitHub owner of the git repository to clone from.
+    - name: image-registry
+      type: string
+      description: The image registry to pull/push from/to.
+      default: "image-registry.openshift-image-registry.svc:5000"
+    - name: branch-name
+      type: string
+      description: The git branch to clone.
+      default: main
+
+  workspaces:
+    - name: shared-data
+
+  tasks:
+
+    - name: init
+      taskRef:
+        name: build-metadata
+
+    - name: checkout
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      workspaces:
+        - name: output
+          workspace: shared-data
+      params:
+        - name: url
+          value: "https://github.com/$(params.repo-owner)/drogue-cloud"
+        - name: revision
+          value: $(params.branch-name)
+        - name: deleteExisting
+          value: "true"
+
+    - name: cargo-build
+      runAfter: ["checkout"]
+      taskRef:
+        name: rust-build
+      workspaces:
+        - name: source
+          workspace: shared-data
+
+    - name: container-build
+      runAfter: ["cargo-build", "init"]
+      taskRef:
+        name: buildah
+      params:
+        - name: DOCKERFILE
+          value: web-test/Dockerfile
+        - name: IMAGE
+          value: "$(params.image-registry)/$(tasks.init.results.namespace)/web-test:latest"
+        - name: TLSVERIFY
+          value: "false" # required for now, to push to the internal registry
+      workspaces:
+        - name: source
+          workspace: shared-data

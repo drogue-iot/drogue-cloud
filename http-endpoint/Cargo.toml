@@ -1,5 +1,5 @@
 [package]
-name = "web-test"
+name = "http-endpoint"
 version = "0.1.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"

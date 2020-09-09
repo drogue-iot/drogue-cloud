@@ -1,0 +1,21 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cleanup-pipelineruns
+spec:
+  schedule: "*/15 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: kubectl
+              image: ghcr.io/ctron/kubectl:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                    kubectl delete pipelinerun $(kubectl get pipelinerun -o jsonpath='{range .items[?(@.status.completionTime)]}{.metadata.name}{"\n"}{end}')
+
+          restartPolicy: OnFailure
+          concurrencyPolicy: Forbid

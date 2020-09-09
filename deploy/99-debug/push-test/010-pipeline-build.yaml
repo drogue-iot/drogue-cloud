@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: build-rust-pipeline
+  name: push-test-pipeline
 spec:
 
   params:
@@ -21,31 +21,24 @@ spec:
       taskRef:
         name: build-metadata
 
-    - name: checkout
-      taskRef:
-        name: git-clone
-        kind: ClusterTask
-      workspaces:
-        - name: output
-          workspace: shared-data
-      params:
-        - name: url
-          value: $(params.repo-url)
-        - name: revision
-          value: $(params.branch-name)
-        - name: deleteExisting
-          value: "true"
-
     - name: cargo-build
-      runAfter: ["checkout"]
-      taskRef:
-        name: rust-build
+      runAfter: ["init"]
+      taskSpec:
+        steps:
+          - name: cargo-build
+            image: registry.access.redhat.com/ubi8-minimal
+            workingDir: $(workspaces.source.path)
+            script: |
+              mkdir -p target/release
+              touch target/release/web-test
+        workspaces:
+          - name: source
       workspaces:
         - name: source
           workspace: shared-data
 
     - name: container-build
-      runAfter: ["cargo-build", "init"]
+      runAfter: ["cargo-build"]
       taskRef:
         name: buildah
       params:
