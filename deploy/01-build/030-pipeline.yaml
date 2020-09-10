@@ -49,7 +49,7 @@ spec:
         - name: source
           workspace: shared-data
 
-    - name: container-build
+    - name: container-http-endpoint
       runAfter: ["cargo-build", "init"]
       taskRef:
         name: buildah
@@ -62,4 +62,4 @@ spec:
           value: "false" # required for now, to push to the internal registry
       workspaces:
         - name: source
-          workspace: shared-data
+          workspace: shared-

@@ -12,5 +12,3 @@ spec:
           env:
             - name: RUST_LOG
               value: info
-#            - name: K_SINK
-#              value: http://broker-ingress.knative-eventing.svc.cluster.local/drogue-iot/default

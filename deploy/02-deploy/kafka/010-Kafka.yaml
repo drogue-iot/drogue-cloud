@@ -1,19 +1,20 @@
 kind: Kafka
 apiVersion: kafka.strimzi.io/v1beta1
 metadata:
-  name: iot-cluster
+  name: kafka-eventing
+  namespace: knative-eventing
 spec:
   entityOperator:
     topicOperator: {}
     userOperator: {}
   kafka:
     config:
-      log.message.format.version: '2.4'
+      log.message.format.version: '2.5'
       offsets.topic.replication.factor: 1
       transaction.state.log.min.isr: 1
       transaction.state.log.replication.factor: 1
-    authorization:
-      type: simple
+#    authorization:
+#      type: simple
     listeners:
       plain: {}
       tls: {}
@@ -26,7 +27,7 @@ spec:
       type: persistent-claim
       size: 10Gi
       deleteClaim: true
-    version: 2.4.0
+    version: 2.5.0
     template:
       pod:
         securityContext: {}

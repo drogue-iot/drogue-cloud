@@ -41,8 +41,12 @@ spec:
           containers:
             - name: kubectl
               image: ghcr.io/ctron/kubectl:latest
+              env:
+                - name: NUM_TO_KEEP
+                  value: "3"
               command:
                 - /bin/bash
                 - -c
                 - |
-                    kubectl delete pipelinerun $(kubectl get pipelinerun -o jsonpath='{range .items[?(@.status.completionTime)]}{.metadata.name}{"\n"}{end}')
+                    kubectl delete pipelinerun $(kubectl get pipelinerun -o jsonpath='{range .items[?(@.status.completionTime)]}{.status.completionTime}{" "}{.metadata.name}{"\n"}{end}' | sort | head -n -${NUM_TO_KEEP} | awk '{ print $2}')
+
