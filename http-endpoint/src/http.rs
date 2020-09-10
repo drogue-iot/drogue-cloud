@@ -1,13 +1,14 @@
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
-use log;
-use serde::{Deserialize, Serialize};
-
 use actix_web::error::PayloadError;
+use actix_web::web;
 use actix_web::web::Bytes;
 use anyhow::Context;
+use cloudevents::event::Data;
 use cloudevents::{EventBuilder, EventBuilderV10};
 use futures::StreamExt;
 use futures_core::Stream;
+use log;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Publish {
@@ -59,8 +60,16 @@ impl HttpEndpoint {
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://dentrassi.de/iot")
             .subject(&publish.channel)
-            .data("application/octet-stream", bytes.to_vec())
             .ty("de.dentrassi.iot.message");
+
+        // try decoding as JSON
+
+        let event = match serde_json::from_slice::<Value>(&bytes) {
+            Ok(v) => event.data("text/json", Data::Json(v)),
+            Err(_) => event.data("application/octet-stream", bytes.to_vec()),
+        };
+
+        // build event
 
         let event = event
             .build()

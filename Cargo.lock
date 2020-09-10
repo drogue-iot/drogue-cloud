@@ -773,17 +773,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "derivative"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb582b60359da160a9477ee80f15c8d784c477e69c217ef2cdd4169c24ea380f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "derive_more"
 version = "0.99.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1251,6 +1240,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "influxdb"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec8ecb29ede5eb57f1cb62c537732c55b1caba53c084967339d7a0e96892363c"
+dependencies = [
+ "chrono",
+ "failure",
+ "futures",
+ "influxdb_derive",
+ "lazy_static",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "influxdb-pusher"
+version = "0.1.0"
+dependencies = [
+ "actix-rt",
+ "actix-service",
+ "actix-web 2.0.0",
+ "anyhow",
+ "chrono",
+ "cloudevents-sdk",
+ "cloudevents-sdk-actix-web",
+ "cloudevents-sdk-reqwest",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "influxdb",
+ "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "influxdb_derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40a1bad2298b111aa99a98141f7307cec2dab604ca8fa6bb3f2f8a389c6ec34a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "instant"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1299,28 +1338,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "kafka-forwarder"
-version = "0.1.0"
-dependencies = [
- "actix-rt",
- "actix-service",
- "actix-web 3.0.0-beta.4",
- "anyhow",
- "cloudevents-sdk",
- "cloudevents-sdk-actix-web",
- "cloudevents-sdk-reqwest",
- "env_logger",
- "futures",
- "futures-core",
- "futures-util",
- "log",
- "rdkafka",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
 name = "kernel32-sys"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1347,18 +1364,6 @@ name = "libc"
 version = "0.2.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "755456fae044e6fa1ebbbd1b3e902ae19e73097ed4ed87bb79934a867c007bc3"
-
-[[package]]
-name = "libz-sys"
-version = "1.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "602113192b08db8f38796c4e85c39e960c145965140e918018bcde1952429655"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
- "vcpkg",
-]
 
 [[package]]
 name = "linked-hash-map"
@@ -1537,28 +1542,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num_enum"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "226b45a5c2ac4dd696ed30fa6b94b057ad909c7b7fc2e0d0808192bced894066"
-dependencies = [
- "derivative",
- "num_enum_derive",
-]
-
-[[package]]
-name = "num_enum_derive"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c0fd9eba1d5db0994a239e09c1be402d35622277e35468ba891aa5e3188ce7e"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "object"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1695,15 +1678,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c36fa947111f5c62a733b652544dd0016a43ce89619538a8ef92724a6f501a20"
 
 [[package]]
-name = "proc-macro-crate"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d6ea3c4595b96363c13943497db34af4460fb474a95c43f4446ad341b8c9785"
-dependencies = [
- "toml",
-]
-
-[[package]]
 name = "proc-macro-hack"
 version = "0.5.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1781,34 +1755,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rdkafka"
-version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db594dc221933be6f2ad804b997b48a57a63436c26ab924222c28e9a36ad210a"
-dependencies = [
- "futures",
- "libc",
- "log",
- "rdkafka-sys",
- "serde",
- "serde_derive",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "rdkafka-sys"
-version = "2.1.0+1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d3f17044cba41c7309facedc72ca9bf25f177bf1e06756318e010f043713017"
-dependencies = [
- "libc",
- "libz-sys",
- "num_enum",
- "pkg-config",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1868,6 +1814,7 @@ dependencies = [
  "pin-project-lite",
  "rustls",
  "serde",
+ "serde_json",
  "serde_urlencoded",
  "tokio",
  "tokio-rustls",
@@ -2402,15 +2349,6 @@ dependencies = [
  "log",
  "pin-project-lite",
  "tokio",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
-dependencies = [
- "serde",
 ]
 
 [[package]]

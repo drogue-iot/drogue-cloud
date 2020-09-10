@@ -1,0 +1,15 @@
+apiVersion: sources.knative.dev/v1alpha1
+kind: KafkaSource
+metadata:
+  name: influxdb-kafka-source
+spec:
+  consumerGroup: influxdb-pusher
+  bootstrapServers:
+    - kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092
+  topics:
+    - knative-messaging-kafka.drogue-iot.iot-channel
+  sink:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: influxdb-pusher

@@ -62,4 +62,19 @@ spec:
           value: "false" # required for now, to push to the internal registry
       workspaces:
         - name: source
-          workspace: shared-
+          workspace: shared-data
+
+    - name: container-influxdb-pusher
+      runAfter: ["cargo-build", "init"]
+      taskRef:
+        name: buildah
+      params:
+        - name: DOCKERFILE
+          value: influxdb-pusher/Dockerfile
+        - name: IMAGE
+          value: "$(params.image-registry)/$(tasks.init.results.namespace)/influxdb-pusher:latest"
+        - name: TLSVERIFY
+          value: "false" # required for now, to push to the internal registry
+      workspaces:
+        - name: source
+          workspace: shared-data
