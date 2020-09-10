@@ -68,11 +68,11 @@ impl HttpEndpoint {
 
         let response =
             cloudevents_sdk_reqwest::event_to_request(event, self.client.post(&self.sink))
-                // If i can't build the request, fail with internal server error
+                // Unable to build event ... fail internally
                 .map_err(actix_web::error::ErrorInternalServerError)?
                 .send()
                 .await
-                // If something went wrong when sending the event, fail with internal server error
+                // Unable to process HTTP request ... fail internally
                 .map_err(actix_web::error::ErrorInternalServerError)?;
 
         log::info!("Publish result: {:?}", response);

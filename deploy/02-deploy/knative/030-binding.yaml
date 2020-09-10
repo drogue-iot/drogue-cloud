@@ -1,0 +1,16 @@
+apiVersion: sources.knative.dev/v1alpha2
+kind: SinkBinding
+metadata:
+  name: bind-http-endpoint
+spec:
+
+  subject:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    name: http-endpoint
+
+  sink:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: event-display

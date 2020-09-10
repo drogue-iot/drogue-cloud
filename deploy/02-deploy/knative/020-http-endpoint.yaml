@@ -1,0 +1,16 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: http-endpoint
+  annotations:
+spec:
+  template:
+    spec:
+      containers:
+#        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/http-endpoint:latest
+        - image: quay.io/ctrontesting/http-endpoint:latest
+          env:
+            - name: RUST_LOG
+              value: info
+#            - name: K_SINK
+#              value: http://broker-ingress.knative-eventing.svc.cluster.local/drogue-iot/default
