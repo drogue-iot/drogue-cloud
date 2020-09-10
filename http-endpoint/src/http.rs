@@ -56,6 +56,7 @@ impl HttpEndpoint {
         let bytes = bytes.freeze();
 
         let event = EventBuilderV10::new()
+            .id(uuid::Uuid::new_v4().to_string())
             .source("https://dentrassi.de/iot")
             .subject(&publish.channel)
             .data("application/octet-stream", bytes.to_vec())
