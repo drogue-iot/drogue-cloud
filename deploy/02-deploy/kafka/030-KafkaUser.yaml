@@ -1,0 +1,36 @@
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: iot-tenant-endpoint
+  labels:
+    strimzi.io/cluster: iot-cluster
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: iot-tenant
+          patternType: literal
+        operation: Write
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: iot-tenant-application
+  labels:
+    strimzi.io/cluster: iot-cluster
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: iot-tenant
+          patternType: literal
+        operation: Read

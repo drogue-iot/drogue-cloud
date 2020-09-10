@@ -55,9 +55,9 @@ spec:
         name: buildah
       params:
         - name: DOCKERFILE
-          value: web-test/Dockerfile
+          value: http-endpoint/Dockerfile
         - name: IMAGE
-          value: "$(params.image-registry)/$(tasks.init.results.namespace)/web-test:latest"
+          value: "$(params.image-registry)/$(tasks.init.results.namespace)/http-endpoint:latest"
         - name: TLSVERIFY
           value: "false" # required for now, to push to the internal registry
       workspaces:

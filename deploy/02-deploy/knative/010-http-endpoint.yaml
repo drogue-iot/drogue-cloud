@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: web-test
+  name: http-endpoint
   annotations:
 spec:
   template:
@@ -11,3 +11,5 @@ spec:
           env:
             - name: RUST_LOG
               value: info
+            - name: K_SINK
+              value: http://event-display

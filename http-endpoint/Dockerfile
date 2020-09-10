@@ -1,5 +1,5 @@
 FROM registry.access.redhat.com/ubi8-minimal
 
-ADD target/release/web-test /
+ADD target/release/http-endpoint /
 
-ENTRYPOINT [ "/web-test" ]
+ENTRYPOINT [ "/http-endpoint" ]

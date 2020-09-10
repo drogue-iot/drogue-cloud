@@ -1,0 +1,13 @@
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaTopic
+metadata:
+  labels:
+    strimzi.io/cluster: iot-cluster
+  name: iot-tenant
+spec:
+  config:
+    retention.ms: '604800000'
+    segment.bytes: '1073741824'
+  partitions: 1
+  replicas: 1
+  topicName: iot-tenant
