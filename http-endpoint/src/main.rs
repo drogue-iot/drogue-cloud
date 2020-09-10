@@ -3,7 +3,7 @@ mod http;
 use crate::http::{HttpEndpoint, Outcome, Publish, PublishResponse};
 use actix_web::dev::HttpResponseBuilder;
 use actix_web::http::StatusCode;
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
 use log;
 
 use futures_util::StreamExt;
@@ -13,7 +13,7 @@ async fn index() -> impl Responder {
     format!("Hello World!")
 }
 
-#[get("/publish/{channel}")]
+#[post("/publish/{channel}")]
 async fn publish(
     endpoint: web::Data<HttpEndpoint>,
     web::Path(channel): web::Path<String>,
