@@ -1,0 +1,189 @@
+:icons: font
+
+= Deploying
+
+Guide should take your through the process of deploying the example.
+
+NOTE: All commands are relative to the root of the repository.
+
+== Pre-requisites
+
+The following pre-requisites are required to run this. As there are many ways to obtain them, I will stick to my
+own environment, and try to point out possible differences.
+
+Also, there may be newer versions of the components I used, maybe you can upgrade, maybe not.
+
+=== Kubernetes
+
+You will need an installation of Kubernetes. I am using OpenShift 4.5, but you should be able to take any other
+Kubernetes 1.17+.
+
+The biggest differences from OpenShift to Kubernetes may be:
+* The lack of the `Route` CRD. Which exposes services easily, without requiring any load balancer or other tunnel workarounds.
+* The lack of an internal image registry. Which you can ignore if you build your images manually, or have other options.
+
+Although I am using a dedicated cluster, using
+https://developers.redhat.com/products/codeready-containers/overview[CRC]footnote:[CodeReady Containers, OpenShift in a local VM]
+should be possible as well. Just ensure that you bring enough CPU and RAM.
+
+=== Command line tools
+
+The usual command line tools. I would like to call out the following:
+
+* `tkn` - The Tekton command line client. You can ignore it if you don't want to use Tekton.
+* `kn` - The Knative command line tool. Not required, but might come in handy.
+* `oc` / `kubectl` - In our case, there isn't a big difference. I try to go for `kubectl`, but should
+you encounter `oc`, then just swap it. And/or raise a PR 😉
+* `http` - aka HTTPie[https://httpie.org/]
+
+=== Knative 0.13.x
+
+On the cluster, you will need https://knative.dev/[Knative], including the following features:
+
+* Serving
+* Eventing
+* Kafka event support
+
+I walked through the steps of "OpenShift Serverless Operator 1.7.x" (https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/serverless_applications/installing-openshift-serverless-1),
+installed via OperatorHub.
+
+I needed to add the Kafka eventing after that, by partially following this guide: https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html.
+You can install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
+
+=== Strimzi
+
+For Kafka this needs https://strimzi.io/[Strimzi]. I deployed "AMQ Streams" from OperatorHub.
+
+=== Grafana Operator
+
+For having nice dashboards. I installed "Grafana Operator 3.5.0" from OperatorHub.
+
+=== Tekton Pipelines 0.11 (optional)
+
+As I wanted to build images on my cluster as well, I added a https://tekton.dev[Tekton] pipeline as well.
+You can skip this step, but then you need to build images yourself, and push them somewhere the deployment
+can pull them from, later on.
+
+I installed "OpenShift Pipelines Operator" via OperatorHub.
+
+== Performing the deployment
+
+Once you have everything installed, you can start deploying.
+
+=== Create a new namespace
+
+----
+oc new-project drogue-iot
+----
+
+Or:
+
+----
+kubectl create namespace drogue-iot
+kubectl config set-context --current --namespace=drogue-iot
+----
+
+NOTE: Unless noted otherwise, the guide will expect that your context defaults to the `drogue-iot` namespace.
+
+WARNING: Currently, some parts of the deployment actually expect the name `drogue-iot`. If you change it, you will
+break things.
+
+=== Build with Tekton
+
+NOTE: For a local build, see the next section.
+
+==== Deploy the pipeline
+
+To deploy the pipeline, run:
+
+    kubectl apply -f deploy/01-build
+
+NOTE: If you don't have OpenShift, ignore the failure on `010-imagestreams.yaml`.
+
+==== Create a workspace claim
+
+You will need a workspace for running the build pipeline. It is expected to be a PVCfootnote:[persistent volume claim]]
+with the name of `build-workspace`.
+
+You can create one with the following command:
+
+    kubectl apply -f deploy/build-pvc.yaml
+
+The claim can be reused for builds. Of course, it can also be destroyed and re-created.
+
+==== Trigger a build
+
+----
+tkn pipeline start build-drogue-cloud --showlog -p repo-owner=ctron -p branch-name=main --workspace name=shared-data,claimName=build-workspace
+----
+
+[NOTE]
+====
+.GitHub repository
+The previous build assumes you re-use this exact repository to perform the build. Of course, you can also fork
+the repository and use `-p repo-owner=your-user` in the previous command.
+====
+
+[NOTE]
+====
+.Internal image registry
+By default, this pushes to the OpenShift internal registry. You can override the target registry using
+`-p image-registry=my-target`. However, you probably will need to attach push credentials using tekton as well.
+====
+
+=== Local build
+
+If you don't want to use build pipelines, you can run the following command:
+
+----
+make CONTAINER_REGISTRY=quay.io/my-user
+----
+
+This will push the following images, be sure to grant access to them (aka make them public):
+
+* `http-endpoint`
+* `influxdb-pusher`
+
+=== Deploy Kafka
+
+This deploys a Kafka cluster and creates the Kafka channel capability.
+
+[NOTE]
+====
+The following command operates on the namespace `knative-eventing`. The namespace is specified in the YAML file.
+So be careful here when use `kubectl` with `-n`.
+====
+
+----
+kubectl apply -f deploy/02-deploy/01-kafka
+----
+
+=== Deploy InfluxDB
+
+Simply execute the following:
+
+----
+kubectl apply -f deploy/02-deploy/02-influxdb
+----
+
+=== Deploy Grafana
+
+Simply execute the following:
+
+----
+kubectl apply -f deploy/02-deploy/03-dashboard
+----
+
+Credentials: `admin` / `admin123456`
+
+=== Deploy Knative services
+
+Depending on your environment, you need to fix the source of your images. Check the files
+`deploy/02-deploy/04-knative/pass:[*]-Service-pass:[*].yaml` and adapt the `image` field.
+
+Then execute the following:
+
+----
+kubectl apply -f deploy/02-deploy/04-knative
+----
+
