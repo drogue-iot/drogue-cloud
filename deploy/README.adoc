@@ -126,14 +126,23 @@ The claim can be reused for builds. Of course, it can also be destroyed and re-c
 ==== Trigger a build
 
 ----
-tkn pipeline start build-drogue-cloud --showlog -p repo-owner=ctron -p branch-name=main --workspace name=shared-data,claimName=build-workspace
+tkn pipeline start build-drogue-cloud --showlog -p repo-owner=ctron -p ref-name=main --workspace name=shared-data,claimName=build-workspace
 ----
+
+[NOTE]
+====
+.Git ref/commit/tag/branch
+
+By default, the pipeline will build the `main` branch. You can use `-p ref-name=<commit|tag|branch>` to select
+a specific Git commit, tag, or branch. Best synchronize this with the version of the documentation you are using.
+====
 
 Wait for the build to succeed.
 
 [NOTE]
 ====
 .GitHub repository
+
 The previous build assumes you re-use this exact repository to perform the build. Of course, you can also fork
 the repository and use `-p repo-owner=your-user` in the previous command.
 ====
@@ -141,6 +150,7 @@ the repository and use `-p repo-owner=your-user` in the previous command.
 [NOTE]
 ====
 .Internal image registry
+
 By default, this pushes to the OpenShift internal registry. You can override the target registry using
 `-p image-registry=my-target`. However, you probably will need to attach push credentials using tekton as well.
 ====

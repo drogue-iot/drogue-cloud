@@ -12,9 +12,9 @@ spec:
       type: string
       description: The image registry to pull/push from/to.
       default: "image-registry.openshift-image-registry.svc:5000"
-    - name: branch-name
+    - name: ref-name
       type: string
-      description: The git branch to clone.
+      description: The git ref to clone.
       default: main
 
   workspaces:
@@ -37,7 +37,7 @@ spec:
         - name: url
           value: "https://github.com/$(params.repo-owner)/drogue-cloud"
         - name: revision
-          value: $(params.branch-name)
+          value: $(params.ref-name)
         - name: deleteExisting
           value: "true"
 
