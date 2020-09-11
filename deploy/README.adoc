@@ -52,11 +52,7 @@ You can install the operator following these instructions, but don't create any 
 
 === Strimzi
 
-For Kafka this needs https://strimzi.io/[Strimzi]. I deployed "AMQ Streams" from OperatorHub.
-
-=== Grafana Operator
-
-For having nice dashboards. I installed "Grafana Operator 3.5.0" from OperatorHub.
+For Kafka, this deployment requires https://strimzi.io/[Strimzi]. I deployed "AMQ Streams" from OperatorHub.
 
 === Tekton Pipelines 0.11 (optional)
 
@@ -186,4 +182,3 @@ Then execute the following:
 ----
 kubectl apply -f deploy/02-deploy/04-knative
 ----
-
