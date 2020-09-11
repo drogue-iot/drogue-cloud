@@ -49,4 +49,4 @@ spec:
                 - -c
                 - |
                     TO_DELETE="$(kubectl get pipelinerun -o jsonpath='{range .items[?(@.status.completionTime)]}{.status.completionTime}{" "}{.metadata.name}{"\n"}{end}' | sort | head -n -${NUM_TO_KEEP} | awk '{ print $2}')"
-                    test -n "$TO_DELETE" && kubectl delete pipelinerun ${TO_DELETE}
+                    test -n "$TO_DELETE" && kubectl delete pipelinerun ${TO_DELETE} || true
