@@ -28,19 +28,6 @@ own environment, and try to point out possible differences.
 
 Also, there may be newer versions of the components I used, maybe you can upgrade, maybe not.
 
-=== Kubernetes
-
-You will need an installation of Kubernetes. I am using OpenShift 4.5, but you should be able to take any other
-Kubernetes 1.17+.
-
-The biggest differences from OpenShift to Kubernetes may be:
-* The lack of the `Route` CRD. Which exposes services easily, without requiring any load balancer or other tunnel workarounds.
-* The lack of an internal image registry. Which you can ignore if you build your images manually, or have other options.
-
-Although I am using a dedicated cluster, using
-https://developers.redhat.com/products/codeready-containers/overview[CRC]footnote:[CodeReady Containers, OpenShift in a local VM]
-should be possible as well. Just ensure that you bring enough CPU and RAM.
-
 === Command line tools
 
 The usual command line tools. I would like to call out the following:
@@ -49,7 +36,21 @@ The usual command line tools. I would like to call out the following:
 * `kn` - The Knative command line tool. Not required, but might come in handy.
 * `oc` / `kubectl` - In our case, there isn't a big difference. I try to go for `kubectl`, but should
 you encounter `oc`, then just swap it. And/or raise a PR 😉
-* `http` - aka HTTPie[https://httpie.org/]
+* `http` - aka https://httpie.org/[HTTPie]
+
+=== Kubernetes
+
+You will need an installation of Kubernetes. I am using OpenShift 4.5, but you should be able to take any other
+Kubernetes 1.17+.
+
+The biggest differences from OpenShift to Kubernetes may be:
+* The lack of the `Route` CRD. Which exposes services easily, without requiring any load balancer or other tunnel
+  workarounds.
+* The lack of an internal image registry. Which you can ignore if you build your images manually, or have other options.
+
+Although I am using a dedicated cluster, using
+https://developers.redhat.com/products/codeready-containers/overview[CRC]footnote:[CodeReady Containers, OpenShift in a local VM]
+should be possible as well. Just ensure that you bring enough CPU and RAM.
 
 === Knative 0.13.x
 
@@ -109,7 +110,7 @@ To deploy the pipeline, run:
 
     kubectl apply -f deploy/01-build
 
-NOTE: If you don't have OpenShift, ignore the failure on `010-imagestreams.yaml`.
+NOTE: If you don't have OpenShift, ignore the failure on `010-ImageStreams.yaml`.
 
 ==== Create a workspace claim
 
@@ -171,7 +172,7 @@ kubectl apply -f deploy/02-deploy/01-kafka
 
 === Deploy InfluxDB
 
-Simply execute the following:
+Execute the following:
 
 ----
 kubectl apply -f deploy/02-deploy/02-influxdb
@@ -179,7 +180,7 @@ kubectl apply -f deploy/02-deploy/02-influxdb
 
 === Deploy Grafana
 
-Simply execute the following:
+Execute the following:
 
 ----
 kubectl apply -f deploy/02-deploy/03-dashboard
