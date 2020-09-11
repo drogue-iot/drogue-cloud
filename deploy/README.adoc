@@ -213,3 +213,63 @@ kubectl apply -f deploy/02-deploy/04-knative
 
 == Testing
 
+=== Endpoints
+
+First you need to figure out the endpoints for the Grafana instance and the HTTP adapter.
+
+If you are running on OpenShift, and have properly configured the ingress operator, then this should be easy.
+
+The following command should give you the endpoint of the Grafana instance:
+----
+oc get routes
+----
+
+While the next command gives you the URL of the HTTP endpoint:
+
+----
+kn route describe http-endpoint
+----
+
+NOTE: It may be that the endpoint of the Knative service is listed as `http:`, while in fact it is `https:`.
+
+If you are not running on OpenShift, you may need some extra configuration for exposing services. Please check
+with the documentation of your Kubernetes variant.
+
+=== Dashboard
+
+Login in to the Grafana instance and open the dashboard "Knative test". Double check that it is set to
+automatically reload.
+
+=== Publish data
+
+From the command line run (and be sure to replace the URL with your own):
+
+----
+http POST https://http-endpoint-drogue-iot.apps.my.cluster/publish/foo temp:=2.5
+----
+
+The result should be something like:
+
+----
+HTTP/1.1 202 Accepted
+content-length: 0
+date: Fri, 11 Sep 2020 12:07:17 GMT
+server: envoy
+set-cookie: 84c0cd5758bb97f4b5bed57575911131=531e737940bb08052e1fa4cc58c12866; path=/; HttpOnly
+x-envoy-upstream-service-time: 3616
+----
+
+If the content was accepted, it should pop up in the dashboard after a few seconds.
+
+=== What just happened?!
+
+* The data was published to the HTTP endpoint. Pre-processed and converted into a "cloud event",
+* That cloud event was delivered to the Kafka channel, which stores it,
+* The InfluxDB pusher got notified from the Kafka source (attached to the Kafka channel of the HTTP endpoint)…
+* … and writes it to the InfluxDB,
+* From where the Grafana dashboard will poll it.
+
+Like this:
+
+.Overview diagram
+image::../images/example.svg[Overview]
