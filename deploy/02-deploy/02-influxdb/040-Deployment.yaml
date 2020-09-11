@@ -11,8 +11,6 @@ spec:
     app: influxdb
  strategy:
    type: Recreate
-   recreateParams:
-     timeoutSeconds: 3600
  template:
    metadata:
      labels:

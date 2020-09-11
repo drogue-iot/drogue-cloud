@@ -80,7 +80,7 @@ I installed "OpenShift Pipelines Operator" via OperatorHub.
 
 == Performing the deployment
 
-Once you have everything installed, you can start deploying.
+Once you have all pre-requisites installed, you can start deploying.
 
 === Create a new namespace
 
@@ -128,6 +128,8 @@ The claim can be reused for builds. Of course, it can also be destroyed and re-c
 ----
 tkn pipeline start build-drogue-cloud --showlog -p repo-owner=ctron -p branch-name=main --workspace name=shared-data,claimName=build-workspace
 ----
+
+Wait for the build to succeed.
 
 [NOTE]
 ====
@@ -198,3 +200,6 @@ Then execute the following:
 ----
 kubectl apply -f deploy/02-deploy/04-knative
 ----
+
+== Testing
+
