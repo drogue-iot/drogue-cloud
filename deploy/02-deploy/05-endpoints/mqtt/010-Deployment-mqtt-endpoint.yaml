@@ -44,7 +44,7 @@ spec:
             limits:
               memory: 64Mi
           volumeMounts:
-            - mountPath: /etc/tls
+            - mountPath: /etc/endpoint
               name: endpoint-tls
       volumes:
         - name: endpoint-tls

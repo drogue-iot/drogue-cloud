@@ -99,16 +99,19 @@ async fn control_v5<E: Debug>(
     }
 }
 
+const MAX_SIZE: u32 = 1024;
+
 fn build(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<ServerBuilder> {
     let addr = addr.unwrap_or("127.0.0.1:1883");
     log::info!("Starting MQTT (non-TLS) server: {}", addr);
+
     Ok(builder.bind("mqtt", addr, || {
         MqttServer::new()
             .v3(v3::MqttServer::new(connect_v3)
                 .control(control_v3)
                 .publish(publish_v3))
             .v5(v5::MqttServer::new(connect_v5)
-                .max_size(1024)
+                .max_size(MAX_SIZE)
                 .control(control_v5)
                 .publish(publish_v5))
     })?)
@@ -146,6 +149,7 @@ fn build_tls(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<Serve
                         .control(control_v3)
                         .publish(publish_v3))
                     .v5(v5::MqttServer::new(connect_v5)
+                        .max_size(MAX_SIZE)
                         .control(control_v5)
                         .publish(publish_v5)),
             )
