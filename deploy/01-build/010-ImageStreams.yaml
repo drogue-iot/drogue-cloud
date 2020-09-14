@@ -7,4 +7,9 @@ metadata:
 apiVersion: image.openshift.io/v1
 kind: ImageStream
 metadata:
+  name: mqtt-endpoint
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
   name: influxdb-pusher

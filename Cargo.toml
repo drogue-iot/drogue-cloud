@@ -2,5 +2,9 @@
 
 members = [
     "http-endpoint",
+    "mqtt-endpoint",
     "influxdb-pusher",
 ]
+
+[patch.crates-io]
+#ntex-mqtt = { path = "../ntex-mqtt" }

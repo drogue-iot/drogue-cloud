@@ -65,6 +65,21 @@ spec:
         - name: source
           workspace: shared-data
 
+    - name: container-mqtt-endpoint
+      runAfter: ["cargo-build", "init"]
+      taskRef:
+        name: buildah
+      params:
+        - name: DOCKERFILE
+          value: mqtt-endpoint/Dockerfile
+        - name: IMAGE
+          value: "$(params.image-registry)/$(tasks.init.results.namespace)/mqtt-endpoint:latest"
+        - name: TLSVERIFY
+          value: "false" # required for now, to push to the internal registry
+      workspaces:
+        - name: source
+          workspace: shared-data
+
     - name: container-influxdb-pusher
       runAfter: ["cargo-build", "init"]
       taskRef:

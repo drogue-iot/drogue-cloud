@@ -86,12 +86,14 @@ Once you have all pre-requisites installed, you can start deploying.
 
 ----
 oc new-project drogue-iot
+oc label namespace drogue-iot bindings.knative.dev/include=true
 ----
 
 Or:
 
 ----
 kubectl create namespace drogue-iot
+kubectl label namespace drogue-iot bindings.knative.dev/include=true
 kubectl config set-context --current --namespace=drogue-iot
 ----
 

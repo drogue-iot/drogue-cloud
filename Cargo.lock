@@ -1484,6 +1484,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "mqtt-endpoint"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cloudevents-sdk",
+ "cloudevents-sdk-actix-web",
+ "cloudevents-sdk-reqwest",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "log",
+ "ntex",
+ "ntex-mqtt",
+ "ntex-rt",
+ "ntex-service",
+ "reqwest",
+ "rustls",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1510,6 +1534,174 @@ dependencies = [
  "cfg-if",
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "ntex"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b03834ecf5ccff35084eba537b2aaa25f8fec4a28d7652c4083f2bf5beb90671"
+dependencies = [
+ "actix-threadpool",
+ "async-trait",
+ "base64 0.12.3",
+ "bitflags",
+ "bytes",
+ "bytestring",
+ "derive_more",
+ "either",
+ "encoding_rs",
+ "futures",
+ "fxhash",
+ "h2",
+ "http",
+ "httparse",
+ "lazy_static",
+ "log",
+ "mime",
+ "mio",
+ "mio-uds",
+ "ntex-codec 0.1.2",
+ "ntex-macros",
+ "ntex-router",
+ "ntex-rt",
+ "ntex-rt-macros",
+ "ntex-service",
+ "num_cpus",
+ "openssl",
+ "percent-encoding",
+ "pin-project",
+ "pin-project-lite",
+ "rand",
+ "regex",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sha-1",
+ "slab",
+ "socket2",
+ "time 0.2.18",
+ "tokio",
+ "tokio-openssl",
+ "tokio-rustls",
+ "trust-dns-proto 0.19.5",
+ "trust-dns-resolver 0.19.5",
+ "url",
+ "webpki",
+ "webpki-roots 0.20.0",
+]
+
+[[package]]
+name = "ntex-codec"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff772648c695e5db6b0101e3a820bc8611d0c105502163b26569a5741dbf016e"
+dependencies = [
+ "bitflags",
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "log",
+ "tokio",
+ "tokio-util 0.2.0",
+]
+
+[[package]]
+name = "ntex-codec"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f744205de8f749134f617c9d7dd5fdc9d60844bec2ec8213eb476b5513c3630"
+dependencies = [
+ "bitflags",
+ "bytes",
+ "either",
+ "futures-core",
+ "futures-sink",
+ "log",
+ "tokio",
+]
+
+[[package]]
+name = "ntex-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "849b0f5bf10401fe149d6ca35e8fec6c54e866b451f7c777faf2cb0dd96a143f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "ntex-mqtt"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4d278662b458c74967e51850d947e5c00a5df5059e7a6c34e0e5549de19b722"
+dependencies = [
+ "bitflags",
+ "bytes",
+ "bytestring",
+ "derive_more",
+ "either",
+ "futures",
+ "fxhash",
+ "log",
+ "ntex",
+ "ntex-codec 0.2.1",
+ "pin-project",
+ "pin-project-internal",
+ "pin-project-lite",
+ "serde",
+ "serde_json",
+ "slab",
+ "uuid",
+]
+
+[[package]]
+name = "ntex-router"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53da653866106ce98b8edc12888aa724684c1b45dc8e507ad8d40dcee9c77dab"
+dependencies = [
+ "bytestring",
+ "http",
+ "log",
+ "regex",
+ "serde",
+]
+
+[[package]]
+name = "ntex-rt"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "938fca25fbf9c69294a4874d66be2ff7471cfd68f2ee95de172be6dc8ed394b7"
+dependencies = [
+ "actix-threadpool",
+ "futures",
+ "ntex-rt-macros",
+ "tokio",
+]
+
+[[package]]
+name = "ntex-rt-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "809511b287997c0f0b5119a46f99fba9bc1e920d34e7b74ccfa46f6294a958cc"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "ntex-service"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ae8fdc76d1e5b808b3ea36ec63d55183063558ff509d41217af36ea1d386545"
+dependencies = [
+ "futures-util",
+ "pin-project",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -1823,7 +2015,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots",
+ "webpki-roots 0.19.0",
  "winreg 0.7.0",
 ]
 
@@ -2302,6 +2494,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-openssl"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c4b08c5f4208e699ede3df2520aca2e82401b2de33f45e96696a074480be594"
+dependencies = [
+ "openssl",
+ "tokio",
+]
+
+[[package]]
 name = "tokio-rustls"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2661,6 +2863,15 @@ name = "webpki-roots"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8eff4b7516a57307f9349c64bf34caa34b940b66fed4b2fb3136cb7386e5739"
+dependencies = [
+ "webpki",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f20dea7535251981a9670857150d571846545088359b28e4951d350bdaf179f"
 dependencies = [
  "webpki",
 ]
