@@ -8,6 +8,7 @@ spec:
     - name: repo-owner
       type: string
       description: The GitHub owner of the git repository to clone from.
+      default: drogue-iot
     - name: image-registry
       type: string
       description: The image registry to pull/push from/to.

@@ -1,6 +1,6 @@
 all: build push
 
-CONTAINER_REGISTRY=quay.io/ctrontesting
+CONTAINER_REGISTRY=quay.io/use-your-own
 
 clean:
 	cargo clean

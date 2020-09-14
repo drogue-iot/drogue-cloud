@@ -126,7 +126,7 @@ The claim can be reused for builds. Of course, it can also be destroyed and re-c
 ==== Trigger a build
 
 ----
-tkn pipeline start build-drogue-cloud --showlog -p repo-owner=ctron -p ref-name=main --workspace name=shared-data,claimName=build-workspace
+tkn pipeline start build-drogue-cloud --showlog -p repo-owner=drogue-iot -p ref-name=main --workspace name=shared-data,claimName=build-workspace
 ----
 
 [NOTE]
