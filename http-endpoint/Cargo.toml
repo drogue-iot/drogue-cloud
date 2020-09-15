@@ -30,3 +30,6 @@ log = "0.4"
 cloudevents-sdk = "0.2"
 cloudevents-sdk-actix-web = "0.2"
 cloudevents-sdk-reqwest = "0.2"
+
+
+drogue-cloud-common = { version = "0.1", path = "../common" }

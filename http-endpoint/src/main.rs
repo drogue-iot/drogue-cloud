@@ -1,7 +1,6 @@
-mod http;
-
-use crate::http::{HttpEndpoint, Outcome, Publish, PublishResponse};
 use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use drogue_cloud_common::downstream::{DownstreamSender, Outcome, Publish, PublishResponse};
+use futures::StreamExt;
 use log;
 
 #[get("/")]
@@ -11,13 +10,19 @@ async fn index() -> impl Responder {
 
 #[post("/publish/{channel}")]
 async fn publish(
-    endpoint: web::Data<HttpEndpoint>,
+    endpoint: web::Data<DownstreamSender>,
     web::Path(channel): web::Path<String>,
-    body: web::Payload,
+    mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Published to '{}'", channel);
 
-    match endpoint.publish(Publish { channel }, body).await {
+    let mut bytes = web::BytesMut::new();
+    while let Some(item) = body.next().await {
+        bytes.extend_from_slice(&item?);
+    }
+    let bytes = bytes.freeze();
+
+    match endpoint.publish(Publish { channel }, bytes).await {
         // ok, and accepted
         Ok(PublishResponse {
             outcome: Outcome::Accepted,
@@ -41,13 +46,13 @@ const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let endpoint = HttpEndpoint::new()?;
+    let sender = DownstreamSender::new()?;
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(GLOBAL_MAX_JSON_PAYLOAD_SIZE))
-            .data(endpoint.clone())
+            .data(sender.clone())
             .service(index)
             .service(publish)
     })

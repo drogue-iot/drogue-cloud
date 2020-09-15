@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "common",
     "http-endpoint",
     "mqtt-endpoint",
     "influxdb-pusher",

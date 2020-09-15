@@ -805,6 +805,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
+name = "drogue-cloud-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cloudevents-sdk",
+ "cloudevents-sdk-actix-web",
+ "cloudevents-sdk-reqwest",
+ "env_logger",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "dtoa"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1139,6 +1158,7 @@ dependencies = [
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
+ "drogue-cloud-common",
  "env_logger",
  "futures",
  "futures-core",
@@ -1491,6 +1511,7 @@ dependencies = [
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
+ "drogue-cloud-common",
  "env_logger",
  "futures",
  "futures-core",

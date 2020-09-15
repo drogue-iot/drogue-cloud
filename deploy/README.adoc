@@ -37,6 +37,7 @@ The usual command line tools. I would like to call out the following:
 * `oc` / `kubectl` - In our case, there isn't a big difference. I try to go for `kubectl`, but should
 you encounter `oc`, then just swap it. And/or raise a PR 😉
 * `http` - aka https://httpie.org/[HTTPie]
+* `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
 
 === Kubernetes
 
@@ -168,6 +169,7 @@ make CONTAINER_REGISTRY=quay.io/my-user
 This will push the following images, be sure to grant access to them (aka make them public):
 
 * `http-endpoint`
+* `mqtt-endpoint`
 * `influxdb-pusher`
 
 === Deploy Kafka
@@ -204,13 +206,27 @@ Credentials: `admin` / `admin123456`
 
 === Deploy Knative services
 
-Depending on your environment, you need to fix the source of your images. Check the files
-`deploy/02-deploy/04-knative/pass:[*]-Service-pass:[*].yaml` and adapt the `image` field.
+Depending on your environment, you need to fix the source of your images. Check the files,
+and adapt the `image` field:
+
+* `deploy/02-deploy/04-knative/110-Service-influxdb-pusher.yaml`
+* `deploy/02-deploy/05-endpoints/http/020-Service-http-endpoint.yaml`
+* `deploy/02-deploy/05-endpoints/mqtt/010-Deployment-mqtt-endpoint.yaml`
+
+You must also provide a TLS certificate for the MQTT endpoint. You can create a secret like this:
+
+----
+kubectl create secret tls mqtt-endpoint-tls --key server.key --cert fullchain.pem
+----
+
+Also see: link:02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml[02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml]
 
 Then execute the following:
 
 ----
 kubectl apply -f deploy/02-deploy/04-knative
+kubectl apply -f deploy/02-deploy/05-endpoints/http
+kubectl apply -f deploy/02-deploy/05-endpoints/mqtt
 ----
 
 == Testing
@@ -221,7 +237,7 @@ First you need to figure out the endpoints for the Grafana instance and the HTTP
 
 If you are running on OpenShift, and have properly configured the ingress operator, then this should be easy.
 
-The following command should give you the endpoint of the Grafana instance:
+The following command should give you the endpoint of the Grafana instance and the MQTT endpoint:
 ----
 oc get routes
 ----
@@ -234,7 +250,7 @@ kn route describe http-endpoint
 
 NOTE: It may be that the endpoint of the Knative service is listed as `http:`, while in fact it is `https:`.
 
-If you are not running on OpenShift, you may need some extra configuration for exposing services. Please check
+NOTE: If you are not running on OpenShift, you may need some extra configuration for exposing services. Please check
 with the documentation of your Kubernetes variant.
 
 === Dashboard
@@ -242,13 +258,17 @@ with the documentation of your Kubernetes variant.
 Login in to the Grafana instance and open the dashboard "Knative test". Double check that it is set to
 automatically reload.
 
-=== Publish data
+=== Publish data using HTTP
+
+==== Execute
 
 From the command line run (and be sure to replace the URL with your own):
 
 ----
 http POST https://http-endpoint-drogue-iot.apps.my.cluster/publish/foo temp:=2.5
 ----
+
+==== Verify
 
 The result should be something like:
 
@@ -263,7 +283,7 @@ x-envoy-upstream-service-time: 3616
 
 If the content was accepted, it should pop up in the dashboard after a few seconds.
 
-=== What just happened?!
+==== What just happened?!
 
 * The data was published to the HTTP endpoint. Pre-processed and converted into a "cloud event",
 * That cloud event was delivered to the Kafka channel, which stores it,
@@ -275,3 +295,34 @@ Like this:
 
 .Overview diagram
 image::../images/example.svg[Overview]
+
+=== Publish data (MQTT)
+
+==== Execute (MQTT v3.1.1)
+
+From the command line run (and be sure to replace the host and port with your own):
+
+----
+mqtt pub -h mqtt-endpoint-drogue-iot.apps.my.cluster -p 443 -s -t temp -m '{"temp":33}' -V 3
+----
+
+==== Execute (MQTT v5)
+
+From the command line run (and be sure to replace the host and port with your own):
+
+----
+mqtt pub -h mqtt-endpoint-drogue-iot.apps.my.cluster -p 443 -s -t temp -m '{"temp":33}'
+----
+
+==== Verify
+
+In the output, you should see something like `received PUBLISH acknowledgement` as one of the
+last messages. If the content was accepted, it should pop up in the dashboard after a few seconds.
+
+==== What just happened?!
+
+* The data was published to the MQTT endpoint. Pre-processed and converted into a "cloud event",
+* That cloud event was delivered to the Kafka channel, which stores it,
+* The InfluxDB pusher got notified from the Kafka source (attached to the Kafka channel of the HTTP endpoint)…
+* … and writes it to the InfluxDB,
+* From where the Grafana dashboard will poll it.

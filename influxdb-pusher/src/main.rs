@@ -30,9 +30,13 @@ async fn forward(
 
     let temp = match data {
         Some(Data::Json(value)) => value["temp"].as_f64(),
+        Some(Data::String(s)) => serde_json::from_str::<Value>(&s)
+            .ok()
+            .and_then(|value| value["temp"].as_f64()),
         Some(Data::Binary(b)) => serde_json::from_slice::<Value>(&b)
             .ok()
             .and_then(|value| value["temp"].as_f64()),
+
         _ => {
             log::info!("Invalid data format: {:?}", data);
             None
