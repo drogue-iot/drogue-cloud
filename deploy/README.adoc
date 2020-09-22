@@ -63,7 +63,7 @@ On the cluster, you will need https://knative.dev/[Knative], including the follo
 * Kafka event support
 
 The easiest way is to get the https://operatorhub.io/operator/knative-operator[Knative operator],
-through OperatorHub.
+through OperatorHub. Then install https://knative.dev/docs/install/knative-with-operators/#installing-the-knative-serving-component[serving and eventing].
 
 I needed to add the Kafka eventing after that, by partially following this guide: https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html.
 You can install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
@@ -166,7 +166,7 @@ kubectl create secret tls mqtt-endpoint-tls --key server.key --cert fullchain.pe
 
 Also see: link:02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml[02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml]
 
-NOTE: The default values point to our built images, hosted on (https://quay.io/drogueiot)[the drogueiot quay organisation].
+NOTE: The default values point to our built images, hosted on https://quay.io/drogueiot[the drogueiot quay organisation].
 
 Then execute the following:
 
