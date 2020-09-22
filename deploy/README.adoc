@@ -44,6 +44,7 @@ You will need an installation of Kubernetes. I am using OpenShift 4.5, but you s
 Kubernetes 1.17+.
 
 The biggest differences from OpenShift to Kubernetes may be:
+
 * The lack of the `Route` CRD. Which exposes services easily, without requiring any load balancer or other tunnel
   workarounds.
 * The lack of an internal image registry. Which you can ignore if you build and host your images manually, or use our provided image.
@@ -61,7 +62,7 @@ On the cluster, you will need https://knative.dev/[Knative], including the follo
 * Eventing
 * Kafka event support
 
-The easiest way is to get the Knative operator (https://operatorhub.io/operator/knative-operator),
+The easiest way is to get the https://operatorhub.io/operator/knative-operator[Knative operator],
 through OperatorHub.
 
 I needed to add the Kafka eventing after that, by partially following this guide: https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html.
@@ -70,10 +71,6 @@ You can install the operator following these instructions, but don't create any 
 === Strimzi
 
 For Kafka, this deployment requires https://strimzi.io/[Strimzi]. I deployed "Strimzi" from OperatorHub.
-
-=== Tekton Pipelines 0.11 (optional)
-
-The images can be built in the cluster using Tekton, see [tekton.adoc](tekton.adoc).
 
 == Performing the deployment
 
@@ -98,6 +95,11 @@ NOTE: Unless noted otherwise, the guide will expect that your context defaults t
 
 WARNING: Currently, some parts of the deployment actually expect the name `drogue-iot`. If you change it, you will
 break things.
+
+
+=== Tekton Pipelines 0.11 (optional)
+
+The images can be built in the cluster using Tekton, see ./tekton.adoc[tekton.adoc].
 
 If you want to build drogue manually see the next section. You can also skip it and use our pre-built images.
 
