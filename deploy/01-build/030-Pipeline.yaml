@@ -30,7 +30,7 @@ spec:
     - name: checkout
       taskRef:
         name: git-clone
-        kind: ClusterTask
+        kind: Task
       workspaces:
         - name: output
           workspace: shared-data
