@@ -65,8 +65,8 @@ On the cluster, you will need https://knative.dev/[Knative], including the follo
 The easiest way is to get the https://operatorhub.io/operator/knative-operator[Knative operator],
 through OperatorHub. Then install https://knative.dev/docs/install/knative-with-operators/#installing-the-knative-serving-component[serving and eventing].
 
-I needed to add the Kafka eventing after that, by partially following this guide: https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html.
-You can install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
+I needed to add the Kafka eventing after that, I used the https://github.com/openshift-knative/knative-kafka-operator[knative kafka operator]. If you are using Openshift, you can follow https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html[this guide].
+Install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
 
 === Strimzi
 
