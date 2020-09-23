@@ -44,9 +44,13 @@ async fn publish(
 async fn telemetry(
     endpoint: web::Data<DownstreamSender>,
     web::Path((tenant, device)): web::Path<(String, String)>,
-    mut body: web::Payload
+    mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::info!("Sending telemetry for unauthenticated device '{}' belonging to tenant '{}'", device, tenant);
+    log::info!(
+        "Sending telemetry for unauthenticated device '{}' belonging to tenant '{}'",
+        device,
+        tenant
+    );
 
     let mut bytes = web::BytesMut::new();
     while let Some(item) = body.next().await {
@@ -70,7 +74,6 @@ async fn telemetry(
             .content_type("text/plain")
             .body(err.to_string())),
     }
-
 }
 
 const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
@@ -79,7 +82,7 @@ const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    log::info!("Staring HTTP service endpoint");
+    log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new()?;
 
