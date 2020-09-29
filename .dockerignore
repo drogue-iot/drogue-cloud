@@ -9,7 +9,6 @@ target/wasm32-unknown-unknown
 
 console-frontend/node_modules
 console-frontend/pkg
-console-frontend/dist
 
 **/Dockerfile
 
@@ -17,3 +16,5 @@ deploy/
 
 tls.*
 tls_tmp.*
+
+.cargo-container-home

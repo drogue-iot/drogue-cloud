@@ -108,7 +108,7 @@ If you want to build drogue manually see the next section. You can also skip it 
 
 === Local build
 
-If you don't want to use build pipelines, you can run the following command:
+If you don't want to use build pipelines, you can build the images locally:
 
 ----
 make CONTAINER_REGISTRY=quay.io/my-user
@@ -119,6 +119,8 @@ This will push the following images, be sure to grant access to them (aka make t
 * `http-endpoint`
 * `mqtt-endpoint`
 * `influxdb-pusher`
+* `console-backend`
+* `console-frontend`
 
 === Deploy Kafka
 
