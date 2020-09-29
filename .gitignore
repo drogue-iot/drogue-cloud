@@ -6,13 +6,11 @@ target/
 
 .idea/
 
-# Node
-
-node_modules/
-pkg/
-dist/
-
 # TLS
 
 tls.*
 tls_tmp.*
+
+# Build
+
+.cargo-container-home/
