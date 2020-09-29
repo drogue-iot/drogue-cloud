@@ -20,6 +20,13 @@ push:
 
 docker-build:
 	docker build . -f http-endpoint/Dockerfile -t $(CONTAINER_REGISTRY)/http-endpoint:latest
+	
+	
+extract-artifacts:
+	ID=$(shell docker create $(CONTAINER_REGISTRY)/http-endpoint:latest) ; \
+	docker cp $$ID:target ./target ; \
+	docker rm $$ID
+	
         
 
 .PHONY: all clean build push
