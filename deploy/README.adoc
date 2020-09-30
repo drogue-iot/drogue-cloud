@@ -160,7 +160,7 @@ By default, this pushes to the OpenShift internal registry. You can override the
 
 === Local build
 
-If you don't want to use build pipelines, you build the images locally:
+If you don't want to use build pipelines, you can build the images locally:
 
 ----
 make CONTAINER_REGISTRY=quay.io/my-user
