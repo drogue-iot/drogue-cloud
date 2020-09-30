@@ -160,7 +160,7 @@ By default, this pushes to the OpenShift internal registry. You can override the
 
 === Local build
 
-If you don't want to use build pipelines, you can run the following command:
+If you don't want to use build pipelines, you build the images locally:
 
 ----
 make CONTAINER_REGISTRY=quay.io/my-user
@@ -171,6 +171,42 @@ This will push the following images, be sure to grant access to them (aka make t
 * `http-endpoint`
 * `mqtt-endpoint`
 * `influxdb-pusher`
+
+==== Building docker images using containers (cross compilation)
+
+If rust is not installed on your system or if you use OSX you can build the image inside a docker container using the multi stage Dockerfile : 
+
+----
+make CONTAINER_REGISTRY=quay.io/my-user docker-rust-build
+----
+
+Don't forget to push your images : 
+
+----
+make CONTAINER_REGISTRY=quay.io/my-user push
+----
+
+
+==== Building the rust artifacts in a container
+
+If rust is not installed on your system or if you use OSX but you want to build the rust artifact locally you can use the following docker command : 
+
+----
+docker run \
+--rm \
+-it \
+--volume ${PWD}:/opt/volume:z \
+--workdir /opt/volume \
+rust:latest \
+cargo build --release
+----
+
+Keep in mind that while you have built the rust binaries, there are not bundled into a docker image. You can build and push with them with : 
+
+----
+make CONTAINER_REGISTRY=quay.io/my-user build-docker-images
+make CONTAINER_REGISTRY=quay.io/my-user push   
+----
 
 === Deploy Kafka
 

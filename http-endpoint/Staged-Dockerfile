@@ -15,6 +15,6 @@ RUN cargo build --release
 # Bundle
 FROM registry.access.redhat.com/ubi8-minimal
 
-COPY --from=builder /usr/src/http-endpoint/target/ /target
+COPY --from=builder /usr/src/http-endpoint/target/release/http-endpoint /target
 USER 1000
-CMD [ "/target/release/http-endpoint" ]
+CMD [ "http-endpoint" ]
