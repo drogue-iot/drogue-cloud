@@ -99,7 +99,7 @@ break things.
 
 === Tekton Pipelines 0.11 (optional)
 
-The images can be built in the cluster using Tekton, see ./tekton.adoc[tekton.adoc].
+The images can be built in the cluster using Tekton, see link:build.adoc[].
 
 If you want to build drogue manually see the next section. You can also skip it and use our pre-built images.
 
