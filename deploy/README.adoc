@@ -32,7 +32,6 @@ Also, there may be newer versions of the components I used, maybe you can upgrad
 
 The usual command line tools. I would like to call out the following:
 
-* `tkn` - The Tekton command line client. You can ignore it if you don't want to use Tekton.
 * `kn` - The Knative command line tool. Not required, but might come in handy.
 * `oc` / `kubectl` - In our case, there isn't a big difference. I try to go for `kubectl`, but should
 you encounter `oc`, then just swap it. And/or raise a PR 😉
@@ -45,12 +44,14 @@ You will need an installation of Kubernetes. I am using OpenShift 4.5, but you s
 Kubernetes 1.17+.
 
 The biggest differences from OpenShift to Kubernetes may be:
+
 * The lack of the `Route` CRD. Which exposes services easily, without requiring any load balancer or other tunnel
   workarounds.
-* The lack of an internal image registry. Which you can ignore if you build your images manually, or have other options.
+* The lack of an internal image registry. Which you can ignore if you build and host your images manually, or use our provided image.
 
 Although I am using a dedicated cluster, using
-https://developers.redhat.com/products/codeready-containers/overview[CRC]footnote:[CodeReady Containers, OpenShift in a local VM]
+https://developers.redhat.com/products/codeready-containers/overview[CRC]footnote:[CodeReady Containers, OpenShift in a local VM] 
+or https://kubernetes.io/docs/tasks/tools/install-minikube/[Minikube] 
 should be possible as well. Just ensure that you bring enough CPU and RAM.
 
 === Knative 0.13.x
@@ -61,23 +62,15 @@ On the cluster, you will need https://knative.dev/[Knative], including the follo
 * Eventing
 * Kafka event support
 
-I walked through the steps of "OpenShift Serverless Operator 1.7.x" (https://access.redhat.com/documentation/en-us/openshift_container_platform/4.5/html/serverless_applications/installing-openshift-serverless-1),
-installed via OperatorHub.
+The easiest way is to get the https://operatorhub.io/operator/knative-operator[Knative operator],
+through OperatorHub. Then install https://knative.dev/docs/install/knative-with-operators/#installing-the-knative-serving-component[serving and eventing].
 
-I needed to add the Kafka eventing after that, by partially following this guide: https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html.
-You can install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
+I needed to add the Kafka eventing after that, I used the https://github.com/openshift-knative/knative-kafka-operator[knative kafka operator]. If you are using Openshift, you can follow https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html[this guide].
+Install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
 
 === Strimzi
 
-For Kafka, this deployment requires https://strimzi.io/[Strimzi]. I deployed "AMQ Streams" from OperatorHub.
-
-=== Tekton Pipelines 0.11 (optional)
-
-As I wanted to build images on my cluster as well, I added a https://tekton.dev[Tekton] pipeline as well.
-You can skip this step, but then you need to build images yourself, and push them somewhere the deployment
-can pull them from, later on.
-
-I installed "OpenShift Pipelines Operator" via OperatorHub.
+For Kafka, this deployment requires https://strimzi.io/[Strimzi]. I deployed "Strimzi" from OperatorHub.
 
 == Performing the deployment
 
@@ -103,60 +96,12 @@ NOTE: Unless noted otherwise, the guide will expect that your context defaults t
 WARNING: Currently, some parts of the deployment actually expect the name `drogue-iot`. If you change it, you will
 break things.
 
-=== Build with Tekton
 
-NOTE: For a local build, see the next section.
+=== Tekton Pipelines 0.11 (optional)
 
-==== Deploy the pipeline
+The images can be built in the cluster using Tekton, see ./tekton.adoc[tekton.adoc].
 
-To deploy the pipeline, run:
-
-    kubectl apply -f deploy/01-build
-
-NOTE: If you don't have OpenShift, ignore the failure on `010-ImageStreams.yaml`.
-
-==== Create a workspace claim
-
-You will need a workspace for running the build pipeline. It is expected to be a PVCfootnote:[persistent volume claim]]
-with the name of `build-workspace`.
-
-You can create one with the following command:
-
-    kubectl apply -f deploy/build-pvc.yaml
-
-The claim can be reused for builds. Of course, it can also be destroyed and re-created.
-
-==== Trigger a build
-
-----
-tkn pipeline start build-drogue-cloud --showlog -p repo-owner=drogue-iot -p ref-name=main --workspace name=shared-data,claimName=build-workspace
-----
-
-[NOTE]
-====
-.Git ref/commit/tag/branch
-
-By default, the pipeline will build the `main` branch. You can use `-p ref-name=<commit|tag|branch>` to select
-a specific Git commit, tag, or branch. Best synchronize this with the version of the documentation you are using.
-====
-
-Wait for the build to succeed.
-
-[NOTE]
-====
-.GitHub repository
-
-The previous build assumes you re-use this exact repository to perform the build. Of course, you can also fork
-the repository and use `-p repo-owner=your-user` in the previous command.
-====
-
-[NOTE]
-====
-.Internal image registry
-
-By default, this pushes to the OpenShift internal registry. You can override the target registry using
-`-p image-registry=my-target`. However, you probably will need to attach push credentials using tekton as well.
-====
+If you want to build drogue manually see the next section. You can also skip it and use our pre-built images.
 
 === Local build
 
@@ -220,6 +165,8 @@ kubectl create secret tls mqtt-endpoint-tls --key server.key --cert fullchain.pe
 ----
 
 Also see: link:02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml[02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml]
+
+NOTE: The default values point to our built images, hosted on https://quay.io/drogueiot[the drogueiot quay organisation].
 
 Then execute the following:
 

@@ -1,0 +1,81 @@
+:icons: font
+
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+
+:toc:
+:toc-placement!:
+
+WARNING: Currently, this has only been tested with an openshift installation (which conveniently have a local inage registry).
+
+you'll need the `tkn` command line tool. Download the https://github.com/tektoncd/cli/releases[latest release].
+
+=== Tekton Pipelines 0.11
+
+As I wanted to build images on my cluster as well, I added a https://tekton.dev[Tekton] pipeline as well.
+You can skip this step, but then you need to build images yourself, and push them somewhere the deployment
+can pull them from, later on.
+
+I installed "OpenShift Pipelines Operator" via OperatorHub.
+
+For plain kubernetes deployment, after installing tekton CRDS you'll need the git-clone Task : 
+
+    kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/v1beta1/git/git-clone.yaml
+
+=== Build with Tekton
+
+==== Deploy the pipeline
+
+To deploy the pipeline, run:
+
+    kubectl apply -f deploy/01-build
+
+NOTE: If you don't have OpenShift, ignore the failure on `010-ImageStreams.yaml`.
+
+==== Create a workspace claim
+
+You will need a workspace for running the build pipeline. It is expected to be a PVCfootnote:[persistent volume claim]]
+with the name of `build-workspace`.
+
+You can create one with the following command:
+
+    kubectl apply -f deploy/build-pvc.yaml
+
+The claim can be reused for builds. Of course, it can also be destroyed and re-created.
+
+==== Trigger a build
+
+----
+tkn pipeline start build-drogue-cloud --showlog -p repo-owner=drogue-iot -p ref-name=main --workspace name=shared-data,claimName=build-workspace
+----
+[NOTE]
+====
+.Git ref/commit/tag/branch
+
+By default, the pipeline will build the `main` branch. You can use `-p ref-name=<commit|tag|branch>` to select
+a specific Git commit, tag, or branch. Best synchronize this with the version of the documentation you are using.
+====
+
+Wait for the build to succeed.
+
+[NOTE]
+====
+.GitHub repository
+
+The previous build assumes you re-use this exact repository to perform the build. Of course, you can also fork
+the repository and use `-p repo-owner=your-user` in the previous command.
+====
+
+[NOTE]
+====
+.Internal image registry
+
+By default, this pushes to the OpenShift internal registry. You can override the target registry using
+`-p image-registry=my-target`. However, you probably will need to attach push credentials using tekton as well.
+====
+
