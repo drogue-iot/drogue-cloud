@@ -5,10 +5,11 @@ set -ex
 KNATIVE_SERVING_VERSION=${KNATIVE_SERVING_VERSION:-0.17.2}
 KNATIVE_EVENTING_VERSION=${KNATIVE_EVENTING_VERSION:-0.17.5}
 KOURIER_VERSION=${KOURIER_VERSION:-0.17.0}
-EVENTING_CONTRIB_VERSION=${EVENTING_CONTRIB_VERSION:-0.18.0}
-KAFKA_NS=kafka
+EVENTING_KAFKA_VERSION=${EVENTING_KAFKA_VERSION:-nightly}
+KAFKA_NS=${KAFKA_NS:-kafka}
+DROGUE_NS=${DROGUE_NS:-drogue-iot}
 
-SRC="$(dirname "${BASH_SOURCE[0]}")/../deploy/69-temp"
+DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
 
 # Knative Serving
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml
@@ -60,23 +61,64 @@ if ! kubectl -n $KAFKA_NS get deploy/strimzi-cluster-operator >/dev/null 2>&1; t
       --clusterrole=strimzi-topic-operator \
       --serviceaccount $KAFKA_NS:strimzi-cluster-operator
   fi
-  kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $KAFKA_NS
-  kubectl apply -f https://strimzi.io/examples/latest/kafka/kafka-persistent-single.yaml -n $KAFKA_NS
-  kubectl wait kafka/my-cluster --for=condition=Ready --timeout=300s -n $KAFKA_NS
 fi
+kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $KAFKA_NS
 
 # Knative Kafka resources
-# TODO: not this
-kubectl apply -f $SRC/kafka-source.yaml -n knative-eventing
-# TODO: this
-# curl -L "https://github.com/knative/eventing-contrib/releases/download/v${EVENTING_CONTRIB_VERSION}/kafka-source.yaml" \
-#   | sed 's/namespace: .*/namespace: knative-eventing/' \
-#   | kubectl apply -f - -n knative-eventing
+EVENTING_KAFKA_SOURCE_URL="https://github.com/knative/eventing-contrib/releases/download/v${EVENTING_KAFKA_VERSION}/kafka-source.yaml"
+EVENTING_KAFKA_CHANNEL_URL="https://github.com/knative/eventing-contrib/releases/download/v${EVENTING_KAFKA_VERSION}/kafka-channel.yaml"
+if [[ ${EVENTING_KAFKA_VERSION} == "nightly" ]]; then
+  EVENTING_KAFKA_SOURCE_URL="https://knative-nightly.storage.googleapis.com/eventing-kafka/latest/source.yaml"
+  EVENTING_KAFKA_CHANNEL_URL="https://knative-nightly.storage.googleapis.com/eventing-kafka/latest/channel-consolidated.yaml"
+fi
+curl -L ${EVENTING_KAFKA_SOURCE_URL} \
+  | sed 's/namespace: .*/namespace: knative-eventing/' \
+  | kubectl apply -f - -n knative-eventing
+curl -L ${EVENTING_KAFKA_CHANNEL_URL} \
+    | sed 's/REPLACE_WITH_CLUSTER_URL/kafka-eventing-kafka-bootstrap.knative-eventing:9092/' \
+    | kubectl apply -f -
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
-# TODO: not this
-kubectl apply -f $SRC/kafka-channel.yaml 
-# TODO: this
-# curl -L "https://github.com/knative/eventing-contrib/releases/download/v${EVENTING_CONTRIB_VERSION}/kafka-channel.yaml" \
-#     | sed 's/REPLACE_WITH_CLUSTER_URL/my-cluster-kafka-bootstrap.kafka:9092/' \
-#     | kubectl apply -f -
-kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
+
+# Create workspace for endpoints
+if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then
+  kubectl create namespace $DROGUE_NS
+  kubectl label namespace $DROGUE_NS bindings.knative.dev/include=true
+fi
+
+# Create kafka cluster
+kubectl apply -f $DEPLOY_DIR/01-kafka/010-Kafka.yaml
+kubectl patch kafka -n knative-eventing kafka-eventing -p '[{"op": "remove", "path": "/spec/kafka/listeners/external"}]' --type json
+kubectl wait kafka --all --for=condition=Ready --timeout=-1s -n knative-eventing
+
+# Create InfluxDB
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/02-influxdb
+
+# Create Grafana dashboard
+for f in $(ls $DEPLOY_DIR/03-dashboard); do
+  if [[ ! $f =~ 'Route' ]]; then
+    kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/03-dashboard/$f
+  fi
+done
+kubectl patch svc -n $DROGUE_NS grafana -p "{\"spec\": {\"type\": \"NodePort\"}}"
+
+# Provide a TLS certificate for the MQTT endpoint
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=foo.bar.com"
+kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+
+# Create needed knative resources
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/04-knative
+
+# Create the http endpoint
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/05-endpoints/http
+
+# Create the mqqt endpoint
+for f in $(ls $DEPLOY_DIR/05-endpoints/mqtt); do
+  if [[ ! $f =~ 'Route' ]]; then
+    kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/05-endpoints/mqtt/$f
+  fi
+done
+
+kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
+
+echo "Grafana dashboard at $(minikube service -n $DROGUE_NS --url grafana)"
+echo "http POST $(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')/publish/foo temp:=2.5"

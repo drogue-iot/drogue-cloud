@@ -37,6 +37,7 @@ The usual command line tools. I would like to call out the following:
 you encounter `oc`, then just swap it. And/or raise a PR 😉
 * `http` - aka https://httpie.org/[HTTPie]
 * `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
+* `openssl` - to create a TLS Secret for the MQTT endpoint
 
 === Kubernetes
 
