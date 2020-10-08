@@ -5,7 +5,7 @@ metadata:
 spec:
   consumerGroup: eds
   bootstrapServers:
-    - my-cluster-kafka-bootstrap.kafka:9092
+    - kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092
   topics:
     - knative-messaging-kafka.drogue-iot.iot-channel
   sink:

@@ -5,7 +5,6 @@ metadata:
   labels:
     app: mqtt-endpoint
 spec:
-  type: NodePort
   selector:
     app: mqtt-endpoint
   ports:
