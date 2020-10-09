@@ -102,8 +102,10 @@ done
 kubectl patch svc -n $DROGUE_NS grafana -p "{\"spec\": {\"type\": \"NodePort\"}}"
 
 # Provide a TLS certificate for the MQTT endpoint
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=foo.bar.com"
-kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+if ! kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1; then
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=foo.bar.com"
+  kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+fi
 
 # Create needed knative resources
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/04-knative
@@ -117,8 +119,22 @@ for f in $(ls $DEPLOY_DIR/05-endpoints/mqtt); do
     kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/05-endpoints/mqtt/$f
   fi
 done
+kubectl -n $DROGUE_NS patch svc mqtt-endpoint -p "{\"spec\": {\"type\": \"NodePort\"}}"
 
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
+# TODO: not this
+kubectl -n $DROGUE_NS set env deploy/mqtt-endpoint DISABLE_TLS=true
+kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE_NS
 
-echo "Grafana dashboard at $(minikube service -n $DROGUE_NS --url grafana)"
-echo "http POST $(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')/publish/foo temp:=2.5"
+# Dump out the dashboard URL and sample commands for http and mqtt
+set +x
+echo ""
+echo "Login to Grafana:"
+echo "  url:      $(minikube service -n $DROGUE_NS --url grafana)"
+echo "  username: admin"
+echo "  password: admin123456"
+echo "Search for the 'Knative test' dashboard"
+echo ""
+echo "At a shell prompt, try these commands:"
+echo "  http POST $(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')/publish/foo temp:=44"
+minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print "  mqtt pub -v -h " $4 " -p " $5 " -t temp -m '\''{\"temp\":42}'\'' -V 3"}'
