@@ -58,7 +58,6 @@ data:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "id": null,
       "links": [],
       "panels": [
         {
@@ -100,12 +99,19 @@ data:
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
-          "seriesOverrides": [],
+          "seriesOverrides": [
+            {
+              "$$hashKey": "object:284",
+              "alias": "measurements",
+              "yaxis": 2
+            }
+          ],
           "spaceLength": 10,
           "stack": false,
           "steppedLine": false,
           "targets": [
             {
+              "alias": "temperature",
               "groupBy": [
                 {
                   "params": [
@@ -115,7 +121,7 @@ data:
                 },
                 {
                   "params": [
-                      "null"
+                      "previous"
                   ],
                   "type": "fill"
                 }
@@ -136,6 +142,43 @@ data:
                   {
                     "params": [],
                     "type": "mean"
+                  }
+                ]
+              ],
+              "tags": []
+            },
+            {
+              "alias": "measurements",
+              "groupBy": [
+                {
+                  "params": [
+                      "$__interval"
+                  ],
+                  "type": "time"
+                },
+                {
+                  "params": [
+                      "null"
+                  ],
+                  "type": "fill"
+                }
+              ],
+              "measurement": "temperatures",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  {
+                    "params": [
+                        "temperature"
+                    ],
+                    "type": "field"
+                  },
+                  {
+                    "params": [],
+                    "type": "count"
                   }
                 ]
               ],
@@ -162,7 +205,9 @@ data:
           },
           "yaxes": [
             {
-              "format": "short",
+              "$$hashKey": "object:262",
+              "decimals": null,
+              "format": "celsius",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -170,11 +215,13 @@ data:
               "show": true
             },
             {
+              "$$hashKey": "object:263",
+              "decimals": null,
               "format": "short",
               "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
+              "max": "20",
+              "min": "0",
               "show": true
             }
           ],
@@ -337,7 +384,6 @@ data:
       },
       "timezone": "",
       "title": "Knative test",
-      "uid": null,
-      "version": 0
+      "uid": "YYGTNzdMk",
+      "version": 3
     }
-
