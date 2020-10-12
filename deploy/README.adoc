@@ -37,6 +37,7 @@ The usual command line tools. I would like to call out the following:
 you encounter `oc`, then just swap it. And/or raise a PR 😉
 * `http` - aka https://httpie.org/[HTTPie]
 * `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
+* `openssl` - to create a TLS Secret for the MQTT endpoint
 
 === Kubernetes
 
@@ -161,7 +162,8 @@ and adapt the `image` field:
 You must also provide a TLS certificate for the MQTT endpoint. You can create a secret like this:
 
 ----
-kubectl create secret tls mqtt-endpoint-tls --key server.key --cert fullchain.pem
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=foo.bar.com"
+kubectl create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
 ----
 
 Also see: link:02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml[02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml]
