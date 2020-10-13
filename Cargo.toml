@@ -9,6 +9,7 @@ members = [
     "console-common",
     "console-backend",
     "console-frontend",
+    "authentication-service",
 ]
 
 [patch.crates-io]
