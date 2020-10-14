@@ -101,13 +101,6 @@ for f in $(ls $DEPLOY_DIR/03-dashboard); do
 done
 kubectl patch svc -n $DROGUE_NS grafana -p "{\"spec\": {\"type\": \"NodePort\"}}"
 
-# Provide a TLS certificate for the MQTT endpoint
-if ! kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1; then
-  openssl req -x509 -nodes -subj '/CN=localhost' -newkey rsa:4096 -keyout key8.pem -out cert.pem -days 365 -keyform PEM
-  openssl rsa -in key8.pem -out key.pem
-  kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key key.pem --cert cert.pem
-fi
-
 # Create needed knative resources
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/04-knative
 
@@ -121,6 +114,13 @@ for f in $(ls $DEPLOY_DIR/05-endpoints/mqtt); do
   fi
 done
 kubectl -n $DROGUE_NS patch svc mqtt-endpoint -p "{\"spec\": {\"type\": \"NodePort\"}}"
+
+# Provide a TLS certificate for the MQTT endpoint
+if ! kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1; then
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext $(minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print "subjectAltName=DNS:" $4 ".nip.io"}')
+  openssl rsa -in tls_tmp.key -out tls.key
+  kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+fi
 
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
 #kubectl -n $DROGUE_NS set env deploy/mqtt-endpoint DISABLE_TLS=true
@@ -137,4 +137,4 @@ echo "Search for the 'Knative test' dashboard"
 echo ""
 echo "At a shell prompt, try these commands:"
 echo "  http POST $(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')/publish/foo temp:=44"
-minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print "  mqtt pub -v -h " $4 " -p " $5 " -t temp -m '\''{\"temp\":42}'\'' -V 3 -s"}'
+minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print "  mqtt pub -v -h " $4 ".nip.io -p " $5 " -s --cafile tls.crt -t temp -m '\''{\"temp\":42}'\'' -V 3"}'

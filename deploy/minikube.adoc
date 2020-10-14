@@ -1,0 +1,56 @@
+:icons: font
+
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+
+:toc:
+:toc-placement!:
+
+== Drogue Cloud on Minikube
+
+=== Versions and Configuration
+
+These instructions are known to work with...
+
+These versions:
+
+* `minikube` - 1.13.1
+* `kubectl` - 1.19.2
+
+And this minikube configuration:
+
+- cpus: 4
+- memory: 10240
+- disk-size: 20g
+- kubernetes-version: v1.19.0
+- vm-driver: kvm2
+
+=== Installation
+
+If running, refresh your minikube:
+
+----
+minikube stop && minikube delete && minikube start
+----
+
+In a separate shell, fire up a tunnel:
+
+----
+minikube tunnel
+----
+
+And then run link:../hack/minikube.sh[]:
+
+----
+./hack/minikube.sh
+----
+
+It will take a few minutes. Upon successful completion, it will print
+the URL of the Grafana dashboard along with sample commands to test
+the HTTP and MQTT endpoints.
+

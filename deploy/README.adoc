@@ -55,6 +55,8 @@ https://developers.redhat.com/products/codeready-containers/overview[CRC]footnot
 or https://kubernetes.io/docs/tasks/tools/install-minikube/[Minikube] 
 should be possible as well. Just ensure that you bring enough CPU and RAM.
 
+For instructions specific to minikube, see link:minikube.adoc[].
+
 === Knative 0.13.x
 
 On the cluster, you will need https://knative.dev/[Knative], including the following features:
