@@ -1,8 +1,5 @@
 use actix_web::{get, web, HttpResponse, HttpServer, App};
-use std::collections::HashMap;
 //use chrono::{DateTime, Utc};
-
-use std::sync::Arc;
 
 use serde::Deserialize;
 use serde_json::json;
@@ -16,10 +13,13 @@ use crypto::sha2::Sha256;
 
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
-#[derive(Clone, Debug)]
+use authentication_service::{PgPool, pg_pool_handler, establish_connection, get_credentials};
+
+#[derive(Clone, Debug, Deserialize)]
 struct Secret {
-     salt: String,
-     hash: String
+    hash: String,
+    salt: String,
+     
  }
 
 #[derive(Debug, Deserialize)]
@@ -32,37 +32,42 @@ enum AuthenticationResult{
     Success,
     NotFound,
     Failed,
+    Error,
 }
-
 
 
 #[get("/authenticate")]
 async fn authenticate(
     credentials: web::Query<Credentials>,
-    data: web::Data<HashMap<String, Secret>>,
+    pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, actix_web::Error> {
 
-    println!("credentials recevied  {:?}", credentials);
+    println!("Received Authentication request for device: {}", credentials.device_id);
 
-    println!("Received Authentication request for device: {:?}", credentials.device_id);
-    println!("password given: {:?}", credentials.password);
+    let connection = pg_pool_handler(pool)?;
 
     let auth_result;
-    match Arc::try_unwrap(data.into_inner()) {
-        Ok(database) => {
-            match database.get(&credentials.device_id) {
-                Some(secret) => auth_result = verify_password(&credentials.password, &secret),
-                None => auth_result = AuthenticationResult::NotFound
-            }
+    let db_credentials = get_credentials(&credentials.device_id, &connection);
+
+    if db_credentials.len() > 1 {
+        auth_result = AuthenticationResult::Error;
+        println!("More than one credential exist for {}", credentials.device_id);
+    } else if db_credentials.len() == 1 {
+        
+        let cred = &db_credentials[0];
+        match &cred.secret {
+            Some(s) => {
+                // turn s into a Secret object
+                let secret: Secret = serde_json::from_str(s)?;
+                auth_result = verify_password(&credentials.password, &secret);
+            },
+            None => auth_result = AuthenticationResult::Error,
         }
-        //Todo panic ?    
-        Err(e) =>  {
-            println!("got  {:?}", e);
-            match e.get(&credentials.device_id) {
-                Some(secret) => auth_result = verify_password(&credentials.password, &secret),
-                None => auth_result = AuthenticationResult::NotFound
-            }
-        }
+    } else if db_credentials.len() == 0 {
+        auth_result = AuthenticationResult::NotFound;
+        println!("No credentials found for {}", credentials.device_id);
+    } else {
+        auth_result = AuthenticationResult::Error;
     }
 
     //issue token if auth is successful
@@ -73,8 +78,10 @@ async fn authenticate(
                 Ok(token) => Ok(HttpResponse::Ok().body(format!("token :{}", token))),
                 _ => Ok(HttpResponse::InternalServerError().content_type("text/plain").body("error encoding the JWT"))
             }
-        } 
-        _ => Ok(HttpResponse::Ok().body(format!("auth failed")))
+        },
+        AuthenticationResult::Error => Ok(HttpResponse::InternalServerError().content_type("text/plain").body("Internal error")),
+        AuthenticationResult::NotFound => Ok(HttpResponse::NotFound().finish()),
+        AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
     }
 }
 
@@ -82,11 +89,11 @@ async fn authenticate(
 const TOKEN_SECRET: &str = "somesymmetricSecret";
 const TOKEN_EXPIRATION_SECONDS: u64 = 600;
 
-fn get_jwt_token(device_id: &str) -> Result<String, Error> {
+fn get_jwt_token(dev_id: &str) -> Result<String, Error> {
     let alg = Algorithm::new_hmac(AlgorithmID::HS256, TOKEN_SECRET)?;
     let header = json!({ "alg": alg.name() });
     let claims = json!({ 
-                    "deviceId":  device_id,
+                    "deviceId":  dev_id,
                     "valid_until": get_future_timestamp(TOKEN_EXPIRATION_SECONDS)
                 });
 
@@ -114,15 +121,11 @@ fn get_future_timestamp(seconds_from_now: u64) -> u64 {
 fn verify_password(password:  &str, secret: &Secret) -> AuthenticationResult {
 
     let mut computed_hash = password.to_owned() + &secret.salt;
-
     let mut hasher = Sha256::new();
 
-    println!("stored hash {}", secret.hash);
     hasher.input_str(&computed_hash);
     computed_hash = hasher.result_str();
     
-    println!("hashed password : {}", computed_hash);
-
     if computed_hash.eq(&secret.hash) {
         AuthenticationResult::Success
     } else {
@@ -135,21 +138,12 @@ fn verify_password(password:  &str, secret: &Secret) -> AuthenticationResult {
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let mut database = HashMap::new();
-
-    database.insert(
-                    "device1".to_string(), 
-                    Secret { 
-                        salt:"alongFixedSizeSaltString".to_string(), 
-                        hash:"2188dd0b20077359488b272f485d90dc1267f212b2d9e23e46a281161b54ae3f".to_string() 
-                        //password : verysecret
-                    }
-                );
+    let connection_pool = establish_connection();
 
     HttpServer::new(move || {
         App::new()
             .service(authenticate)
-            .data(database.clone())
+            .data(connection_pool.clone())
     })
     .bind("127.0.0.1:8080")?
     .run()
