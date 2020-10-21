@@ -16,3 +16,4 @@ members = [
 #ntex-mqtt = { path = "../ntex-mqtt" }
 #patternfly-yew = { path = "../patternfly-yew" }
 #drogue-ttn = { path = "../drogue-ttn" }
+diesel = { git = 'https://github.com/diesel-rs/diesel', branch = 'master'}
