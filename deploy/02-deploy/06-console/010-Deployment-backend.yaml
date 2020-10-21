@@ -1,15 +1,15 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: mqtt-endpoint
+  name: console-backend
   labels:
-    app: mqtt-endpoint
+    app: console-backend
   annotations:
     image.openshift.io/triggers: |
       [{
         "from":{
           "kind":"ImageStreamTag",
-          "name":"mqtt-endpoint:latest"
+          "name":"console-backend:latest"
         },
         "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
       }]
@@ -17,36 +17,25 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mqtt-endpoint
+      app: console-backend
   template:
     metadata:
       labels:
-        app: mqtt-endpoint
+        app: console-backend
     spec:
       containers:
         - name: endpoint
-          image: quay.io/ctrontesting/mqtt-endpoint:latest
+          image: quay.io/ctrontesting/console-backend:latest
           imagePullPolicy: Always
           env:
             - name: RUST_LOG
               value: info
             - name: BIND_ADDR
-              value: "0.0.0.0:8883"
-            - name: CERT_FILE
-              value: /etc/endpoint/tls.crt
-            - name: KEY_FILE
-              value: /etc/endpoint/tls.key
+              value: "0.0.0.0:8080"
           ports:
-            - containerPort: 8883
+            - containerPort: 8080
               name: endpoint
               protocol: TCP
           resources:
             limits:
               memory: 64Mi
-          volumeMounts:
-            - mountPath: /etc/endpoint
-              name: endpoint-tls
-      volumes:
-        - name: endpoint-tls
-          secret:
-            secretName: mqtt-endpoint-tls

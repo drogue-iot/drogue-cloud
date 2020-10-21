@@ -1,0 +1,23 @@
+[package]
+name = "console-backend"
+version = "0.1.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2018"
+
+[dependencies]
+
+actix-web = "3"
+actix-cors = "0.4"
+
+log = "0.4"
+env_logger = "0.7"
+
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.5"
+
+anyhow = "1"
+
+serde = "1"
+serde_json = "1"
+
+futures = "0.3"

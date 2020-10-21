@@ -5,6 +5,8 @@ members = [
     "http-endpoint",
     "mqtt-endpoint",
     "influxdb-pusher",
+    "console-backend",
+    "console-frontend",
 ]
 
 [patch.crates-io]

@@ -5,3 +5,8 @@ target/
 # IntelliJ
 
 .idea/
+
+# Node
+
+node_modules/
+pkg/

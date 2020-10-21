@@ -1,0 +1,65 @@
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: http-endpoint
+spec:
+  tags:
+    - from:
+        kind: DockerImage
+        name: quay.io/ctrontesting/http-endpoint
+      name: latest
+      importPolicy:
+        scheduled: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: mqtt-endpoint
+spec:
+  tags:
+    - from:
+        kind: DockerImage
+        name: quay.io/ctrontesting/mqtt-endpoint
+      name: latest
+      importPolicy:
+        scheduled: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: influxdb-pusher
+spec:
+  tags:
+    - from:
+        kind: DockerImage
+        name: quay.io/ctrontesting/influxdb-pusher
+      name: latest
+      importPolicy:
+        scheduled: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: console-backend
+spec:
+  tags:
+    - from:
+        kind: DockerImage
+        name: quay.io/ctrontesting/console-backend
+      name: latest
+      importPolicy:
+        scheduled: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: console-frontend
+spec:
+  tags:
+    - from:
+        kind: DockerImage
+        name: quay.io/ctrontesting/console-frontend
+      name: latest
+      importPolicy:
+        scheduled: true

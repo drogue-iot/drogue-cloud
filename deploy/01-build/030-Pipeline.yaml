@@ -94,3 +94,18 @@ spec:
       workspaces:
         - name: source
           workspace: shared-data
+
+    - name: container-console-backend
+      runAfter: ["cargo-build", "init"]
+      taskRef:
+        name: buildah
+      params:
+        - name: DOCKERFILE
+          value: console-backend/Dockerfile
+        - name: IMAGE
+          value: "$(params.image-registry)/$(tasks.init.results.namespace)/console-backend:latest"
+        - name: TLSVERIFY
+          value: "false" # required for now, to push to the internal registry
+      workspaces:
+        - name: source
+          workspace: shared-data
