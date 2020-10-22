@@ -7,13 +7,19 @@ clean:
 	cargo clean
 
 
-build:
+cargo-build:
 	cargo build --release
+
+http-endpoint mqtt-endpoint influxdb-pusher console-backend console-frontend: cargo-build
+	docker build . -f $@/Dockerfile -t $(CONTAINER_REGISTRY)/$@:latest
+	docker push $(CONTAINER_REGISTRY)/$@:latest
+
+build: cargo-build
 	docker build . -f http-endpoint/Dockerfile -t $(CONTAINER_REGISTRY)/http-endpoint:latest
 	docker build . -f mqtt-endpoint/Dockerfile -t $(CONTAINER_REGISTRY)/mqtt-endpoint:latest
 	docker build . -f influxdb-pusher/Dockerfile -t $(CONTAINER_REGISTRY)/influxdb-pusher:latest
 	docker build . -f console-backend/Dockerfile -t $(CONTAINER_REGISTRY)/console-backend:latest
-	docker build console-frontend/. -f console-frontend/Dockerfile -t $(CONTAINER_REGISTRY)/console-frontend:latest
+	docker build . -f console-frontend/Dockerfile -t $(CONTAINER_REGISTRY)/console-frontend:latest
 
 
 push:
@@ -25,3 +31,4 @@ push:
 
 
 .PHONY: all clean build push
+.PHONY: http-endpoint mqtt-endpoint influxdb-pusher console-backend console-frontend

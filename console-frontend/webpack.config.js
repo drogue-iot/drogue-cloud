@@ -8,8 +8,10 @@ module.exports = (env, argv) => {
     return {
         devServer: {
             contentBase: distPath,
+            historyApiFallback: true,
             compress: argv.mode === 'production',
-            port: 8000
+            port: 8010,
+            contentBase: [path.join(__dirname,'dev')]
         },
         entry: './main.js',
         output: {

@@ -1,3 +1,5 @@
+mod info;
+
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 
 use serde_json::json;
@@ -28,6 +30,7 @@ async fn main() -> anyhow::Result<()> {
             .data(web::JsonConfig::default().limit(4096))
             .service(index)
             .service(health)
+            .service(info::get_info)
     })
     .bind(addr.unwrap_or("127.0.0.1:8080"))?
     .run()

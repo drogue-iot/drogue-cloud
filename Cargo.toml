@@ -5,9 +5,13 @@ members = [
     "http-endpoint",
     "mqtt-endpoint",
     "influxdb-pusher",
+    "console-common",
     "console-backend",
     "console-frontend",
 ]
 
 [patch.crates-io]
 #ntex-mqtt = { path = "../ntex-mqtt" }
+
+[patch.'https://github.com/ctron/patternfly-yew']
+#patternfly-yew = { path = "../patternfly-yew" }

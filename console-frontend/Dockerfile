@@ -11,7 +11,7 @@ RUN rustup target add wasm32-unknown-unknown
 RUN mkdir /src
 COPY . /src
 
-WORKDIR /src
+WORKDIR /src/console-frontend
 
 RUN npm install
 RUN npm run build
@@ -23,9 +23,15 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 RUN microdnf -y install nginx
 
 RUN mkdir /public
-COPY --from=builder /src/dist/* /public/
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY --from=builder /src/console-frontend/dist/ /public/
+COPY console-frontend/nginx.conf /etc/nginx/nginx.conf
 
-CMD ["/usr/sbin/nginx", "-g", "daemon off;" ]
+RUN mkdir /endpoints
+VOLUME /endpoints
+COPY console-frontend/nginx.sh /nginx.sh
+RUN chmod a+x /nginx.sh
+ENV BACKEND_URL "http://localhost:8011"
+
+CMD ["/nginx.sh"]
 
 EXPOSE 8080

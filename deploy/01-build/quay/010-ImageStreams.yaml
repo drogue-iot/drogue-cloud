@@ -11,6 +11,7 @@ spec:
       name: latest
       importPolicy:
         scheduled: true
+      reference: true
 ---
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -24,6 +25,7 @@ spec:
       name: latest
       importPolicy:
         scheduled: true
+      reference: true
 ---
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -37,6 +39,7 @@ spec:
       name: latest
       importPolicy:
         scheduled: true
+      reference: true
 ---
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -50,6 +53,7 @@ spec:
       name: latest
       importPolicy:
         scheduled: true
+      reference: true
 ---
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -63,3 +67,4 @@ spec:
       name: latest
       importPolicy:
         scheduled: true
+      reference: true

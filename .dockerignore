@@ -1,5 +1,16 @@
 .git
 .idea
 
-**/node_modules
-**/pkg
+target/debug
+target/release/.fingerprint
+target/release/build
+target/release/deps
+target/wasm32-unknown-unknown
+
+console-frontend/node_modules
+console-frontend/pkg
+console-frontend/dist
+
+**/Dockerfile
+
+deploy/
