@@ -33,6 +33,7 @@ pub struct Backend {
 static CONSOLE_BACKEND: Lazy<RwLock<Option<Backend>>> = Lazy::new(|| RwLock::new(None));
 
 impl Backend {
+    /// Return the backend endpoint, or [`Option::None`].
     pub fn get() -> Option<Backend> {
         CONSOLE_BACKEND.read().unwrap().clone()
     }

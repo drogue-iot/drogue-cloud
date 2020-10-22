@@ -98,8 +98,14 @@ impl Index {
     fn render_endpoints(&self, endpoints: &Endpoints) -> Html {
         html! {
             <Gallery
-                        gutter=true
-                        >
+                gutter=true
+                >
+                {
+                    match &Backend::get() {
+                        Some(backend) => self.render_api_endpoint(backend),
+                        None => html! {},
+                    }
+                }
                 {
                     match &endpoints.http {
                         Some(http) => self.render_http_endpoint(http),
@@ -135,6 +141,18 @@ impl Index {
                 >
                 <div>
                     { &mqtt.host } { ":" } { &mqtt.port }
+                </div>
+            </Card>
+        }
+    }
+
+    fn render_api_endpoint(&self, backend: &Backend) -> Html {
+        html! {
+            <Card
+                title={html_nested!{<>{"API Endpoint"}</>}}
+                >
+                <div>
+                    { &backend.url }
                 </div>
             </Card>
         }
