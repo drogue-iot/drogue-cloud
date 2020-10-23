@@ -1,15 +1,12 @@
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
-use console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
+use crate::endpoints::EndpointSourceType;
+use actix_web::{get, web, HttpResponse, Responder};
+
+use serde_json::json;
 
 #[get("/info")]
-pub async fn get_info() -> impl Responder {
-    HttpResponse::Ok().json(Endpoints {
-        http: Some(HttpEndpoint {
-            url: "https://http.foo.bar".into(),
-        }),
-        mqtt: Some(MqttEndpoint {
-            host: "mqtt.foo.bar".into(),
-            port: 443,
-        }),
-    })
+pub async fn get_info(endpoint_source: web::Data<EndpointSourceType>) -> impl Responder {
+    match endpoint_source.eval_endpoints().await {
+        Ok(endpoints) => HttpResponse::Ok().json(endpoints),
+        Err(err) => HttpResponse::InternalServerError().json(json!( {"error": err.to_string()})),
+    }
 }

@@ -55,7 +55,7 @@ impl Component for Index {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
-                        <h1>{"Drogue IoT"}</h1>
+                        <h1>{"Overview"}</h1>
                     </Content>
                 </PageSection>
                 <PageSection>
@@ -96,28 +96,25 @@ impl Index {
     }
 
     fn render_endpoints(&self, endpoints: &Endpoints) -> Html {
+        let mut cards = Vec::new();
+
+        if let Some(backend) = Backend::get() {
+            cards.push(self.render_api_endpoint(&backend));
+        }
+
+        if let Some(http) = &endpoints.http {
+            cards.push(self.render_http_endpoint(&http));
+        }
+
+        if let Some(mqtt) = &endpoints.mqtt {
+            cards.push(self.render_mqtt_endpoint(&mqtt));
+        }
+
         html! {
             <Gallery
                 gutter=true
                 >
-                {
-                    match &Backend::get() {
-                        Some(backend) => self.render_api_endpoint(backend),
-                        None => html! {},
-                    }
-                }
-                {
-                    match &endpoints.http {
-                        Some(http) => self.render_http_endpoint(http),
-                        None => html! {},
-                    }
-                }
-                {
-                    match &endpoints.mqtt {
-                        Some(mqtt) => self.render_mqtt_endpoint(mqtt),
-                        None => html! {},
-                    }
-                }
+                { for cards }
             </Gallery>
         }
     }

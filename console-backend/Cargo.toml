@@ -23,3 +23,10 @@ serde = "1"
 serde_json = "1"
 
 futures = "0.3"
+
+kube = "0.43"
+kube-derive = "0.43"
+k8s-openapi = { version = "0.9", features = ["v1_17"]}
+openshift-openapi = { version = "0.1", features = ["v4_4"] }
+
+async-trait = "0.1"

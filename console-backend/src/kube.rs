@@ -1,0 +1,34 @@
+pub fn namespace() -> Option<String> {
+    namespace_from_env().or_else(|| namespace_from_cluster())
+}
+
+/// Try getting the namespace from the environment variables
+fn namespace_from_env() -> Option<String> {
+    std::env::var_os("NAMESPACE").and_then(|s| s.to_str().map(|s| s.to_string()))
+}
+
+/// Try getting the namespace from the cluster configuration
+fn namespace_from_cluster() -> Option<String> {
+    kube::Config::from_cluster_env()
+        .ok()
+        .map(|cfg| cfg.default_ns)
+}
+
+pub mod knative {
+    use kube_derive::CustomResource;
+
+    use serde::{Deserialize, Serialize};
+
+    #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, Default)]
+    #[kube(
+        group = "serving.knative.dev",
+        version = "v1",
+        kind = "Service",
+        status = "ServiceStatus",
+        namespaced
+    )]
+    pub struct ServiceSpec(pub serde_json::Value);
+
+    #[derive(Serialize, Deserialize, Debug, Clone, Default)]
+    pub struct ServiceStatus(pub serde_json::Value);
+}
