@@ -108,8 +108,15 @@ kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/05-endpoints/mqtt
 if ! kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1; then
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext "subjectAltName = DNS:$(kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')"
   openssl rsa -in tls_tmp.key -out tls.key
-  kubectl -n drogue-iot create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+  kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
 fi
+
+# Create the Console endpoints
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console/ocp
+
+kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=https://$(oc get route console-backend -o 'jsonpath={ .spec.host }')"
+kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE=openshift"
 
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE_NS
@@ -118,8 +125,11 @@ kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE
 # Dump out the dashboard URL and sample commands for http and mqtt
 set +x
 echo ""
+echo "Console:"
+echo "  $(kubectl -n $DROGUE_NS get routes console -o jsonpath={.spec.host})"
+echo ""
 echo "Login to Grafana:"
-echo "  url:      $(oc -n drogue-iot get routes grafana -o jsonpath={.spec.host})"
+echo "  url:      $(kubectl -n $DROGUE_NS get routes grafana -o jsonpath={.spec.host})"
 echo "  username: admin"
 echo "  password: admin123456"
 echo "Search for the 'Knative test' dashboard"

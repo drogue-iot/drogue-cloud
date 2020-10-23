@@ -85,9 +85,6 @@ if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then
   kubectl label namespace $DROGUE_NS bindings.knative.dev/include=true
 fi
 
-# Create configuration
-kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/00-config
-
 # Create kafka cluster
 kubectl apply -f $DEPLOY_DIR/01-kafka/010-Kafka.yaml
 kubectl patch kafka -n knative-eventing kafka-eventing -p '[{"op": "remove", "path": "/spec/kafka/listeners/external"}]' --type json
@@ -142,7 +139,7 @@ kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE
 set +x
 echo ""
 echo "Console:"
-echo "  $(minikube service -n $DROGUE_NS --url console-backend)"
+echo "  $(minikube service -n $DROGUE_NS --url console-frontend)"
 echo ""
 echo "Login to Grafana:"
 echo "  url:      $(minikube service -n $DROGUE_NS --url grafana)"
