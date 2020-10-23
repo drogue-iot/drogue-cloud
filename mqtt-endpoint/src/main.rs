@@ -10,7 +10,7 @@ mod server;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    // just testing
+    // test to see if we can create one, although we don't use it now, we would fail early
     DownstreamSender::new()?;
 
     let builder = ntex::server::Server::build();
