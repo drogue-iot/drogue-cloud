@@ -6,7 +6,9 @@ use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 
 use serde_json::json;
 
-use crate::endpoints::{EndpointSourceType, OpenshiftEndpointSource};
+use crate::endpoints::{
+    EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
+};
 use actix_cors::Cors;
 use actix_web::web::Data;
 
@@ -28,8 +30,7 @@ async fn main() -> anyhow::Result<()> {
     let addr = addr.as_ref().map(|s| s.as_str());
 
     // the endpoint source we choose
-    let endpoint_source: Data<EndpointSourceType> =
-        Data::new(Box::new(OpenshiftEndpointSource::new()?));
+    let endpoint_source: Data<EndpointSourceType> = Data::new(create_endpoint_source()?);
 
     HttpServer::new(move || {
         App::new()
@@ -46,4 +47,16 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     Ok(())
+}
+
+fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
+    match std::env::var_os("ENDPOINT_SOURCE") {
+        Some(name) if name == "openshift" => Ok(Box::new(OpenshiftEndpointSource::new()?)),
+        Some(name) if name == "kubernetes" => Ok(Box::new(KubernetesEndpointSource::new()?)),
+        Some(name) => Err(anyhow::anyhow!(
+            "Unsupported endpoint source: '{}'",
+            name.to_str().unwrap_or_default()
+        )),
+        None => Ok(Box::new(EnvEndpointSource)),
+    }
 }

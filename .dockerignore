@@ -14,3 +14,6 @@ console-frontend/dist
 **/Dockerfile
 
 deploy/
+
+tls.*
+tls_tmp.*

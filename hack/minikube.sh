@@ -85,6 +85,9 @@ if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then
   kubectl label namespace $DROGUE_NS bindings.knative.dev/include=true
 fi
 
+# Create configuration
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/00-config
+
 # Create kafka cluster
 kubectl apply -f $DEPLOY_DIR/01-kafka/010-Kafka.yaml
 kubectl patch kafka -n knative-eventing kafka-eventing -p '[{"op": "remove", "path": "/spec/kafka/listeners/external"}]' --type json
@@ -107,7 +110,7 @@ kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/04-knative
 # Create the http endpoint
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/05-endpoints/http
 
-# Create the mqqt endpoint
+# Create the mqtt endpoint
 for f in $(ls $DEPLOY_DIR/05-endpoints/mqtt); do
   if [[ ! $f =~ 'Route' ]]; then
     kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/05-endpoints/mqtt/$f
@@ -122,12 +125,24 @@ if ! kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1; then
   kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
 fi
 
+# Deploy the console
+kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console
+kubectl -n $DROGUE_NS patch svc console-backend -p "{\"spec\": {\"type\": \"NodePort\"}}"
+kubectl -n $DROGUE_NS patch svc console-frontend -p "{\"spec\": {\"type\": \"NodePort\"}}"
+kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=$(minikube service -n $DROGUE_NS --url console-backend)"
+kubectl -n $DROGUE_NS set env deployment/console-backend "HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')"
+kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_HOST=$(minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')"
+kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_PORT=$(minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $5}')"
+
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
 #kubectl -n $DROGUE_NS set env deploy/mqtt-endpoint DISABLE_TLS=true
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE_NS
 
 # Dump out the dashboard URL and sample commands for http and mqtt
 set +x
+echo ""
+echo "Console:"
+echo "  $(minikube service -n $DROGUE_NS --url console-backend)"
 echo ""
 echo "Login to Grafana:"
 echo "  url:      $(minikube service -n $DROGUE_NS --url grafana)"

@@ -1,11 +1,5 @@
-use anyhow::Error;
 use patternfly_yew::*;
-use yew::format::{Json, Nothing};
 use yew::prelude::*;
-
-use console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
-
-use crate::Backend;
 
 pub struct Placeholder {}
 
