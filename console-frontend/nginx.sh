@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-: ${BACKEND_URL:=http://localhost:8081}
+: "${BACKEND_URL:=http://localhost:8011}"
 
-echo "{\"url\":\"$BACKEND_URL\"}" > /endpoints/backend.json
+echo "Setting backend endpoint:"
 
-/usr/sbin/nginx -g "daemon off;"
+echo '{}' | jq --arg url "$BACKEND_URL" '. + {url: $url}' | tee /endpoints/backend.json
+
+exec /usr/sbin/nginx -g "daemon off;"

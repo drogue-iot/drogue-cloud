@@ -5,42 +5,26 @@ mod index;
 mod placeholder;
 mod spy;
 
-use patternfly_yew::*;
+use anyhow::Error;
+use std::sync::RwLock;
 
 use wasm_bindgen::prelude::*;
 
-use yew::prelude::*;
-use yew::services::fetch::*;
-
+use patternfly_yew::*;
+use yew::{
+    format::{Json, Nothing},
+    prelude::*,
+    services::fetch::*,
+};
 use yew_router::prelude::*;
+
+use serde::{Deserialize, Serialize};
+
+use once_cell::sync::Lazy;
 
 use crate::index::Index;
 use crate::placeholder::Placeholder;
 use crate::spy::Spy;
-
-use yew::format::{Json, Nothing};
-
-use anyhow::Error;
-use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Backend {
-    pub url: String,
-}
-
-static CONSOLE_BACKEND: Lazy<RwLock<Option<Backend>>> = Lazy::new(|| RwLock::new(None));
-
-impl Backend {
-    /// Return the backend endpoint, or [`Option::None`].
-    pub fn get() -> Option<Backend> {
-        CONSOLE_BACKEND.read().unwrap().clone()
-    }
-    fn set(backend: Option<Backend>) {
-        *CONSOLE_BACKEND.write().unwrap() = backend;
-    }
-}
 
 #[derive(Switch, Debug, Clone, PartialEq)]
 pub enum AppRoute {
@@ -142,8 +126,14 @@ impl Main {
     fn fetch_backend(&self) -> Result<FetchTask, anyhow::Error> {
         let req = Request::get("/endpoints/backend.json").body(Nothing)?;
 
-        FetchService::fetch(
+        let opts = FetchOptions {
+            cache: Some(Cache::NoCache),
+            ..Default::default()
+        };
+
+        FetchService::fetch_with_options(
             req,
+            opts,
             self.link
                 .callback(|response: Response<Json<Result<Backend, Error>>>| {
                     log::info!("Backend: {:?}", response);
@@ -155,6 +145,24 @@ impl Main {
                     Msg::FetchFailed
                 }),
         )
+    }
+}
+
+/// Backend information
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Backend {
+    pub url: String,
+}
+
+static CONSOLE_BACKEND: Lazy<RwLock<Option<Backend>>> = Lazy::new(|| RwLock::new(None));
+
+impl Backend {
+    /// Return the backend endpoint, or [`Option::None`].
+    pub fn get() -> Option<Backend> {
+        CONSOLE_BACKEND.read().unwrap().clone()
+    }
+    pub(crate) fn set(backend: Option<Backend>) {
+        *CONSOLE_BACKEND.write().unwrap() = backend;
     }
 }
 

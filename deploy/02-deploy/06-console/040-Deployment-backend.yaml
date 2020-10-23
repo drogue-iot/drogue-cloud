@@ -5,14 +5,14 @@ metadata:
   labels:
     app: console-backend
   annotations:
-    image.openshift.io/triggers: |
-      [{
-        "from":{
-          "kind":"ImageStreamTag",
-          "name":"console-backend:latest"
-        },
-        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-      }]
+#    image.openshift.io/triggers: |
+#      [{
+#        "from":{
+#          "kind":"ImageStreamTag",
+#          "name":"console-backend:latest"
+#        },
+#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
+#      }]
 spec:
   replicas: 1
   selector:
@@ -23,6 +23,7 @@ spec:
       labels:
         app: console-backend
     spec:
+      serviceAccount: console-backend
       containers:
         - name: endpoint
           image: quay.io/ctrontesting/console-backend:latest

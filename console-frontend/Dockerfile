@@ -20,7 +20,7 @@ WORKDIR /
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
-RUN microdnf -y install nginx
+RUN microdnf -y install nginx jq
 
 RUN mkdir /public
 COPY --from=builder /src/console-frontend/dist/ /public/

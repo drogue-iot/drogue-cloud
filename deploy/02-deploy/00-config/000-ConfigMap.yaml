@@ -1,0 +1,6 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: configuration
+data:
+  cluster.domain: apps.wonderful.iot-playground.org
