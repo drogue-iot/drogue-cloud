@@ -33,10 +33,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: CLUSTER_DOMAIN
-              valueFrom:
-                configMapKeyRef:
-                  name: configuration
-                  key: cluster.domain
+              value: change-me.tld
             - name: BACKEND_URL
               value: https://console-backend-$(NAMESPACE).$(CLUSTER_DOMAIN)
           ports:
