@@ -1690,6 +1690,7 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
+ "jsonwebtokens",
  "log",
  "reqwest",
  "serde",

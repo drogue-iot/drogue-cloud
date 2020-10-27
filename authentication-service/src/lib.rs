@@ -1,17 +1,17 @@
 pub mod models;
 pub mod schema;
 
-use actix_web::{web, HttpResponse};
+use actix_web::{HttpResponse};
 
 use diesel::prelude::*;
 use diesel::r2d2::{Pool, ConnectionManager, PooledConnection};
 use diesel::pg::PgConnection;
 
 use dotenv::dotenv;
-use std::env;
 
 use crate::models::Credential;
 use crate::schema::credentials::dsl::*;
+
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
@@ -20,7 +20,7 @@ pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
 pub fn establish_connection() -> PgPool {
     dotenv().ok();
 
-    let database_url = env::var("DATABASE_URL")
+    let database_url = std::env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
@@ -29,7 +29,7 @@ pub fn establish_connection() -> PgPool {
         .expect("Failed to create pool.")
 }
 
-pub fn pg_pool_handler(pool: web::Data<PgPool>) -> Result<PgPooledConnection, HttpResponse> {
+pub fn pg_pool_handler(pool: &PgPool) -> Result<PgPooledConnection, HttpResponse> {
     pool
     .get()
     .map_err(|e| {
@@ -44,5 +44,9 @@ pub fn get_credentials(id: &str, pool: &PgConnection) -> Vec<Credential> {
             .expect("Error loading credentials");
 
     results
+}
+
+pub fn read_private_key_file(path: String) -> Vec<u8> {
+    std::fs::read(path).unwrap()
 }
 
