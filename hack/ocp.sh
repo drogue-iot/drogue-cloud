@@ -115,8 +115,7 @@ fi
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console/ocp
 
-kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=https://$(oc get route console-backend -o 'jsonpath={ .spec.host }')"
-kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE=openshift"
+kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=https://$(oc get route console-backend -o 'jsonpath={ .spec.host }')" "CLUSTER_DOMAIN-"
 
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE_NS

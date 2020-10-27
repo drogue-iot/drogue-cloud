@@ -126,7 +126,8 @@ fi
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console
 kubectl -n $DROGUE_NS patch svc console-backend -p "{\"spec\": {\"type\": \"NodePort\"}}"
 kubectl -n $DROGUE_NS patch svc console-frontend -p "{\"spec\": {\"type\": \"NodePort\"}}"
-kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=$(minikube service -n $DROGUE_NS --url console-backend)"
+kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=$(minikube service -n $DROGUE_NS --url console-backend)" "CLUSTER_DOMAIN-"
+kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE-"
 kubectl -n $DROGUE_NS set env deployment/console-backend "HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')"
 kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_HOST=$(minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')"
 kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_PORT=$(minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $5}')"
