@@ -13,7 +13,7 @@ use crypto::sha2::Sha256;
 
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
-use authentication_service::{PgPool, pg_pool_handler, establish_connection, get_credentials};
+use authentication_service::{PgPool, pg_pool_handler, establish_connection, get_credentials, read_private_key_file};
 
 #[derive(Clone, Debug, Deserialize)]
 struct Secret {
@@ -25,7 +25,7 @@ struct Secret {
 #[derive(Debug, Deserialize)]
 struct Credentials {
     device_id: String,
-    password: String
+    password: String,
 }
 
 enum AuthenticationResult{
@@ -39,12 +39,12 @@ enum AuthenticationResult{
 #[get("/authenticate")]
 async fn authenticate(
     credentials: web::Query<Credentials>,
-    pool: web::Data<PgPool>,
+    data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::Error> {
 
     println!("Received Authentication request for device: {}", credentials.device_id);
 
-    let connection = pg_pool_handler(pool)?;
+    let connection = pg_pool_handler(&data.connection_pool)?;
 
     let auth_result;
     let db_credentials = get_credentials(&credentials.device_id, &connection);
@@ -73,10 +73,13 @@ async fn authenticate(
     //issue token if auth is successful
     match auth_result {
         AuthenticationResult::Success => {
-            let token = get_jwt_token(&credentials.device_id);
+            let token = get_jwt_token(&credentials.device_id, &data.token_signing_private_key, data.token_expiration_seconds);
             match token {
                 Ok(token) => Ok(HttpResponse::Ok().body(format!("token :{}", token))),
-                _ => Ok(HttpResponse::InternalServerError().content_type("text/plain").body("error encoding the JWT"))
+                Err(e) => { 
+                    println!("{:?}", e);
+                    Ok(HttpResponse::InternalServerError().content_type("text/plain").body("error encoding the JWT"))
+                }
             }
         },
         AuthenticationResult::Error => Ok(HttpResponse::InternalServerError().content_type("text/plain").body("Internal error")),
@@ -85,16 +88,13 @@ async fn authenticate(
     }
 }
 
-//but RSA can be used as well
-const TOKEN_SECRET: &str = "somesymmetricSecret";
-const TOKEN_EXPIRATION_SECONDS: u64 = 600;
+fn get_jwt_token(dev_id: &str, pem_data:  &[u8], expiration: u64) -> Result<String, Error> {
 
-fn get_jwt_token(dev_id: &str) -> Result<String, Error> {
-    let alg = Algorithm::new_hmac(AlgorithmID::HS256, TOKEN_SECRET)?;
+    let alg = Algorithm::new_ecdsa_pem_signer(AlgorithmID::ES256, pem_data)?;
     let header = json!({ "alg": alg.name() });
     let claims = json!({ 
                     "deviceId":  dev_id,
-                    "valid_until": get_future_timestamp(TOKEN_EXPIRATION_SECONDS)
+                    "valid_until": get_future_timestamp(expiration)
                 });
 
     encode(&header, &claims, &alg)
@@ -115,9 +115,8 @@ fn get_future_timestamp(seconds_from_now: u64) -> u64 {
 }
 
 
-
-
 //const PASSWORD_HASH_ALGORITHM: str = "SHA256";
+
 fn verify_password(password:  &str, secret: &Secret) -> AuthenticationResult {
 
     let mut computed_hash = password.to_owned() + &secret.salt;
@@ -133,17 +132,37 @@ fn verify_password(password:  &str, secret: &Secret) -> AuthenticationResult {
     }
 }
 
+#[derive(Clone)]
+struct WebData {
+    connection_pool: PgPool,
+    token_expiration_seconds: u64,
+    token_signing_private_key: Vec<u8>,
+}
+
+
+const TOKEN_EXPIRATION_SECONDS_ENV_VAR: &str = "TOKEN_EXPIRATION";
+const JWT_SIGNING_PRIVATE_KEY_ENV_VAR: &str = "JWT_ECDSA_SIGNING_KEY";
+
+const DEFAULT_TOKEN_EXPIRATION: &str = "300";
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let connection_pool = establish_connection();
+    let pool = establish_connection();
+    let jwt_expiration = std::env::var(TOKEN_EXPIRATION_SECONDS_ENV_VAR).unwrap_or(DEFAULT_TOKEN_EXPIRATION.to_string());
+    let pem_data = read_private_key_file(std::env::var(JWT_SIGNING_PRIVATE_KEY_ENV_VAR).expect("JWT_ECDSA_SIGNING_KEY must be set"));
+
+    let data = WebData {
+        connection_pool: pool,
+        token_expiration_seconds: jwt_expiration.parse::<u64>().unwrap(),
+        token_signing_private_key: pem_data,
+    };
 
     HttpServer::new(move || {
         App::new()
             .service(authenticate)
-            .data(connection_pool.clone())
+            .data(data.clone())
     })
     .bind("127.0.0.1:8080")?
     .run()
