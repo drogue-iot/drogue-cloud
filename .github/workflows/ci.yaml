@@ -58,13 +58,6 @@ jobs:
         with:
           command: test
 
-      - name: Install NodeJS
-        uses: actions/setup-node@v1
-        with:
-          node-version: '12'
-
-      - name: Install NPM dependencies
-        run: cd main && npm install
-
-      - name: Run web-pack build
-        run: cd main && npm run build
+      - name: Run build
+        run: |
+          make build
