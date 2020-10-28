@@ -1,6 +1,7 @@
 mod endpoints;
 mod info;
 mod kube;
+mod spy;
 
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 
@@ -30,7 +31,9 @@ async fn main() -> anyhow::Result<()> {
     let addr = addr.as_ref().map(|s| s.as_str());
 
     // the endpoint source we choose
-    let endpoint_source: Data<EndpointSourceType> = Data::new(create_endpoint_source()?);
+    let endpoint_source = create_endpoint_source()?;
+    log::info!("Using endpoint source: {:?}", endpoint_source);
+    let endpoint_source: Data<EndpointSourceType> = Data::new(endpoint_source);
 
     HttpServer::new(move || {
         App::new()
@@ -41,6 +44,7 @@ async fn main() -> anyhow::Result<()> {
             .service(index)
             .service(health)
             .service(info::get_info)
+            .service(spy::stream_events)
     })
     .bind(addr.unwrap_or("127.0.0.1:8080"))?
     .run()

@@ -6,14 +6,16 @@ use openshift_openapi::api::route::v1::Route;
 
 use crate::kube::knative;
 use serde_json::Value;
+use std::fmt::Debug;
 
 pub type EndpointSourceType = Box<dyn EndpointSource + Send + Sync>;
 
 #[async_trait]
-pub trait EndpointSource {
+pub trait EndpointSource: Debug {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints>;
 }
 
+#[derive(Debug)]
 pub struct EnvEndpointSource;
 
 #[async_trait]

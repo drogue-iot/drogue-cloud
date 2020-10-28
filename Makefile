@@ -13,6 +13,7 @@ clean:
 	cargo clean
 	rm -Rf .cargo-container-home
 
+
 #
 # Build artifacts and containers.
 #
@@ -34,7 +35,8 @@ container-build: webpack-build
 #
 host-build:
 	docker build containers/builder -t builder
-	docker run --rm -ti -v "$(CURRENT_DIR):/usr/src:z" builder make -C /usr/src container-build
+	docker run --rm -ti -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" builder make -C /usr/src container-build
+
 
 #
 # Run the cargo build.
@@ -85,6 +87,7 @@ push: push-images
 # Build and push images.
 #
 images: build-images push-images
+
 
 #
 # Check if we have a container registry set.

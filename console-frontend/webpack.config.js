@@ -7,11 +7,28 @@ const distPath = path.resolve(__dirname, "dist");
 module.exports = (env, argv) => {
     return {
         devServer: {
-            contentBase: distPath,
-            historyApiFallback: true,
+            contentBase: [
+                distPath,
+                path.resolve(__dirname, "dev")
+            ],
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+                "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
+            },
+            historyApiFallback: {
+                rewrites: [
+                    { from: /endpoints\/backend\.json/, to: '/endpoints/backend.json'},
+                    // translate everything that is in a sub-directory (e.g. components/form) and contains a dot
+                    // (e.g. components/form/main.js) to the root (e.g. main.js).
+                    { from: /\/.*?\/(.*\..*)$/, to: function(context) {
+                            return '/' + context.match[1];
+                    }}
+                ],
+                verbose: true,
+            },
             compress: argv.mode === 'production',
             port: 8010,
-            contentBase: [path.join(__dirname,'dev')]
         },
         entry: './main.js',
         output: {

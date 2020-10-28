@@ -1,3 +1,4 @@
 {
-  "url": "http://localhost:8011"
+  "xurl": "http://localhost:8011",
+  "url": "https://console-backend-drogue-iot.apps.wonderful.iot-playground.org"
 }

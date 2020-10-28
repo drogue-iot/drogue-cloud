@@ -32,7 +32,7 @@ impl Component for Index {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> bool {
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::FetchOverview => {
                 self.ft = Some(self.fetch_overview().unwrap());
@@ -46,7 +46,7 @@ impl Component for Index {
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> bool {
+    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
         false
     }
 
