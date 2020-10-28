@@ -35,7 +35,7 @@ container-build: webpack-build
 #
 host-build:
 	docker build containers/builder -t builder
-	docker run --rm -ti -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" builder make -C /usr/src container-build
+	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" builder make -C /usr/src container-build
 
 
 #
