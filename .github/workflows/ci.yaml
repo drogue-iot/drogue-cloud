@@ -84,7 +84,7 @@ jobs:
   images:
     runs-on: ubuntu-latest
     needs: [build, check]
-    if: ${{github.head_ref == ""}}
+    if: ${{github.head_ref == ''}}
 
     steps:
       - uses: actions/checkout@v2
