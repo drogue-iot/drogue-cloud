@@ -48,7 +48,11 @@ kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console/ocp
 
 kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE-"
 kubectl -n $DROGUE_NS set env deployment/console-backend "HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')"
-kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=https://$(oc get route -n $DROGUE_NS console-backend -o 'jsonpath={ .spec.host }')" "CLUSTER_DOMAIN-"
+
+kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_HOST=$(kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')"
+kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_PORT=443"
+
+kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=https://$(kubectl get route -n $DROGUE_NS console-backend -o 'jsonpath={ .spec.host }')" "CLUSTER_DOMAIN-"
 
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE_NS
