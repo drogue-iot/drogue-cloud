@@ -64,21 +64,17 @@ pub fn build(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<Serve
         MqttServer::new()
             .v3(v3::MqttServer::new(connect_v3)
                 .control(fn_factory_with_config(|session: v3::Session<Session>| {
-                    let session = session.clone();
                     ok::<_, ServerError>(fn_service(move |req| control_v3(session.clone(), req)))
                 }))
                 .publish(fn_factory_with_config(|session: v3::Session<Session>| {
-                    let session = session.clone();
                     ok::<_, ServerError>(fn_service(move |req| publish_v3(session.clone(), req)))
                 })))
             .v5(v5::MqttServer::new(connect_v5)
                 .max_size(DEFAULT_MAX_SIZE)
                 .control(fn_factory_with_config(|session: v5::Session<Session>| {
-                    let session = session.clone();
                     ok::<_, ServerError>(fn_service(move |req| control_v5(session.clone(), req)))
                 }))
                 .publish(fn_factory_with_config(|session: v5::Session<Session>| {
-                    let session = session.clone();
                     ok::<_, ServerError>(fn_service(move |req| publish_v5(session.clone(), req)))
                 })))
     })?)
@@ -91,8 +87,8 @@ pub fn build_tls(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<S
 
     let mut tls_config = ServerConfig::new(NoClientAuth::new());
 
-    let key = std::env::var("KEY_FILE").unwrap_or("./examples/key.pem".into());
-    let cert = std::env::var("CERT_FILE").unwrap_or("./examples/cert.pem".into());
+    let key = std::env::var("KEY_FILE").unwrap_or_else(|_| "./examples/key.pem".into());
+    let cert = std::env::var("CERT_FILE").unwrap_or_else(|_| "./examples/cert.pem".into());
 
     let cert_file = &mut BufReader::new(File::open(cert).unwrap());
     let key_file = &mut BufReader::new(File::open(key).unwrap());
@@ -118,13 +114,11 @@ pub fn build_tls(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<S
                 MqttServer::new()
                     .v3(v3::MqttServer::new(connect_v3)
                         .control(fn_factory_with_config(|session: v3::Session<Session>| {
-                            let session = session.clone();
                             ok::<_, ServerError>(fn_service(move |req| {
                                 control_v3(session.clone(), req)
                             }))
                         }))
                         .publish(fn_factory_with_config(|session: v3::Session<Session>| {
-                            let session = session.clone();
                             ok::<_, ServerError>(fn_service(move |req| {
                                 publish_v3(session.clone(), req)
                             }))
@@ -132,13 +126,11 @@ pub fn build_tls(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<S
                     .v5(v5::MqttServer::new(connect_v5)
                         .max_size(DEFAULT_MAX_SIZE)
                         .control(fn_factory_with_config(|session: v5::Session<Session>| {
-                            let session = session.clone();
                             ok::<_, ServerError>(fn_service(move |req| {
                                 control_v5(session.clone(), req)
                             }))
                         }))
                         .publish(fn_factory_with_config(|session: v5::Session<Session>| {
-                            let session = session.clone();
                             ok::<_, ServerError>(fn_service(move |req| {
                                 publish_v5(session.clone(), req)
                             }))

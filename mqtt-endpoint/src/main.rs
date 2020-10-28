@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or(false);
 
     let addr = std::env::var("BIND_ADDR").ok();
-    let addr = addr.as_ref().map(|s| s.as_str());
+    let addr = addr.as_deref();
 
     let builder = if tls {
         build_tls(addr, builder)?
