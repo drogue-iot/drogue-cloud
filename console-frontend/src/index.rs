@@ -110,13 +110,23 @@ impl Index {
             cards.push(self.render_mqtt_endpoint(&mqtt));
         }
 
-        html! {
-            <Gallery
-                gutter=true
-                >
-                { for cards }
-            </Gallery>
-        }
+        let cards: Vec<FlexChildVariant> = cards
+            .iter()
+            .map(|card| {
+                return html_nested! {
+                    <FlexItem>
+                        {card.clone()}
+                    </FlexItem>
+                }
+                .into();
+            })
+            .collect();
+
+        return html! {
+            <Flex>
+                { cards }
+            </Flex>
+        };
     }
 
     fn render_http_endpoint(&self, http: &HttpEndpoint) -> Html {
@@ -124,9 +134,7 @@ impl Index {
             <Card
                 title={html_nested!{<>{"HTTP Endpoint"}</>}}
                 >
-                <div>
-                    { &http.url }
-                </div>
+                <Clipboard value=&http.url/>
             </Card>
         }
     }
@@ -136,9 +144,8 @@ impl Index {
             <Card
                 title={html_nested!{<>{"MQTT Endpoint"}</>}}
                 >
-                <div>
-                    { &mqtt.host } { ":" } { &mqtt.port }
-                </div>
+                <Clipboard value=&mqtt.host/>
+                <Clipboard value={format!("{}", mqtt.port)}/>
             </Card>
         }
     }
@@ -148,9 +155,7 @@ impl Index {
             <Card
                 title={html_nested!{<>{"API Endpoint"}</>}}
                 >
-                <div>
-                    { &backend.url }
-                </div>
+                <Clipboard value=&backend.url/>
             </Card>
         }
     }
