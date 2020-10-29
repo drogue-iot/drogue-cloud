@@ -141,7 +141,7 @@ push: tag-images push-images
 #
 # Build and push images.
 #
-images: build-images push-images
+images: build-images tag-images push-images
 
 
 #
