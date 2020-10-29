@@ -124,7 +124,6 @@ fn host_from_route(route: &Route) -> Option<String> {
         .ingress
         .iter()
         .find_map(|ingress| ingress.host.clone())
-        .clone()
 }
 
 fn url_from_kservice(ksvc: &knative::Service, force_tls: bool) -> Option<String> {

@@ -131,7 +131,7 @@ pub async fn stream_events() -> impl Responder {
     log::info!("Created consumer");
 
     consumer
-        .subscribe(&vec![cfg.topic.as_str()])
+        .subscribe(&[cfg.topic.as_str()])
         .expect("Can't subscribe to the specified topics");
 
     log::info!("Subscribed");

@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let addr = std::env::var("BIND_ADDR").ok();
-    let addr = addr.as_ref().map(|s| s.as_str());
+    let addr = addr.as_deref();
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;

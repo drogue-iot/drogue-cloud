@@ -43,8 +43,6 @@ impl Component for Spy {
         let source =
             EventSource::new_with_event_source_init_dict(&url, &EventSourceInit::new()).unwrap();
 
-        let link = link.clone();
-
         let on_message = Closure::wrap(Box::new(move |msg: &JsValue| {
             let msg = extract_event(msg);
             link.send_message(msg);
@@ -141,7 +139,7 @@ fn render_data(event: &Event) -> Html {
     }
 }
 
-fn render_blob(blob: &Vec<u8>) -> String {
+fn render_blob(blob: &[u8]) -> String {
     let max = blob.len().max(100);
     let ellipsis = if blob.len() > max { ", …" } else { "" };
     format!("[{}; {:02x?}{}]", blob.len(), &blob[0..max], ellipsis)
@@ -150,7 +148,7 @@ fn render_blob(blob: &Vec<u8>) -> String {
 fn truncate_str(len: usize, string: String) -> String {
     let mut r = String::new();
     for c in string.graphemes(true) {
-        if r.len() > len || r.contains("\n") || r.contains("\r") {
+        if r.len() > len || r.contains('\n') || r.contains('\r') {
             r.push_str("…");
             break;
         }

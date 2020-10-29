@@ -1,5 +1,5 @@
 pub fn namespace() -> Option<String> {
-    namespace_from_env().or_else(|| namespace_from_cluster())
+    namespace_from_env().or_else(namespace_from_cluster)
 }
 
 /// Try getting the namespace from the environment variables
