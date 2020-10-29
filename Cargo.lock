@@ -1130,7 +1130,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
-name = "drogue-cloud-common"
+name = "drogue-cloud-endpoint-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1587,7 +1587,7 @@ dependencies = [
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
- "drogue-cloud-common",
+ "drogue-cloud-endpoint-common",
  "env_logger",
  "futures",
  "futures-core",
@@ -2055,7 +2055,7 @@ dependencies = [
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
- "drogue-cloud-common",
+ "drogue-cloud-endpoint-common",
  "env_logger",
  "futures",
  "futures-core",

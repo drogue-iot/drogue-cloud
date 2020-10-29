@@ -3,7 +3,9 @@ use ntex_mqtt::types::QoS;
 use ntex_mqtt::v5::codec::{Auth, DisconnectReasonCode, PublishAckReason};
 use ntex_mqtt::{v3, v5};
 
-use drogue_cloud_common::downstream::{DownstreamSender, Outcome, Publish, PublishResponse};
+use drogue_cloud_endpoint_common::downstream::{
+    DownstreamSender, Outcome, Publish, PublishResponse,
+};
 
 use crate::server::{ServerError, Session};
 use std::fmt::Debug;

@@ -1,5 +1,7 @@
 use actix_web::{get, middleware, post, put, web, App, HttpResponse, HttpServer, Responder};
-use drogue_cloud_common::downstream::{DownstreamSender, Outcome, Publish, PublishResponse};
+use drogue_cloud_endpoint_common::downstream::{
+    DownstreamSender, Outcome, Publish, PublishResponse,
+};
 use futures::StreamExt;
 use serde_json::json;
 

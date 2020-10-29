@@ -12,7 +12,7 @@ use rust_tls::{
     internal::pemfile::certs, internal::pemfile::rsa_private_keys, NoClientAuth, ServerConfig,
 };
 
-use drogue_cloud_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 
 use crate::mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5};
 

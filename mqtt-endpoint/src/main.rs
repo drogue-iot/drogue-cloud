@@ -1,7 +1,7 @@
 #![type_length_limit = "6000000"]
 
 use crate::server::{build, build_tls};
-use drogue_cloud_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 
 mod mqtt;
 mod server;
