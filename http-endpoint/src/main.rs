@@ -1,3 +1,5 @@
+mod ttn;
+
 use actix_web::{get, middleware, post, put, web, App, HttpResponse, HttpServer, Responder};
 use drogue_cloud_endpoint_common::downstream::{
     DownstreamSender, Outcome, Publish, PublishResponse,
@@ -93,6 +95,9 @@ async fn main() -> anyhow::Result<()> {
 
     let sender = DownstreamSender::new()?;
 
+    let addr = std::env::var("BIND_ADDR").ok();
+    let addr = addr.as_deref();
+
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
@@ -101,8 +106,9 @@ async fn main() -> anyhow::Result<()> {
             .service(index)
             .service(publish)
             .service(telemetry)
+            .service(ttn::publish)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(addr.unwrap_or("127.0.0.1:8080"))?
     .run()
     .await?;
 
