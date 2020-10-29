@@ -1,7 +1,6 @@
 use anyhow::Context;
 use cloudevents::event::Data;
 use cloudevents::{EventBuilder, EventBuilderV10};
-use log;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

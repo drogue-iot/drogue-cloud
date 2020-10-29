@@ -1,11 +1,18 @@
 use actix_web::{get, middleware, post, put, web, App, HttpResponse, HttpServer, Responder};
 use drogue_cloud_common::downstream::{DownstreamSender, Outcome, Publish, PublishResponse};
 use futures::StreamExt;
-use log;
+use serde_json::json;
+
+const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 
 #[get("/")]
 async fn index() -> impl Responder {
-    format!("Hello World!")
+    HttpResponse::Ok().json(json!({"success": true}))
+}
+
+#[get("/health")]
+async fn health() -> impl Responder {
+    HttpResponse::Ok().finish()
 }
 
 #[post("/publish/{channel}")]
@@ -47,7 +54,7 @@ async fn telemetry(
     mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!(
-        "Sending telemetry for unauthenticated device '{}' belonging to tenant '{}'",
+        "Sending telemetry for an unauthenticated device '{}' belonging to tenant '{}'",
         device,
         tenant
     );
@@ -75,8 +82,6 @@ async fn telemetry(
             .body(err.to_string())),
     }
 }
-
-const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
