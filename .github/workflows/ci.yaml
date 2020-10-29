@@ -10,6 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
     steps:
       - uses: actions/checkout@v2
 
@@ -42,7 +45,20 @@ jobs:
 
       - name: Run build
         run: |
-          make host-build
+          make build
+
+      - name: Run tests
+        run: |
+          make test
+
+      - name: Login to github container repository
+        if: ${{github.head_ref == ''}}
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Run build
+        if: ${{github.head_ref == ''}}
+        run: |
+          make push
 
   check:
     runs-on: ubuntu-latest
@@ -80,35 +96,3 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-
-  images:
-    runs-on: ubuntu-latest
-    needs: [build, check]
-    if: ${{github.head_ref == ''}}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      # Use same cache as for the build step
-      - uses: actions/cache@v2
-        with:
-          path: |
-            .cargo-container-home/registry
-            .cargo-container-home/git
-            target
-          key: ${{ runner.os }}-cargo-container-${{ hashFiles('**/Cargo.lock') }}
-
-      # Use same cache as for the build step
-      - uses: actions/cache@v2
-        with:
-          path: console-frontend
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Login to github container repository
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Run build
-        run: |
-          make CONTAINER_REGISTRY=ghcr.io/${{ github.repository_owner }}

@@ -9,7 +9,7 @@ Take a look at the file [deploy/README.md](deploy/README.adoc). It guides you th
 You will need:
 
 * GNU Make
-* A container engine (e.g. Docker of Podman)
+* A container engine (e.g. Docker or Podman)
 * An internet connection
 
 To build and publish, run:
