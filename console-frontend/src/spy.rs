@@ -146,12 +146,15 @@ fn render_data(event: &Event) -> Html {
         None => html! {},
         Some(Data::String(text)) => html! { <pre> {text} </pre> },
         Some(Data::Binary(blob)) => html! { <pre> {blob} </pre> },
-        Some(Data::Json(value)) => html! { <pre> {value} </pre> },
+        Some(Data::Json(value)) => {
+            let value = serde_json::to_string_pretty(&value).unwrap();
+            html! { <pre> {value} </pre> }
+        }
     }
 }
 
 fn render_blob(blob: &[u8]) -> String {
-    let max = blob.len().max(100);
+    let max = blob.len().max(50);
     let ellipsis = if blob.len() > max { ", …" } else { "" };
     format!("[{}; {:02x?}{}]", blob.len(), &blob[0..max], ellipsis)
 }
@@ -171,9 +174,9 @@ fn truncate_str(len: usize, string: String) -> String {
 fn render_data_short(event: &Event) -> Html {
     let str = match event.get_data() {
         None => None,
-        Some(Data::String(text)) => Some(truncate_str(200, text)),
+        Some(Data::String(text)) => Some(truncate_str(100, text)),
         Some(Data::Binary(blob)) => Some(render_blob(&blob)),
-        Some(Data::Json(value)) => Some(truncate_str(200, value.to_string())),
+        Some(Data::Json(value)) => Some(truncate_str(100, value.to_string())),
     };
 
     match str {
