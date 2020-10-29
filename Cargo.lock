@@ -2470,12 +2470,13 @@ dependencies = [
 
 [[package]]
 name = "patternfly-yew"
-version = "0.0.5"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f3e99f72018ee046b16032b77224e0961ddf35ce75a5cfe931a23e27c59627b"
+checksum = "d289beef780812200207477b26889c300a0449c1f59c321d69055dcc870d8074"
 dependencies = [
  "js-sys",
  "log",
+ "serde",
  "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",

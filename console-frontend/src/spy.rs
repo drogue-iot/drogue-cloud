@@ -85,7 +85,18 @@ impl Component for Spy {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
-                        <h1>{"Device Message Spy"}</h1>
+                        <h1>{"Device Message Spy"}
+                            <Popover
+                                toggle_by_onclick=true
+                                target=html!{<Button variant=Variant::Plain icon=Icon::Help align=Align::End></Button>}
+                                header=html!{<Title size=Size::Medium>{"Data acquisition"}</Title>}
+                                >
+                                <div>
+                                    { "The" } <em> {" message spy "} </em> { "will show the messages received by a system
+                                    at the time of watching. Only new messages will be displayed." }
+                                </div>
+                            </Popover>
+                        </h1>
                     </Content>
                 </PageSection>
                 <PageSection>
