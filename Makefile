@@ -67,6 +67,9 @@ host-test: build-builder
 	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" builder make -C /usr/src container-test
 
 
+fix-permissions:
+	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
+
 #
 # Run the cargo build.
 #
