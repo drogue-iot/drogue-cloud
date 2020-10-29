@@ -4,6 +4,7 @@ metadata:
   name: grafana
   labels:
     app: grafana
+    app.kubernetes.io/part-of: custom-app-1
   annotations:
     app.openshift.io/connects-to: influxdb
 spec:

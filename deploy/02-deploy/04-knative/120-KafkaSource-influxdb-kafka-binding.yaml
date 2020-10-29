@@ -2,6 +2,8 @@ apiVersion: sources.knative.dev/v1alpha1
 kind: KafkaSource
 metadata:
   name: influxdb-kafka-source
+  labels:
+    app.kubernetes.io/part-of: custom-app-1
 spec:
   consumerGroup: influxdb-pusher
   bootstrapServers:

@@ -4,6 +4,7 @@ metadata:
  name: influxdb
  labels:
    app: influxdb
+   app.kubernetes.io/part-of: custom-app-1
 spec:
  replicas: 1
  selector:

@@ -4,6 +4,7 @@ metadata:
   name: console-backend
   labels:
     app: console-backend
+    app.kubernetes.io/part-of: console
   annotations:
 #    image.openshift.io/triggers: |
 #      [{
@@ -26,7 +27,7 @@ spec:
       serviceAccount: console-backend
       containers:
         - name: endpoint
-          image: quay.io/ctrontesting/console-backend:latest
+          image: ghcr.io/drogue-iot/console-backend:latest
           imagePullPolicy: Always
           env:
             - name: RUST_LOG

@@ -2,7 +2,8 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: http-endpoint
-  annotations:
+  labels:
+    app.kubernetes.io/part-of: endpoints
 spec:
   template:
     metadata:
@@ -10,7 +11,7 @@ spec:
         bindings.knative.dev/include: "true"
     spec:
       containers:
-        - image: quay.io/drogueiot/http-endpoint:latest
+        - image: ghcr.io/drogue-iot/http-endpoint:latest
 #        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/http-endpoint:latest
           env:
             - name: RUST_LOG

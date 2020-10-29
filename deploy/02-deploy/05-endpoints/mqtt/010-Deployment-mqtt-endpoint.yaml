@@ -4,15 +4,16 @@ metadata:
   name: mqtt-endpoint
   labels:
     app: mqtt-endpoint
+    app.kubernetes.io/part-of: endpoints
   annotations:
-    image.openshift.io/triggers: |
-      [{
-        "from":{
-          "kind":"ImageStreamTag",
-          "name":"mqtt-endpoint:latest"
-        },
-        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-      }]
+#    image.openshift.io/triggers: |
+#      [{
+#        "from":{
+#          "kind":"ImageStreamTag",
+#          "name":"mqtt-endpoint:latest"
+#        },
+#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
+#      }]
 spec:
   replicas: 1
   selector:
@@ -25,7 +26,7 @@ spec:
     spec:
       containers:
         - name: endpoint
-          image: quay.io/ctrontesting/mqtt-endpoint:latest
+          image: ghcr.io/drogue-iot/mqtt-endpoint:latest
           imagePullPolicy: Always
           env:
             - name: RUST_LOG
