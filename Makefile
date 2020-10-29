@@ -70,12 +70,14 @@ host-test: build-builder
 fix-permissions:
 	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
 
+
 #
 # Run the cargo build.
 #
 cargo-build:
 	@#
-	@# We build everything, expect the wasm stuff
+	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need the
+	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
 	cargo build --release --workspace --exclude console-frontend
 
