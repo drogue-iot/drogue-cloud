@@ -129,6 +129,9 @@ module.exports = (env, argv) => {
                 }
             ],
         },
+        performance: {
+            hints: false
+        },
         plugins: [
             new CopyWebpackPlugin([
                 { from: './static', to: distPath }
