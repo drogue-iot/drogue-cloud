@@ -1,0 +1,14 @@
+{{- if and .Values.sources.mqtt.enabled ( eq .Values.platform "openshift" ) }}
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: mqtt-endpoint
+spec:
+  to:
+    kind: Service
+    name: mqtt-endpoint
+  port:
+    targetPort: endpoint
+  tls:
+    termination: passthrough
+{{- end }}

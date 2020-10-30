@@ -1,0 +1,60 @@
+{{- if .Values.services.console.enabled }}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: console-frontend
+  labels:
+    app: console-frontend
+  annotations:
+#    image.openshift.io/triggers: |
+#      [{
+#        "from":{
+#          "kind":"ImageStreamTag",
+#          "name":"console-frontend:latest"
+#        },
+#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
+#      }]
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: console-frontend
+  template:
+    metadata:
+      labels:
+        app: console-frontend
+    spec:
+      containers:
+        - name: endpoint
+          image: quay.io/ctrontesting/console-frontend:latest
+          imagePullPolicy: Always
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CLUSTER_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: configuration
+                  key: cluster.domain
+            - name: BACKEND_URL
+              value: https://console-backend-$(NAMESPACE).$(CLUSTER_DOMAIN)
+          ports:
+            - containerPort: 8080
+              name: endpoint
+              protocol: TCP
+          resources:
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /run
+              name: run
+            - mountPath: /endpoints
+              name: endpoints
+      volumes:
+        - name: run
+          emptyDir: {}
+        - name: endpoints
+          emptyDir: {}
+{{- end }}

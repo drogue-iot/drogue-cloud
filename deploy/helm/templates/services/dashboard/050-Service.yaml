@@ -1,0 +1,21 @@
+{{- if .Values.services.dashboard.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+ labels:
+   app: grafana
+ name: grafana
+spec:
+ ports:
+ - name: web
+   port: 3000
+   protocol: TCP
+   targetPort: 3000
+ selector:
+   app: grafana
+{{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
+ type: LoadBalancer
+{{- else }}
+ type: NodePort
+{{- end }}
+{{- end }}

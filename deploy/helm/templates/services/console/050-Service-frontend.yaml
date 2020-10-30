@@ -1,0 +1,21 @@
+{{- if .Values.services.console.enabled }}
+kind: Service
+apiVersion: v1
+metadata:
+  name: console-frontend
+  labels:
+    app: console-frontend
+spec:
+  selector:
+    app: console-frontend
+  ports:
+    - name: endpoint
+      protocol: TCP
+      port: 8080
+      targetPort: endpoint
+{{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
+  type: LoadBalancer
+{{- else }}
+  type: NodePort
+{{- end }}
+{{- end }}

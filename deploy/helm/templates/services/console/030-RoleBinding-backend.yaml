@@ -1,0 +1,13 @@
+{{- if .Values.services.console.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: console-backend
+subjects:
+  - kind: ServiceAccount
+    name: console-backend
+roleRef:
+  kind: Role
+  name: console-backend
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

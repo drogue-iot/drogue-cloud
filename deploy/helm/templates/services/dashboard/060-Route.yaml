@@ -1,0 +1,17 @@
+{{- if and .Values.services.dashboard.enabled ( eq .Values.platform "openshift" ) }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: grafana
+  name: grafana
+spec:
+  port:
+    targetPort: web
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: grafana
+{{- end }}

@@ -1,0 +1,30 @@
+knativeChannel: iot-channel
+
+# platform indicates the type of container orchestration platform we are deploying to.
+# Supported values are:
+# - openshift
+# - kubernetes
+#
+# When setting to "openshift", Route resources will also be deployed.
+platform: kubernetes
+
+# useLoadBalancer indicates whether services should be deployed using the
+# "LoadBalancer" type (true) or the "NodePort" type (false).
+# This property will be ignored when deploying to platform "openshift".
+useLoadBalancer: false
+
+sources:
+  http:
+    enabled: true
+  mqtt:
+    enabled: false
+
+services:
+  influxdb:
+    enabled: true
+
+  dashboard:
+    enabled: true
+
+  console:
+    enabled: false

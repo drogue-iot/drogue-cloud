@@ -1,0 +1,19 @@
+{{- if .Values.sources.http.enabled }}
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: http-endpoint
+  annotations:
+spec:
+  template:
+    metadata:
+      labels:
+        bindings.knative.dev/include: "true"
+    spec:
+      containers:
+        - image: quay.io/drogueiot/http-endpoint:latest
+#        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/http-endpoint:latest
+          env:
+            - name: RUST_LOG
+              value: info
+{{- end }}
