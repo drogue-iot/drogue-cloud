@@ -661,6 +661,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
 
 [[package]]
+name = "base64"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
+
+[[package]]
+name = "base64-serde"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e964e3e0a930303c7c0bdb28ebf691dd98d9eee4b8b68019d2c995710b58a18"
+dependencies = [
+ "base64 0.13.0",
+ "serde",
+]
+
+[[package]]
 name = "bincode"
 version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1145,7 +1161,19 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "snafu",
  "uuid",
+]
+
+[[package]]
+name = "drogue-ttn"
+version = "0.1.1"
+dependencies = [
+ "base64 0.13.0",
+ "base64-serde",
+ "chrono",
+ "serde",
+ "url",
 ]
 
 [[package]]
@@ -1588,6 +1616,7 @@ dependencies = [
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "drogue-cloud-endpoint-common",
+ "drogue-ttn",
  "env_logger",
  "futures",
  "futures-core",
@@ -1596,6 +1625,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "snafu",
  "uuid",
 ]
 

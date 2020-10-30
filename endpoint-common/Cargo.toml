@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 
 anyhow = "1"
+snafu = "0.6"
 
 futures = "0.3"
 futures-core = "0.3"

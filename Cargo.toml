@@ -13,3 +13,4 @@ members = [
 [patch.crates-io]
 #ntex-mqtt = { path = "../ntex-mqtt" }
 #patternfly-yew = { path = "../patternfly-yew" }
+#drogue-ttn = { path = "../drogue-ttn" }

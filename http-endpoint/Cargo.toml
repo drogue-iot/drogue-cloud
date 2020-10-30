@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 
 anyhow = "1"
+snafu = "0.6"
 
 actix-rt = "1.1"
 actix-service = "1"
@@ -32,3 +33,6 @@ cloudevents-sdk-actix-web = "0.2"
 cloudevents-sdk-reqwest = "0.2"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-ttn = "0.1.1"
+
+

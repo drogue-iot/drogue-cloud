@@ -1,3 +1,4 @@
+mod error;
 mod ttn;
 
 use actix_web::{get, middleware, post, put, web, App, HttpResponse, HttpServer, Responder};
