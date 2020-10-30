@@ -17,6 +17,8 @@ pub enum Msg {
     Error(String),
 }
 
+const DEFAULT_MAX_SIZE: usize = 200;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Entry(pub Event);
 
@@ -60,7 +62,7 @@ impl Component for Spy {
             Msg::Event(event) => {
                 log::info!("Pushing event: {:?}", event);
                 self.events.insert(0, Entry(event));
-                while self.events.len() > 10 {
+                while self.events.len() > DEFAULT_MAX_SIZE {
                     self.events.pop();
                 }
             }
