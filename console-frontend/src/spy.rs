@@ -7,7 +7,7 @@ use web_sys::{EventSource, EventSourceInit};
 
 pub struct Spy {
     source: EventSource,
-    events: Vec<Entry>,
+    events: SharedTableModel<Entry>,
 }
 
 use crate::Backend;
@@ -50,7 +50,7 @@ impl Component for Spy {
         source.set_onmessage(Some(&on_message.into_js_value().into()));
 
         Self {
-            events: Vec::new(),
+            events: Default::default(),
             source,
         }
     }
@@ -100,7 +100,7 @@ impl Component for Spy {
                     </Content>
                 </PageSection>
                 <PageSection>
-                    <Table<Entry>
+                    <Table<SharedTableModel<Entry>>
                         entries=self.events.clone()
                         mode=TableMode::CompactExpandable
                         header={html_nested!{
@@ -110,7 +110,7 @@ impl Component for Spy {
                             </TableHeader>
                         }}
                         >
-                    </Table<Entry>>
+                    </Table<SharedTableModel<Entry>>>
                 </PageSection>
             </>
         };
@@ -148,7 +148,7 @@ fn render_data(event: &Event) -> Html {
         Some(Data::Binary(blob)) => html! { <pre> {blob} </pre> },
         Some(Data::Json(value)) => {
             let value = serde_json::to_string_pretty(&value).unwrap();
-            html! { <pre> {value} </pre> }
+            return html! { <pre> {value} </pre> };
         }
     }
 }
@@ -230,8 +230,8 @@ fn render_details(event: &Event) -> Html {
     return html! {
         <>
             <h3>{"Attributes"}</h3>
-            <Table<AttributeEntry>
-                entries=attrs
+            <Table<SimpleTableModel<AttributeEntry>>
+                entries=SimpleTableModel::from(attrs)
                 mode=TableMode::CompactNoBorders
                 header=html_nested!{
                     <TableHeader>
@@ -240,7 +240,7 @@ fn render_details(event: &Event) -> Html {
                     </TableHeader>
                 }
                 >
-            </Table<AttributeEntry>>
+            </Table<SimpleTableModel<AttributeEntry>>>
 
             <h3>{"Payload"}</h3>
             { render_data(event) }
