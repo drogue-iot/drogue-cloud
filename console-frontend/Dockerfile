@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-clou
 RUN microdnf -y install nginx jq
 
 RUN mkdir /public
-COPY console-frontend/dist/ /public/
+
 COPY console-frontend/nginx.conf /etc/nginx/nginx.conf
 
 RUN mkdir /endpoints
@@ -15,5 +15,7 @@ RUN chmod a+x /nginx.sh
 ENV BACKEND_URL "http://localhost:8011"
 
 CMD ["/nginx.sh"]
+
+COPY console-frontend/dist/ /public/
 
 EXPOSE 8080
