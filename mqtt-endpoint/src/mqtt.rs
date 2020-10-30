@@ -14,15 +14,17 @@ pub async fn connect_v3<Io>(
     connect: v3::Connect<Io>,
 ) -> Result<v3::ConnectAck<Io, Session>, ServerError> {
     log::info!("new connection: {:?}", connect);
-    Ok(connect.ack(Session::new(DownstreamSender::new()?), false))
+    let device_id = connect.packet().client_id.to_string();
+    Ok(connect.ack(Session::new(DownstreamSender::new()?, device_id), false))
 }
 
 pub async fn connect_v5<Io>(
     connect: v5::Connect<Io>,
 ) -> Result<v5::ConnectAck<Io, Session>, ServerError> {
     log::info!("new connection: {:?}", connect);
+    let device_id = connect.packet().client_id.to_string();
     Ok(connect
-        .ack(Session::new(DownstreamSender::new()?))
+        .ack(Session::new(DownstreamSender::new()?, device_id))
         .with(|ack| {
             ack.wildcard_subscription_available = Some(false);
         }))
@@ -42,6 +44,7 @@ pub async fn publish_v5(
         .publish(
             Publish {
                 channel: channel.into(),
+                device_id: session.device_id.clone(),
             },
             publish.payload(),
         )
@@ -78,6 +81,7 @@ pub async fn publish_v3(
         .publish(
             Publish {
                 channel: channel.into(),
+                device_id: session.device_id.clone(),
             },
             publish.payload(),
         )

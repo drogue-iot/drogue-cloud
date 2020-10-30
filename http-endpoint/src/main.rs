@@ -19,10 +19,10 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[post("/publish/{channel}")]
+#[post("/publish/{device_id}/{channel}")]
 async fn publish(
     endpoint: web::Data<DownstreamSender>,
-    web::Path(channel): web::Path<String>,
+    web::Path((device_id, channel)): web::Path<(String, String)>,
     mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Published to '{}'", channel);
@@ -33,7 +33,10 @@ async fn publish(
     }
     let bytes = bytes.freeze();
 
-    match endpoint.publish(Publish { channel }, bytes).await {
+    match endpoint
+        .publish(Publish { channel, device_id }, bytes)
+        .await
+    {
         // ok, and accepted
         Ok(PublishResponse {
             outcome: Outcome::Accepted,
@@ -69,7 +72,16 @@ async fn telemetry(
     }
     let bytes = bytes.freeze();
 
-    match endpoint.publish(Publish { channel: tenant }, bytes).await {
+    match endpoint
+        .publish(
+            Publish {
+                channel: tenant,
+                device_id: device,
+            },
+            bytes,
+        )
+        .await
+    {
         // ok, and accepted
         Ok(PublishResponse {
             outcome: Outcome::Accepted,

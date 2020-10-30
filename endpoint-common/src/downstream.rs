@@ -7,6 +7,7 @@ use serde_json::Value;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
+    pub device_id: String,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -43,6 +44,7 @@ impl DownstreamSender {
         let event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
+            .extension("device_id", publish.device_id)
             .subject(&publish.channel)
             .ty("io.drogue.iot.message");
 

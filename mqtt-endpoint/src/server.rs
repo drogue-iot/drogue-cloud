@@ -19,11 +19,12 @@ use crate::mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, pu
 #[derive(Clone)]
 pub struct Session {
     pub sender: DownstreamSender,
+    pub device_id: String,
 }
 
 impl Session {
-    pub fn new(sender: DownstreamSender) -> Self {
-        Session { sender }
+    pub fn new(sender: DownstreamSender, device_id: String) -> Self {
+        Session { sender, device_id }
     }
 }
 

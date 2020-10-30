@@ -217,7 +217,7 @@ automatically reload.
 From the command line run (and be sure to replace the URL with your own):
 
 ----
-http POST https://http-endpoint-drogue-iot.apps.my.cluster/publish/foo temp:=2.5
+http POST https://http-endpoint-drogue-iot.apps.my.cluster/publish/device_id/foo temp:=2.5
 ----
 
 ==== Verify

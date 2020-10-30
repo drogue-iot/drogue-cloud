@@ -79,5 +79,5 @@ echo "  password: admin123456"
 echo "Search for the 'Knative test' dashboard"
 echo ""
 echo "At a shell prompt, try these commands:"
-echo "  http POST $(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')/publish/foo temp:=44"
+echo "  http POST $(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')/publish/device_id/foo temp:=44"
 minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print "  mqtt pub -v -h " $4 ".nip.io -p " $5 " -s --cafile tls.crt -t temp -m '\''{\"temp\":42}'\'' -V 3"}'

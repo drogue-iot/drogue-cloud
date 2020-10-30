@@ -25,8 +25,23 @@ pub struct Entry(pub Event);
 impl TableRenderer for Entry {
     fn render(&self, col: ColumnIndex) -> Html {
         match col.index {
+            // timestamp
             0 => render_timestamp(&self.0),
-            1 => render_data_short(&self.0),
+            // device id
+            1 => self
+                .0
+                .get_extension("device_id")
+                .map(|s| match s {
+                    ExtensionValue::String(s) => s.clone(),
+                    ExtensionValue::Integer(i) => i.to_string(),
+                    ExtensionValue::Boolean(true) => "true".into(),
+                    ExtensionValue::Boolean(false) => "false".into(),
+                })
+                .unwrap_or_default()
+                .into(),
+            // payload
+            2 => render_data_short(&self.0),
+            // ignore
             _ => html! {},
         }
     }
@@ -108,6 +123,7 @@ impl Component for Spy {
                         header={html_nested!{
                             <TableHeader>
                                 <TableColumn label="Timestamp"/>
+                                <TableColumn label="Device ID"/>
                                 <TableColumn label="Payload"/>
                             </TableHeader>
                         }}
@@ -139,6 +155,7 @@ fn extract_event(msg: &JsValue) -> Msg {
 
 impl Spy {}
 
+use cloudevents::event::ExtensionValue;
 use unicode_segmentation::UnicodeSegmentation;
 
 fn render_data(event: &Event) -> Html {
