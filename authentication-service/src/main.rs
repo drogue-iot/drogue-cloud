@@ -90,6 +90,7 @@ async fn authenticate(
     }
 }
 
+//TODO : add a claim for tenant id.
 fn get_jwt_token(dev_id: &str, pem_data:  &[u8], expiration: u64) -> Result<String, Error> {
 
     let alg = Algorithm::new_ecdsa_pem_signer(AlgorithmID::ES256, pem_data)?;

@@ -85,7 +85,7 @@ async fn telemetry(
     mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!(
-        "Sending telemetry for an unauthenticated device '{}' belonging to tenant '{}'",
+        "Sending telemetry for device '{}' belonging to tenant '{}'",
         device,
         tenant
     );
