@@ -1,13 +1,22 @@
+mod auth;
 mod error;
 mod ttn;
 
 use actix_web::{get, middleware, post, put, web, App, HttpResponse, HttpServer, Responder};
+
 use drogue_cloud_endpoint_common::downstream::{
     DownstreamSender, Outcome, Publish, PublishResponse,
 };
-use futures::StreamExt;
 use serde::Deserialize;
 use serde_json::json;
+
+use actix_web_httpauth::middleware::HttpAuthentication;
+use dotenv::dotenv;
+
+use futures::StreamExt;
+use log;
+
+use self::auth::validator;
 
 const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 
@@ -118,7 +127,7 @@ async fn telemetry(
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-
+    dotenv().ok();
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new()?;
@@ -127,7 +136,9 @@ async fn main() -> anyhow::Result<()> {
     let addr = addr.as_deref();
 
     HttpServer::new(move || {
+        let auth = HttpAuthentication::bearer(validator);
         App::new()
+            .wrap(auth)
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(GLOBAL_MAX_JSON_PAYLOAD_SIZE))
             .data(sender.clone())

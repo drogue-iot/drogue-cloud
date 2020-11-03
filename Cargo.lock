@@ -442,6 +442,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-web-httpauth"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "536a75d767c5c2b3e64d3f569621f38ed7609359a0c82d149c88290a6ba41b22"
+dependencies = [
+ "actix-service",
+ "actix-web",
+ "base64 0.12.3",
+ "bytes",
+ "futures-util",
+]
+
+[[package]]
 name = "actix_derive"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1680,10 +1693,12 @@ dependencies = [
  "actix-rt",
  "actix-service",
  "actix-web",
+ "actix-web-httpauth",
  "anyhow",
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
+ "dotenv",
  "drogue-cloud-endpoint-common",
  "drogue-ttn",
  "env_logger",
