@@ -4,6 +4,8 @@ use actix_web::{get, web, HttpResponse, HttpServer, App};
 use serde::Deserialize;
 use serde_json::json;
 
+use dotenv::dotenv;
+
 use jsonwebtokens as jwt;
 use jwt::{Algorithm, AlgorithmID, encode};
 use jwt::error::Error;
@@ -28,6 +30,7 @@ struct Credentials {
     password: String,
 }
 
+#[derive(Debug)]
 enum AuthenticationResult{
     Success,
     NotFound,
@@ -75,9 +78,8 @@ async fn authenticate(
         AuthenticationResult::Success => {
             let token = get_jwt_token(&credentials.device_id, &data.token_signing_private_key, data.token_expiration_seconds);
             match token {
-                Ok(token) => Ok(HttpResponse::Ok().body(format!("token :{}", token))),
+                Ok(token) => Ok(HttpResponse::Ok().body(format!("token: {}", token))),
                 Err(e) => { 
-                    println!("{:?}", e);
                     Ok(HttpResponse::InternalServerError().content_type("text/plain").body("error encoding the JWT"))
                 }
             }
@@ -94,7 +96,7 @@ fn get_jwt_token(dev_id: &str, pem_data:  &[u8], expiration: u64) -> Result<Stri
     let header = json!({ "alg": alg.name() });
     let claims = json!({ 
                     "deviceId":  dev_id,
-                    "valid_until": get_future_timestamp(expiration)
+                    "exp": get_future_timestamp(expiration)
                 });
 
     encode(&header, &claims, &alg)
@@ -148,6 +150,7 @@ const DEFAULT_TOKEN_EXPIRATION: &str = "300";
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+    dotenv().ok();
 
     let pool = establish_connection();
     let jwt_expiration = std::env::var(TOKEN_EXPIRATION_SECONDS_ENV_VAR).unwrap_or(DEFAULT_TOKEN_EXPIRATION.to_string());
@@ -164,7 +167,7 @@ async fn main() -> std::io::Result<()> {
             .service(authenticate)
             .data(data.clone())
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:8081")?
     .run()
     .await
 

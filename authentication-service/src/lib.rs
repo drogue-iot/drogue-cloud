@@ -7,7 +7,6 @@ use diesel::prelude::*;
 use diesel::r2d2::{Pool, ConnectionManager, PooledConnection};
 use diesel::pg::PgConnection;
 
-use dotenv::dotenv;
 
 use crate::models::Credential;
 use crate::schema::credentials::dsl::*;
@@ -18,7 +17,6 @@ pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
 
 pub fn establish_connection() -> PgPool {
-    dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
