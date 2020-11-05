@@ -1,16 +1,22 @@
 use patternfly_yew::*;
 use yew::prelude::*;
 
-use cloudevents::{event::Data, AttributesReader, Event};
+use cloudevents::{
+    event::{Data, ExtensionValue},
+    AttributesReader, Event,
+};
+
+use unicode_segmentation::UnicodeSegmentation;
+
 use wasm_bindgen::{closure::Closure, JsValue};
 use web_sys::{EventSource, EventSourceInit};
+
+use crate::Backend;
 
 pub struct Spy {
     source: EventSource,
     events: SharedTableModel<Entry>,
 }
-
-use crate::Backend;
 
 pub enum Msg {
     Event(Event),
@@ -91,44 +97,41 @@ impl Component for Spy {
     }
 
     fn view(&self) -> Html {
-        let columns = vec![
-            html_nested! {<TableColumn label="Timestamp (UTC)"/>},
-            html_nested! {<TableColumn label="Payload"/>},
-        ];
-
-        log::info!("Columns: {:?}", columns);
-
         return html! {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
-                        <h1>{"Device Message Spy"}
-                            <Popover
-                                toggle_by_onclick=true
-                                target=html!{<Button variant=Variant::Plain icon=Icon::Help align=Align::End></Button>}
-                                header=html!{<Title size=Size::Medium>{"Data acquisition"}</Title>}
-                                >
-                                <div>
-                                    { "The" } <em> {" message spy "} </em> { "will show the messages received by a system
-                                    at the time of watching. Only new messages will be displayed." }
-                                </div>
-                            </Popover>
-                        </h1>
+                        <h1>{"Device Message Spy"}</h1>
                     </Content>
                 </PageSection>
                 <PageSection>
-                    <Table<SharedTableModel<Entry>>
-                        entries=self.events.clone()
-                        mode=TableMode::CompactExpandable
-                        header={html_nested!{
-                            <TableHeader>
-                                <TableColumn label="Timestamp"/>
-                                <TableColumn label="Device ID"/>
-                                <TableColumn label="Payload"/>
-                            </TableHeader>
-                        }}
-                        >
-                    </Table<SharedTableModel<Entry>>>
+                    { if self.events.len() > 0 {
+                        html!{
+                            <Table<SharedTableModel<Entry>>
+                                entries=self.events.clone()
+                                mode=TableMode::CompactExpandable
+                                header={html_nested!{
+                                    <TableHeader>
+                                        <TableColumn label="Timestamp (UTC)"/>
+                                        <TableColumn label="Device ID"/>
+                                        <TableColumn label="Payload"/>
+                                    </TableHeader>
+                                }}
+                                >
+                            </Table<SharedTableModel<Entry>>>
+                        }
+                    } else {
+                        html!{
+                            <EmptyState
+                                title="No new messages"
+                                icon=Icon::Pending
+                                size=Size::XLarge
+                                >
+                                { "The " } <q> {"message spy"} </q> { " will only show "} <strong> {"new"} </strong> {" messages received by the system.
+                                When the next message arrives, you will see it right here." }
+                            </EmptyState>
+                        }
+                    }}
                 </PageSection>
             </>
         };
@@ -140,7 +143,7 @@ impl Component for Spy {
 }
 
 fn extract_event(msg: &JsValue) -> Msg {
-    web_sys::console::debug_2(&JsValue::from("event: "), msg);
+    // web_sys::console::debug_2(&JsValue::from("event: "), msg);
 
     let data: String = js_sys::Reflect::get(msg, &JsValue::from("data"))
         .unwrap()
@@ -152,11 +155,6 @@ fn extract_event(msg: &JsValue) -> Msg {
         Err(e) => Msg::Error(e.to_string()),
     }
 }
-
-impl Spy {}
-
-use cloudevents::event::ExtensionValue;
-use unicode_segmentation::UnicodeSegmentation;
 
 fn render_data(event: &Event) -> Html {
     // let data: Option<Data> = event.get_data();
@@ -191,16 +189,23 @@ fn truncate_str(len: usize, string: String) -> String {
 }
 
 fn render_data_short(event: &Event) -> Html {
-    let str = match event.get_data() {
-        None => None,
-        Some(Data::String(text)) => Some(truncate_str(100, text)),
-        Some(Data::Binary(blob)) => Some(render_blob(&blob)),
-        Some(Data::Json(value)) => Some(truncate_str(100, value.to_string())),
-    };
-
-    match str {
-        Some(str) => html! { <pre>{str}</pre> },
+    match event.get_data() {
         None => html! {},
+        Some(Data::String(text)) => html! {
+            <pre>
+                <Label label="String" color=Color::Purple/>{" "}{truncate_str(100, text)}
+            </pre>
+        },
+        Some(Data::Binary(blob)) => html! {
+            <pre>
+                <Label label="BLOB" color=Color::Blue/>{" "}{render_blob(&blob)}
+            </pre>
+        },
+        Some(Data::Json(value)) => html! {
+            <pre>
+                <Label label="JSON" color=Color::Cyan/>{" "}{truncate_str(100, value.to_string())}
+            </pre>
+        },
     }
 }
 
