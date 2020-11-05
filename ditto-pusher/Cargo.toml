@@ -1,5 +1,5 @@
 [package]
-name = "http-endpoint"
+name = "ditto-pusher"
 version = "0.1.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
@@ -8,22 +8,30 @@ license = "Apache-2.0"
 [dependencies]
 
 anyhow = "1"
-snafu = "0.6"
 
-actix-rt = "1.1"
+awc = "2"
+
+actix = "0.10"
+actix-codec = "0.3"
+actix-files = "0.3"
+actix-http = "1"
+actix-rt = "1"
 actix-service = "1"
 actix-web = "3"
+actix-web-actors = "3"
 
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
 
 reqwest = "0.10"
+http = "0.2"
+#headers = "0.3"
+
+chrono = "0.4"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-uuid = { version = "0.8", features = ["v4"] }
 
 env_logger = "0.7"
 log = "0.4"
@@ -33,6 +41,3 @@ cloudevents-sdk-actix-web = "0.3"
 cloudevents-sdk-reqwest = "0.3"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
-drogue-ttn = "0.1.1"
-
-

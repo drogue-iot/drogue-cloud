@@ -105,6 +105,7 @@ webpack-build:
 build-images:
 	docker build . -f http-endpoint/Dockerfile -t http-endpoint:latest
 	docker build . -f mqtt-endpoint/Dockerfile -t mqtt-endpoint:latest
+	docker build . -f ditto-pusher/Dockerfile -t ditto-pusher:latest
 	docker build . -f influxdb-pusher/Dockerfile -t influxdb-pusher:latest
 	docker build . -f console-backend/Dockerfile -t console-backend:latest
 	docker build . -f console-frontend/Dockerfile -t console-frontend:latest
@@ -116,6 +117,7 @@ build-images:
 tag-images: require-container-registry
 	docker tag http-endpoint:latest $(CONTAINER_REGISTRY)/http-endpoint:latest
 	docker tag mqtt-endpoint:latest $(CONTAINER_REGISTRY)/mqtt-endpoint:latest
+	docker tag ditto-pusher:latest $(CONTAINER_REGISTRY)/ditto-pusher:latest
 	docker tag influxdb-pusher:latest $(CONTAINER_REGISTRY)/influxdb-pusher:latest
 	docker tag console-backend:latest $(CONTAINER_REGISTRY)/console-backend:latest
 	docker tag console-frontend:latest $(CONTAINER_REGISTRY)/console-frontend:latest
@@ -127,6 +129,7 @@ tag-images: require-container-registry
 push-images: require-container-registry
 	docker push $(CONTAINER_REGISTRY)/http-endpoint:latest
 	docker push $(CONTAINER_REGISTRY)/mqtt-endpoint:latest
+	docker push $(CONTAINER_REGISTRY)/ditto-pusher:latest
 	docker push $(CONTAINER_REGISTRY)/influxdb-pusher:latest
 	docker push $(CONTAINER_REGISTRY)/console-backend:latest
 	docker push $(CONTAINER_REGISTRY)/console-frontend:latest

@@ -1,12 +1,10 @@
 use actix_web::{middleware, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use chrono::{DateTime, Utc};
-use cloudevents_sdk_actix_web::RequestExt;
-use influxdb::Client;
-use influxdb::Timestamp;
-use log;
-
 use cloudevents::event::Data;
+use cloudevents_sdk_actix_web::HttpRequestExt;
 use influxdb::InfluxDbWriteable;
+use influxdb::{Client, Timestamp};
+use log;
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -22,11 +20,11 @@ async fn forward(
     payload: web::Payload,
     client: web::Data<Client>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let request_event = req.into_event(payload).await?;
+    let request_event = req.to_event(payload).await?;
 
     log::info!("Received Event: {:?}", request_event);
 
-    let data: Option<Data> = request_event.get_data();
+    let data: Option<&Data> = request_event.data();
 
     let temp = match data {
         Some(Data::Json(value)) => value["temp"].as_f64(),
