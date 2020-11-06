@@ -36,7 +36,7 @@ impl TableRenderer for Entry {
             // device id
             1 => self
                 .0
-                .get_extension("device_id")
+                .extension("device_id")
                 .map(|s| match s {
                     ExtensionValue::String(s) => s.clone(),
                     ExtensionValue::Integer(i) => i.to_string(),
@@ -159,10 +159,10 @@ fn extract_event(msg: &JsValue) -> Msg {
 fn render_data(event: &Event) -> Html {
     // let data: Option<Data> = event.get_data();
 
-    match event.get_data() {
+    match event.data() {
         None => html! {},
         Some(Data::String(text)) => html! { <pre> {text} </pre> },
-        Some(Data::Binary(blob)) => html! { <pre> {blob} </pre> },
+        Some(Data::Binary(blob)) => html! { <pre> { format!("{:02x?}", blob) } </pre> },
         Some(Data::Json(value)) => {
             let value = serde_json::to_string_pretty(&value).unwrap();
             return html! { <pre> {value} </pre> };
@@ -176,7 +176,7 @@ fn render_blob(blob: &[u8]) -> String {
     format!("[{}; {:02x?}{}]", blob.len(), &blob[0..max], ellipsis)
 }
 
-fn truncate_str(len: usize, string: String) -> String {
+fn truncate_str(len: usize, string: &String) -> String {
     let mut r = String::new();
     for c in string.graphemes(true) {
         if r.len() > len || r.contains('\n') || r.contains('\r') {
@@ -189,7 +189,7 @@ fn truncate_str(len: usize, string: String) -> String {
 }
 
 fn render_data_short(event: &Event) -> Html {
-    match event.get_data() {
+    match event.data() {
         None => html! {},
         Some(Data::String(text)) => html! {
             <pre>
@@ -203,7 +203,7 @@ fn render_data_short(event: &Event) -> Html {
         },
         Some(Data::Json(value)) => html! {
             <pre>
-                <Label label="JSON" color=Color::Cyan/>{" "}{truncate_str(100, value.to_string())}
+                <Label label="JSON" color=Color::Cyan/>{" "}{truncate_str(100, &value.to_string())}
             </pre>
         },
     }
@@ -211,7 +211,7 @@ fn render_data_short(event: &Event) -> Html {
 
 fn render_timestamp(event: &Event) -> Html {
     event
-        .get_time()
+        .time()
         .map(|ts| {
             return html! {
                 <span>

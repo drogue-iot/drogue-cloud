@@ -13,7 +13,7 @@ use awc::{
 use cloudevents::event::Data;
 use cloudevents_sdk_actix_web::HttpRequestExt;
 use futures::stream::SplitSink;
-use futures::{FutureExt, StreamExt, TryFutureExt};
+use futures::StreamExt;
 use http::StatusCode;
 use log;
 use serde_json::{json, Value};

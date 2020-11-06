@@ -27,7 +27,7 @@ once_cell = "1"
 chrono = { version = "0.4", features = ["wasmbind"] }
 chrono-tz = "0.5"
 
-cloudevents-sdk = "0.2.0"
+cloudevents-sdk = "0.3"
 
 log = "0.4"
 wasm-logger = "0.2"
@@ -36,6 +36,5 @@ headers = "0.3"
 
 serde = "1"
 serde_json = "1"
-
 
 unicode-segmentation = "1"

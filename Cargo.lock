@@ -805,25 +805,6 @@ dependencies = [
 
 [[package]]
 name = "cloudevents-sdk"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c814591b300c224c5705c7579a4c80d68aa3472c0d9f0da8c20a74ce40b4bed"
-dependencies = [
- "base64 0.12.3",
- "chrono",
- "delegate",
- "hostname",
- "serde",
- "serde-value 0.6.0",
- "serde_json",
- "snafu",
- "url",
- "uuid",
- "web-sys",
-]
-
-[[package]]
-name = "cloudevents-sdk"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "def892ec210149befc5c0665267042c7a4c8a560c04b17a0652e6f1506e25328"
@@ -851,19 +832,19 @@ dependencies = [
  "actix-web",
  "async-trait",
  "bytes",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "futures",
  "lazy_static",
 ]
 
 [[package]]
 name = "cloudevents-sdk-rdkafka"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d84a2a1f07370760f4fd6128acbb0c9d9d4dbe627de3ccc321153b709d9c4908"
+checksum = "447261f3fc10d26a72ca99b771a131d6d440b70dc57f6c37295528ed91815972"
 dependencies = [
  "bytes",
- "cloudevents-sdk 0.2.0",
+ "cloudevents-sdk",
  "lazy_static",
  "rdkafka",
 ]
@@ -876,9 +857,18 @@ checksum = "da53165fffcc2054d0b320046d561555d9597dd42fd1a6ec37d0eed84b828665"
 dependencies = [
  "async-trait",
  "bytes",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "lazy_static",
  "reqwest",
+]
+
+[[package]]
+name = "cmake"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -892,7 +882,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "chrono-tz",
- "cloudevents-sdk 0.2.0",
+ "cloudevents-sdk",
  "cloudevents-sdk-rdkafka",
  "console-common",
  "env_logger",
@@ -924,7 +914,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "chrono-tz",
- "cloudevents-sdk 0.2.0",
+ "cloudevents-sdk",
  "console-common",
  "headers",
  "js-sys",
@@ -1033,17 +1023,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "delegate"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12e531288b600a8bea48baff926d2f16a3f68fda1cd2d59240279907ba727332"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "delegate-attr"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1135,7 +1114,7 @@ dependencies = [
  "anyhow",
  "awc",
  "chrono",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "drogue-cloud-endpoint-common",
@@ -1161,7 +1140,7 @@ name = "drogue-cloud-endpoint-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "env_logger",
@@ -1194,6 +1173,18 @@ name = "dtoa"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
+
+[[package]]
+name = "duct"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f90a9c3a25aafbd538c7d40a53f83c4487ee8216c12d1c8ef2c01eb2f6ea1553"
+dependencies = [
+ "libc",
+ "once_cell",
+ "os_pipe",
+ "shared_child",
+]
 
 [[package]]
 name = "either"
@@ -1626,7 +1617,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "anyhow",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "drogue-cloud-endpoint-common",
@@ -1764,7 +1755,7 @@ dependencies = [
  "actix-web",
  "anyhow",
  "chrono",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "env_logger",
@@ -2096,7 +2087,7 @@ name = "mqtt-endpoint"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cloudevents-sdk 0.3.0",
+ "cloudevents-sdk",
  "cloudevents-sdk-reqwest",
  "drogue-cloud-endpoint-common",
  "env_logger",
@@ -2365,9 +2356,9 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
-version = "0.4.3"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca565a7df06f3d4b485494f25ba05da1435950f4dc263440eda7a6fa9b8e36e4"
+checksum = "226b45a5c2ac4dd696ed30fa6b94b057ad909c7b7fc2e0d0808192bced894066"
 dependencies = [
  "derivative",
  "num_enum_derive",
@@ -2375,9 +2366,9 @@ dependencies = [
 
 [[package]]
 name = "num_enum_derive"
-version = "0.4.3"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffa5a33ddddfee04c0283a7653987d634e880347e96b5b2ed64de07efb59db9d"
+checksum = "1c0fd9eba1d5db0994a239e09c1be402d35622277e35468ba891aa5e3188ce7e"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -2476,6 +2467,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fe9037165d7023b1228bc4ae9a2fa1a2b0095eca6c2998c624723dfd01314a5"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "os_pipe"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb233f06c2307e1f5ce2ecad9f8121cffbbee2c95428f44ea85222e460d0d213"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2710,9 +2711,9 @@ dependencies = [
 
 [[package]]
 name = "rdkafka"
-version = "0.23.1"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d455ac2a07a27d87b4f0e321dfd8d9a5b574bd96f55e42e6c594712a08051222"
+checksum = "db594dc221933be6f2ad804b997b48a57a63436c26ab924222c28e9a36ad210a"
 dependencies = [
  "futures",
  "libc",
@@ -2721,19 +2722,22 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
 name = "rdkafka-sys"
-version = "1.3.1"
+version = "2.1.0+1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d770343fbbc6089c750000711a17a906e8b3f7831afcd752d9667d38833e578"
+checksum = "6d3f17044cba41c7309facedc72ca9bf25f177bf1e06756318e010f043713017"
 dependencies = [
+ "cmake",
  "libc",
  "libz-sys",
  "num_enum",
  "openssl-sys",
  "pkg-config",
+ "sasl2-sys",
 ]
 
 [[package]]
@@ -2891,6 +2895,18 @@ name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
+
+[[package]]
+name = "sasl2-sys"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b82548e259466e09971e8b1d1adfffba6005c83a2ca2aca5b5d00a61f6b8058"
+dependencies = [
+ "cc",
+ "duct",
+ "libc",
+ "pkg-config",
+]
 
 [[package]]
 name = "schannel"
@@ -3074,6 +3090,16 @@ name = "sha1"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2579985fda508104f7587689507983eadd6a6e84dd35d6d115361f530916fa0d"
+
+[[package]]
+name = "shared_child"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8cebcf3a403e4deafaf34dc882c4a1b6a648b43e5670aa2e4bb985914eaeb2d2"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
 
 [[package]]
 name = "signal-hook-registry"
