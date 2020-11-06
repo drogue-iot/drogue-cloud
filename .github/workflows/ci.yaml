@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: console-frontend
+          path: console-frontend/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
