@@ -1,7 +1,6 @@
-use actix_web::error::PayloadError;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
-use drogue_cloud_endpoint_common::error::{EndpointError, ErrorResponse};
+use drogue_cloud_endpoint_common::error::ErrorResponse;
 use std::fmt::Formatter;
 
 #[derive(Debug)]

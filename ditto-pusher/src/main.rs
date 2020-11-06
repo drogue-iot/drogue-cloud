@@ -1,7 +1,7 @@
 mod error;
 
 use crate::error::PusherError;
-use actix::{io::SinkWrite, Actor, Addr, AsyncContext, Context, Handler};
+use actix::{io::SinkWrite, Actor, ActorContext, Addr, AsyncContext, Context, Handler};
 use actix_codec::Framed;
 use actix_web::web::Bytes;
 use actix_web::{middleware, post, web, App, HttpRequest, HttpResponse, HttpServer};
@@ -10,25 +10,16 @@ use awc::{
     ws::{Codec, Message},
     BoxedSocket, Client,
 };
-use chrono::{DateTime, Utc};
 use cloudevents::event::Data;
 use cloudevents_sdk_actix_web::HttpRequestExt;
-use drogue_cloud_endpoint_common::error::EndpointError;
 use futures::stream::SplitSink;
 use futures::StreamExt;
 use http::StatusCode;
 use log;
-use serde::Deserialize;
 use serde_json::{json, Value};
 use std::time::Duration;
 
 const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
-
-#[derive(Debug, PartialEq, Deserialize)]
-struct TemperatureReading {
-    time: DateTime<Utc>,
-    temperature: f64,
-}
 
 #[post("/")]
 async fn forward(
@@ -74,10 +65,16 @@ async fn forward(
         message: err.to_string(),
     })?;
 
-    Ok(match ditto.send(DittoCommand(data.to_string())).await {
-        Ok(_) => HttpResponse::Accepted().body("Payload accepted"),
-        Err(err) => HttpResponse::NotAcceptable()
-            .json(json!({"error": "Failed to publish", "reason": err.to_string()})),
+    Ok(match ditto.send(DittoUpdate(data.to_string())).await {
+        Ok(_) => {
+            log::info!("Payload accepted");
+            HttpResponse::Accepted().body("Payload accepted")
+        }
+        Err(err) => {
+            log::info!("Failed to handle data: {}", err);
+            HttpResponse::NotAcceptable()
+                .json(json!({"error": "Failed to publish", "reason": err.to_string()}))
+        }
     })
 }
 
@@ -94,11 +91,12 @@ impl DittoConfiguration {
             .basic_auth(&self.username, Some(&self.password))
             .finish();
 
-        let (_, framed) = client
-            .ws(&self.url)
-            .connect()
-            .await
-            .map_err(|err| anyhow::Error::msg(err.to_string()))?;
+        let (response, framed) = client.ws(&self.url).connect().await.map_err(|err| {
+            log::info!("Failed to connect: {}", err);
+            anyhow::Error::msg(err.to_string())
+        })?;
+
+        log::info!("WS connect response: {:?}", response);
 
         let (sink, _) = framed.split();
 
@@ -125,18 +123,13 @@ impl Actor for DittoClient {
 
     fn stopped(&mut self, _: &mut Context<Self>) {
         log::info!("Disconnected");
-
-        // Stop application on disconnect
-        // System::current().stop();
     }
 }
 
 impl DittoClient {
     fn hb(&self, ctx: &mut Context<Self>) {
         ctx.run_later(Duration::new(1, 0), |act, ctx| {
-            act.sink
-                .write(Message::Ping(Bytes::from_static(b"")))
-                .unwrap();
+            act.sink.write(Message::Ping(Bytes::from_static(b"")));
             act.hb(ctx);
 
             // client should also check for a timeout here, similar to the
@@ -147,13 +140,25 @@ impl DittoClient {
 
 #[derive(actix::Message)]
 #[rtype(result = "()")]
-struct DittoCommand(String);
+struct DittoUpdate(String);
 
-impl Handler<DittoCommand> for DittoClient {
+impl Handler<DittoUpdate> for DittoClient {
     type Result = ();
 
-    fn handle(&mut self, msg: DittoCommand, _ctx: &mut Context<Self>) {
-        self.sink.write(Message::Text(msg.0)).unwrap();
+    fn handle(&mut self, msg: DittoUpdate, _ctx: &mut Context<Self>) {
+        self.sink.write(Message::Text(msg.0));
+    }
+}
+
+#[derive(actix::Message)]
+#[rtype(result = "()")]
+struct DittoClose();
+
+impl Handler<DittoClose> for DittoClient {
+    type Result = ();
+
+    fn handle(&mut self, _msg: DittoClose, ctx: &mut Context<Self>) {
+        ctx.stop();
     }
 }
 
