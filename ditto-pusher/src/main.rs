@@ -13,7 +13,7 @@ use awc::{
 use cloudevents::event::Data;
 use cloudevents_sdk_actix_web::HttpRequestExt;
 use futures::stream::SplitSink;
-use futures::StreamExt;
+use futures::{FutureExt, StreamExt, TryFutureExt};
 use http::StatusCode;
 use log;
 use serde_json::{json, Value};
@@ -68,9 +68,11 @@ async fn forward(
     Ok(match ditto.send(DittoUpdate(data.to_string())).await {
         Ok(_) => {
             log::info!("Payload accepted");
+            ditto.send(DittoClose).await.ok();
             HttpResponse::Accepted().body("Payload accepted")
         }
         Err(err) => {
+            ditto.send(DittoClose).await.ok();
             log::info!("Failed to handle data: {}", err);
             HttpResponse::NotAcceptable()
                 .json(json!({"error": "Failed to publish", "reason": err.to_string()}))
@@ -152,7 +154,7 @@ impl Handler<DittoUpdate> for DittoClient {
 
 #[derive(actix::Message)]
 #[rtype(result = "()")]
-struct DittoClose();
+struct DittoClose;
 
 impl Handler<DittoClose> for DittoClient {
     type Result = ();
