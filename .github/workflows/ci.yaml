@@ -84,6 +84,10 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Install dependencies
+        run: |
+          sudo aptitude install libsasl2-dev
+
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
