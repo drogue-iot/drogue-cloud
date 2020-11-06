@@ -44,7 +44,7 @@ fi
 
 # Wait for the HTTP endpoint to become ready
 
-kubectl -n $DROGUE_NS wait --for=condition=Ready ksvc/http-endpoint
+kubectl -n $DROGUE_NS wait --timeout=-1s --for=condition=Ready ksvc/http-endpoint
 
 # Create the Console endpoints
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console
