@@ -9,12 +9,14 @@ use drogue_cloud_endpoint_common::downstream::{
 use drogue_cloud_endpoint_common::error::EndpointError;
 use drogue_ttn::http as ttn;
 
+use crate::PublishOptions;
+
 use log;
 
 #[post("/ttn")]
 pub async fn publish(
     endpoint: web::Data<DownstreamSender>,
-    web::Query(model_id): web::Query<Option<String>>,
+    web::Query(opts): web::Query<PublishOptions>,
     mut body: web::Payload,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let mut bytes = web::BytesMut::new();
@@ -35,7 +37,7 @@ pub async fn publish(
             Publish {
                 channel: uplink.port.to_string(),
                 device_id: uplink.dev_id,
-                model_id,
+                model_id: opts.model_id,
             },
             bytes,
         )

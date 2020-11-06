@@ -6,6 +6,7 @@ use drogue_cloud_endpoint_common::downstream::{
     DownstreamSender, Outcome, Publish, PublishResponse,
 };
 use futures::StreamExt;
+use serde::Deserialize;
 use serde_json::json;
 
 const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
@@ -20,11 +21,16 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
+#[derive(Deserialize)]
+pub struct PublishOptions {
+    model_id: Option<String>,
+}
+
 #[post("/publish/{device_id}/{channel}")]
 async fn publish(
     endpoint: web::Data<DownstreamSender>,
     web::Path((device_id, channel)): web::Path<(String, String)>,
-    web::Query(model_id): web::Query<Option<String>>,
+    web::Query(opts): web::Query<PublishOptions>,
     mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Published to '{}'", channel);
@@ -40,7 +46,7 @@ async fn publish(
             Publish {
                 channel,
                 device_id,
-                model_id,
+                model_id: opts.model_id,
             },
             bytes,
         )
