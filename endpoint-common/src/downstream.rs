@@ -56,7 +56,7 @@ impl DownstreamSender {
         // try decoding as JSON
 
         let event = match serde_json::from_slice::<Value>(body.as_ref()) {
-            Ok(v) => event.data("text/json", Data::Json(v)),
+            Ok(v) => event.data("application/json", Data::Json(v)),
             Err(_) => event.data("application/octet-stream", Vec::from(body.as_ref())),
         };
 
