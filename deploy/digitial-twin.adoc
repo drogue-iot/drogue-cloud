@@ -1,0 +1,117 @@
+:icons: font
+
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+
+:toc:
+:toc-placement!:
+
+= Digital twin
+
+NOTE: All commands are relative to the root of the repository.
+
+'''
+
+toc::[]
+
+== Setup
+
+=== Vorto API token
+
+You will need to head to https://vorto.eclipse.org and register an account. The account will be backed
+by another identity provider (e.g. GitHub). Next you will need to create an access token for this identity.
+
+Assuming you are using GitHub as identity provider, you need to create a GitHub personal access token, with
+the permissions:
+
+* `read:user`
+* `user:email`
+
+Take this token, and create a Kubernetes secret using (be sure to replace `<my-token>`): 
+
+    kubectl create secret generic vorto-api --from-literal=token=<my-token>
+
+=== Install pre-reqs
+
+The digital twin requires a few pre-requisites.
+
+==== MongoDO
+
+A MongoDB instance is required by Ditto for persisting device state information:
+
+    helm repo add bitnami https://charts.bitnami.com/bitnami
+    helm install mongodb bitnami/mongodb --set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false --set auth.rootPassword=admin123456 --set auth.enabled=false
+
+==== Ditto Operator
+
+Install the Ditto operator using Helm:
+
+    helm repo add helm-charts https://ctron.github.io/helm-charts/
+    helm install ditto-operator helm-charts/ditto-operator --version 0.1.7
+
+NOTE: It is also possible to install the Ditto operator using OLM.
+
+=== Deploy
+
+Deploy all components using:
+
+    kubectl apply -f deploy/03-digital-twin
+
+=== Setup model
+
+// TO BE WRITTEN … maybe we can use a public model
+
+== Using
+
+=== Create a device in Ditto
+
+First you need to create a device in Ditto:
+
+    echo "{}" | http PUT https://ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev1
+
+=== Publish data
+
+----
+DEVICE="my:dev1"
+CHANNEL="foo"
+MODEL_ID="vorto.private.ctron:DeviceOne:1.0.0"
+
+http -v POST "https://http-endpoint-drogue-iot.apps.my.cluster/publish/${DEVICE}/${CHANNEL}" "model_id==$MODEL_ID" temp:=1.23
+----
+
+NOTE: You can use the scrip `./hack/publish_loop.sh` to generate a constant stream of simulated temperature readings.
+
+=== Fetch from Ditto
+
+    http "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev1"
+
+This should return the current state, in the normalized Ditto format:
+
+[source,json]
+----
+{
+    "attributes": {
+        "modelDisplayName": "DeviceOne"
+    },
+    "definition": "vorto.private.ctron:DeviceOne:1.0.0",
+    "features": {
+        "blockOne": {
+            "definition": [
+                "vorto.private.ctron:BlockOne:1.0.0"
+            ],
+            "properties": {
+                "status": {
+                    "temperature": 17.552146
+                }
+            }
+        }
+    },
+    "policyId": "my:dev1",
+    "thingId": "my:dev1"
+}
+----

@@ -1,0 +1,20 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: vorto-converter
+  labels:
+    app.kubernetes.io/part-of: digital-twin
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/scaleToZeroPodRetentionPeriod: "5m"
+    spec:
+      containers:
+        - image: ghcr.io/drogue-iot/vorto-converter:latest
+          env:
+            - name: APIKEY_VORTO
+              valueFrom:
+                secretKeyRef:
+                  name: vorto-api
+                  key: token
