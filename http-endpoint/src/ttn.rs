@@ -14,6 +14,7 @@ use log;
 #[post("/ttn")]
 pub async fn publish(
     endpoint: web::Data<DownstreamSender>,
+    web::Query(model_id): web::Query<Option<String>>,
     mut body: web::Payload,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let mut bytes = web::BytesMut::new();
@@ -34,6 +35,7 @@ pub async fn publish(
             Publish {
                 channel: uplink.port.to_string(),
                 device_id: uplink.dev_id,
+                model_id,
             },
             bytes,
         )

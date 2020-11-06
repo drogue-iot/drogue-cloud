@@ -8,6 +8,7 @@ use serde_json::Value;
 pub struct Publish {
     pub channel: String,
     pub device_id: String,
+    pub model_id: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -41,12 +42,16 @@ impl DownstreamSender {
     where
         B: AsRef<[u8]>,
     {
-        let event = EventBuilderV10::new()
+        let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
             .extension("device_id", publish.device_id)
             .subject(&publish.channel)
             .ty("io.drogue.iot.message");
+
+        if let Some(model_id) = publish.model_id {
+            event = event.extension("model_id", model_id);
+        }
 
         // try decoding as JSON
 

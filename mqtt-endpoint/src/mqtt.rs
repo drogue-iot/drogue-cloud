@@ -45,6 +45,7 @@ pub async fn publish_v5(
             Publish {
                 channel: channel.into(),
                 device_id: session.device_id.clone(),
+                model_id: None,
             },
             publish.payload(),
         )
@@ -82,6 +83,7 @@ pub async fn publish_v3(
             Publish {
                 channel: channel.into(),
                 device_id: session.device_id.clone(),
+                model_id: None,
             },
             publish.payload(),
         )
