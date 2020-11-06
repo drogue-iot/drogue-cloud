@@ -52,6 +52,10 @@ if ! kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1; then
   kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
 fi
 
+# Wait for the HTTP endpoint to become ready
+
+kubectl -n $DROGUE_NS wait --for=condition=Ready ksvc/http-endpoint
+
 # Deploy the console
 kubectl -n $DROGUE_NS apply -f $DEPLOY_DIR/06-console
 kubectl -n $DROGUE_NS patch svc console-backend -p "{\"spec\": {\"type\": \"NodePort\"}}"
