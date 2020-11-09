@@ -1,4 +1,5 @@
 use anyhow::Context;
+use chrono::Utc;
 use cloudevents::event::Data;
 use cloudevents::{EventBuilder, EventBuilderV10};
 use serde::{Deserialize, Serialize};
@@ -47,6 +48,7 @@ impl DownstreamSender {
             .source("https://drogue.io/endpoint")
             .extension("device_id", publish.device_id)
             .subject(&publish.channel)
+            .time(Utc::now())
             .ty("io.drogue.iot.message");
 
         if let Some(model_id) = publish.model_id {

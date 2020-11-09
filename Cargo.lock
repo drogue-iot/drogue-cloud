@@ -1140,6 +1140,7 @@ name = "drogue-cloud-endpoint-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
