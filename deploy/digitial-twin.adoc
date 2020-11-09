@@ -21,21 +21,6 @@ toc::[]
 
 == Setup
 
-=== Vorto API token
-
-You will need to head to https://vorto.eclipse.org and register an account. The account will be backed
-by another identity provider (e.g. GitHub). Next you will need to create an access token for this identity.
-
-Assuming you are using GitHub as identity provider, you need to create a GitHub personal access token, with
-the permissions:
-
-* `read:user`
-* `user:email`
-
-Take this token, and create a Kubernetes secret using (be sure to replace `<my-token>`): 
-
-    kubectl create secret generic vorto-api --from-literal=token=<my-token>
-
 === Install pre-reqs
 
 The digital twin requires a few pre-requisites.
@@ -44,8 +29,10 @@ The digital twin requires a few pre-requisites.
 
 A MongoDB instance is required by Ditto for persisting device state information:
 
-    helm repo add bitnami https://charts.bitnami.com/bitnami
-    helm install mongodb bitnami/mongodb --set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false --set auth.rootPassword=admin123456 --set auth.enabled=false
+----
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install mongodb bitnami/mongodb --set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false --set auth.rootPassword=admin123456 --set auth.enabled=false
+----
 
 ==== Ditto Operator
 
@@ -56,39 +43,119 @@ Install the Ditto operator using Helm:
 
 NOTE: It is also possible to install the Ditto operator using OLM.
 
+==== Vorto API token (optional)
+
+NOTE: This step is not required by the default example in this tutorial. However, you might need it, if you want
+to further experiment with Ditto and Vorto.
+
+If you want to use private models or mappings from the Vorto repository, you will need to register an account at
+https://vorto.eclipse.org. The account will be backed  by another identity  provider (e.g. GitHub), and you
+will need to create an access token for this identity, using the chosen identity provider.
+
+Assuming you are using GitHub as identity provider, you need to create a GitHub personal access token, granting
+the following permissions:
+
+* `read:user`
+* `user:email`
+
+With this token create a Kubernetes secret using the following command (be sure to replace `<my-token>`):
+
+----
+kubectl create secret generic vorto-api --from-literal=token=<my-token>
+----
+
 === Deploy
 
 Deploy all components using:
 
-    kubectl apply -f deploy/03-digital-twin
-
-=== Setup model
-
-// TO BE WRITTEN … maybe we can use a public model
+----
+kubectl apply -f deploy/03-digital-twin
+----
 
 == Using
 
 === Create a device in Ditto
 
-First you need to create a device in Ditto:
+First you need to create a device in Ditto. For this we need the description of the device. The description is
+stored in the public Vorto repository (https://vorto.eclipse.org), and the device description can be exported
+using the following command:
 
-    echo "{}" | http PUT https://ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev1
+----
+http -do FirstTestDevice.json https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/io.drogue.demo:FirstTestDevice:1.0.0/?target=thingJson
+----
+
+This will store the device description in the file `FirstTestDevice.json` of your local file system. The content
+should look like:
+
+[source,json]
+----
+{
+  "definition": "io.drogue.demo:FirstTestDevice:1.0.0",
+  "attributes": {
+    "modelDisplayName": "FirstTestDevice"
+  },
+  "features": {
+    "temperature": {
+      "definition": [
+        "org.eclipse.vorto.std.sensor:TemperatureSensor:1.0.0"
+      ],
+      "properties": {
+        "status": {
+          "value": 0
+        }
+      }
+    }
+  }
+}
+----
+
+With this device description, we can create a new device in the Ditto system:
+
+----
+cat FirstTestDevice.json | http PUT "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev3"
+----
+
+As a result, you should receive:
+
+----
+HTTP/1.1 201 Created
+…
+----
+
+If the device already existed in the Ditto system, then it would update the device with the newly provided
+definition and instead return:
+
+----
+HTTP/1.1 204 No Content
+…
+----
 
 === Publish data
 
 ----
+ENDPOINT="https://http-endpoint-drogue-iot.apps.wonderful.iot-playground.org"
 DEVICE="my:dev1"
 CHANNEL="foo"
-MODEL_ID="vorto.private.ctron:DeviceOne:1.0.0"
+MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
 
-http -v POST "https://http-endpoint-drogue-iot.apps.my.cluster/publish/${DEVICE}/${CHANNEL}" "model_id==$MODEL_ID" temp:=1.23
+http -v POST "${ENDPOINT}/publish/${DEVICE}/${CHANNEL}" "model_id==$MODEL_ID" temp:=1.23
 ----
 
-NOTE: You can use the scrip `./hack/publish_loop.sh` to generate a constant stream of simulated temperature readings.
+NOTE: You can use the script `./hack/publish_loop.sh` to generate a constant stream of simulated temperature readings.
 
 === Fetch from Ditto
 
-    http "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev1"
+The simulated temperature readings are now published to the HTTP endpoint. On reception, the data is still directly
+stored in the Kafka stream. Additionally to InfluxDB, it will now be also available in the Ditto instance. You can
+retrieve the current state of the device using the following command:
+
+The published temperature readings that are now published to the HTTP endpoint are still stored in the original
+Kafka stream. Additionally to InfluxDB, they are now processed by a second consumer, which will first translate
+the payload using the Vorto converter, and then forward the normalized payload to the Ditto instance.
+
+----
+http "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev1"
+----
 
 This should return the current state, in the normalized Ditto format:
 
@@ -96,17 +163,17 @@ This should return the current state, in the normalized Ditto format:
 ----
 {
     "attributes": {
-        "modelDisplayName": "DeviceOne"
+        "modelDisplayName": "FirstTestDevice"
     },
-    "definition": "vorto.private.ctron:DeviceOne:1.0.0",
+    "definition": "io.drogue.demo:FirstTestDevice:1.0.0",
     "features": {
-        "blockOne": {
+        "temperature": {
             "definition": [
-                "vorto.private.ctron:BlockOne:1.0.0"
+                "org.eclipse.vorto.std.sensor:TemperatureSensor:1.0.0"
             ],
             "properties": {
                 "status": {
-                    "temperature": 17.552146
+                    "value": 0.052751
                 }
             }
         }
@@ -115,3 +182,7 @@ This should return the current state, in the normalized Ditto format:
     "thingId": "my:dev1"
 }
 ----
+
+== What just
+
+== Additionally

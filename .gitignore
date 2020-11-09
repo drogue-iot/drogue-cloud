@@ -14,3 +14,7 @@ tls_tmp.*
 # Build
 
 .cargo-container-home/
+
+# Example files
+
+FirstTestDevice.json

@@ -11,10 +11,11 @@ spec:
         autoscaling.knative.dev/scaleToZeroPodRetentionPeriod: "5m"
     spec:
       containers:
-        - image: ghcr.io/drogue-iot/vorto-converter:latest
+        - image: ghcr.io/drogue-iot/vorto-converter:0.1.1
           env:
             - name: APIKEY_VORTO
               valueFrom:
                 secretKeyRef:
                   name: vorto-api
                   key: token
+                  optional: true
