@@ -1,9 +1,10 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: vorto-converter
+  name: {{ include "drogue.fullname" . }}-vorto-converter
   labels:
-    app.kubernetes.io/part-of: digital-twin
+    app.kubernetes.io/name: {{ include "drogue.name" . }}-vorto-converter
+{{ include "drogue.labels" . | indent 4 }}
 spec:
   template:
     metadata:
@@ -11,7 +12,7 @@ spec:
         autoscaling.knative.dev/scaleToZeroPodRetentionPeriod: "5m"
     spec:
       containers:
-        - image: ghcr.io/drogue-iot/vorto-converter:0.1.1
+        - image: {{ include "drogue.imageRepository" . }}/vorto-converter:0.1.1
           env:
             - name: APIKEY_VORTO
               valueFrom:

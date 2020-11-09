@@ -69,7 +69,7 @@ kubectl create secret generic vorto-api --from-literal=token=<my-token>
 Deploy all components using:
 
 ----
-kubectl apply -f deploy/03-digital-twin
+helm -n drogue-iot install ditigal-twin ./deploy/helm/digital-twin
 ----
 
 == Using

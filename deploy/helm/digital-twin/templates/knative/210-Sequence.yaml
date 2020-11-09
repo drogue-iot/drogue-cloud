@@ -1,7 +1,10 @@
 apiVersion: flows.knative.dev/v1
 kind: Sequence
 metadata:
-  name: digital-twin
+  name: {{ include "drogue.fullname" . }}-digital-twin
+  labels:
+    app.kubernetes.io/name: {{ include "drogue.name" . }}-digital-twin
+{{ include "drogue.labels" . | indent 4 }}
 spec:
   channelTemplate:
     apiVersion: messaging.knative.dev/v1alpha1
@@ -13,8 +16,8 @@ spec:
     - ref:
         apiVersion: serving.knative.dev/v1
         kind: Service
-        name: vorto-converter
+        name: {{ include "drogue.fullname" . }}-vorto-converter
     - ref:
         kind: Service
         apiVersion: serving.knative.dev/v1
-        name: ditto-pusher
+        name: {{ include "drogue.fullname" . }}-ditto-pusher

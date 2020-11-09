@@ -1,0 +1,34 @@
+apiVersion: v2
+name: digital-twin
+description: |
+  Digital twin feature for Drogue IoT
+version: 0.1.0
+appVersion: 0.1.0
+keywords:
+  - iot-chart
+  - IoT
+  - servlerless
+  - Digital Twin
+home: https://blog.drogue.io/
+sources:
+  - https://github.com/drogue-iot/drogue-cloud
+icon: https://blog.drogue.io/favicon.svg
+dependencies:
+  - name: common
+    version: 0.1
+    repository: file://../common
+  - name: ditto-operator
+    version: 0.1.7
+    repository: https://ctron.github.io/helm-charts
+  - name: mongodb
+    version: 9
+    repository: https://charts.bitnami.com/bitnami
+maintainers:
+  - name: dejanb
+    email: dbosanac@redhat.com
+  - name: ctron
+    email: jreimann@redhat.com
+  - name: jcrossley3
+    email: jcrossle@redhat.com
+  - name: jbtrystram
+    email: jbtrystram@redhat.com

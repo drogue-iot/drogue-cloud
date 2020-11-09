@@ -1,0 +1,11 @@
+kind: Ditto
+apiVersion: iot.eclipse.org/v1alpha1
+metadata:
+  name: {{ include "drogue.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "drogue.name" . }}-ditto
+{{ include "drogue.labels" . | indent 4 }}
+spec:
+  mongoDb:
+    host: {{ include "drogue.fullname" . }}-mongodb
+  enableDummyAuth: true

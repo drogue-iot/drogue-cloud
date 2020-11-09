@@ -1,0 +1,12 @@
+dependencies:
+- name: common
+  repository: file://../common
+  version: 0.1.0
+- name: ditto-operator
+  repository: https://ctron.github.io/helm-charts
+  version: 0.1.7
+- name: mongodb
+  repository: https://charts.bitnami.com/bitnami
+  version: 9.3.1
+digest: sha256:40646e0d9e1ca3f9ba667c8eb2e32972349210f8096287215e076aaab03e8e8a
+generated: "2020-11-09T15:55:51.32994028+01:00"
