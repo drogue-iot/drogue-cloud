@@ -11,7 +11,7 @@ spec:
         bindings.knative.dev/include: "true"
     spec:
       containers:
-        - image: quay.io/drogueiot/http-endpoint:latest
+        - image: {{.Values.images.registry}}/{{.Values.images.org}}/http-endpoint:{{.Values.images.tag}}
 #        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/http-endpoint:latest
           env:
             - name: RUST_LOG

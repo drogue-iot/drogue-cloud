@@ -13,6 +13,12 @@ platform: kubernetes
 # This property will be ignored when deploying to platform "openshift".
 useLoadBalancer: false
 
+
+images:
+  registry: quay.io
+  org: drogueiot
+  tag: latest
+
 sources:
   http:
     enabled: true

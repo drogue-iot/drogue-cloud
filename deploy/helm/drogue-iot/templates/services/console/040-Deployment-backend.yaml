@@ -27,7 +27,7 @@ spec:
       serviceAccount: console-backend
       containers:
         - name: endpoint
-          image: quay.io/ctrontesting/console-backend:latest
+          image: {{.Values.images.registry}}/ctrontesting/console-backend:{{.Values.images.tag}}
           imagePullPolicy: Always
           env:
             - name: RUST_LOG

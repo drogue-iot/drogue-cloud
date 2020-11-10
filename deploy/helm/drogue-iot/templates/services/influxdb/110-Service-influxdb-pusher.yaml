@@ -7,7 +7,7 @@ spec:
   template:
     spec:
       containers:
-        - image: quay.io/drogueiot/influxdb-pusher:latest
+        - image: {{.Values.images.registry}}/{{.Values.images.org}}/influxdb-pusher:{{.Values.images.tag}}
 #        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/influxdb-pusher:latest
           env:
             - name: RUST_LOG
