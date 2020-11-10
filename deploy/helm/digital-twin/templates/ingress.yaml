@@ -1,0 +1,19 @@
+{{ if .Values.ingress }}{{if .Values.ingress.enabled }}
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: {{ include "drogue.fullname" . }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "drogue.fullname" . }}-nginx
+                port:
+                  name: http
+{{ end }}{{ end }}

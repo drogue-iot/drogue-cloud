@@ -18,7 +18,7 @@ dependencies:
     version: 0.1
     repository: file://../common
   - name: ditto-operator
-    version: 0.1.7
+    version: 0.1.8
     repository: https://ctron.github.io/helm-charts
   - name: mongodb
     version: 9

@@ -1,0 +1,35 @@
+
+~~~bash
+ENDPOINT="$(kubectl get ksvc -n {{ .Release.Namespace }} http-endpoint -o jsonpath='{.status.url}')"
+TWIN_API="https://ditto:ditto@$(kubectl -n {{ .Release.Namespace }} get ingress {{ .Release.Name }} -o jsonpath={.status.loadBalancer.ingress[0].ip})"
+DEVICE_ID="my:dev1"
+CHANNEL="foo"
+MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
+~~~
+
+~~~fish
+set ENDPOINT (kubectl get ksvc -n {{ .Release.Namespace }} http-endpoint -o jsonpath='{.status.url}')
+set TWIN_API http://ditto:ditto@(kubectl -n {{ .Release.Namespace }} get ingress {{ .Release.Name }} -o jsonpath={.status.loadBalancer.ingress[0].ip})
+set DEVICE_ID "my:dev1"
+set CHANNEL "foo"
+set MODEL_ID "io.drogue.demo:FirstTestDevice:1.0.0"
+~~~
+
+You can now fetch the device description, and create a new device with it:
+
+~~~
+http -do FirstTestDevice.json https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/$MODEL_ID/?target=thingJson
+cat FirstTestDevice.json | http PUT "$TWIN_API/api/2/things/$DEVICE_ID"
+~~~
+
+Then you can start publishing as this device:
+
+~~~
+http -v POST "$ENDPOINT/publish/$DEVICE_ID/$CHANNEL" "model_id==$MODEL_ID" temp:=1.23
+~~~
+
+And then, check the device state:
+
+~~~
+http "$TWIN_API/api/2/things/my:dev1"
+~~~

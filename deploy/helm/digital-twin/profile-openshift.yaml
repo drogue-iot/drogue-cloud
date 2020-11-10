@@ -1,0 +1,18 @@
+#
+# Profile for deploying on OpenShift
+#
+
+routes:
+  enabled: true
+
+ingress:
+  enabled: false
+
+loadBalancer:
+  enabled: false
+
+mongodb:
+  podSecurityContext:
+    enabled: false
+  containerSecurityContext:
+    enabled: false

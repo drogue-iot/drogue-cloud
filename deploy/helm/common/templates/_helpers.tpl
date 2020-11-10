@@ -1,17 +1,6 @@
 {{/* vim: set filetype=mustache: */}}
 
 {{/*
-Default security context value
-*/}}
-{{- define "defaultSecurityContext" -}}
-{{- if eq .Values.platform "kubernetes" -}}
-true
-{{- else -}}
-false
-{{- end -}}
-{{- end -}}
-
-{{/*
 Expand the name of the chart.
 */}}
 {{- define "drogue.name" -}}

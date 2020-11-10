@@ -1,14 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "properties": {
-    "platform": {
-      "description": "Kubernetes platform to deploy to",
-      "type": "string",
-      "enum": ["kubernetes", "openshift"]
-    },
-
     "image": {
-      "type": [ "null", "object" ],
+      "type": [
+        "null",
+        "object"
+      ],
       "properties": {
         "repository": {
           "type": "string",
@@ -17,13 +14,44 @@
         }
       }
     },
-
     "knativeChannel": {
       "type": "string",
       "description": "The name of the device payload ingress Knative channel",
       "default": "iot-channel"
+    },
+    "knativeEventingNamespace": {
+      "type": "string",
+      "description": "The namespace of the Knative eventing installation",
+      "default": "knative-eventing"
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "loadBalancer": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "routes": {
+      "type": "object",
+      "description": "Settings for OpenShift routes",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
     }
   },
-
-  "required": ["platform", "knativeChannel"]
+  "required": [
+    "knativeChannel",
+    "knativeEventingNamespace"
+  ]
 }

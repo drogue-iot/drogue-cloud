@@ -8,7 +8,7 @@ metadata:
 spec:
   consumerGroup: digital-twin
   bootstrapServers:
-    - kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092
+    - kafka-eventing-kafka-bootstrap.{{ .Values.knativeEventingNamespace }}.svc:9092
   topics:
     - knative-messaging-kafka.{{ .Release.Namespace }}.{{ .Values.knativeChannel }}
   sink:

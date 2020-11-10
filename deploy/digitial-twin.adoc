@@ -69,8 +69,20 @@ kubectl create secret generic vorto-api --from-literal=token=<my-token>
 Deploy all components using:
 
 ----
-helm -n drogue-iot install ditigal-twin ./deploy/helm/digital-twin
+# plain Kubernetes
+helm -n drogue-iot install --dependency-update --wait --timeout 15m digital-twin deploy/helm/digital-twin
+
+# OpenShift, with routes
+helm -n drogue-iot install --file deploy/helm/digital-twin/profile-openshift.yaml --dependency-update --wait --timeout 15m digital-twin deploy/helm/digital-twin
 ----
+
+[TIP]
+.Environment variables
+====
+When the `helm` command succeeds, it will print out a set of shell statements, which set some environment
+variables with their expected values. These variables will be used later on in this tutorial, so you can simply
+execute these statements and don't need to set the environment variables manually later on.
+====
 
 == Using
 
@@ -81,7 +93,9 @@ stored in the public Vorto repository (https://vorto.eclipse.org), and the devic
 using the following command:
 
 ----
-http -do FirstTestDevice.json https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/io.drogue.demo:FirstTestDevice:1.0.0/?target=thingJson
+MODEL_ID=io.drogue.demo:FirstTestDevice:1.0.0
+
+http -do FirstTestDevice.json https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/$MODEL_ID/?target=thingJson
 ----
 
 This will store the device description in the file `FirstTestDevice.json` of your local file system. The content
@@ -112,7 +126,9 @@ should look like:
 With this device description, we can create a new device in the Ditto system:
 
 ----
-cat FirstTestDevice.json | http PUT "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev3"
+DEVICE_ID=my:dev1
+
+cat FirstTestDevice.json | http PUT "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/$DEVICE_ID"
 ----
 
 As a result, you should receive:
@@ -133,12 +149,12 @@ HTTP/1.1 204 No Content
 === Publish data
 
 ----
-ENDPOINT="https://http-endpoint-drogue-iot.apps.wonderful.iot-playground.org"
-DEVICE="my:dev1"
+ENDPOINT="https://http-endpoint-drogue-iot.apps.my.cluster"
+DEVICE_ID="my:dev1"
 CHANNEL="foo"
 MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
 
-http -v POST "${ENDPOINT}/publish/${DEVICE}/${CHANNEL}" "model_id==$MODEL_ID" temp:=1.23
+http -v POST "${ENDPOINT}/publish/${DEVICE_ID}/${CHANNEL}" "model_id==$MODEL_ID" temp:=1.23
 ----
 
 NOTE: You can use the script `./hack/publish_loop.sh` to generate a constant stream of simulated temperature readings.

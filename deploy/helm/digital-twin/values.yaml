@@ -1,12 +1,21 @@
 
-# platform is the Kubernetes that the chart will deploy to
-platform: kubernetes # (or "openshift")
-
 # knativeChannel holds the name of the Knative channel streaming the device payload
 knativeChannel: iot-channel
 
+# knativeEventingNamespace holds the namespace of the Knative eventing installation
+knativeEventingNamespace: knative-eventing
+
 image:
   # repository: ghcr.io/drogue-iot
+
+# configuration options for OpenShift routes
+routes: {}
+
+ingress:
+  enabled: true
+
+loadBalancer:
+  enabled: false
 
 # Dependencies
 

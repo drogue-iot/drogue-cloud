@@ -17,7 +17,8 @@ spec:
         apiVersion: serving.knative.dev/v1
         kind: Service
         name: {{ include "drogue.fullname" . }}-vorto-converter
-    - ref:
-        kind: Service
-        apiVersion: serving.knative.dev/v1
-        name: {{ include "drogue.fullname" . }}-ditto-pusher
+  reply:
+    ref:
+      kind: Service
+      apiVersion: serving.knative.dev/v1
+      name: {{ include "drogue.fullname" . }}-ditto-pusher
