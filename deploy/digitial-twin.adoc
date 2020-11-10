@@ -15,6 +15,15 @@ endif::[]
 
 NOTE: All commands are relative to the root of the repository.
 
+[NOTE]
+====
+You will need a Kubernetes installation supporting the
+https://kubernetes.io/docs/concepts/services-networking/ingress/[Ingress] resource, or OpenShift with routes.
+
+Using Minikube, you can enable the `ingress` addon, using `--addons=ingress`.
+Kind also allows using https://kind.sigs.k8s.io/docs/user/ingress/[Ingress].
+====
+
 '''
 
 toc::[]
