@@ -154,7 +154,7 @@ DEVICE_ID="my:dev1"
 CHANNEL="foo"
 MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
 
-http -v POST "${ENDPOINT}/publish/${DEVICE_ID}/${CHANNEL}" "model_id==$MODEL_ID" temp:=1.23
+http -v POST "$ENDPOINT/publish/$DEVICE_ID/$CHANNEL" "model_id==$MODEL_ID" temp:=1.23
 ----
 
 NOTE: You can use the script `./hack/publish_loop.sh` to generate a constant stream of simulated temperature readings.
@@ -165,12 +165,10 @@ The simulated temperature readings are now published to the HTTP endpoint. On re
 stored in the Kafka stream. Additionally to InfluxDB, it will now be also available in the Ditto instance. You can
 retrieve the current state of the device using the following command:
 
-The published temperature readings that are now published to the HTTP endpoint are still stored in the original
-Kafka stream. Additionally to InfluxDB, they are now processed by a second consumer, which will first translate
-the payload using the Vorto converter, and then forward the normalized payload to the Ditto instance.
-
 ----
-http "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/my:dev1"
+TWIN_API="https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster"
+
+http "$TWIN_API/api/2/things/$DEVICE_ID"
 ----
 
 This should return the current state, in the normalized Ditto format:
@@ -199,6 +197,5 @@ This should return the current state, in the normalized Ditto format:
 }
 ----
 
-== What just
+== What just happened
 
-== Additionally

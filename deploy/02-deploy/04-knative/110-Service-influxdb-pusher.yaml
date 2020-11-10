@@ -32,3 +32,6 @@ spec:
                 secretKeyRef:
                   name: influxdb-secret
                   key: app.password
+          resources:
+            limits:
+              memory: 64Mi

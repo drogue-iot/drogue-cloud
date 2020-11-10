@@ -21,3 +21,6 @@ spec:
               value: ditto
             - name: DITTO_PASSWORD
               value: ditto
+          resources:
+            limits:
+              memory: 64Mi

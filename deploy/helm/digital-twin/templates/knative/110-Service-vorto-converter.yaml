@@ -20,3 +20,8 @@ spec:
                   name: vorto-api
                   key: token
                   optional: true
+          resources:
+            requests:
+              memory: 128Mi
+            limits:
+              memory: 128Mi

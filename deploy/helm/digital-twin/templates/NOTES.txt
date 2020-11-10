@@ -31,5 +31,5 @@ http -v POST "$ENDPOINT/publish/$DEVICE_ID/$CHANNEL" "model_id==$MODEL_ID" temp:
 And then, check the device state:
 
 ~~~
-http "$TWIN_API/api/2/things/my:dev1"
+http "$TWIN_API/api/2/things/$DEVICE_ID"
 ~~~
