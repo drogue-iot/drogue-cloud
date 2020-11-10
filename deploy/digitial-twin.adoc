@@ -21,29 +21,9 @@ toc::[]
 
 == Setup
 
-=== Install pre-reqs
+Additionally to the basic deployment, you will need to install the following components:
 
-The digital twin requires a few pre-requisites.
-
-==== MongoDO
-
-A MongoDB instance is required by Ditto for persisting device state information:
-
-----
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm install mongodb bitnami/mongodb --set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false --set auth.rootPassword=admin123456 --set auth.enabled=false
-----
-
-==== Ditto Operator
-
-Install the Ditto operator using Helm:
-
-    helm repo add helm-charts https://ctron.github.io/helm-charts/
-    helm install ditto-operator helm-charts/ditto-operator --version 0.1.7
-
-NOTE: It is also possible to install the Ditto operator using OLM.
-
-==== Vorto API token (optional)
+=== Vorto API token (optional)
 
 NOTE: This step is not required by the default example in this tutorial. However, you might need it, if you want
 to further experiment with Ditto and Vorto.
@@ -199,3 +179,78 @@ This should return the current state, in the normalized Ditto format:
 
 == What just happened
 
+In the first tutorial, we published a device message to the cloud, processing it with Knative eventing and storing
+the result, the temperature, in an InfluxDB.
+
+While this was easy, there is a downside: the device, and the service pushing data to InfluxDB, need to agree on
+a data format. As would everyone else, processing this data. And while InfluxDB can provide us with a nice history,
+it can quickly get tricky to store a more complex device state.
+
+So now we process the incoming data, using a Vorto model transformation. This translates the device specific
+payload:
+
+[source,json]
+----
+{ "temp": 1.23 }
+----
+
+Into a canonical data format:
+
+[source,json]
+----
+{
+  "temperature": {
+    "value": 1.23
+  }
+}
+----
+
+Which allows us to also convert this into an Eclipse Ditto update request:
+
+[source,json]
+----
+{
+  "headers": {
+    "response-required": false
+  },
+  "path": "/features",
+  "topic": "my/dev1/things/twin/commands/modify",
+  "value": {
+    "temperature": {
+      "definition": [
+        "org.eclipse.vorto.std.sensor:TemperatureSensor:1.0.0"
+      ],
+      "properties": {
+        "status": {
+          "value": 1.23
+        }
+      }
+    }
+  }
+}
+----
+
+As you can see in the model, we are actually re-using a temperature sensor
+definition (`org.eclipse.vorto.std.sensor:TemperatureSensor:1.0.0`) from the public Vorto model repository.
+
+[NOTE]
+.Public Vorto repository
+====
+The Eclipse Vorto project hosts a publicly available Vorto instance. In this repository you can find existing
+data types, partial models ("function blocks"), as well as completely mapped devices.
+
+You can use this instance for experimenting with the technology, and for sharing your own mappings. But of
+course you can also run your own instance of Vorto.
+====
+
+The Knative eventing system is configured to create a new flow. Processing events from the same source as the
+"InfluxDB pusher", the Kafka stream. However, instead of directly processing the events, it runs this through
+a "sequence", translating events in the process:
+
+.Flow of events
+image::../images/digital-twin.svg[Flow of events]
+
+The first step translates the events using the Vorto mapping engine. The second step forwards the converted events
+to the Ditto API.
+
+Ditto will store a "most recent" version of the full device state, and we did query that with the last command.
