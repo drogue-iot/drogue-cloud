@@ -17,6 +17,7 @@ use futures::StreamExt;
 use log;
 
 use self::auth::validator;
+use actix_web::middleware::Condition;
 
 const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 
@@ -128,6 +129,7 @@ async fn telemetry(
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
+
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new()?;
@@ -135,10 +137,16 @@ async fn main() -> anyhow::Result<()> {
     let addr = std::env::var("BIND_ADDR").ok();
     let addr = addr.as_deref();
 
+    let enable_auth = match std::env::var_os("ENABLE_AUTH") {
+        Some(str) => str == "true",
+        None => false,
+    };
+
     HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(validator);
+
         App::new()
-            .wrap(auth)
+            .wrap(Condition::new(enable_auth, auth))
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(GLOBAL_MAX_JSON_PAYLOAD_SIZE))
             .data(sender.clone())
