@@ -5,15 +5,6 @@ metadata:
   labels:
     app: console-backend
     app.kubernetes.io/part-of: console
-  annotations:
-#    image.openshift.io/triggers: |
-#      [{
-#        "from":{
-#          "kind":"ImageStreamTag",
-#          "name":"console-backend:latest"
-#        },
-#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-#      }]
 spec:
   replicas: 1
   selector:
@@ -46,3 +37,19 @@ spec:
           resources:
             limits:
               memory: 64Mi
+          livenessProbe:
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            httpGet:
+              port: 8080
+              path: /health
+          readinessProbe:
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            periodSeconds: 5
+            successThreshold: 1
+            httpGet:
+              port: 8080
+              path: /health

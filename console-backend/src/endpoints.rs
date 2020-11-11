@@ -1,10 +1,9 @@
-use crate::kube::namespace;
+use crate::kube::knative;
+
 use async_trait::async_trait;
 use console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
-
-use crate::kube::knative;
 use serde_json::Value;
 use std::fmt::Debug;
 
@@ -56,11 +55,9 @@ pub struct OpenshiftEndpointSource {
 
 impl OpenshiftEndpointSource {
     pub fn new() -> anyhow::Result<Self> {
-        let ns = namespace().ok_or_else(|| {
-            anyhow::anyhow!("Missing namespace. Consider setting 'NAMESPACE' variable")
-        })?;
-
-        Ok(Self { namespace: ns })
+        Ok(Self {
+            namespace: namespace()?,
+        })
     }
 }
 
@@ -93,12 +90,15 @@ pub struct KubernetesEndpointSource {
 
 impl KubernetesEndpointSource {
     pub fn new() -> anyhow::Result<Self> {
-        let ns = namespace().ok_or_else(|| {
-            anyhow::anyhow!("Missing namespace. Consider setting 'NAMESPACE' variable")
-        })?;
-
-        Ok(Self { namespace: ns })
+        Ok(Self {
+            namespace: namespace()?,
+        })
     }
+}
+
+fn namespace() -> anyhow::Result<String> {
+    crate::kube::namespace()
+        .ok_or_else(|| anyhow::anyhow!("Missing namespace. Consider setting 'NAMESPACE' variable"))
 }
 
 #[async_trait]

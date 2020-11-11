@@ -62,7 +62,7 @@ impl Component for Spy {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let url = format!("{}/spy", Backend::get().unwrap().url);
+        let url = format!("{}/api/v1/spy", Backend::get().unwrap().url);
         let source =
             EventSource::new_with_event_source_init_dict(&url, &EventSourceInit::new()).unwrap();
 
@@ -81,7 +81,7 @@ impl Component for Spy {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Event(event) => {
-                log::info!("Pushing event: {:?}", event);
+                log::debug!("Pushing event: {:?}", event);
                 self.events.insert(0, Entry(event));
                 while self.events.len() > DEFAULT_MAX_SIZE {
                     self.events.pop();

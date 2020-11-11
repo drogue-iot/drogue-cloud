@@ -68,7 +68,7 @@ impl Component for Index {
 
 impl Index {
     fn fetch_overview(&self) -> Result<FetchTask, Error> {
-        let request = Request::get(format!("{}/info", Backend::get().unwrap().url))
+        let request = Request::get(format!("{}/api/v1/info", Backend::get().unwrap().url))
             .body(Nothing)
             .expect("Failed to build request");
 

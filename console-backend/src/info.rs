@@ -3,7 +3,7 @@ use actix_web::{get, web, HttpResponse, Responder};
 
 use serde_json::json;
 
-#[get("/info")]
+#[get("/api/v1/info")]
 pub async fn get_info(endpoint_source: web::Data<EndpointSourceType>) -> impl Responder {
     match endpoint_source.eval_endpoints().await {
         Ok(endpoints) => HttpResponse::Ok().json(endpoints),
