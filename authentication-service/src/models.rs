@@ -1,6 +1,5 @@
 use diesel::Queryable;
 
-
 #[derive(Queryable)]
 pub struct Credential {
     pub device_id: String,

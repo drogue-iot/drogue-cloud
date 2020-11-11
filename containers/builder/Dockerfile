@@ -3,7 +3,7 @@
 FROM registry.access.redhat.com/ubi8/ubi:latest as builder
 
 RUN dnf -y update
-RUN dnf -y install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake
+RUN dnf -y install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
