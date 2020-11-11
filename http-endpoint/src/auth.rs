@@ -9,11 +9,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::Value;
 
 use log;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
-    deviceId: String,
+    device_id: String,
     valid_until: u64,
 }
 
@@ -39,7 +38,7 @@ pub async fn validator(
             if verify_jwt_claims(&claims, &req) {
                 Ok(req)
             } else {
-                log::debug!("JWT is valid but was issued for {}", claims.deviceId);
+                log::debug!("JWT is valid but was issued for {}", claims.device_id);
                 Err(AuthenticationError::from(config).into())
             }
         }
@@ -53,7 +52,7 @@ pub async fn validator(
 fn verify_jwt_claims(claims: &Claims, req: &ServiceRequest) -> bool {
     let path: Vec<&str> = req.uri().path().split("/").collect();
 
-    claims.deviceId == path[2]
+    claims.device_id == path[2]
     //assert_eq!(claims.deviceId, path[2], "valid JWT but not for this device");
 }
 
