@@ -1,8 +1,8 @@
 use actix_web::dev::ServiceRequest;
 use actix_web::Error;
 
-use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 
 use jsonwebtokens::{Algorithm, AlgorithmID, Verifier};
 use serde::{Deserialize, Serialize};
@@ -49,11 +49,10 @@ pub async fn validator(
     }
 }
 
-fn verify_jwt_claims(claims: &Claims, req: &ServiceRequest) -> bool {
-    let path: Vec<&str> = req.uri().path().split("/").collect();
+fn verify_jwt_claims (claims: &Claims, req: &ServiceRequest) -> bool {
+    let path : Vec<&str> = req.uri().path().split("/").collect();
 
     claims.device_id == path[2]
-    //assert_eq!(claims.deviceId, path[2], "valid JWT but not for this device");
 }
 
 fn verify_jwt_signature(
@@ -61,6 +60,8 @@ fn verify_jwt_signature(
     pem_data: &[u8],
 ) -> Result<Value, jsonwebtokens::error::Error> {
     let alg = Algorithm::new_ecdsa_pem_verifier(AlgorithmID::ES256, pem_data)?;
-    let verifier = Verifier::create().leeway(5).build()?;
+    let verifier = Verifier::create()
+        .leeway(5)
+        .build()?;
     verifier.verify(&token, &alg)
 }
