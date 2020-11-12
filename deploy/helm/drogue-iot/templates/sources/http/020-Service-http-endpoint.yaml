@@ -12,7 +12,6 @@ spec:
     spec:
       containers:
         - image: {{.Values.images.registry}}/{{.Values.images.org}}/http-endpoint:{{.Values.images.tag}}
-#        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/http-endpoint:latest
           env:
             - name: RUST_LOG
               value: info
