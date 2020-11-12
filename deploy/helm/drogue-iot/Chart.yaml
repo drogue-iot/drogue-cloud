@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: v2
 name: drogue-iot
 description: |
   Drogue IoT provides serverless IoT cloud
@@ -12,6 +12,10 @@ home: https://blog.drogue.io/
 sources:
   - https://github.com/drogue-iot/drogue-cloud
 icon: https://blog.drogue.io/favicon.svg
+dependencies:
+  - name: postgresql
+    version: 9
+    repository: https://charts.bitnami.com/bitnami
 maintainers:
   - name: dejanb
     email: dbosanac@redhat.com

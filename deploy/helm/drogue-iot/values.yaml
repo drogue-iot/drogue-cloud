@@ -15,8 +15,8 @@ useLoadBalancer: false
 
 
 images:
-  registry: quay.io
-  org: drogueiot
+  registry: ghcr.io
+  org: drogue-iot
   tag: latest
 
 sources:
@@ -34,3 +34,14 @@ services:
 
   console:
     enabled: false
+
+  registry:
+    enabled: true
+
+# dependencies
+
+postgresql:
+  # passwords are necessary for updates: https://github.com/bitnami/charts/tree/master/bitnami/postgresql#upgrade
+  postgresqlPostgresPassword: admin123456
+  postgresqlUsername: user
+  postgresqlPassword: user1234

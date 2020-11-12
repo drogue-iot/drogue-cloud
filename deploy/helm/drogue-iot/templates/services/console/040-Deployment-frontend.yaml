@@ -5,15 +5,6 @@ metadata:
   name: console-frontend
   labels:
     app: console-frontend
-  annotations:
-#    image.openshift.io/triggers: |
-#      [{
-#        "from":{
-#          "kind":"ImageStreamTag",
-#          "name":"console-frontend:latest"
-#        },
-#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-#      }]
 spec:
   replicas: 1
   selector:
@@ -26,7 +17,7 @@ spec:
     spec:
       containers:
         - name: endpoint
-          image: {{.Values.images.registry}}/ctrontesting/console-frontend:{{.Values.images.tag}}
+          image: {{.Values.images.registry}}/{{.Values.images.org}}/console-frontend:{{.Values.images.tag}}
           imagePullPolicy: Always
           env:
             - name: NAMESPACE

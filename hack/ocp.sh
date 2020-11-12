@@ -2,15 +2,16 @@
 
 set -ex
 
-DROGUE_NS=${DROGUE_NS:-drogue-iot}
-DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
 CLUSTER="openshift"
 MQTT=false
 CONSOLE=false
-HELM_ARGS="--set platform=$CLUSTER"
+HELM_ARGS="--values $SCRIPTDIR/../deploy/helm/drogue-iot/profile-openshift.yaml"
 
+source "$SCRIPTDIR/common.sh"
 source "$SCRIPTDIR/knative.sh"
+source "$SCRIPTDIR/postgres.sh"
 
 # Create workspace for endpoints
 if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then
@@ -31,7 +32,7 @@ if [ "$CONSOLE" = true ] ; then
   HELM_ARGS+=" --set services.console.enabled=true"
 fi
 
-helm install -n $DROGUE_NS $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
+helm install --dependency-update -n $DROGUE_NS $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
 
 # Provide a TLS certificate for the MQTT endpoint
 if  [ "$MQTT" = true ] && ! [[kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1]] ; then

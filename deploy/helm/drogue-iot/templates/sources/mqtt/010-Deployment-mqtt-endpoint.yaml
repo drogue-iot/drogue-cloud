@@ -5,15 +5,6 @@ metadata:
   name: mqtt-endpoint
   labels:
     app: mqtt-endpoint
-  annotations:
-    image.openshift.io/triggers: |
-      [{
-        "from":{
-          "kind":"ImageStreamTag",
-          "name":"mqtt-endpoint:latest"
-        },
-        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-      }]
 spec:
   replicas: 1
   selector:
@@ -26,7 +17,7 @@ spec:
     spec:
       containers:
         - name: endpoint
-          image: {{.Values.images.registry}} /ctrontesting/mqtt-endpoint: {{.Values.images.tag}}
+          image: {{.Values.images.registry}}/{{.Values.images.org}}/mqtt-endpoint:{{.Values.images.tag}}
           imagePullPolicy: Always
           env:
             - name: RUST_LOG

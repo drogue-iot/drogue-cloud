@@ -2,12 +2,13 @@
 
 set -ex
 
-DROGUE_NS=${DROGUE_NS:-drogue-iot}
 DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 CLUSTER="minikube"
 
+source "$SCRIPTDIR/common.sh"
 source "$SCRIPTDIR/knative.sh"
+source "$SCRIPTDIR/postgres.sh"
 
 # Create workspace for endpoints
 if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then

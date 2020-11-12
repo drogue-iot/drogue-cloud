@@ -5,15 +5,6 @@ metadata:
   name: console-backend
   labels:
     app: console-backend
-  annotations:
-#    image.openshift.io/triggers: |
-#      [{
-#        "from":{
-#          "kind":"ImageStreamTag",
-#          "name":"console-backend:latest"
-#        },
-#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-#      }]
 spec:
   replicas: 1
   selector:
@@ -27,7 +18,7 @@ spec:
       serviceAccount: console-backend
       containers:
         - name: endpoint
-          image: {{.Values.images.registry}}/ctrontesting/console-backend:{{.Values.images.tag}}
+          image: {{.Values.images.registry}}/{{.Values.images.org}}/console-backend:{{.Values.images.tag}}
           imagePullPolicy: Always
           env:
             - name: RUST_LOG

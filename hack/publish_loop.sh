@@ -4,7 +4,7 @@
 # Publish a "temperature" every 5 seconds
 #
 
-: "${ENDPOINT:="https://http-endpoint-drogue-iot.apps.wonderful.iot-playground.org"}"
+: "${ENDPOINT:="https://http-endpoint-drogue-iot.apps.my.cluster"}"
 : "${DEVICE_ID:="my:dev1"}"
 : "${CHANNEL:="foo"}"
 : "${MODEL_ID:="io.drogue.demo:FirstTestDevice:1.0.0"}"
