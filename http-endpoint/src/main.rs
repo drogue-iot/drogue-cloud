@@ -135,7 +135,7 @@ async fn main() -> anyhow::Result<()> {
     let sender = DownstreamSender::new()?;
 
     let addr = std::env::var("BIND_ADDR").ok();
-    let addr = addr.as_deref();
+    let addr = addr.as_deref().unwrap_or("127.0.0.1:8080");
 
     let enable_auth = match std::env::var_os("ENABLE_AUTH") {
         Some(str) => str == "true",
@@ -155,7 +155,7 @@ async fn main() -> anyhow::Result<()> {
             .service(telemetry)
             .service(ttn::publish)
     })
-    .bind(addr.unwrap_or("127.0.0.1:8080"))?
+    .bind(addr)?
     .run()
     .await?;
 

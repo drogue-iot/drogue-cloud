@@ -117,11 +117,13 @@ async fn authenticate(
             );
             match token {
                 Ok(token) => {
-                    log::debug!("Issued JWT for device {}. Token: {}",
+                    log::debug!(
+                        "Issued JWT for device {}. Token: {}",
                         credentials.device_id,
-                        token);
+                        token
+                    );
                     Ok(HttpResponse::Ok().header("Authorization", token).finish())
-                },
+                }
                 Err(e) => {
                     log::error!("Could not issue JWT token: {}", e);
                     Ok(HttpResponse::InternalServerError()
@@ -194,8 +196,9 @@ async fn main() -> std::io::Result<()> {
     let jwt_expiration = std::env::var(TOKEN_EXPIRATION_SECONDS_ENV_VAR)
         .unwrap_or(DEFAULT_TOKEN_EXPIRATION.to_string());
     let pem_data = std::fs::read(
-        std::env::var(JWT_SIGNING_PRIVATE_KEY_ENV_VAR)
-            .expect("JWT_ECDSA_SIGNING_KEY must be set")).unwrap();
+        std::env::var(JWT_SIGNING_PRIVATE_KEY_ENV_VAR).expect("JWT_ECDSA_SIGNING_KEY must be set"),
+    )
+    .unwrap();
 
     let data = WebData {
         connection_pool: pool,
@@ -203,8 +206,11 @@ async fn main() -> std::io::Result<()> {
         token_signing_private_key: pem_data,
     };
 
+    let addr = std::env::var("BIND_ADDR").ok();
+    let addr = addr.as_deref().unwrap_or("127.0.0.1:8080");
+
     HttpServer::new(move || App::new().service(authenticate).data(data.clone()))
-        .bind("127.0.0.1:8081")?
+        .bind(addr)?
         .run()
         .await
 }

@@ -16,5 +16,6 @@ deploy/
 
 tls.*
 tls_tmp.*
+tmp/
 
 .cargo-container-home

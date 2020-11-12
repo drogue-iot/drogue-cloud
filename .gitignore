@@ -10,6 +10,7 @@ target/
 
 tls.*
 tls_tmp.*
+tmp/
 
 # Build
 

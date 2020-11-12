@@ -3,10 +3,23 @@
 # By default, build and push artifacts and containers.
 #
 
-all: build test push
+all: build images test push
 
 
 CURRENT_DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
+
+
+#
+# all container images that we build and push (so it does not include the "builder")
+#
+IMAGES=\
+	http-endpoint \
+	mqtt-endpoint \
+	ditto-pusher \
+	influxdb-pusher \
+	console-backend \
+	console-frontend \
+	authentication-service \
 
 
 #
@@ -21,7 +34,7 @@ clean:
 # Build artifacts and containers.
 #
 build: host-build
-build: build-images
+
 
 #
 # Run all tests.
@@ -57,18 +70,18 @@ build-builder:
 # Run a build on the host, forking off into the build container.
 #
 host-build: build-builder
-	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" builder make -C /usr/src container-build
+	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" builder make -j1 -C /usr/src container-build
 
 
 #
 # Run tests on the host, forking off into the build container.
 #
 host-test: build-builder
-	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" builder make -C /usr/src container-test
+	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" builder make -j1 -C /usr/src container-test
 
 
 fix-permissions:
-	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e MAKEFLAGS="$(MAKEFLAGS)" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
+	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
 
 
 #
@@ -92,7 +105,7 @@ cargo-test:
 #
 # Run the webpack build.
 #
-webpack-build:
+webpack-build: cargo-build
 	cd console-frontend && npm install
 	cd console-frontend && npm run build
 
@@ -100,39 +113,27 @@ webpack-build:
 #
 # Build images.
 #
-# You might want to consider doing a `build` first.
+# You might want to consider doing a `build` first, but we don't force that.
 #
-build-images:
-	docker build . -f http-endpoint/Dockerfile -t http-endpoint:latest
-	docker build . -f mqtt-endpoint/Dockerfile -t mqtt-endpoint:latest
-	docker build . -f ditto-pusher/Dockerfile -t ditto-pusher:latest
-	docker build . -f influxdb-pusher/Dockerfile -t influxdb-pusher:latest
-	docker build . -f console-backend/Dockerfile -t console-backend:latest
-	docker build . -f console-frontend/Dockerfile -t console-frontend:latest
+build-images: build-image($(IMAGES))
+build-image($(IMAGES)):
+	docker build . -f $%/Dockerfile -t $%:latest
 
 
 #
 # Tag Images.
 #
-tag-images: require-container-registry
-	docker tag http-endpoint:latest $(CONTAINER_REGISTRY)/http-endpoint:latest
-	docker tag mqtt-endpoint:latest $(CONTAINER_REGISTRY)/mqtt-endpoint:latest
-	docker tag ditto-pusher:latest $(CONTAINER_REGISTRY)/ditto-pusher:latest
-	docker tag influxdb-pusher:latest $(CONTAINER_REGISTRY)/influxdb-pusher:latest
-	docker tag console-backend:latest $(CONTAINER_REGISTRY)/console-backend:latest
-	docker tag console-frontend:latest $(CONTAINER_REGISTRY)/console-frontend:latest
+tag-images: tag-image($(IMAGES))
+tag-image($(IMAGES)): require-container-registry
+	docker tag $%:latest $(CONTAINER_REGISTRY)/$%:latest
 
 
 #
 # Push images.
 #
-push-images: require-container-registry
-	docker push $(CONTAINER_REGISTRY)/http-endpoint:latest
-	docker push $(CONTAINER_REGISTRY)/mqtt-endpoint:latest
-	docker push $(CONTAINER_REGISTRY)/ditto-pusher:latest
-	docker push $(CONTAINER_REGISTRY)/influxdb-pusher:latest
-	docker push $(CONTAINER_REGISTRY)/console-backend:latest
-	docker push $(CONTAINER_REGISTRY)/console-frontend:latest
+push-images: push-image($(IMAGES))
+push-image($(IMAGES)): require-container-registry
+	docker push $(CONTAINER_REGISTRY)/$%:latest
 
 
 #
@@ -155,12 +156,13 @@ ifndef CONTAINER_REGISTRY
 	$(error CONTAINER_REGISTRY is undefined)
 endif
 
-.PHONY: all clean build test push
+.PHONY: all clean build test push images
 .PHONY: build-builder
-.PHONY: build-images tag-images push-images images
+.PHONY: require-container-registry
+
+.PHONY: build-images tag-images push-images
+.PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
+
 .PHONY: container-build container-test
 .PHONY: host-build host-test
 .PHONY: cargo-build cargo-test
-
-.PHONY: require-container-registry
-

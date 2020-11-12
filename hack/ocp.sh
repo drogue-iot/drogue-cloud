@@ -11,7 +11,7 @@ HELM_ARGS="--values $SCRIPTDIR/../deploy/helm/drogue-iot/profile-openshift.yaml"
 
 source "$SCRIPTDIR/common.sh"
 source "$SCRIPTDIR/knative.sh"
-source "$SCRIPTDIR/postgres.sh"
+source "$SCRIPTDIR/registry.sh"
 
 # Create workspace for endpoints
 if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then
