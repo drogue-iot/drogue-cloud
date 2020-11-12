@@ -1,7 +1,11 @@
 
 ~~~bash
 ENDPOINT="$(kubectl get ksvc -n {{ .Release.Namespace }} http-endpoint -o jsonpath='{.status.url}')"
-TWIN_API="https://ditto:ditto@$(kubectl -n {{ .Release.Namespace }} get ingress {{ .Release.Name }} -o jsonpath={.status.loadBalancer.ingress[0].ip})"
+{{ if .Values.routes.enabled -}}
+TWIN_API="https://ditto:ditto@$(kubectl -n {{ .Release.Namespace }} get route {{ .Release.Name }}-console -o jsonpath={.spec.host})"
+{{ else -}}
+TWIN_API="http://ditto:ditto@$(kubectl -n {{ .Release.Namespace }} get ingress {{ .Release.Name }} -o jsonpath={.status.loadBalancer.ingress[0].ip})"
+{{ end -}}
 DEVICE_ID="my:dev1"
 CHANNEL="foo"
 MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
@@ -9,7 +13,11 @@ MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
 
 ~~~fish
 set ENDPOINT (kubectl get ksvc -n {{ .Release.Namespace }} http-endpoint -o jsonpath='{.status.url}')
+{{ if .Values.routes.enabled -}}
+set TWIN_API https://ditto:ditto@(kubectl -n {{ .Release.Namespace }} get route {{ .Release.Name }}-console -o jsonpath={.spec.host})
+{{ else -}}
 set TWIN_API http://ditto:ditto@(kubectl -n {{ .Release.Namespace }} get ingress {{ .Release.Name }} -o jsonpath={.status.loadBalancer.ingress[0].ip})
+{{ end -}}
 set DEVICE_ID "my:dev1"
 set CHANNEL "foo"
 set MODEL_ID "io.drogue.demo:FirstTestDevice:1.0.0"

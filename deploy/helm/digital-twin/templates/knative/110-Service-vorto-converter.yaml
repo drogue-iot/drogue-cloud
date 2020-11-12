@@ -1,9 +1,10 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: {{ include "drogue.fullname" . }}-vorto-converter
+  name: vorto-converter
   labels:
-    app.kubernetes.io/name: {{ include "drogue.name" . }}-vorto-converter
+    app.kubernetes.io/name: vorto-converter
+    app.kubernetes.io/part-of: digital-twin
 {{ include "drogue.labels" . | indent 4 }}
 spec:
   template:

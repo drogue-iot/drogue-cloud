@@ -11,6 +11,10 @@ ingress:
 loadBalancer:
   enabled: false
 
+ditto-operator:
+  openshift:
+    enabled: true
+
 mongodb:
   podSecurityContext:
     enabled: false

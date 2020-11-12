@@ -116,8 +116,9 @@ With this device description, we can create a new device in the Ditto system:
 
 ----
 DEVICE_ID=my:dev1
+TWIN_API="https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster"
 
-cat FirstTestDevice.json | http PUT "https://ditto:ditto@ditto-console-drogue-iot.apps.my.cluster/api/2/things/$DEVICE_ID"
+cat FirstTestDevice.json | http PUT "$TWIN_API/api/2/things/$DEVICE_ID"
 ----
 
 As a result, you should receive:

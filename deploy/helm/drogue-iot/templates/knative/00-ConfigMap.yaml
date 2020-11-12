@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-broker-config
+data:
+  default.topic.partitions: "3"
+  default.topic.replication.factor: "1"
+  bootstrap.servers: "kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092"

@@ -3,12 +3,13 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: influxdb-pusher
+  labels:
+    app.kubernetes.io/part-of: custom-app-1
 spec:
   template:
     spec:
       containers:
         - image: {{.Values.images.registry}}/{{.Values.images.org}}/influxdb-pusher:{{.Values.images.tag}}
-#        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/influxdb-pusher:latest
           env:
             - name: RUST_LOG
               value: info

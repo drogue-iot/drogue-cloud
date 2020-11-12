@@ -5,6 +5,7 @@ metadata:
   name: mqtt-endpoint
   labels:
     app: mqtt-endpoint
+    app.kubernetes.io/part-of: endpoints
 spec:
   replicas: 1
   selector:

@@ -1,11 +1,12 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: {{ include "drogue.fullname" . }}-ditto-pusher
+  name: ditto-pusher
   annotations:
     app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"{{ include "drogue.fullname" . }}-nginx"}]'
   labels:
-    app.kubernetes.io/name: {{ include "drogue.name" . }}-ditto-pusher
+    app.kubernetes.io/name: ditto-pusher
+    app.kubernetes.io/part-of: digital-twin
 {{ include "drogue.labels" . | indent 4 }}
 spec:
   template:
