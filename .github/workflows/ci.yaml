@@ -50,10 +50,10 @@ jobs:
         if: ${{github.head_ref == ''}}
         run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push images
+      - name: Build, tag, and push images
         if: ${{github.head_ref == ''}}
         run: |
-          make push
+          make images
 
       - name: Fix permissions
         run: |
