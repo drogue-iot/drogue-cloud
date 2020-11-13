@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+ labels:
+   app: influxdb
+ name: influxdb
+spec:
+ ports:
+ - name: api
+   port: 8086
+   protocol: TCP
+   targetPort: 8086
+ selector:
+   app: influxdb

@@ -1,0 +1,12 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: console
+spec:
+  to:
+    kind: Service
+    name: console-frontend
+  port:
+    targetPort: endpoint
+  tls:
+    termination: edge

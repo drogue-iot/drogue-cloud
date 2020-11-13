@@ -1,0 +1,37 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: influxdb-pusher
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"influxdb"}]'
+  labels:
+    app.kubernetes.io/part-of: custom-app-1
+spec:
+  template:
+    spec:
+      containers:
+        - image: ghcr.io/drogue-iot/influxdb-pusher:latest
+#        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/influxdb-pusher:latest
+          env:
+            - name: RUST_LOG
+              value: info
+            - name: INFLUXDB_URI
+              value: http://influxdb:8086
+            - name: INFLUXDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: influxdb-config
+                  key: databaseName
+            - name: INFLUXDB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: app.username
+            - name: INFLUXDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: influxdb-secret
+                  key: app.password
+          resources:
+            limits:
+              memory: 64Mi

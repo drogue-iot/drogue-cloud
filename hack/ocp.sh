@@ -5,8 +5,9 @@ set -ex
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
 CLUSTER="openshift"
-MQTT=false
-CONSOLE=false
+MQTT=true
+CONSOLE=true
+HELM=false
 HELM_ARGS="--values $SCRIPTDIR/../deploy/helm/drogue-iot/profile-openshift.yaml"
 
 source "$SCRIPTDIR/common.sh"
@@ -24,15 +25,21 @@ kubectl apply -f $DEPLOY_DIR/01-kafka/010-Kafka.yaml
 kubectl patch kafka -n knative-eventing kafka-eventing -p '[{"op": "remove", "path": "/spec/kafka/listeners/external"}]' --type json
 kubectl wait kafka --all --for=condition=Ready --timeout=-1s -n knative-eventing
 
-if [ "$MQTT" = true ] ; then
-  HELM_ARGS+=" --set sources.mqtt.enabled=true"
-fi
+# Install Drogue components (sources and services)
 
-if [ "$CONSOLE" = true ] ; then
-  HELM_ARGS+=" --set services.console.enabled=true"
-fi
+if [ "$HELM" = true ] ; then
+  if [ "$MQTT" = true ] ; then
+    HELM_ARGS+=" --set sources.mqtt.enabled=true"
+  fi
 
-helm install --dependency-update -n $DROGUE_NS $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
+  if [ "$CONSOLE" = true ] ; then
+    HELM_ARGS+=" --set services.console.enabled=true"
+  fi
+
+  helm install --dependency-update -n $DROGUE_NS $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
+else
+  kubectl -n $DROGUE_NS apply -k $SCRIPTDIR/../deploy/openshift/
+fi
 
 # Provide a TLS certificate for the MQTT endpoint
 if  [ "$MQTT" = true ] && ! [[kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls >/dev/null 2>&1]] ; then
@@ -47,6 +54,8 @@ kubectl -n $DROGUE_NS wait --timeout=-1s --for=condition=Ready ksvc/http-endpoin
 
 # Create the Console endpoints
 if [ $CONSOLE = "true" ] ; then
+
+  # Create the Console endpoints
   kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE-"
   kubectl -n $DROGUE_NS set env deployment/console-backend "HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}')"
 

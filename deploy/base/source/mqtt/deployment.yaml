@@ -1,0 +1,53 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: mqtt-endpoint
+  labels:
+    app: mqtt-endpoint
+    app.kubernetes.io/part-of: endpoints
+  annotations:
+#    image.openshift.io/triggers: |
+#      [{
+#        "from":{
+#          "kind":"ImageStreamTag",
+#          "name":"mqtt-endpoint:latest"
+#        },
+#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
+#      }]
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt-endpoint
+  template:
+    metadata:
+      labels:
+        app: mqtt-endpoint
+    spec:
+      containers:
+        - name: endpoint
+          image: ghcr.io/drogue-iot/mqtt-endpoint:latest
+          imagePullPolicy: Always
+          env:
+            - name: RUST_LOG
+              value: info
+            - name: BIND_ADDR
+              value: "0.0.0.0:8883"
+            - name: CERT_FILE
+              value: /etc/endpoint/tls.crt
+            - name: KEY_FILE
+              value: /etc/endpoint/tls.key
+          ports:
+            - containerPort: 8883
+              name: endpoint
+              protocol: TCP
+          resources:
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /etc/endpoint
+              name: endpoint-tls
+      volumes:
+        - name: endpoint-tls
+          secret:
+            secretName: mqtt-endpoint-tls

@@ -1,0 +1,21 @@
+apiVersion: sources.knative.dev/v1alpha2
+kind: SinkBinding
+metadata:
+  name: bind-http-endpoint
+  labels:
+    app.kubernetes.io/part-of: endpoints
+spec:
+
+  subject:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    name: http-endpoint
+
+  sink:
+    ref:
+#      apiVersion: serving.knative.dev/v1
+#      kind: Service
+#      name: event-display
+      apiVersion: messaging.knative.dev/v1alpha1
+      kind: KafkaChannel
+      name: iot-channel
