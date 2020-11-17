@@ -7,12 +7,18 @@ set -x
 : "${CONSOLE:=true}"
 : "${MQTT:=true}"
 
+HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}'")
+
 case $CLUSTER in
    minikube)
+        MQTT_ENDPOINT_HOST=$(eval minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
+        MQTT_ENDPOINT_PORT=$(eval minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $5}')
         CONSOLE_URL=$(eval minikube service -n $DROGUE_NS --url console-frontend)
         DASHBOARD_URL=$(eval minikube service -n $DROGUE_NS --url grafana)
         ;;
    *)
+        MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
+        MQTT_ENDPOINT_PORT=443
         CONSOLE_URL=$(eval kubectl -n $DROGUE_NS get routes console -o jsonpath={.spec.host})
         DASHBOARD_URL=$(eval kubectl -n $DROGUE_NS get routes grafana -o jsonpath={.spec.host})
         ;;
