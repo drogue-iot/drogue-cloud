@@ -38,11 +38,7 @@ if [ "$HELM" = true ] ; then
 
   helm install --dependency-update -n $DROGUE_NS $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
 else
-  c=$CLUSTER
-  if [ "$c" == "kind" ]; then
-    c="minikube"
-  fi
-  kubectl -n $DROGUE_NS apply -k $SCRIPTDIR/../deploy/$c/
+  kubectl -n $DROGUE_NS apply -k $SCRIPTDIR/../deploy/$CLUSTER/
 fi
 
 # Wait for the HTTP endpoint to become ready
