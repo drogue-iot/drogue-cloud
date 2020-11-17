@@ -1,0 +1,24 @@
+apiVersion: flows.knative.dev/v1
+kind: Sequence
+metadata:
+  name: digital-twin
+  labels:
+    app.kubernetes.io/name: digital-twin
+    app.kubernetes.io/part-of: digital-twin
+spec:
+  channelTemplate:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: KafkaChannel
+    spec:
+      numPartitions: 1
+      replicationFactor: 1
+  steps:
+    - ref:
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        name: vorto-converter
+  reply:
+    ref:
+      kind: Service
+      apiVersion: serving.knative.dev/v1
+      name: ditto-pusher

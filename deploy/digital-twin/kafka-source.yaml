@@ -12,6 +12,6 @@ spec:
     - knative-messaging-kafka.drogue-iot.iot-channel
   sink:
     ref:
-      apiVersion: serving.knative.dev/v1
-      kind: Service
-      name: influxdb-pusher
+      apiVersion: flows.knative.dev/v1
+      kind: Sequence
+      name: digital-twin

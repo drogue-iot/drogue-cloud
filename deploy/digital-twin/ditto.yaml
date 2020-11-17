@@ -1,0 +1,10 @@
+kind: Ditto
+apiVersion: iot.eclipse.org/v1alpha1
+metadata:
+  name: ditto
+  labels:
+    app.kubernetes.io/name: ditto
+spec:
+  mongoDb:
+    host: mongodb
+  enableDummyAuth: true

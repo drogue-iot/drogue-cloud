@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ditto.yaml
+  - ingress.yaml
+  - service-vorto-converter.yaml
+  - service-ditto-pusher.yaml
+  - sequence.yaml
+  - kafka-source.yaml # drop once we can use the subscription.yaml
+#  - subscription.yaml # currently broken as there seems to be an issue with the kafka-ch-dispatcher

@@ -8,4 +8,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - pusher-service.yaml
-  - kafka-source.yaml
+  - subscription.yaml

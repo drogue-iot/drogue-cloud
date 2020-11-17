@@ -5,7 +5,7 @@ kind: Kustomization
 #- name: ghcr.io/drogue-iot/http-endpoint
 #  newname: quay.io/dejanb/http-endpoint
 
-bases:
+resources:
   - knative
   - source/http
   - source/mqtt
