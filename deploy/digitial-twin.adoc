@@ -59,18 +59,18 @@ Deploy all components using:
 
 ----
 # plain Kubernetes
-helm -n drogue-iot install --dependency-update --wait --timeout 15m digital-twin deploy/helm/digital-twin
+./hack/digital-twin.sh
 
 # OpenShift, with routes
-helm -n drogue-iot install --file deploy/helm/digital-twin/profile-openshift.yaml --dependency-update --wait --timeout 15m digital-twin deploy/helm/digital-twin
+env CLUSTER=openshift ./hack/digital-twin.sh
 ----
 
 [TIP]
 .Environment variables
 ====
-When the `helm` command succeeds, it will print out a set of shell statements, which set some environment
-variables with their expected values. These variables will be used later on in this tutorial, so you can simply
-execute these statements and don't need to set the environment variables manually later on.
+When the script finishes, it will print out some example commands to try. These are the same commands as the
+following sections of this document use. Only they already contain the correct information, so you can
+simply copy and past them.
 ====
 
 == Using

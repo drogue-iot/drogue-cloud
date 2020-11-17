@@ -7,7 +7,6 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "$SCRIPTDIR/common.sh"
 
 : "${CLUSTER:=minikube}"
-: "${PLATFORM:=kubernetes}"
 : "${CONSOLE:=true}"
 : "${MQTT:=true}"
 : "${DIGITAL_TWIN:=false}"
@@ -40,18 +39,34 @@ esac;
 
 # Dump out the dashboard URL and sample commands for http and mqtt
 
-echo ""
+echo
+echo "=========================================================================================="
+echo " Base:"
+echo "=========================================================================================="
+echo
+
 if [ $CONSOLE = "true" ] ; then
   echo "Console:"
   echo "  $CONSOLE_URL"
   echo ""
 fi
-echo "Login to Grafana:"
-echo "  url:      $DASHBOARD_URL"
-echo "  username: admin"
-echo "  password: admin123456"
-echo "Search for the 'Knative test' dashboard"
-echo ""
+
+echo "------------------------------------------------------------------------------------------"
+echo "Examples"
+echo "------------------------------------------------------------------------------------------"
+echo
+echo "View the dashboard:"
+echo "---------------------"
+echo
+echo "* Login to Grafana:"
+echo "    url:      $DASHBOARD_URL"
+echo "    username: admin"
+echo "    password: admin123456"
+echo "* Search for the 'Knative test' dashboard"
+echo
+echo "Publish data:"
+echo "----------------"
+echo
 echo "At a shell prompt, try these commands:"
 echo "  http POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=44"
 if [ "$MQTT" = true ] ; then
@@ -61,7 +76,7 @@ fi
 #
 # expects "VAR=value" as an argument, which gets printed and executed.
 #
-function setexec() {
+function sete() {
   echo "$@"
   # shellcheck disable=SC2163
   export "$@"
@@ -70,25 +85,26 @@ function setexec() {
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
 
 echo
+echo
 echo "=========================================================================================="
 echo " Digital Twin:"
 echo "=========================================================================================="
 echo
 
-setexec ENDPOINT="$(kubectl get ksvc -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.url}')"
+sete ENDPOINT="$(kubectl get ksvc -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.url}')"
 
-case $PLATFORM in
+case $CLUSTER in
 openshift)
-setexec TWIN_API="https://ditto:ditto@$(kubectl -n "$DROGUE_NS" get route ditto-console -o jsonpath='{.spec.host}')"
+sete TWIN_API="https://ditto:ditto@$(kubectl -n "$DROGUE_NS" get route ditto-console -o jsonpath='{.spec.host}')"
   ;;
 *)
-setexec TWIN_API="http://ditto:ditto@$(kubectl -n "$DROGUE_NS" get ingress ditto -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)"
+sete TWIN_API="http://ditto:ditto@$(kubectl -n "$DROGUE_NS" get ingress ditto -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)"
   ;;
 esac
 
-setexec DEVICE_ID="my:dev1"
-setexec CHANNEL="foo"
-setexec MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
+sete DEVICE_ID="my:dev1"
+sete CHANNEL="foo"
+sete MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
 
 echo
 

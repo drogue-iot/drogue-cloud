@@ -4,14 +4,14 @@ set -e
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-: "${PLATFORM:="kubernetes"}"
+: "${CLUSTER:="minikube"}"
 
 source "$SCRIPTDIR/common.sh"
 
 HELMARGS_DITTO=""
 HELMARGS_MONGODB="--set auth.rootPassword=admin123456 --set auth.enabled=false"
 
-case $PLATFORM in
+case $CLUSTER in
 openshift)
   HELMARGS_DITTO="--set openshift.enabled=true"
   HELMARGS_MONGODB="--set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false"

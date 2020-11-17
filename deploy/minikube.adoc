@@ -61,7 +61,7 @@ minikube tunnel
 And then run link:../hack/minikube.sh[]:
 
 ----
-./hack/minikube.sh
+./hack/drogue.sh
 ----
 
 It will take a few minutes. Upon successful completion, it will print
