@@ -1,0 +1,8 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: console-frontend
+  labels:
+    app: console-frontend
+spec:
+  type: NodePort

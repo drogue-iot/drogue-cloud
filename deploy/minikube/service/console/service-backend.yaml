@@ -1,0 +1,8 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: console-backend
+  labels:
+    app: console-backend
+spec:
+  type: NodePort
