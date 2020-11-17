@@ -2,12 +2,12 @@
 
 set -ex
 
+: "${CLUSTER:=minikube}"
+: "${CONSOLE:=true}"
+: "${MQTT:=true}"
+: "${HELM:=false}"
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
-CLUSTER="minikube"
-MQTT=true
-CONSOLE=true
-HELM=false
 HELM_ARGS="--values $SCRIPTDIR/../deploy/helm/drogue-iot/profile-openshift.yaml"
 
 source "$SCRIPTDIR/common.sh"
@@ -56,7 +56,7 @@ case $CLUSTER in
    *)
         MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        BACKEND_URL=https://$(eval kubectl get route -n $DROGUE_NS console-backend -o 'jsonpath={ .spec.host }')
+        BACKEND_URL="https://$(kubectl get route -n $DROGUE_NS console-backend -o 'jsonpath={ .spec.host }')"
         ;;
 esac;
 
