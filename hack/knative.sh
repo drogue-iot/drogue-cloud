@@ -2,14 +2,14 @@
 
 set -ex
 
-KNATIVE_SERVING_VERSION=${KNATIVE_SERVING_VERSION:-0.17.2}
-KNATIVE_EVENTING_VERSION=${KNATIVE_EVENTING_VERSION:-0.17.5}
-KOURIER_VERSION=${KOURIER_VERSION:-0.17.0}
-EVENTING_KAFKA_VERSION=${EVENTING_KAFKA_VERSION:-nightly}
-KAFKA_NS=${KAFKA_NS:-kafka}
+: ${KNATIVE_SERVING_VERSION:=0.19.0}
+: ${KNATIVE_EVENTING_VERSION:=0.19.1}
+: ${KOURIER_VERSION:=0.19.0}
+: ${EVENTING_KAFKA_VERSION:=0.19.0}
+: ${KAFKA_NS:=kafka}
+: ${CLUSTER:=minikube}
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-: "${CLUSTER:=minikube}"
 
 DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
 
@@ -45,8 +45,6 @@ while [ -z $INGRESS_HOST ]; do
   echo "Waiting for Kourier ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell"
   INGRESS_HOST=$(eval $INGRESS_COMMAND)
 done
-
-
 
 echo "The INGRESS_HOST is $INGRESS_HOST"
 kubectl patch configmap/config-network \
@@ -97,16 +95,11 @@ fi
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $KAFKA_NS
 
 # Knative Kafka resources
-EVENTING_KAFKA_SOURCE_URL="https://github.com/knative/eventing-contrib/releases/download/v${EVENTING_KAFKA_VERSION}/kafka-source.yaml"
-EVENTING_KAFKA_CHANNEL_URL="https://github.com/knative/eventing-contrib/releases/download/v${EVENTING_KAFKA_VERSION}/kafka-channel.yaml"
-if [[ ${EVENTING_KAFKA_VERSION} == "nightly" ]]; then
-  EVENTING_KAFKA_SOURCE_URL="https://knative-nightly.storage.googleapis.com/eventing-kafka/latest/source.yaml"
-  EVENTING_KAFKA_CHANNEL_URL="https://knative-nightly.storage.googleapis.com/eventing-kafka/latest/channel-consolidated.yaml"
-fi
-curl -L ${EVENTING_KAFKA_SOURCE_URL} \
+curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/source.yaml" \
   | sed 's/namespace: .*/namespace: knative-eventing/' \
   | kubectl apply -f - -n knative-eventing
-curl -L ${EVENTING_KAFKA_CHANNEL_URL} \
+kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
+curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/channel-consolidated.yaml" \
     | sed 's/REPLACE_WITH_CLUSTER_URL/kafka-eventing-kafka-bootstrap.knative-eventing:9092/' \
     | kubectl apply -f -
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
