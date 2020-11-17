@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-bases:
-  - ../../../base/source/mqtt/
-
 resources:
+  - ../../../base/source/mqtt/
   - route.yaml

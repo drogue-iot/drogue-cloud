@@ -5,15 +5,6 @@ metadata:
   labels:
     app: console-frontend
     app.kubernetes.io/part-of: console
-  annotations:
-#    image.openshift.io/triggers: |
-#      [{
-#        "from":{
-#          "kind":"ImageStreamTag",
-#          "name":"console-frontend:latest"
-#        },
-#        "fieldPath":"spec.template.spec.containers[?(@.name==\"endpoint\")].image"
-#      }]
 spec:
   replicas: 1
   selector:

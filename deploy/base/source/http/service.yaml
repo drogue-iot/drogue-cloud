@@ -12,7 +12,6 @@ spec:
     spec:
       containers:
         - image: ghcr.io/drogue-iot/http-endpoint:latest
-#        - image: image-registry.openshift-image-registry.svc:5000/drogue-iot/http-endpoint:latest
           env:
             - name: RUST_LOG
               value: info
