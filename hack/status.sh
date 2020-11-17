@@ -10,6 +10,14 @@ set -x
 HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}'")
 
 case $CLUSTER in
+    kind)
+        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+        CONSOLE_PORT=$(kubectl get service -n $DROGUE_NS console-frontend -o jsonpath='{.spec.ports[0].nodePort}')
+        GRAFANA_PORT=$(kubectl get service -n $DROGUE_NS grafana -o jsonpath='{.spec.ports[0].nodePort}')
+
+        CONSOLE_URL=http://console-frontend.$DOMAIN:$CONSOLE_PORT
+        DASHBOARD_URL=http://grafana.$DOMAIN:$GRAFANA_PORT
+        ;;
    minikube)
         MQTT_ENDPOINT_HOST=$(eval minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
         MQTT_ENDPOINT_PORT=$(eval minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $5}')
