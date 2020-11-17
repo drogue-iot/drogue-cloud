@@ -58,7 +58,7 @@ In a separate shell, fire up a tunnel:
 minikube tunnel
 ----
 
-And then run link:../hack/minikube.sh[]:
+And then run link:../hack/drogue.sh[]:
 
 ----
 ./hack/drogue.sh
