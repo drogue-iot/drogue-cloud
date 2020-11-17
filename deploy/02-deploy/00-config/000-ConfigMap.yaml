@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: configuration
-data:
-  cluster.domain: my.cluster.tld
-  endpoint.source: openshift

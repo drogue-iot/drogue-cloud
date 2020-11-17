@@ -35,29 +35,33 @@ The usual command line tools. I would like to call out the following:
 * `kn` - The Knative command line tool. Not required, but might come in handy.
 * `oc` / `kubectl` - In our case, there isn't a big difference. I try to go for `kubectl`, but should
 you encounter `oc`, then just swap it. And/or raise a PR 😉
+* `helm` - Used internall for pulling in some dependencies, get from https://github.com/helm/helm/releases[Helm releases]
 * `http` - aka https://httpie.org/[HTTPie]
 * `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
 * `openssl` - to create a TLS Secret for the MQTT endpoint
 
 === Kubernetes
 
-You will need an installation of Kubernetes. I am using OpenShift 4.5, but you should be able to take any other
-Kubernetes 1.17+.
+You will need an installation of Kubernetes. This should work on OpenShift, Minikube, Kind, and all other versions
+of Kubernetes.
 
-The biggest differences from OpenShift to Kubernetes may be:
+For the script we provide, we try to focus on Minikube, OpenShift, and Kind. However it should be possible
+to re-use them for other Kubernetes types as well.
 
-* The lack of the `Route` CRD. Which exposes services easily, without requiring any load balancer or other tunnel
-  workarounds.
-* The lack of an internal image registry. Which you can ignore if you build and host your images manually, or use our provided image.
+== Dependencies
 
-Although I am using a dedicated cluster, using
-https://developers.redhat.com/products/codeready-containers/overview[CRC]footnote:[CodeReady Containers, OpenShift in a local VM] 
-or https://kubernetes.io/docs/tasks/tools/install-minikube/[Minikube] 
-should be possible as well. Just ensure that you bring enough CPU and RAM.
+On the cluster you will need some infrastructure components installed. By default the deployment scripts
+will install dependencies, but there are other ways to install things as well. The following sub-sections
+describe what is required.
 
-For instructions specific to minikube, see link:minikube.adoc[].
+NOTE: All following dependencies will be installed by the deployment scripts. There is no need to install
+them manually, unless you explicitly wish to do so.
 
-=== Knative 0.13.x
+=== Strimzi
+
+For Kafka, this deployment requires https://strimzi.io/[Strimzi]. I deployed "Strimzi" from OperatorHub.
+
+=== Knative 0.17.x
 
 On the cluster, you will need https://knative.dev/[Knative], including the following features:
 
@@ -71,133 +75,28 @@ through OperatorHub. Then install https://knative.dev/docs/install/knative-with-
 I needed to add the Kafka eventing after that, I used the https://github.com/openshift-knative/knative-kafka-operator[knative kafka operator]. If you are using Openshift, you can follow https://openshift-knative.github.io/docs/docs/proc_apache-kafka.html[this guide].
 Install the operator following these instructions, but don't create any CRfootnote:[custom resource] yet.
 
-=== Strimzi
-
-For Kafka, this deployment requires https://strimzi.io/[Strimzi]. I deployed "Strimzi" from OperatorHub.
-
 == Performing the deployment
 
 Once you have all pre-requisites installed, you can start deploying.
 
-=== Create a new namespace
+Run the `./hack/drogue.sh` script and pass the Kubernetes type you use (`minikube` is the default):
 
 ----
-oc new-project drogue-iot
-oc label namespace drogue-iot bindings.knative.dev/include=true
-----
-
-Or:
-
-----
-kubectl create namespace drogue-iot
-kubectl label namespace drogue-iot bindings.knative.dev/include=true
-kubectl config set-context --current --namespace=drogue-iot
-----
-
-NOTE: Unless noted otherwise, the guide will expect that your context defaults to the `drogue-iot` namespace.
-
-WARNING: Currently, some parts of the deployment actually expect the name `drogue-iot`. If you change it, you will
-break things.
-
-=== Local build
-
-If you want to build the images yourself, you can do this with the following command:
-
-----
-make CONTAINER_REGISTRY=quay.io/my-user
-----
-
-This will push the following images, be sure to grant access to them (aka make them public):
-
-* `http-endpoint`
-* `mqtt-endpoint`
-* `influxdb-pusher`
-* `console-backend`
-* `console-frontend`
-
-=== Deploy Kafka
-
-This deploys a Kafka cluster and creates the Kafka channel capability.
-
-[NOTE]
-====
-The following command operates on the namespace `knative-eventing`. The namespace is specified in the YAML file.
-So be careful here when use `kubectl` with `-n`.
-====
-
-----
-kubectl apply -f deploy/02-deploy/01-kafka
-----
-
-=== Deploy InfluxDB
-
-Execute the following:
-
-----
-kubectl apply -f deploy/02-deploy/02-influxdb
-----
-
-=== Deploy Grafana
-
-Execute the following:
-
-----
-kubectl apply -f deploy/02-deploy/03-dashboard
-----
-
-Credentials: `admin` / `admin123456`
-
-=== Deploy Knative services
-
-Depending on your environment, you need to fix the source of your images. Check the files,
-and adapt the `image` field:
-
-* `deploy/02-deploy/04-knative/110-Service-influxdb-pusher.yaml`
-* `deploy/02-deploy/05-endpoints/http/020-Service-http-endpoint.yaml`
-* `deploy/02-deploy/05-endpoints/mqtt/010-Deployment-mqtt-endpoint.yaml`
-
-You must also provide a TLS certificate for the MQTT endpoint. You can create a secret like this:
-
-----
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=foo.bar.com"
-kubectl create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
-----
-
-Also, see: link:02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml[02-deploy/05-endpoints/mqtt/010-Secret-mqtt.yaml]
-
-NOTE: The default values point to our built images, hosted on https://quay.io/drogueiot[the drogueiot quay organisation].
-
-Then execute the following:
-
-----
-kubectl apply -f deploy/02-deploy/04-knative
-kubectl apply -f deploy/02-deploy/05-endpoints/http
-kubectl apply -f deploy/02-deploy/05-endpoints/mqtt
+env CLUSTER=minikube ./hack/drogue.sh
 ----
 
 == Testing
 
-=== Endpoints
+The deployment script will print out the necessary connection information for your environment. It will
+also suggest some commands to try out the installation.
 
-First you need to figure out the endpoints for the Grafana instance and the HTTP adapter.
-
-If you are running on OpenShift, and have properly configured the ingress operator, then this should be easy.
-
-The following command should give you the endpoint of the Grafana instance and the MQTT endpoint:
-----
-oc get routes
-----
-
-While the next command gives you the URL of the HTTP endpoint:
+You can get this information later on by running:
 
 ----
-kn route describe http-endpoint
+./hack/status.sh
 ----
 
-NOTE: It may be that the endpoint of the Knative service is listed as `http:`, while in fact it is `https:`.
-
-NOTE: If you are not running on OpenShift, you may need some extra configuration for exposing services. Please check
-with the documentation of your Kubernetes variant.
+The following sub-sections describe the examples in a bit more detail.
 
 === Console
 
@@ -207,8 +106,8 @@ You can open up the console to get some more information about the installation:
 
 === Dashboard
 
-Login in to the Grafana instance and open the dashboard "Knative test". Double check that it is set to
-automatically reload.
+Login in to the Grafana instance and open the dashboard "Knative test". Double check it is set to
+reload automatically.
 
 === Publish data using HTTP
 
