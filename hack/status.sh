@@ -8,6 +8,14 @@ set -x
 : "${MQTT:=true}"
 
 case $CLUSTER in
+    kind)
+        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+        CONSOLE_PORT=$(kubectl get service -n $DROGUE_NS console-frontend -o jsonpath='{.spec.ports[0].nodePort}')
+        GRAFANA_PORT=$(kubectl get service -n $DROGUE_NS grafana -o jsonpath='{.spec.ports[0].nodePort}')
+
+        CONSOLE_URL=http://console-frontend.$DOMAIN:$CONSOLE_PORT
+        DASHBOARD_URL=http://grafana.$DOMAIN:$GRAFANA_PORT
+        ;;
    minikube)
         CONSOLE_URL=$(eval minikube service -n $DROGUE_NS --url console-frontend)
         DASHBOARD_URL=$(eval minikube service -n $DROGUE_NS --url grafana)
