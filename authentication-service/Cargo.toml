@@ -29,3 +29,5 @@ jsonwebtokens = "1.0.0-alpha.13"
 
 diesel = { version = "2.0.0", features = ["postgres", "r2d2"] }
 dotenv = "0.15.0"
+actix-web-httpauth = "0.5.0"
+envconfig = "0.9.1"

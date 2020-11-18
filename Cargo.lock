@@ -561,11 +561,13 @@ dependencies = [
  "actix-rt",
  "actix-service",
  "actix-web",
+ "actix-web-httpauth",
  "anyhow",
  "chrono",
  "diesel",
  "dotenv",
  "env_logger",
+ "envconfig",
  "futures",
  "futures-core",
  "futures-util",
@@ -1127,7 +1129,7 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#fef3b93824bc7abaae0b3f41c9c2ca6b984bb027"
+source = "git+https://github.com/diesel-rs/diesel#fef3b93824bc7abaae0b3f41c9c2ca6b984bb027"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -1140,7 +1142,7 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#fef3b93824bc7abaae0b3f41c9c2ca6b984bb027"
+source = "git+https://github.com/diesel-rs/diesel#fef3b93824bc7abaae0b3f41c9c2ca6b984bb027"
 dependencies = [
  "proc-macro2",
  "quote",
