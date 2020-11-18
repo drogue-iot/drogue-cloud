@@ -1,0 +1,41 @@
+kind: Kafka
+apiVersion: kafka.strimzi.io/v1beta1
+metadata:
+  name: kafka-eventing
+spec:
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  kafka:
+    config:
+      log.message.format.version: '2.5'
+      offsets.topic.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      transaction.state.log.replication.factor: 1
+    #    authorization:
+    #      type: simple
+    listeners:
+      plain: {}
+      tls: {}
+      external:
+        type: route
+        authentication:
+          type: tls
+    replicas: 1
+    storage:
+      type: persistent-claim
+      size: 10Gi
+      deleteClaim: true
+    version: 2.5.0
+    template:
+      pod:
+        securityContext: {}
+  zookeeper:
+    replicas: 1
+    storage:
+      type: persistent-claim
+      size: 1Gi
+      deleteClaim: true
+    template:
+      pod:
+        securityContext: {}
