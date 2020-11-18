@@ -26,9 +26,10 @@ kubectl apply \
 
 fi
 
-kubectl apply -n "$DROGUE_NS" \
+kubectl -n "$DROGUE_NS" apply \
   -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/11.0.3/deploy/service_account.yaml" \
   -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/11.0.3/deploy/role.yaml" \
   -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/11.0.3/deploy/role_binding.yaml" \
   -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/11.0.3/deploy/operator.yaml" \
 
+kubectl -n "$DROGUE_NS" wait deployment keycloak-operator --for=condition=Available --timeout=-1s
