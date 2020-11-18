@@ -21,15 +21,22 @@ openshift)
 
 esac
 
-helm upgrade --install --wait --timeout 30m --repo https://ctron.github.io/helm-charts ditto-operator ditto-operator --version "^0.1.9" -n "$DROGUE_NS" $HELMARGS_DITTO
-helm upgrade --install --wait --timeout 30m --repo https://charts.bitnami.com/bitnami mongodb mongodb --version 9 -n "$DROGUE_NS" $HELMARGS_MONGODB
+echo -n "🧑‍🔧 Deploying Ditto operator... "
+helm upgrade --install --wait --timeout 30m --repo https://ctron.github.io/helm-charts ditto-operator ditto-operator --version "^0.1.9" -n "$DROGUE_NS" $HELMARGS_DITTO >/dev/null
+echo "OK"
 
-kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/digital-twin/"
+echo -n "📚 Deploying MongoDB instance... "
+helm upgrade --install --wait --timeout 30m --repo https://charts.bitnami.com/bitnami mongodb mongodb --version 9 -n "$DROGUE_NS" $HELMARGS_MONGODB >/dev/null
+echo "OK"
+
+echo -n "🪞 Deploying digital twin... "
+kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/digital-twin/" >/dev/null
+echo "OK"
 
 # waiting for ditto operator
 
 echo -n "🧑‍🔧 Waiting for the Ditto operator to start... "
-kubectl -n "$DROGUE_NS" wait deployment/ditto-operator --for=condition=Available --timeout=-1s &>/dev/null
+kubectl -n "$DROGUE_NS" wait deployment/ditto-operator --for=condition=Available --timeout=-1s >/dev/null
 echo "OK"
 
 # wait for ingress IP to appear
@@ -42,16 +49,17 @@ echo "OK"
 
 # waiting for Ditto API to be available
 
-echo -n "👍 Waiting availability of ditto API"
-kubectl -n "$DROGUE_NS" wait deployment/ditto-nginx --for=condition=Available --timeout=-1s &>/dev/null
+echo -n "👍 Waiting for the availability of the Ditto API... "
+kubectl -n "$DROGUE_NS" wait deployment/ditto-nginx --for=condition=Available --timeout=-1s >/dev/null
 echo "OK"
 
 # show status
 
 DIGITAL_TWIN=true source $SCRIPTDIR/status.sh
 
-echo
+tput setaf 7 && tput dim || true
+echo -----
 echo "You can display this information later on by running:"
+echo "   env DIGITAL_TWIN=true ./hack/status.sh"
 echo
-echo "env DIGITAL_TWIN=true ./hack/status.sh"
-echo
+tput sgr0 || true
