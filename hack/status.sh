@@ -72,9 +72,12 @@ echo "  http POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=44"
 if [ "$MQTT" = true ] ; then
   echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -s --cafile tls.crt -t temp -m '{\"temp\":42}' -V 3"
 fi
+echo
 
 #
-# expects "VAR=value" as an argument, which gets printed and executed.
+# Expects "VAR=value" as an argument, which gets printed and executed.
+#
+# This is used to show an env-var command to the user, and make the same value available in the script later on.
 #
 function sete() {
   echo "$@"
@@ -84,7 +87,6 @@ function sete() {
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
 
-echo
 echo
 echo "=========================================================================================="
 echo " Digital Twin:"
