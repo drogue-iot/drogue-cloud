@@ -54,6 +54,7 @@ case $CLUSTER in
    openshift)
         MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
+        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
         BACKEND_URL="https://$(kubectl get route -n "$DROGUE_NS" console-backend -o 'jsonpath={ .spec.host }')"
         ;;
    *)
@@ -70,15 +71,12 @@ if  [ "$MQTT" = true ] && [ "$(kubectl -n $DROGUE_NS get secret mqtt-endpoint-tl
   kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
 fi
 
-# Create the Console endpoints
+# Update the console endpoints
 
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINT_SOURCE-"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
-
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
-
-kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL" "CLUSTER_DOMAIN-"
+kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"
 
 # wait for all necessary components
 

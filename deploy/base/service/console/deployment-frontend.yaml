@@ -20,17 +20,9 @@ spec:
           image: ghcr.io/drogue-iot/console-frontend:latest
           imagePullPolicy: Always
           env:
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: CLUSTER_DOMAIN
-              valueFrom:
-                configMapKeyRef:
-                  name: configuration
-                  key: cluster.domain
-            - name: BACKEND_URL
-              value: https://console-backend-$(NAMESPACE).$(CLUSTER_DOMAIN)
+# Needs to be set, is done by 'drogue.sh'
+#            - name: BACKEND_URL
+#              value: https://console-backend-$(NAMESPACE).$(CLUSTER_DOMAIN)
           ports:
             - containerPort: 8080
               name: endpoint
