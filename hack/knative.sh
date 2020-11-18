@@ -2,16 +2,16 @@
 
 set -ex
 
-: ${KNATIVE_SERVING_VERSION:=0.19.0}
-: ${KNATIVE_EVENTING_VERSION:=0.19.1}
-: ${KOURIER_VERSION:=0.19.0}
-: ${EVENTING_KAFKA_VERSION:=0.19.0}
-: ${KAFKA_NS:=kafka}
-: ${CLUSTER:=minikube}
+: "${KNATIVE_SERVING_VERSION:=0.19.0}"
+: "${KNATIVE_EVENTING_VERSION:=0.19.1}"
+: "${KOURIER_VERSION:=0.19.0}"
+: "${EVENTING_KAFKA_VERSION:=0.19.0}"
+: "${KAFKA_NS:=kafka}"
+: "${CLUSTER:=minikube}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
+DEPLOYDIR="$SCRIPTDIR/../deploy"
 
 # Knative Serving
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml
@@ -103,3 +103,8 @@ curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${
     | sed 's/REPLACE_WITH_CLUSTER_URL/kafka-eventing-kafka-bootstrap.knative-eventing:9092/' \
     | kubectl apply -f -
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
+
+# Create kafka cluster
+kubectl -n knative-eventing  apply -k "$DEPLOYDIR/knative"
+kubectl -n knative-eventing patch kafka kafka-eventing -p '[{"op": "remove", "path": "/spec/kafka/listeners/external"}]' --type json
+kubectl -n knative-eventing wait kafka --all --for=condition=Ready --timeout=-1s

@@ -6,24 +6,24 @@ set -ex
 : "${CONSOLE:=true}"
 : "${MQTT:=true}"
 : "${HELM:=false}"
+
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DEPLOY_DIR="$(dirname "${BASH_SOURCE[0]}")/../deploy/02-deploy"
+DEPLOYDIR="$SCRIPTDIR/.."
 HELM_ARGS="--values $SCRIPTDIR/../deploy/helm/drogue-iot/profile-openshift.yaml"
 
 source "$SCRIPTDIR/common.sh"
-source "$SCRIPTDIR/knative.sh"
-source "$SCRIPTDIR/registry.sh"
 
-# Create workspace for endpoints
-if ! kubectl get ns $DROGUE_NS >/dev/null 2>&1; then
-  kubectl create namespace $DROGUE_NS
-  kubectl label namespace $DROGUE_NS bindings.knative.dev/include=true
+# Create the namespace first
+if ! kubectl get ns "$DROGUE_NS" >/dev/null 2>&1; then
+  kubectl create namespace "$DROGUE_NS"
+  kubectl label namespace "$DROGUE_NS" bindings.knative.dev/include=true
 fi
 
-# Create kafka cluster
-kubectl apply -f $DEPLOY_DIR/01-kafka/010-Kafka.yaml
-kubectl patch kafka -n knative-eventing kafka-eventing -p '[{"op": "remove", "path": "/spec/kafka/listeners/external"}]' --type json
-kubectl wait kafka --all --for=condition=Ready --timeout=-1s -n knative-eventing
+# install additional components
+
+source "$SCRIPTDIR/knative.sh"
+source "$SCRIPTDIR/sso.sh"
+source "$SCRIPTDIR/registry.sh"
 
 # Install Drogue components (sources and services)
 
@@ -36,14 +36,14 @@ if [ "$HELM" = true ] ; then
     HELM_ARGS+=" --set services.console.enabled=true"
   fi
 
-  helm install --dependency-update -n $DROGUE_NS $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
+  helm install --dependency-update -n "$DROGUE_NS" $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
 else
-  kubectl -n $DROGUE_NS apply -k $SCRIPTDIR/../deploy/$CLUSTER/
+  kubectl -n "$DROGUE_NS" apply -k $SCRIPTDIR/../deploy/$CLUSTER/
 fi
 
 # Wait for the HTTP endpoint to become ready
 
-kubectl -n $DROGUE_NS wait --timeout=-1s --for=condition=Ready ksvc/http-endpoint
+kubectl -n "$DROGUE_NS" wait --timeout=-1s --for=condition=Ready ksvc/http-endpoint
 HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}'")
 
 case $CLUSTER in
