@@ -3,7 +3,6 @@
 set -ex
 
 : "${CLUSTER:=minikube}"
-: "${CONSOLE:=true}"
 : "${MQTT:=true}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -65,20 +64,19 @@ if  [ "$MQTT" = true ] && [ "$(kubectl -n $DROGUE_NS get secret mqtt-endpoint-tl
 fi
 
 # Create the Console endpoints
-if [ $CONSOLE = "true" ] ; then
+kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE-"
+kubectl -n $DROGUE_NS set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 
-  # Create the Console endpoints
-  kubectl -n $DROGUE_NS set env deployment/console-backend "ENDPOINT_SOURCE-"
-  kubectl -n $DROGUE_NS set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
+kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST"
+kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
 
-  kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST"
-  kubectl -n $DROGUE_NS set env deployment/console-backend "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
+kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL" "CLUSTER_DOMAIN-"
 
-  kubectl -n $DROGUE_NS set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL" "CLUSTER_DOMAIN-"
-fi
-
+# wait for all necessary components
 
 kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n $DROGUE_NS
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $DROGUE_NS
+
+# show status
 
 source "$SCRIPTDIR/status.sh"
