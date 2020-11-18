@@ -19,14 +19,15 @@ if ! kubectl get ns "$DROGUE_NS" >/dev/null 2>&1; then
   kubectl label namespace "$DROGUE_NS" bindings.knative.dev/include=true
 fi
 
-# install additional components
+# install pre-reqs
 
 [[ "$INSTALL_STRIMZI" == true ]] && source "$SCRIPTDIR/strimzi.sh"
 [[ "$INSTALL_KNATIVE" == true ]] && source "$SCRIPTDIR/knative.sh"
 [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]] && source "$SCRIPTDIR/sso.sh"
-source "$SCRIPTDIR/registry.sh"
 
 # Install Drogue components (sources and services)
+
+source "$SCRIPTDIR/registry.sh"
 
 kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
 

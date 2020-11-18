@@ -9,4 +9,5 @@ spec:
   port:
     targetPort: endpoint
   tls:
+    insecureEdgeTerminationPolicy: Redirect
     termination: edge
