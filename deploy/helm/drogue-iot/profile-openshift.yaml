@@ -1,7 +1,0 @@
-platform: openshift
-
-postgresql:
-  securityContext:
-    enabled: false
-  containerSecurityContext:
-    enabled: false

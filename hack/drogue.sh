@@ -5,11 +5,9 @@ set -ex
 : "${CLUSTER:=minikube}"
 : "${CONSOLE:=true}"
 : "${MQTT:=true}"
-: "${HELM:=false}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DEPLOYDIR="$SCRIPTDIR/.."
-HELM_ARGS="--values $SCRIPTDIR/../deploy/helm/drogue-iot/profile-openshift.yaml"
 
 source "$SCRIPTDIR/common.sh"
 
@@ -27,19 +25,7 @@ source "$SCRIPTDIR/registry.sh"
 
 # Install Drogue components (sources and services)
 
-if [ "$HELM" = true ] ; then
-  if [ "$MQTT" = true ] ; then
-    HELM_ARGS+=" --set sources.mqtt.enabled=true"
-  fi
-
-  if [ "$CONSOLE" = true ] ; then
-    HELM_ARGS+=" --set services.console.enabled=true"
-  fi
-
-  helm install --dependency-update -n "$DROGUE_NS" $HELM_ARGS drogue-iot $SCRIPTDIR/../deploy/helm/drogue-iot/
-else
-  kubectl -n "$DROGUE_NS" apply -k $SCRIPTDIR/../deploy/$CLUSTER/
-fi
+kubectl -n "$DROGUE_NS" apply -k $SCRIPTDIR/../deploy/$CLUSTER/
 
 # Wait for the HTTP endpoint to become ready
 
