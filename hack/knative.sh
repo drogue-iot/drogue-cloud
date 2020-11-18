@@ -6,7 +6,6 @@ set -ex
 : "${KNATIVE_EVENTING_VERSION:=0.19.1}"
 : "${KOURIER_VERSION:=0.19.0}"
 : "${EVENTING_KAFKA_VERSION:=0.19.0}"
-: "${KAFKA_NS:=kafka}"
 : "${CLUSTER:=minikube}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -73,26 +72,6 @@ esac;
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-crds.yaml
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-core.yaml
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
-
-# Strimzi
-if ! kubectl get ns $KAFKA_NS >/dev/null 2>&1; then kubectl create ns $KAFKA_NS; fi
-if ! kubectl -n $KAFKA_NS get deploy/strimzi-cluster-operator >/dev/null 2>&1; then
-  kubectl apply -f "https://strimzi.io/install/latest?namespace=$KAFKA_NS" -n $KAFKA_NS
-  # the rest is required to watch all namespaces
-  kubectl -n $KAFKA_NS set env deploy/strimzi-cluster-operator STRIMZI_NAMESPACE=\*
-  if ! kubectl get clusterrolebinding strimzi-cluster-operator-namespaced >/dev/null 2>&1; then
-    kubectl create clusterrolebinding strimzi-cluster-operator-namespaced \
-      --clusterrole=strimzi-cluster-operator-namespaced \
-      --serviceaccount $KAFKA_NS:strimzi-cluster-operator
-    kubectl create clusterrolebinding strimzi-cluster-operator-entity-operator-delegation \
-      --clusterrole=strimzi-entity-operator \
-      --serviceaccount $KAFKA_NS:strimzi-cluster-operator
-    kubectl create clusterrolebinding strimzi-cluster-operator-topic-operator-delegation \
-      --clusterrole=strimzi-topic-operator \
-      --serviceaccount $KAFKA_NS:strimzi-cluster-operator
-  fi
-fi
-kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $KAFKA_NS
 
 # Knative Kafka resources
 curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/source.yaml" \
