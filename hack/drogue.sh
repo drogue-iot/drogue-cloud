@@ -72,7 +72,7 @@ esac;
 
 # Provide a TLS certificate for the MQTT endpoint
 
-if  [ "$MQTT" = true ] && [ "$(kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls --ignore-not-found)" != "" ] ; then
+if  [ "$MQTT" = true ] && [ "$(kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] ; then
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext "subjectAltName = DNS:$MQTT_ENDPOINT_HOST"
   openssl rsa -in tls_tmp.key -out tls.key
   kubectl -n $DROGUE_NS create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
