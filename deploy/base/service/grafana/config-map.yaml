@@ -58,7 +58,17 @@ data:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "links": [],
+      "links": [
+        {
+          "$$hashKey": "object:96",
+          "icon": "external link",
+          "tags": [],
+          "title": "drogue.io",
+          "tooltip": "",
+          "type": "link",
+          "url": "https://drogue.io"
+        }
+      ],
       "panels": [
         {
           "aliasColors": {},
@@ -385,5 +395,5 @@ data:
       "timezone": "",
       "title": "Knative test",
       "uid": "YYGTNzdMk",
-      "version": 3
+      "version": 1
     }
