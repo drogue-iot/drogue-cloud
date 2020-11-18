@@ -58,17 +58,7 @@ data:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "links": [
-        {
-          "$$hashKey": "object:96",
-          "icon": "external link",
-          "tags": [],
-          "title": "drogue.io",
-          "tooltip": "",
-          "type": "link",
-          "url": "https://drogue.io"
-        }
-      ],
+      "links": [],
       "panels": [
         {
           "aliasColors": {},
