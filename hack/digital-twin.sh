@@ -40,4 +40,18 @@ while [ -z "$(kubectl -n "$DROGUE_NS" get ingress ditto -o jsonpath='{.status.lo
 done
 echo "OK"
 
+# waiting for Ditto API to be available
+
+echo -n "👍 Waiting availability of ditto API"
+kubectl -n "$DROGUE_NS" wait deployment/ditto-nginx --for=condition=Available --timeout=-1s &>/dev/null
+echo "OK"
+
+# show status
+
 DIGITAL_TWIN=true source $SCRIPTDIR/status.sh
+
+echo
+echo "You can display this information later on by running:"
+echo
+echo "env DIGITAL_TWIN=true ./hack/status.sh"
+echo

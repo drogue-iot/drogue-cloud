@@ -17,10 +17,6 @@ spec:
     listeners:
       plain: {}
       tls: {}
-      external:
-        type: route
-        authentication:
-          type: tls
     replicas: 1
     storage:
       type: persistent-claim
