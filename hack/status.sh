@@ -28,11 +28,16 @@ case $CLUSTER in
         CONSOLE_URL=$(eval minikube service -n $DROGUE_NS --url console-frontend)
         DASHBOARD_URL=$(eval minikube service -n $DROGUE_NS --url grafana)
         ;;
-   *)
+   openshift)
         MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        CONSOLE_URL=$(eval kubectl -n $DROGUE_NS get routes console -o jsonpath={.spec.host})
-        DASHBOARD_URL=$(eval kubectl -n $DROGUE_NS get routes grafana -o jsonpath={.spec.host})
+        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
+        CONSOLE_URL=https://$(eval kubectl -n $DROGUE_NS get routes console -o jsonpath={.spec.host})
+        DASHBOARD_URL=https://$(eval kubectl -n $DROGUE_NS get routes grafana -o jsonpath={.spec.host})
+        ;;
+   *)
+        echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
+        exit 1
         ;;
 esac;
 

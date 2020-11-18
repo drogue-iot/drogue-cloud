@@ -4,9 +4,11 @@ set -ex
 
 : "${CLUSTER:=minikube}"
 : "${MQTT:=true}"
-: "${INSTALL_STRIMZI:=true}"
-: "${INSTALL_KNATIVE:=true}"
-: "${INSTALL_KEYCLOAK_OPERATOR:=true}"
+
+: "${INSTALL_DEPS:=true}"
+: "${INSTALL_STRIMZI:=${INSTALL_DEPS}}"
+: "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
+: "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DEPLOYDIR="$SCRIPTDIR/.."
@@ -67,9 +69,15 @@ esac;
 # Provide a TLS certificate for the MQTT endpoint
 
 if  [ "$MQTT" = true ] && [ "$(kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] ; then
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext "subjectAltName = DNS:$MQTT_ENDPOINT_HOST"
-  openssl rsa -in tls_tmp.key -out tls.key
-  kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+  if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
+    echo "Creating custom certificate..."
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext "subjectAltName = DNS:$MQTT_ENDPOINT_HOST"
+    openssl rsa -in tls_tmp.key -out tls.key
+    kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key tls.key --cert tls.crt
+  else
+    echo "Using provided certificate..."
+    kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key "$TLS_KEY" --cert "$TLS_CRT"
+  fi
 fi
 
 # Update the console endpoints
