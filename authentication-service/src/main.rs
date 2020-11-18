@@ -1,27 +1,17 @@
-pub mod models;
-pub mod schema;
-
-use diesel::pg::PgConnection;
-use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-
-use crate::models::Credential;
+mod models;
+mod schema;
+mod auth;
+mod database;
 
 use actix_web::{get, web, App, HttpResponse, HttpServer};
+use actix_web_httpauth::extractors::basic::BasicAuth;
 
 use serde::Deserialize;
-use serde_json::json;
 
 use dotenv::dotenv;
+use envconfig::Envconfig;
 
-use jsonwebtokens as jwt;
-use jwt::error::Error;
-use jwt::{encode, Algorithm, AlgorithmID};
-
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
-
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::borrow::Cow;
 
 #[derive(Clone, Debug, Deserialize)]
 struct Secret {
@@ -29,89 +19,61 @@ struct Secret {
     salt: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct Credentials {
-    device_id: String,
-    password: String,
-}
-
 #[derive(Debug)]
 enum AuthenticationResult {
     Success,
-    NotFound,
     Failed,
     Error,
 }
 
-pub type PgPool = Pool<ConnectionManager<PgConnection>>;
-pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
+#[get("/auth")]
+async fn password_authentication(
+    auth: BasicAuth,
+    data: web::Data<WebData>,
+) -> Result<HttpResponse, actix_web::Error> {
 
-pub fn establish_connection() -> PgPool {
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let connection = database::pg_pool_handler(&data.connection_pool)?;
+    let auth_result;
+    let secret = database::get_credential(&auth.user_id(), &connection)?;
 
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-    Pool::builder()
-        .build(manager)
-        .expect("Failed to create pool.")
+    auth_result = auth::verify_password(
+        &auth.password().unwrap_or(&Cow::from("")),
+        &secret
+    );
+
+    match auth_result {
+        AuthenticationResult::Success =>
+            Ok(HttpResponse::Ok().finish()),
+        AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
+        AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
+    }
 }
 
-pub fn pg_pool_handler(pool: &PgPool) -> Result<PgPooledConnection, HttpResponse> {
-    pool.get()
-        .map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
-}
 
-pub fn get_credentials(id: &str, pool: &PgConnection) -> Vec<Credential> {
-    let results = schema::credentials::dsl::credentials
-        .filter(schema::credentials::dsl::device_id.eq(id))
-        .load::<Credential>(pool)
-        .expect("Error loading credentials");
-
-    results
-}
-
-#[get("/authenticate")]
-async fn authenticate(
-    credentials: web::Query<Credentials>,
+#[get("/jwt")]
+async fn token_authentication(
+    auth: BasicAuth,
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!(
         "Received Authentication request for device: {}",
-        credentials.device_id
+        auth.user_id()
     );
 
-    let connection = pg_pool_handler(&data.connection_pool)?;
-
+    let connection = database::pg_pool_handler(&data.connection_pool)?;
     let auth_result;
-    let db_credentials = get_credentials(&credentials.device_id, &connection);
+    let secret = database::get_credential(&auth.user_id(), &connection)?;
 
-    if db_credentials.len() > 1 {
-        auth_result = AuthenticationResult::Error;
-        log::info!(
-            "More than one credential exist for {}",
-            credentials.device_id
-        );
-    } else if db_credentials.len() == 1 {
-        let cred = &db_credentials[0];
-        match &cred.secret {
-            Some(s) => {
-                // turn s into a Secret object
-                let secret: Secret = serde_json::from_str(s)?;
-                auth_result = verify_password(&credentials.password, &secret);
-            }
-            None => auth_result = AuthenticationResult::Error,
-        }
-    } else if db_credentials.len() == 0 {
-        auth_result = AuthenticationResult::NotFound;
-        log::info!("No credentials found for {}", credentials.device_id);
-    } else {
-        auth_result = AuthenticationResult::Error;
-    }
+    auth_result = auth::verify_password(
+        &auth.password().unwrap_or(&Cow::from("")),
+        &secret
+    );
 
     //issue token if auth is successful
     match auth_result {
         AuthenticationResult::Success => {
-            let token = get_jwt_token(
-                &credentials.device_id,
+            let token = auth::get_jwt_token(
+                &auth.user_id(),
                 &data.token_signing_private_key,
                 data.token_expiration_seconds,
             );
@@ -119,7 +81,7 @@ async fn authenticate(
                 Ok(token) => {
                     log::debug!(
                         "Issued JWT for device {}. Token: {}",
-                        credentials.device_id,
+                        auth.user_id(),
                         token
                     );
                     Ok(HttpResponse::Ok().header("Authorization", token).finish())
@@ -132,85 +94,66 @@ async fn authenticate(
                 }
             }
         }
-        AuthenticationResult::Error => Ok(HttpResponse::InternalServerError()
-            .content_type("text/plain")
-            .body("Internal error")),
-        AuthenticationResult::NotFound => Ok(HttpResponse::NotFound().finish()),
         AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
+        AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
     }
 }
 
-fn get_jwt_token(dev_id: &str, pem_data: &[u8], expiration: u64) -> Result<String, Error> {
-    let alg = Algorithm::new_ecdsa_pem_signer(AlgorithmID::ES256, pem_data)?;
-    let header = json!({ "alg": alg.name() });
-    let claims = json!({
-        "device_id":  dev_id,
-        "exp": get_future_timestamp(expiration)
-    });
 
-    encode(&header, &claims, &alg)
-}
-
-fn get_future_timestamp(seconds_from_now: u64) -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(n) => match n.checked_add(Duration::new(seconds_from_now, 0)) {
-            Some(n) => n.as_secs(),
-            _ => 0,
-        },
-        _ => 0,
-    }
-}
-
-fn verify_password(password: &str, secret: &Secret) -> AuthenticationResult {
-    let mut computed_hash = password.to_owned() + &secret.salt;
-    let mut hasher = Sha256::new();
-
-    hasher.input_str(&computed_hash);
-    computed_hash = hasher.result_str();
-
-    if computed_hash.eq(&secret.hash) {
-        AuthenticationResult::Success
-    } else {
-        AuthenticationResult::Failed
-    }
-}
 
 #[derive(Clone)]
 struct WebData {
-    connection_pool: PgPool,
+    connection_pool: database::PgPool,
     token_expiration_seconds: u64,
     token_signing_private_key: Vec<u8>,
 }
 
-const TOKEN_EXPIRATION_SECONDS_ENV_VAR: &str = "TOKEN_EXPIRATION";
-const JWT_SIGNING_PRIVATE_KEY_ENV_VAR: &str = "JWT_ECDSA_SIGNING_KEY";
+#[derive(Envconfig)]
+struct Config {
+    #[envconfig(from = "DATABASE_URL")]
+    pub db_url: String,
+    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    pub bind_addr: String,
 
-const DEFAULT_TOKEN_EXPIRATION: &str = "300";
+    #[envconfig(from = "TOKEN_EXPIRATION", default = "300")]
+    pub jwt_expiration: u64,
+    #[envconfig(from = "JWT_ECDSA_SIGNING_KEY")]
+    pub jwt_signing_key: Option<String>,
+    #[envconfig(from = "ENABLE_JWT", default = "false")]
+    pub enable_jwt: bool,
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    let pool = establish_connection();
-    let jwt_expiration = std::env::var(TOKEN_EXPIRATION_SECONDS_ENV_VAR)
-        .unwrap_or(DEFAULT_TOKEN_EXPIRATION.to_string());
-    let pem_data = std::fs::read(
-        std::env::var(JWT_SIGNING_PRIVATE_KEY_ENV_VAR).expect("JWT_ECDSA_SIGNING_KEY must be set"),
-    )
-    .unwrap();
+    // Initialize config from environment variables
+    let config = Config::init_from_env().unwrap();
+    let data : WebData;
+    let app = App::new();
 
-    let data = WebData {
-        connection_pool: pool,
-        token_expiration_seconds: jwt_expiration.parse::<u64>().unwrap(),
-        token_signing_private_key: pem_data,
-    };
+    let pool = database::establish_connection(config.db_url);
+    if config.enable_jwt {
+        data = WebData{
+            connection_pool: pool,
+            token_expiration_seconds: config.jwt_expiration,
+            token_signing_private_key: std::fs::read(config.jwt_signing_key
+                .expect("JWT_ECDSA_SIGNING_KEY must be set")).unwrap(),
+        };
+        // add the JWT service to the web server.
+        app.service(token_authentication).data(data.clone());
+    } else {
+        data = WebData{
+            connection_pool: pool,
+            token_expiration_seconds: 0,
+            token_signing_private_key: Vec::new(),
+        };
+    }
 
-    let addr = std::env::var("BIND_ADDR").ok();
-    let addr = addr.as_deref().unwrap_or("127.0.0.1:8080");
-
-    HttpServer::new(move || App::new().service(authenticate).data(data.clone()))
-        .bind(addr)?
+    HttpServer::new(move || app
+        .service(password_authentication).data(data.clone()))
+        .bind(config.bind_addr)?
         .run()
         .await
 }
