@@ -1,4 +1,4 @@
-mod auth;
+mod basic_auth;
 mod error;
 mod ttn;
 
@@ -16,7 +16,7 @@ use dotenv::dotenv;
 use futures::StreamExt;
 use log;
 
-use self::auth::validator;
+use self::basic_auth::basic_validator;
 use actix_web::middleware::Condition;
 
 const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
@@ -125,6 +125,7 @@ async fn telemetry(
     }
 }
 
+//TODO : use envconfig
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -143,10 +144,11 @@ async fn main() -> anyhow::Result<()> {
     };
 
     HttpServer::new(move || {
-        let auth = HttpAuthentication::bearer(validator);
+        //let jwt_auth = HttpAuthentication::bearer(jwt_validator);
+        let basic_auth = HttpAuthentication::basic(basic_validator);
 
         App::new()
-            .wrap(Condition::new(enable_auth, auth))
+            .wrap(Condition::new(enable_auth, basic_auth))
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(GLOBAL_MAX_JSON_PAYLOAD_SIZE))
             .data(sender.clone())
