@@ -26,6 +26,7 @@ IMAGES?=\
 	console-frontend \
 	authentication-service \
 
+
 #
 # Restore a clean environment.
 #

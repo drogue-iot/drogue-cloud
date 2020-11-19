@@ -13,6 +13,7 @@ use failure::Fail;
 use serde_json::json;
 use std::io::Read;
 
+use crate::auth::Authenticator;
 use crate::endpoints::{
     EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
 };
@@ -74,36 +75,54 @@ async fn main() -> anyhow::Result<()> {
 
         let cert = Path::new(SERVICE_CA_CERT);
         if cert.exists() {
+            log::info!("Adding root certificate: {}", SERVICE_CA_CERT);
             let mut file = File::open(cert)?;
             let mut buf = Vec::new();
             file.read_to_end(&mut buf)?;
-            client = client.add_root_certificate(
-                Certificate::from_pem(&buf)
-                    .with_context(|| format!("Failed to parse PEM: {}", cert.to_string_lossy()))?,
+
+            let pems = pem::parse_many(buf);
+            let pems = pems
+                .into_iter()
+                .map(|pem| {
+                    Certificate::from_pem(&pem::encode(&pem).into_bytes()).map_err(|err| err.into())
+                })
+                .collect::<anyhow::Result<Vec<_>>>()?;
+
+            log::info!("Found {} certificates", pems.len());
+
+            for pem in pems {
+                log::info!("Adding root certificate: {:?}", pem);
+                client = client.add_root_certificate(pem);
+            }
+        } else {
+            log::info!(
+                "Service CA certificate does not exist, skipping! ({})",
+                SERVICE_CA_CERT
             );
         }
 
-        Some(
-            openid::DiscoveredClient::discover_with_client(
-                client.build()?,
-                config
-                    .client_id
-                    .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_ID' variable"))?,
-                config
-                    .client_secret
-                    .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_SECRET' variable"))?,
-                None,
-                config
-                    .issuer_url
-                    .ok_or_else(|| anyhow::anyhow!("Missing 'ISSUER_URL' variable"))
-                    .and_then(|url| {
-                        Url::parse(&url)
-                            .with_context(|| format!("Failed to parse issuer URL: {}", url))
-                    })?,
-            )
-            .await
-            .map_err(|err| anyhow::Error::from(err.compat()))?,
+        let client = openid::DiscoveredClient::discover_with_client(
+            client.build()?,
+            config
+                .client_id
+                .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_ID' variable"))?,
+            config
+                .client_secret
+                .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_SECRET' variable"))?,
+            None,
+            config
+                .issuer_url
+                .ok_or_else(|| anyhow::anyhow!("Missing 'ISSUER_URL' variable"))
+                .and_then(|url| {
+                    Url::parse(&url).with_context(|| format!("Failed to parse issuer URL: {}", url))
+                })?,
         )
+        .await
+        .map_err(|err| anyhow::Error::from(err.compat()))?;
+
+        log::info!("Discovered OpenID: {:#?}", client.config());
+
+        Some(client)
     } else {
         None
     };
@@ -117,8 +136,11 @@ async fn main() -> anyhow::Result<()> {
             let token = auth.token().to_string();
 
             async {
-                let authenticator: &auth::Authenticator =
-                    req.app_data().ok_or_else(|| ServiceError::TokenError)?;
+                let authenticator = req.app_data::<web::Data<Authenticator>>();
+                log::info!("Authenticator: {:?}", &authenticator);
+                let authenticator = authenticator.ok_or_else(|| ServiceError::InternalError {
+                    message: "Missing authenticator instance".into(),
+                })?;
 
                 authenticator.validate_token(token).await?;
                 Ok(req)
@@ -129,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(Cors::new().send_wildcard().finish())
             .data(web::JsonConfig::default().limit(4096))
-            .data(authenticator.clone())
+            .app_data(authenticator.clone())
             .app_data(endpoint_source.clone())
             .service(
                 web::scope("/api/v1")
@@ -148,10 +170,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
-    let o:Option<String>;
-
-    o.ok_or_else()
-
     match std::env::var_os("ENDPOINT_SOURCE") {
         Some(name) if name == "openshift" => Ok(Box::new(OpenshiftEndpointSource::new()?)),
         Some(name) if name == "kubernetes" => Ok(Box::new(KubernetesEndpointSource::new()?)),

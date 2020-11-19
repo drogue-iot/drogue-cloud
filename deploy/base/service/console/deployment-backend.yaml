@@ -26,7 +26,7 @@ spec:
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
             - name: ENABLE_AUTH
-              value: "true"
+              value: "false"
             - name: CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -42,6 +42,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: ISSUER_URL
+              # FIXME: must be the external URL
               value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443/auth/realms/drogue
           ports:
             - containerPort: 8080
