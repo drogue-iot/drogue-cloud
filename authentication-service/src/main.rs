@@ -151,7 +151,8 @@ async fn main() -> std::io::Result<()> {
         };
     }
 
-    HttpServer::new(move || app
+    //todo fix this :) 
+    HttpServer::new(move || App::new()//app
         .service(password_authentication).data(data.clone()))
         .bind(config.bind_addr)?
         .run()

@@ -39,3 +39,4 @@ drogue-ttn = "0.1.1"
 dotenv = "0.15.0"
 jsonwebtokens = "1.0.0-alpha.13"
 
+awc = "2.0.0"

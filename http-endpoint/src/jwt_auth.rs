@@ -18,7 +18,8 @@ struct Claims {
 
 const JWT_VERIFY_PUBLIC_KEY_ENV_VAR: &str = "JWT_ECDSA_SIGNING_KEY";
 
-pub async fn validator(
+//TODO : use envconfig
+pub async fn jwt_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, Error> {
