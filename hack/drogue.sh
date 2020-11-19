@@ -6,7 +6,6 @@ set -ex
 : "${MQTT:=true}"
 
 : "${INSTALL_DEPS:=true}"
-: "${INSTALL_STRIMZI:=${INSTALL_DEPS}}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
 
@@ -23,7 +22,6 @@ fi
 
 # install pre-reqs
 
-[[ "$INSTALL_STRIMZI" == true ]] && source "$SCRIPTDIR/strimzi.sh"
 [[ "$INSTALL_KNATIVE" == true ]] && source "$SCRIPTDIR/knative.sh"
 [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]] && source "$SCRIPTDIR/sso.sh"
 

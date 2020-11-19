@@ -9,7 +9,6 @@ set -ex
 : "${CLUSTER:=minikube}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
 DEPLOYDIR="$SCRIPTDIR/../deploy"
 
 # Knative Serving
@@ -73,14 +72,17 @@ kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-core.yaml
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
 
+# Kafka by way of Strimzi
+source "$SCRIPTDIR/strimzi.sh"
+
 # Knative Kafka resources
 curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/source.yaml" \
   | sed 's/namespace: .*/namespace: knative-eventing/' \
   | kubectl apply -f - -n knative-eventing
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
 curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/channel-consolidated.yaml" \
-    | sed 's/REPLACE_WITH_CLUSTER_URL/kafka-eventing-kafka-bootstrap.knative-eventing:9092/' \
-    | kubectl apply -f -
+  | sed 's/REPLACE_WITH_CLUSTER_URL/kafka-eventing-kafka-bootstrap.knative-eventing:9092/' \
+  | kubectl apply -f -
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
 
 # Create kafka cluster
