@@ -91,11 +91,18 @@ fix-permissions:
 
 
 #
+# Run an interactive shell inside the build container.
+#
+build-shell:
+	docker run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash
+
+
+#
 # Run the cargo build.
 #
 cargo-build:
 	@#
-	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need the
+	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
 	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
 	cargo build --release --workspace --exclude console-frontend
@@ -161,6 +168,7 @@ require-container-registry:
 ifndef CONTAINER_REGISTRY
 	$(error CONTAINER_REGISTRY is undefined)
 endif
+
 
 .PHONY: all clean build test push images
 .PHONY: build-builder

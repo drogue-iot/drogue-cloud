@@ -1,0 +1,10 @@
+apiVersion: keycloak.org/v1alpha1
+kind: Keycloak
+metadata:
+  name: sso
+  labels:
+    app.kubernetes.io/part-of: sso
+spec:
+  instances: 1
+  externalAccess:
+    enabled: true

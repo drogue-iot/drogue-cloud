@@ -1,0 +1,21 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: client
+  labels:
+    app: console
+spec:
+  realmSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: console
+  client:
+    clientId: drogue
+    clientAuthenticatorType: client-secret
+    enabled: true
+    rootUrl: ""
+    publicClient: false
+    implicitFlowEnabled: false
+    standardFlowEnabled: true
+    defaultRoles:
+      - "drogue-user"
+      - "drogue-admin"

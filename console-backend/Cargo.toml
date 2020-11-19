@@ -12,13 +12,22 @@ actix = "0.10"
 actix-cors = "0.4"
 actix-web = "3"
 
+actix-web-httpauth = "0.5"
+openid = "0.6"
+url = "2"
+reqwest = "0.10"
+ring = "=0.16.15" # required due to an issue in the public API
+
 log = "0.4"
 env_logger = "0.7"
+envconfig = "0.9"
 
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.5"
 
 anyhow = "1"
+snafu = "0.6"
+failure = "0.1" # required for converting error away from failure
 
 serde = "1"
 serde_json = "1"

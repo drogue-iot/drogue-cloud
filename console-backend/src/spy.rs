@@ -105,7 +105,7 @@ impl Stream for MessageSpy {
     }
 }
 
-#[get("/api/v1/spy")]
+#[get("/spy")]
 pub async fn stream_events() -> impl Responder {
     let group_id = Uuid::new_v4().to_string();
 

@@ -1,0 +1,29 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakUser
+metadata:
+  name: admin
+  labels:
+    app.kubernetes.io/part-of: console
+spec:
+  user:
+    username: "admin"
+    firstName: "System"
+    lastName: "Admin"
+    email: "user@example.com"
+    enabled: true
+    emailVerified: false
+    credentials:
+      - type: password
+        value: admin123456
+        temporary: false
+    clientRoles:
+      drogue:
+        - "drogue-admin"
+        - "drogue-user"
+      account:
+        - "manage-account"
+      realm-management:
+        - "manage-users"
+  realmSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: console

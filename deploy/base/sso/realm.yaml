@@ -1,0 +1,14 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakRealm
+metadata:
+  name: drogue
+  labels:
+    app.kubernetes.io/part-of: console
+spec:
+  realm:
+    realm: "drogue"
+    enabled: true
+    displayName: "Drogue"
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: sso

@@ -25,6 +25,24 @@ spec:
               value: info
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
+            - name: ENABLE_AUTH
+              value: "true"
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_SECRET
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ISSUER_URL
+              value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443/auth/realms/drogue
           ports:
             - containerPort: 8080
               name: endpoint
