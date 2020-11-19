@@ -2,17 +2,22 @@
 #
 # By default, build and push artifacts and containers.
 #
-
 all: build images test push
 
+CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
+TOP_DIR ?= $(CURRENT_DIR)
 
-CURRENT_DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
+MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
+
+ifneq ($(MODULE),)
+	IMAGES=$(MODULE)
+endif
 
 
 #
 # all container images that we build and push (so it does not include the "builder")
 #
-IMAGES=\
+IMAGES?=\
 	http-endpoint \
 	mqtt-endpoint \
 	ditto-pusher \
@@ -20,7 +25,6 @@ IMAGES=\
 	console-backend \
 	console-frontend \
 	authentication-service \
-
 
 #
 # Restore a clean environment.
@@ -48,7 +52,9 @@ test: host-test
 # If you have the same environment as the build container, you can also run this on the host, instead of `host-build`.
 #
 container-build: cargo-build
+ifeq ($(MODULE),)
 container-build: webpack-build
+endif
 
 
 #
@@ -63,25 +69,25 @@ container-test: cargo-test
 # Create the builder image
 #
 build-builder:
-	docker build containers/builder -t builder
+	docker build $(TOP_DIR)/containers/builder -t builder
 
 
 #
 # Run a build on the host, forking off into the build container.
 #
 host-build: build-builder
-	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" builder make -j1 -C /usr/src container-build
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" builder make -j1 -C /usr/src/$(MODULE) container-build
 
 
 #
 # Run tests on the host, forking off into the build container.
 #
 host-test: build-builder
-	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" builder make -j1 -C /usr/src container-test
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" builder make -j1 -C /usr/src/$(MODULE) container-test
 
 
 fix-permissions:
-	docker run --rm -t -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
 
 
 #
@@ -117,7 +123,7 @@ webpack-build: cargo-build
 #
 build-images: build-image($(IMAGES))
 build-image($(IMAGES)):
-	docker build . -f $%/Dockerfile -t $%:latest
+	cd $(TOP_DIR) && docker build . -f $%/Dockerfile -t $%:latest
 
 
 #
@@ -125,7 +131,7 @@ build-image($(IMAGES)):
 #
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
-	docker tag $%:latest $(CONTAINER_REGISTRY)/$%:latest
+	cd $(TOP_DIR) && docker tag $%:latest $(CONTAINER_REGISTRY)/$%:latest
 
 
 #
@@ -133,7 +139,7 @@ tag-image($(IMAGES)): require-container-registry
 #
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
-	docker push $(CONTAINER_REGISTRY)/$%:latest
+	cd $(TOP_DIR) && docker push $(CONTAINER_REGISTRY)/$%:latest
 
 
 #

@@ -84,7 +84,7 @@ pub fn build(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<Serve
 pub fn build_tls(addr: Option<&str>, builder: ServerBuilder) -> anyhow::Result<ServerBuilder> {
     let addr = addr.unwrap_or("127.0.0.1:8883");
 
-    log::info!("Loading TLS material...");
+    log::info!("Loading TLS material... HAJ HO");
 
     let mut tls_config = ServerConfig::new(NoClientAuth::new());
 

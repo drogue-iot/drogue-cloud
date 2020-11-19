@@ -1,9 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-#images:
-#- name: ghcr.io/drogue-iot/http-endpoint
-#  newname: quay.io/dejanb/http-endpoint
+images:
+- name: ghcr.io/drogue-iot/mqtt-endpoint
+  newname: quay.io/dejanb/mqtt-endpoint
 
 bases:
   - ../base/knative
