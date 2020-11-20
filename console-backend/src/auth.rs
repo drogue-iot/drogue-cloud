@@ -1,8 +1,6 @@
 use crate::error::ServiceError;
 use failure::_core::fmt::Formatter;
-use openid::{Claims, Client, CompactJson, Discovered, IdToken, Jws};
-use serde::ser::SerializeMap;
-use serde::Serializer;
+use openid::Jws;
 use std::fmt::Debug;
 
 pub struct Authenticator {

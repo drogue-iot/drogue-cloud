@@ -3,6 +3,7 @@ use std::pin::Pin;
 use actix_web::{
     get,
     http::StatusCode,
+    web,
     web::{Bytes, BytesMut},
     HttpResponse, Responder,
 };
@@ -24,7 +25,9 @@ use rdkafka::{
     consumer::{stream_consumer::StreamConsumer, CommitMode, Consumer, DefaultConsumerContext},
 };
 
+use crate::auth::Authenticator;
 use rdkafka::message::BorrowedMessage;
+use serde::Deserialize;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -105,8 +108,23 @@ impl Stream for MessageSpy {
     }
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct SpyQuery {
+    token: String,
+}
+
 #[get("/spy")]
-pub async fn stream_events() -> impl Responder {
+pub async fn stream_events(
+    authenticator: web::Data<Authenticator>,
+    query: web::Query<SpyQuery>,
+) -> impl Responder {
+    match authenticator.validate_token(query.token.clone()).await {
+        Ok(_) => {}
+        Err(_) => {
+            return HttpResponse::Unauthorized().finish();
+        }
+    }
+
     let group_id = Uuid::new_v4().to_string();
 
     let cfg = SpyConfig {

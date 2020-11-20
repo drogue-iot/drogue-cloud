@@ -23,7 +23,7 @@ impl Component for Index {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Msg::FetchOverview);
         Self {
             ft: None,
@@ -68,15 +68,14 @@ impl Component for Index {
 
 impl Index {
     fn fetch_overview(&self) -> Result<FetchTask, Error> {
-        let request = Request::get(format!("{}/api/v1/info", Backend::get().unwrap().url))
-            .body(Nothing)
-            .expect("Failed to build request");
-
-        FetchService::fetch(
-            request,
+        Backend::request(
+            Method::GET,
+            "/api/v1/info",
+            Nothing,
             self.link
                 .callback(|response: Response<Json<Result<Endpoints, Error>>>| {
-                    if let (meta, Json(Ok(body))) = response.into_parts() {
+                    let parts = response.into_parts();
+                    if let (meta, Json(Ok(body))) = parts {
                         if meta.status.is_success() {
                             return Msg::OverviewUpdate(body);
                         }
@@ -155,7 +154,7 @@ impl Index {
             <Card
                 title={html_nested!{<>{"API Endpoint"}</>}}
                 >
-                <Clipboard value=&backend.url/>
+                <Clipboard value=backend.current_url()/>
             </Card>
         }
     }

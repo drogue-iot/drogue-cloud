@@ -31,6 +31,11 @@ source "$SCRIPTDIR/registry.sh"
 
 kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
 
+# Remove the unnecessary and wrong host entry for keycloak ingress
+
+wait_for_resource ingress/keycloak
+kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]'
+
 # Wait for the HTTP endpoint to become ready
 
 kubectl -n "$DROGUE_NS" wait --timeout=-1s --for=condition=Ready ksvc/http-endpoint
@@ -43,26 +48,25 @@ case $CLUSTER in
        MQTT_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.spec.ports[0].nodePort}')
        HTTP_ENDPOINT_PORT=$(kubectl get service -n kourier-system kourier -o jsonpath='{.spec.ports[?(@.name == "http2")].nodePort}')
        HTTP_ENDPOINT_URL=${HTTP_ENDPOINT_URL}:${HTTP_ENDPOINT_PORT}
-
-       BACKEND_PORT=$(kubectl get service -n "$DROGUE_NS" console-backend -o jsonpath='{.spec.ports[0].nodePort}')
-       BACKEND_URL=http://console-backend.$DOMAIN:$BACKEND_PORT
        ;;
    minikube)
         MQTT_ENDPOINT_HOST=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
         MQTT_ENDPOINT_PORT=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $5}')
-        BACKEND_URL=$(eval minikube service -n "$DROGUE_NS" --url console-backend)
         ;;
    openshift)
         MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
         HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
-        BACKEND_URL="https://$(kubectl get route -n "$DROGUE_NS" console-backend -o 'jsonpath={ .spec.host }')"
         ;;
    *)
         echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
         exit 1
         ;;
 esac;
+
+BACKEND_URL="$(service_url "console-backend")"
+CONSOLE_URL="$(service_url "console")"
+SSO_URL="$(ingress_url "keycloak")"
 
 # Provide a TLS certificate for the MQTT endpoint
 
@@ -83,7 +87,12 @@ fi
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "ISSUER_URL=$SSO_URL/auth/realms/drogue"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "REDIRECT_URL=$CONSOLE_URL"
+
 kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"
+
+kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$CONSOLE_URL\"}]"
 
 # wait for all necessary components
 

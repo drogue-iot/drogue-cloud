@@ -1,7 +1,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: console-frontend
+  name: console
   labels:
     app: console-frontend
 spec:

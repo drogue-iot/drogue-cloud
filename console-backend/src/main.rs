@@ -5,26 +5,26 @@ mod info;
 mod kube;
 mod spy;
 
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
-
-use anyhow::Context;
-use envconfig::Envconfig;
-use failure::Fail;
-use serde_json::json;
-use std::io::Read;
-
 use crate::auth::Authenticator;
 use crate::endpoints::{
     EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
 };
-use crate::error::ServiceError;
+use crate::error::{ErrorResponse, ServiceError};
 use actix_cors::Cors;
-use actix_web::middleware::Condition;
-use actix_web::web::Data;
+use actix_web::{
+    get, http,
+    middleware::{self, Condition},
+    web::{self, Data},
+    App, HttpResponse, HttpServer, Responder,
+};
 use actix_web_httpauth::middleware::HttpAuthentication;
+use anyhow::Context;
+use envconfig::Envconfig;
+use failure::Fail;
 use reqwest::Certificate;
-use std::fs::File;
-use std::path::Path;
+use serde::Deserialize;
+use serde_json::json;
+use std::{fs::File, io::Read, path::Path};
 use url::Url;
 
 #[get("/")]
@@ -38,8 +38,58 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
+#[get("/ui/login")]
+async fn login(authenticator: web::Data<Authenticator>) -> impl Responder {
+    if let Some(client) = authenticator.client.as_ref() {
+        let auth_url = client.auth_uri(Some("openid profile email"), None);
+
+        HttpResponse::Found()
+            .header(http::header::LOCATION, auth_url.to_string())
+            .finish()
+    } else {
+        // if we are missing the authenticator, we hide ourselves
+        HttpResponse::NotFound().finish()
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct LoginQuery {
+    code: String,
+    nonce: Option<String>,
+}
+
+#[get("/ui/token")]
+async fn code(
+    authenticator: web::Data<Authenticator>,
+    query: web::Query<LoginQuery>,
+) -> impl Responder {
+    if let Some(client) = authenticator.client.as_ref() {
+        let response = client
+            .authenticate(&query.code, query.nonce.as_deref(), None)
+            .await;
+
+        log::info!(
+            "Response: {:?}",
+            response.as_ref().map(|r| r.bearer.clone())
+        );
+
+        match response {
+            Ok(token) => HttpResponse::Ok().json(json!({ "bearer": token.bearer })),
+            Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
+                error: "Unauthorized".to_string(),
+                message: format!("Code invalid: {:?}", err),
+            }),
+        }
+    } else {
+        // if we are missing the authenticator, we hide ourselves
+        HttpResponse::NotFound().finish()
+    }
+}
+
 #[derive(Envconfig)]
 struct Config {
+    #[envconfig(from = "BIND_ADDR")]
+    pub bind_addr: Option<String>,
     #[envconfig(from = "ENABLE_AUTH")]
     pub enable_auth: bool,
     #[envconfig(from = "CLIENT_ID")]
@@ -48,6 +98,8 @@ struct Config {
     pub client_secret: Option<String>,
     #[envconfig(from = "ISSUER_URL")]
     pub issuer_url: Option<String>,
+    #[envconfig(from = "REDIRECT_URL")]
+    pub redirect_url: Option<String>,
 }
 
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
@@ -57,9 +109,6 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let config = Config::init_from_env()?;
-
-    let addr = std::env::var("BIND_ADDR").ok();
-    let addr = addr.as_deref();
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;
@@ -72,6 +121,9 @@ async fn main() -> anyhow::Result<()> {
 
     let client = if enable_auth {
         let mut client = reqwest::ClientBuilder::new();
+        let redirect_url = config
+            .redirect_url
+            .expect("Missing 'REDIRECT_URL' variable");
 
         let cert = Path::new(SERVICE_CA_CERT);
         if cert.exists() {
@@ -109,7 +161,7 @@ async fn main() -> anyhow::Result<()> {
             config
                 .client_secret
                 .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_SECRET' variable"))?,
-            None,
+            Some(redirect_url),
             config
                 .issuer_url
                 .ok_or_else(|| anyhow::anyhow!("Missing 'ISSUER_URL' variable"))
@@ -149,20 +201,22 @@ async fn main() -> anyhow::Result<()> {
 
         App::new()
             .wrap(middleware::Logger::default())
-            .wrap(Cors::new().send_wildcard().finish())
+            .wrap(Cors::permissive().supports_credentials())
             .data(web::JsonConfig::default().limit(4096))
             .app_data(authenticator.clone())
             .app_data(endpoint_source.clone())
             .service(
                 web::scope("/api/v1")
                     .wrap(Condition::new(enable_auth, auth))
-                    .service(info::get_info)
-                    .service(spy::stream_events),
+                    .service(info::get_info),
             )
+            .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
             .service(index)
             .service(health)
+            .service(login)
+            .service(code)
     })
-    .bind(addr.unwrap_or("127.0.0.1:8080"))?
+    .bind(config.bind_addr.unwrap_or_else(|| "127.0.0.1:8080".into()))?
     .run()
     .await?;
 

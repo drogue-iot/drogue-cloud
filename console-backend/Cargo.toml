@@ -9,7 +9,7 @@ edition = "2018"
 console-common = { path = "../console-common" }
 
 actix = "0.10"
-actix-cors = "0.4"
+actix-cors = "0.5"
 actix-web = "3"
 
 actix-web-httpauth = "0.5"

@@ -16,6 +16,12 @@ spec:
     publicClient: false
     implicitFlowEnabled: false
     standardFlowEnabled: true
+    serviceAccountsEnabled: true
+    fullScopeAllowed: true
+    redirectUris:
+      - "http://not-yet-set"
+    defaultClientScopes:
+      - "good-service"
     defaultRoles:
       - "drogue-user"
       - "drogue-admin"

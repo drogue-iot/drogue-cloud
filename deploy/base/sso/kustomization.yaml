@@ -5,3 +5,5 @@ resources:
   - credential-sso.yaml
   - instance.yaml
   - realm.yaml
+  - client.yaml
+  - user.yaml

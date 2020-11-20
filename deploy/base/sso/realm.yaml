@@ -9,6 +9,20 @@ spec:
     realm: "drogue"
     enabled: true
     displayName: "Drogue"
+    clientScopes:
+      - name: good-service
+        attributes:
+          "include.in.token.scope": "true"
+          "display.on.consent.screen": "true"
+        protocolMappers:
+          - name: app-audience
+            protocol: openid-connect
+            protocolMapper: protocolMapper
+            consentRequired: false
+            config:
+              "included.client.audience": "drogue"
+              "id.token.claim": "false"
+              "access.token.claim": "true"
   instanceSelector:
     matchLabels:
       app.kubernetes.io/part-of: sso

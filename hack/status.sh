@@ -15,25 +15,15 @@ HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpa
 
 case $CLUSTER in
     kind)
-        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
-        CONSOLE_PORT=$(kubectl get service -n $DROGUE_NS console-frontend -o jsonpath='{.spec.ports[0].nodePort}')
-        GRAFANA_PORT=$(kubectl get service -n $DROGUE_NS grafana -o jsonpath='{.spec.ports[0].nodePort}')
-
-        CONSOLE_URL=http://console-frontend.$DOMAIN:$CONSOLE_PORT
-        DASHBOARD_URL=http://grafana.$DOMAIN:$GRAFANA_PORT
         ;;
    minikube)
-        MQTT_ENDPOINT_HOST=$(eval minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
-        MQTT_ENDPOINT_PORT=$(eval minikube service -n $DROGUE_NS --url mqtt-endpoint | awk -F[/:] '{print $5}')
-        CONSOLE_URL=$(eval minikube service -n $DROGUE_NS --url console-frontend)
-        DASHBOARD_URL=$(eval minikube service -n $DROGUE_NS --url grafana)
+        MQTT_ENDPOINT_HOST=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
+        MQTT_ENDPOINT_PORT=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $5}')
         ;;
    openshift)
-        MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
+        MQTT_ENDPOINT_HOST=$(eval kubectl get route -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
-        CONSOLE_URL=https://$(eval kubectl -n $DROGUE_NS get routes console -o jsonpath={.spec.host})
-        DASHBOARD_URL=https://$(eval kubectl -n $DROGUE_NS get routes grafana -o jsonpath={.spec.host})
+        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
         ;;
    *)
         echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
@@ -41,6 +31,9 @@ case $CLUSTER in
         ;;
 esac;
 
+CONSOLE_URL=$(service_url "console")
+DASHBOARD_URL=$(service_url "grafana")
+SSO_URL=$(ingress_url "keycloak")
 
 # Dump out the dashboard URL and sample commands for http and mqtt
 
@@ -49,6 +42,10 @@ echo "==========================================================================
 echo " Base:"
 echo "=========================================================================================="
 echo
+
+echo "SSO:"
+echo "  $SSO_URL"
+echo ""
 
 if [ $CONSOLE = "true" ] ; then
   echo "Console:"
@@ -74,6 +71,7 @@ echo "Publish data:"
 echo "----------------"
 echo
 echo "At a shell prompt, try these commands:"
+echo
 echo "  http POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=44"
 if [ "$MQTT" = true ] ; then
   echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -s --cafile tls.crt -t temp -m '{\"temp\":42}' -V 3"

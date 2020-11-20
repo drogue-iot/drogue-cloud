@@ -62,9 +62,16 @@ impl Component for Spy {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let url = format!("{}/api/v1/spy", Backend::get().unwrap().url);
+        let mut url = Backend::url("/spy").unwrap();
+
+        // EventSource doesn't support passing headers, so we cannot send
+        // the bearer token the normal way
+
+        url.query_pairs_mut()
+            .append_pair("token", &Backend::token().unwrap_or_default());
         let source =
-            EventSource::new_with_event_source_init_dict(&url, &EventSourceInit::new()).unwrap();
+            EventSource::new_with_event_source_init_dict(&url.to_string(), &EventSourceInit::new())
+                .unwrap();
 
         let on_message = Closure::wrap(Box::new(move |msg: &JsValue| {
             let msg = extract_event(msg);
