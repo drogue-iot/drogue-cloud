@@ -151,10 +151,19 @@ async fn main() -> std::io::Result<()> {
         };
     }
 
-    //todo fix this :) 
-    HttpServer::new(move || App::new()//app
-        .service(password_authentication).data(data.clone()))
-        .bind(config.bind_addr)?
-        .run()
-        .await
+    //todo use a separate config function
+    if config.enable_jwt {
+        HttpServer::new(move || App::new()
+            .service(token_authentication).data(data.clone())
+            .service(password_authentication).data(data.clone()))
+            .bind(config.bind_addr)?
+            .run()
+            .await
+    } else {
+        HttpServer::new(move || App::new()
+            .service(password_authentication).data(data.clone()))
+            .bind(config.bind_addr)?
+            .run()
+            .await
+    }
 }
