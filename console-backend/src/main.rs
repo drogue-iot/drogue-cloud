@@ -51,6 +51,9 @@ struct Config {
     pub issuer_url: Option<String>,
     #[envconfig(from = "REDIRECT_URL")]
     pub redirect_url: Option<String>,
+    // "drogue" is the client id which is required for the "aud" claim
+    #[envconfig(from = "SCOPES", default = "openid profile email drogue")]
+    pub scopes: String,
 }
 
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
@@ -130,7 +133,10 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let authenticator = web::Data::new(auth::Authenticator { client });
+    let authenticator = web::Data::new(auth::Authenticator {
+        client,
+        scopes: config.scopes,
+    });
 
     // http server
 

@@ -9,6 +9,7 @@ use std::fmt::Debug;
 
 pub struct Authenticator {
     pub client: Option<openid::Client>,
+    pub scopes: String,
 }
 
 impl Debug for Authenticator {
@@ -61,7 +62,7 @@ impl Authenticator {
 #[get("/ui/login")]
 pub async fn login(authenticator: web::Data<Authenticator>) -> impl Responder {
     if let Some(client) = authenticator.client.as_ref() {
-        let auth_url = client.auth_uri(Some("openid profile email"), None);
+        let auth_url = client.auth_uri(Some(&authenticator.scopes), None);
 
         HttpResponse::Found()
             .header(http::header::LOCATION, auth_url.to_string())
