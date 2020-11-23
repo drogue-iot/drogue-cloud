@@ -44,13 +44,17 @@ echo "==========================================================================
 echo
 
 echo "SSO:"
-echo "  $SSO_URL"
-echo ""
+echo "  url:      $SSO_URL"
+echo "  user:     admin"
+echo "  password: admin123456"
+echo
 
 if [ $CONSOLE = "true" ] ; then
   echo "Console:"
-  echo "  $CONSOLE_URL"
-  echo ""
+  echo "  url:      $CONSOLE_URL"
+  echo "  user:     admin"
+  echo "  password: admin123456"
+  echo
 fi
 
 echo "------------------------------------------------------------------------------------------"

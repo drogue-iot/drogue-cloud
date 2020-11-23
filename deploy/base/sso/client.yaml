@@ -3,7 +3,7 @@ kind: KeycloakClient
 metadata:
   name: client
   labels:
-    app: console
+    app.kubernetes.io/part-of: console
 spec:
   realmSelector:
     matchLabels:
@@ -23,3 +23,12 @@ spec:
     defaultRoles:
       - "drogue-user"
       - "drogue-admin"
+    protocolMappers:
+      - name: add-audience
+        protocol: openid-connect
+        protocolMapper: oidc-audience-mapper
+        consentRequired: false
+        config:
+          "included.client.audience": "drogue"
+          "id.token.claim": "false"
+          "access.token.claim": "true"

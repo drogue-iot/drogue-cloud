@@ -5,7 +5,7 @@ mod info;
 mod kube;
 mod spy;
 
-use crate::auth::Authenticator;
+use crate::auth::{create_client, AuthConfig, Authenticator};
 use crate::endpoints::{
     EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
 };
@@ -18,13 +18,8 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use actix_web_httpauth::middleware::HttpAuthentication;
-use anyhow::Context;
 use envconfig::Envconfig;
-use failure::Fail;
-use reqwest::Certificate;
 use serde_json::json;
-use std::{fs::File, io::Read, path::Path};
-use url::Url;
 
 #[get("/")]
 async fn index() -> impl Responder {
@@ -43,20 +38,7 @@ struct Config {
     pub bind_addr: Option<String>,
     #[envconfig(from = "ENABLE_AUTH")]
     pub enable_auth: bool,
-    #[envconfig(from = "CLIENT_ID")]
-    pub client_id: Option<String>,
-    #[envconfig(from = "CLIENT_SECRET")]
-    pub client_secret: Option<String>,
-    #[envconfig(from = "ISSUER_URL")]
-    pub issuer_url: Option<String>,
-    #[envconfig(from = "REDIRECT_URL")]
-    pub redirect_url: Option<String>,
-    // "drogue" is the client id which is required for the "aud" claim
-    #[envconfig(from = "SCOPES", default = "openid profile email drogue")]
-    pub scopes: String,
 }
-
-const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
@@ -73,70 +55,14 @@ async fn main() -> anyhow::Result<()> {
 
     let enable_auth = config.enable_auth;
 
-    let client = if enable_auth {
-        let mut client = reqwest::ClientBuilder::new();
-        let redirect_url = config
-            .redirect_url
-            .expect("Missing 'REDIRECT_URL' variable");
-
-        let cert = Path::new(SERVICE_CA_CERT);
-        if cert.exists() {
-            log::info!("Adding root certificate: {}", SERVICE_CA_CERT);
-            let mut file = File::open(cert)?;
-            let mut buf = Vec::new();
-            file.read_to_end(&mut buf)?;
-
-            let pems = pem::parse_many(buf);
-            let pems = pems
-                .into_iter()
-                .map(|pem| {
-                    Certificate::from_pem(&pem::encode(&pem).into_bytes()).map_err(|err| err.into())
-                })
-                .collect::<anyhow::Result<Vec<_>>>()?;
-
-            log::info!("Found {} certificates", pems.len());
-
-            for pem in pems {
-                log::info!("Adding root certificate: {:?}", pem);
-                client = client.add_root_certificate(pem);
-            }
-        } else {
-            log::info!(
-                "Service CA certificate does not exist, skipping! ({})",
-                SERVICE_CA_CERT
-            );
-        }
-
-        let client = openid::DiscoveredClient::discover_with_client(
-            client.build()?,
-            config
-                .client_id
-                .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_ID' variable"))?,
-            config
-                .client_secret
-                .ok_or_else(|| anyhow::anyhow!("Missing 'CLIENT_SECRET' variable"))?,
-            Some(redirect_url),
-            config
-                .issuer_url
-                .ok_or_else(|| anyhow::anyhow!("Missing 'ISSUER_URL' variable"))
-                .and_then(|url| {
-                    Url::parse(&url).with_context(|| format!("Failed to parse issuer URL: {}", url))
-                })?,
-        )
-        .await
-        .map_err(|err| anyhow::Error::from(err.compat()))?;
-
-        log::info!("Discovered OpenID: {:#?}", client.config());
-
-        Some(client)
+    let (client, scopes) = if enable_auth {
+        let config: AuthConfig = AuthConfig::init_from_env()?;
+        (Some(create_client(&config).await?), config.scopes)
     } else {
-        None
+        (None, "".into())
     };
 
-    let authenticator = web::Data::new(auth::Authenticator {
-        client,
-        scopes: config.scopes,
-    });
+    let authenticator = web::Data::new(auth::Authenticator { client, scopes });
 
     // http server
 
