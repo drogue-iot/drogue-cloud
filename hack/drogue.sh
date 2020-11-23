@@ -10,7 +10,6 @@ set -ex
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DEPLOYDIR="$SCRIPTDIR/.."
 
 source "$SCRIPTDIR/common.sh"
 
