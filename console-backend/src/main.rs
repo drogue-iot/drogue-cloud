@@ -9,10 +9,10 @@ use crate::auth::Authenticator;
 use crate::endpoints::{
     EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
 };
-use crate::error::{ErrorResponse, ServiceError};
+use crate::error::ServiceError;
 use actix_cors::Cors;
 use actix_web::{
-    get, http,
+    get,
     middleware::{self, Condition},
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
@@ -22,7 +22,6 @@ use anyhow::Context;
 use envconfig::Envconfig;
 use failure::Fail;
 use reqwest::Certificate;
-use serde::Deserialize;
 use serde_json::json;
 use std::{fs::File, io::Read, path::Path};
 use url::Url;
@@ -38,55 +37,7 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[get("/ui/login")]
-async fn login(authenticator: web::Data<Authenticator>) -> impl Responder {
-    if let Some(client) = authenticator.client.as_ref() {
-        let auth_url = client.auth_uri(Some("openid profile email"), None);
-
-        HttpResponse::Found()
-            .header(http::header::LOCATION, auth_url.to_string())
-            .finish()
-    } else {
-        // if we are missing the authenticator, we hide ourselves
-        HttpResponse::NotFound().finish()
-    }
-}
-
-#[derive(Deserialize, Debug)]
-struct LoginQuery {
-    code: String,
-    nonce: Option<String>,
-}
-
-#[get("/ui/token")]
-async fn code(
-    authenticator: web::Data<Authenticator>,
-    query: web::Query<LoginQuery>,
-) -> impl Responder {
-    if let Some(client) = authenticator.client.as_ref() {
-        let response = client
-            .authenticate(&query.code, query.nonce.as_deref(), None)
-            .await;
-
-        log::info!(
-            "Response: {:?}",
-            response.as_ref().map(|r| r.bearer.clone())
-        );
-
-        match response {
-            Ok(token) => HttpResponse::Ok().json(json!({ "bearer": token.bearer })),
-            Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
-                error: "Unauthorized".to_string(),
-                message: format!("Code invalid: {:?}", err),
-            }),
-        }
-    } else {
-        // if we are missing the authenticator, we hide ourselves
-        HttpResponse::NotFound().finish()
-    }
-}
-
-#[derive(Envconfig)]
+#[derive(Debug, Envconfig)]
 struct Config {
     #[envconfig(from = "BIND_ADDR")]
     pub bind_addr: Option<String>,
@@ -213,8 +164,8 @@ async fn main() -> anyhow::Result<()> {
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
             .service(index)
             .service(health)
-            .service(login)
-            .service(code)
+            .service(auth::login)
+            .service(auth::code)
     })
     .bind(config.bind_addr.unwrap_or_else(|| "127.0.0.1:8080".into()))?
     .run()
@@ -224,13 +175,11 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
-    match std::env::var_os("ENDPOINT_SOURCE") {
-        Some(name) if name == "openshift" => Ok(Box::new(OpenshiftEndpointSource::new()?)),
-        Some(name) if name == "kubernetes" => Ok(Box::new(KubernetesEndpointSource::new()?)),
-        Some(name) => Err(anyhow::anyhow!(
-            "Unsupported endpoint source: '{}'",
-            name.to_str().unwrap_or_default()
-        )),
-        None => Ok(Box::new(EnvEndpointSource)),
+    let endpoints: endpoints::EndpointConfig = Envconfig::init_from_env()?;
+    match endpoints.source.as_str() {
+        "openshift" => Ok(Box::new(OpenshiftEndpointSource::new()?)),
+        "kubernetes" => Ok(Box::new(KubernetesEndpointSource::new()?)),
+        "env" => Ok(Box::new(EnvEndpointSource(endpoints))),
+        other => Err(anyhow::anyhow!("Unsupported endpoint source: '{}'", other)),
     }
 }

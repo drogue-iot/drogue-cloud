@@ -2,6 +2,7 @@ use crate::kube::knative;
 
 use async_trait::async_trait;
 use console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
+use envconfig::Envconfig;
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
 use serde_json::Value;
@@ -14,37 +15,35 @@ pub trait EndpointSource: Debug {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints>;
 }
 
+#[derive(Debug, Envconfig)]
+pub struct EndpointConfig {
+    #[envconfig(from = "ENDPOINT_SOURCE", default = "env")]
+    pub source: String,
+    #[envconfig(from = "HTTP_ENDPOINT_URL")]
+    pub http_url: Option<String>,
+    #[envconfig(from = "MQTT_ENDPOINT_HOST")]
+    pub mqtt_host: Option<String>,
+    #[envconfig(from = "MQTT_ENDPOINT_PORT", default = "8883")]
+    pub mqtt_port: u16,
+}
+
 #[derive(Debug)]
-pub struct EnvEndpointSource;
+pub struct EnvEndpointSource(pub EndpointConfig);
 
 #[async_trait]
 impl EndpointSource for EnvEndpointSource {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints> {
-        let http =
-            std::env::var_os("HTTP_ENDPOINT_URL").and_then(|s| s.to_str().map(|s| s.to_string()));
-        let mqtt = (
-            std::env::var_os("MQTT_ENDPOINT_HOST").and_then(|s| s.to_str().map(|s| s.to_string())),
-            std::env::var_os("MQTT_ENDPOINT_PORT")
-                .and_then(|s| s.to_str().and_then(|s| s.parse::<u16>().ok())),
-        );
+        let http = self
+            .0
+            .http_url
+            .as_ref()
+            .map(|url| HttpEndpoint { url: url.clone() });
+        let mqtt = self.0.mqtt_host.as_ref().map(|host| MqttEndpoint {
+            host: host.clone(),
+            port: self.0.mqtt_port,
+        });
 
-        Ok(Endpoints {
-            http: http.map(|url| HttpEndpoint { url }),
-
-            /*
-             * Later on, we can do this with:
-             * mqtt: try {
-             *   MqttEndpoint {
-             *       host: mqtt.0?,
-             *       port: mqtt.1?,
-             *   }
-             * }
-             */
-            mqtt: match mqtt {
-                (Some(host), Some(port)) => Some(MqttEndpoint { host, port }),
-                _ => None,
-            },
-        })
+        Ok(Endpoints { http, mqtt })
     }
 }
 
