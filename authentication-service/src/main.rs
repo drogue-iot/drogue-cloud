@@ -5,6 +5,7 @@ mod database;
 
 use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use actix_web::http::header::ContentType;
 
 use serde::Deserialize;
 
@@ -34,16 +35,19 @@ async fn password_authentication(
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
     let auth_result;
-    let secret = database::get_credential(&auth.user_id(), &connection)?;
+    let cred = database::get_credential(&auth.user_id(), &connection)?;
+    let props = database::serialise_props(cred.properties);
 
     auth_result = auth::verify_password(
         &auth.password().unwrap_or(&Cow::from("")),
-        &secret
+        cred.secret
     );
 
     match auth_result {
         AuthenticationResult::Success =>
-            Ok(HttpResponse::Ok().finish()),
+            Ok(HttpResponse::Ok()
+                .set(ContentType::json())
+                .body(props)),
         AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
         AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
     }
@@ -62,12 +66,13 @@ async fn token_authentication(
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
     let auth_result;
-    let secret = database::get_credential(&auth.user_id(), &connection)?;
+    let cred = database::get_credential(&auth.user_id(), &connection)?;
 
     auth_result = auth::verify_password(
         &auth.password().unwrap_or(&Cow::from("")),
-        &secret
+        cred.secret
     );
+    let props = database::serialise_props(cred.properties);
 
     //issue token if auth is successful
     match auth_result {
@@ -84,7 +89,10 @@ async fn token_authentication(
                         auth.user_id(),
                         token
                     );
-                    Ok(HttpResponse::Ok().header("Authorization", token).finish())
+                    Ok(HttpResponse::Ok()
+                        .set(ContentType::json())
+                        .header("Authorization", token)
+                        .body(props))
                 }
                 Err(e) => {
                     log::error!("Could not issue JWT token: {}", e);
