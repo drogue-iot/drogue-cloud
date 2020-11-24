@@ -32,8 +32,15 @@ kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
 
 # Remove the unnecessary and wrong host entry for keycloak ingress
 
-wait_for_resource ingress/keycloak
-kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]'
+case $CLUSTER in
+   openshift)
+        wait_for_resource route/keycloak
+        ;;
+   *)
+        wait_for_resource ingress/keycloak
+        kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]'
+        ;;
+esac;
 
 # Wait for the HTTP endpoint to become ready
 
