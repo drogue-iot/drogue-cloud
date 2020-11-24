@@ -31,18 +31,29 @@ fn get_future_timestamp(seconds_from_now: u64) -> u64 {
     }
 }
 
-pub(super) fn verify_password(password: &str, secret: &Secret) -> AuthenticationResult {
+pub(super) fn verify_password(password: &str, secret: Option<String>) -> AuthenticationResult {
+
+    //todo this can probably be done with some 1 liner
+    let sec = match secret {
+        Some(s) => {
+            // turn s into a Secret object
+            let sec : Secret = serde_json::from_str(s.as_str()).unwrap();
+            sec
+        }
+        None => return AuthenticationResult::Error
+    };
+
     if password.is_empty() {
        return AuthenticationResult::Error
     }
 
-    let mut computed_hash = password.to_owned() + &secret.salt;
+    let mut computed_hash = password.to_owned() + &sec.salt;
     let mut hasher = Sha256::new();
 
     hasher.input_str(&computed_hash);
     computed_hash = hasher.result_str();
 
-    if computed_hash.eq(&secret.hash) {
+    if computed_hash.eq(&sec.hash) {
         AuthenticationResult::Success
     } else {
         AuthenticationResult::Failed

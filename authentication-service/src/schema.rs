@@ -3,5 +3,6 @@ diesel::table! {
         device_id -> Varchar,
         secret_type -> Int4,
         secret -> Nullable<Text>,
+        properties -> Nullable<Jsonb>,
     }
 }
