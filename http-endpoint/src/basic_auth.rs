@@ -9,11 +9,14 @@ use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web::client::Client;
 use awc::http::StatusCode;
 use log;
+use reqwest::header::{HeaderName, HeaderValue};
+use actix_web::web::Buf;
 
 const AUTH_SERVICE_URL: &str = "AUTH_SERVICE_URL";
+const PROPS_HEADER_NAME: &str = "properties";
 
 pub async fn basic_validator(
-    req: ServiceRequest,
+    mut req: ServiceRequest,
     cred: BasicAuth,
 ) -> Result<ServiceRequest, Error> {
 
@@ -36,13 +39,25 @@ pub async fn basic_validator(
     let response = Client::default().get(url)
         .header(header::AUTHORIZATION, encoded_basic_header.clone())
         .send()
+        // todo : use a future instead of blocking
         .await;
 
     match response {
-        Ok(r) => {
+        Ok(mut r) => {
             if r.status() == StatusCode::OK {
                 log::debug!("{} authenticated successfully", cred.user_id());
-                Ok(req)
+                // todo : use a future instead of blocking
+                let props = r.body().await;
+                match props {
+                    Ok(p) => {
+                        req.headers_mut().insert(
+                            HeaderName::from_static(PROPS_HEADER_NAME),
+                            HeaderValue::from_bytes(p.bytes()).unwrap_or(HeaderValue::from_static("{}"))
+                        );
+                        Ok(req)
+                    }
+                    Err(_) => Ok(req)
+                }
             } else {
                 log::debug!("Authentication failed for {}. Result: {}", cred.user_id(), r.status());
                 Err(AuthenticationError::from(config).into())
