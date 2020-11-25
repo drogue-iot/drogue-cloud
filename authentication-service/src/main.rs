@@ -1,11 +1,11 @@
-mod models;
-mod schema;
 mod auth;
 mod database;
+mod models;
+mod schema;
 
+use actix_web::http::header::ContentType;
 use actix_web::{get, web, App, HttpResponse, HttpServer};
 use actix_web_httpauth::extractors::basic::BasicAuth;
-use actix_web::http::header::ContentType;
 
 use serde::Deserialize;
 
@@ -32,27 +32,21 @@ async fn password_authentication(
     auth: BasicAuth,
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::Error> {
-
     let connection = database::pg_pool_handler(&data.connection_pool)?;
     let auth_result;
     let cred = database::get_credential(&auth.user_id(), &connection)?;
     let props = database::serialise_props(cred.properties);
 
-    auth_result = auth::verify_password(
-        &auth.password().unwrap_or(&Cow::from("")),
-        cred.secret
-    );
+    auth_result = auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
 
     match auth_result {
-        AuthenticationResult::Success =>
-            Ok(HttpResponse::Ok()
-                .set(ContentType::json())
-                .body(props)),
+        AuthenticationResult::Success => {
+            Ok(HttpResponse::Ok().set(ContentType::json()).body(props))
+        }
         AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
         AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
     }
 }
-
 
 #[get("/jwt")]
 async fn token_authentication(
@@ -68,10 +62,7 @@ async fn token_authentication(
     let auth_result;
     let cred = database::get_credential(&auth.user_id(), &connection)?;
 
-    auth_result = auth::verify_password(
-        &auth.password().unwrap_or(&Cow::from("")),
-        cred.secret
-    );
+    auth_result = auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
     let props = database::serialise_props(cred.properties);
 
     //issue token if auth is successful
@@ -84,11 +75,7 @@ async fn token_authentication(
             );
             match token {
                 Ok(token) => {
-                    log::debug!(
-                        "Issued JWT for device {}. Token: {}",
-                        auth.user_id(),
-                        token
-                    );
+                    log::debug!("Issued JWT for device {}. Token: {}", auth.user_id(), token);
                     Ok(HttpResponse::Ok()
                         .set(ContentType::json())
                         .header("Authorization", token)
@@ -106,8 +93,6 @@ async fn token_authentication(
         AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
     }
 }
-
-
 
 #[derive(Clone)]
 struct WebData {
@@ -138,21 +123,25 @@ async fn main() -> std::io::Result<()> {
 
     // Initialize config from environment variables
     let config = Config::init_from_env().unwrap();
-    let data : WebData;
+    let data: WebData;
     let app = App::new();
 
     let pool = database::establish_connection(config.db_url);
     if config.enable_jwt {
-        data = WebData{
+        data = WebData {
             connection_pool: pool,
             token_expiration_seconds: config.jwt_expiration,
-            token_signing_private_key: std::fs::read(config.jwt_signing_key
-                .expect("JWT_ECDSA_SIGNING_KEY must be set")).unwrap(),
+            token_signing_private_key: std::fs::read(
+                config
+                    .jwt_signing_key
+                    .expect("JWT_ECDSA_SIGNING_KEY must be set"),
+            )
+            .unwrap(),
         };
         // add the JWT service to the web server.
         app.service(token_authentication).data(data.clone());
     } else {
-        data = WebData{
+        data = WebData {
             connection_pool: pool,
             token_expiration_seconds: 0,
             token_signing_private_key: Vec::new(),
@@ -161,17 +150,24 @@ async fn main() -> std::io::Result<()> {
 
     //todo use a separate config function
     if config.enable_jwt {
-        HttpServer::new(move || App::new()
-            .service(token_authentication).data(data.clone())
-            .service(password_authentication).data(data.clone()))
-            .bind(config.bind_addr)?
-            .run()
-            .await
+        HttpServer::new(move || {
+            App::new()
+                .service(token_authentication)
+                .data(data.clone())
+                .service(password_authentication)
+                .data(data.clone())
+        })
+        .bind(config.bind_addr)?
+        .run()
+        .await
     } else {
-        HttpServer::new(move || App::new()
-            .service(password_authentication).data(data.clone()))
-            .bind(config.bind_addr)?
-            .run()
-            .await
+        HttpServer::new(move || {
+            App::new()
+                .service(password_authentication)
+                .data(data.clone())
+        })
+        .bind(config.bind_addr)?
+        .run()
+        .await
     }
 }
