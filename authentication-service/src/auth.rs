@@ -2,15 +2,19 @@ use jsonwebtokens as jwt;
 use jwt::error::Error;
 use jwt::{encode, Algorithm, AlgorithmID};
 
-use crypto::sha2::Sha256;
 use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 
 use serde_json::json;
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::{AuthenticationResult, Secret};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-pub(super) fn get_jwt_token(dev_id: &str, pem_data: &[u8], expiration: u64) -> Result<String, Error> {
+pub(super) fn get_jwt_token(
+    dev_id: &str,
+    pem_data: &[u8],
+    expiration: u64,
+) -> Result<String, Error> {
     let alg = Algorithm::new_ecdsa_pem_signer(AlgorithmID::ES256, pem_data)?;
     let header = json!({ "alg": alg.name() });
     let claims = json!({
@@ -32,19 +36,18 @@ fn get_future_timestamp(seconds_from_now: u64) -> u64 {
 }
 
 pub(super) fn verify_password(password: &str, secret: Option<String>) -> AuthenticationResult {
-
     //todo this can probably be done with some 1 liner
     let sec = match secret {
         Some(s) => {
             // turn s into a Secret object
-            let sec : Secret = serde_json::from_str(s.as_str()).unwrap();
+            let sec: Secret = serde_json::from_str(s.as_str()).unwrap();
             sec
         }
-        None => return AuthenticationResult::Error
+        None => return AuthenticationResult::Error,
     };
 
     if password.is_empty() {
-       return AuthenticationResult::Error
+        return AuthenticationResult::Error;
     }
 
     let mut computed_hash = password.to_owned() + &sec.salt;
