@@ -48,8 +48,8 @@ fn control_credentials(creds: Vec<Credential>, id: &str) -> Result<Credential, H
         Ok(creds[0].clone())
     } else if creds.is_empty() {
         log::info!("No credentials found for {}", id);
-         Err(HttpResponse::NotFound().finish())
+        Err(HttpResponse::NotFound().finish())
     } else {
-         Err(HttpResponse::InternalServerError().finish())
+        Err(HttpResponse::InternalServerError().finish())
     }
 }

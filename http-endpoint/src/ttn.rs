@@ -11,7 +11,6 @@ use drogue_ttn::http as ttn;
 
 use crate::PublishOptions;
 
-
 #[post("/ttn")]
 pub async fn publish(
     endpoint: web::Data<DownstreamSender>,

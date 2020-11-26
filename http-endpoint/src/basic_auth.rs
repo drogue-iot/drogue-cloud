@@ -22,7 +22,8 @@ pub async fn basic_validator(
     let auth_service_url = std::env::var(AUTH_SERVICE_URL).expect("AUTH_SERVICE_URL must be set");
 
     let config = req
-        .app_data::<Config>().cloned()
+        .app_data::<Config>()
+        .cloned()
         .map(|data| data)
         .unwrap_or_else(Default::default);
 
