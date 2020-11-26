@@ -183,7 +183,7 @@ fn render_blob(blob: &[u8]) -> String {
     format!("[{}; {:02x?}{}]", blob.len(), &blob[0..max], ellipsis)
 }
 
-fn truncate_str(len: usize, string: &String) -> String {
+fn truncate_str(len: usize, string: &str) -> String {
     let mut r = String::new();
     for c in string.graphemes(true) {
         if r.len() > len || r.contains('\n') || r.contains('\r') {

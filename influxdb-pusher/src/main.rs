@@ -4,7 +4,6 @@ use cloudevents::event::Data;
 use cloudevents_sdk_actix_web::HttpRequestExt;
 use influxdb::InfluxDbWriteable;
 use influxdb::{Client, Timestamp};
-use log;
 use serde::Deserialize;
 use serde_json::Value;
 

@@ -9,7 +9,6 @@ use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web::client::Client;
 use actix_web::web::Buf;
 use awc::http::StatusCode;
-use log;
 use reqwest::header::{HeaderName, HeaderValue};
 
 const AUTH_SERVICE_URL: &str = "AUTH_SERVICE_URL";
@@ -23,8 +22,8 @@ pub async fn basic_validator(
     let auth_service_url = std::env::var(AUTH_SERVICE_URL).expect("AUTH_SERVICE_URL must be set");
 
     let config = req
-        .app_data::<Config>()
-        .map(|data| data.clone())
+        .app_data::<Config>().cloned()
+        .map(|data| data)
         .unwrap_or_else(Default::default);
 
     let url = format!("http://{}/auth", auth_service_url);
@@ -53,7 +52,7 @@ pub async fn basic_validator(
                         req.headers_mut().insert(
                             HeaderName::from_static(PROPS_HEADER_NAME),
                             HeaderValue::from_bytes(p.bytes())
-                                .unwrap_or(HeaderValue::from_static("{}")),
+                                .unwrap_or_else(|_| HeaderValue::from_static("{}")),
                         );
                         Ok(req)
                     }

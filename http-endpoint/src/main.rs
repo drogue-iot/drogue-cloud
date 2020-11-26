@@ -14,7 +14,6 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 
 use futures::StreamExt;
-use log;
 
 use self::basic_auth::basic_validator;
 use actix_web::middleware::Condition;

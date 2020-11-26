@@ -11,7 +11,6 @@ use drogue_ttn::http as ttn;
 
 use crate::PublishOptions;
 
-use log;
 
 #[post("/ttn")]
 pub async fn publish(

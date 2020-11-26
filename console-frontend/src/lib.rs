@@ -68,13 +68,12 @@ impl Component for Main {
 
         let code = url
             .query_pairs()
-            .into_iter()
             .find_map(|(k, v)| if k == "code" { Some(v) } else { None });
 
         if let Some(code) = code {
             let code = code.to_string();
             log::info!("Code: {}", code);
-            storage.store("code", Ok(code.clone()));
+            storage.store("code", Ok(code));
         }
 
         Self {
@@ -257,7 +256,7 @@ impl Backend {
 
     pub fn url<S: AsRef<str>>(path: S) -> Option<Url> {
         Self::get().map(|backend| {
-            let mut result = backend.info.url.clone();
+            let mut result = backend.info.url;
             result.set_path(path.as_ref());
             result
         })

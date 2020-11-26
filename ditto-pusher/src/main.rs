@@ -15,7 +15,6 @@ use cloudevents_sdk_actix_web::HttpRequestExt;
 use futures::stream::SplitSink;
 use futures::StreamExt;
 use http::StatusCode;
-use log;
 use serde_json::{json, Value};
 use std::time::Duration;
 

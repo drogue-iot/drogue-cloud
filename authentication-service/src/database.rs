@@ -43,13 +43,13 @@ pub(super) fn serialise_props(props: Option<Value>) -> String {
 fn control_credentials(creds: Vec<Credential>, id: &str) -> Result<Credential, HttpResponse> {
     if creds.len() > 1 {
         log::info!("More than one credential exist for {}", id);
-        return Err(HttpResponse::InternalServerError().finish());
+        Err(HttpResponse::InternalServerError().finish())
     } else if creds.len() == 1 {
         Ok(creds[0].clone())
-    } else if creds.len() == 0 {
+    } else if creds.is_empty() {
         log::info!("No credentials found for {}", id);
-        return Err(HttpResponse::NotFound().finish());
+         Err(HttpResponse::NotFound().finish())
     } else {
-        return Err(HttpResponse::InternalServerError().finish());
+         Err(HttpResponse::InternalServerError().finish())
     }
 }
