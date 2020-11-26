@@ -9,35 +9,58 @@ use serde_json::Value;
 use crate::models::Credential;
 use crate::schema;
 
-pub(super) type PgPool = Pool<ConnectionManager<PgConnection>>;
-pub(super) type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
+pub type PgPool = Pool<ConnectionManager<PgConnection>>;
+pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
-pub(super) fn establish_connection(database_url: String) -> PgPool {
+pub fn establish_connection(database_url: String) -> PgPool {
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     Pool::builder()
         .build(manager)
         .expect("Failed to create pool.")
 }
 
-pub(super) fn pg_pool_handler(pool: &PgPool) -> Result<PgPooledConnection, HttpResponse> {
+pub fn pg_pool_handler(pool: &PgPool) -> Result<PgPooledConnection, HttpResponse> {
     pool.get()
         .map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
 }
 
-pub(super) fn get_credential(id: &str, pool: &PgConnection) -> Result<Credential, HttpResponse> {
-    let results = schema::credentials::dsl::credentials
-        .filter(schema::credentials::dsl::device_id.eq(id))
+pub fn get_credential(id: &str, pool: &PgConnection) -> Result<Credential, HttpResponse> {
+    use schema::credentials::dsl::*;
+
+    let results = credentials
+        .filter(device_id.eq(id))
         .load::<Credential>(pool)
         .expect("Error loading credentials");
 
     control_credentials(results, id)
 }
 
-pub(super) fn serialise_props(props: Option<Value>) -> String {
+pub fn serialise_props(props: Option<Value>) -> String {
     match props {
         Some(p) => p.as_str().unwrap_or("{}").to_string(),
         None => "{}".to_string(),
     }
+}
+
+pub fn insert_credential(
+    data: Credential,
+    pool: &PgConnection,
+) -> Result<Credential, HttpResponse> {
+    use schema::credentials::dsl::*;
+
+    let res = diesel::insert_into(credentials)
+        .values(data)
+        .get_result(pool);
+
+    res.map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
+}
+
+pub fn delete_credential(id: String, pool: &PgConnection) -> Result<usize, HttpResponse> {
+    use schema::credentials::dsl::*;
+
+    let res = diesel::delete(credentials.filter(device_id.eq(id))).execute(pool);
+
+    res.map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
 }
 
 fn control_credentials(creds: Vec<Credential>, id: &str) -> Result<Credential, HttpResponse> {
