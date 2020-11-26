@@ -1,7 +1,6 @@
 mod auth;
-mod database;
-mod models;
-mod schema;
+
+use drogue_cloud_database_common::database;
 
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};

@@ -10,6 +10,8 @@ members = [
     "console-backend",
     "console-frontend",
     "authentication-service",
+    "device-management-endpoint",
+    "database-common",
 ]
 
 [patch.crates-io]

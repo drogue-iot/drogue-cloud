@@ -725,8 +725,8 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "chrono",
- "diesel",
  "dotenv",
+ "drogue-cloud-database-common",
  "env_logger",
  "envconfig",
  "futures",
@@ -1306,6 +1306,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-utils"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d96d1e189ef58269ebe5b97953da3274d83a93af647c2ddd6f9dab28cedb8d"
+dependencies = [
+ "autocfg",
+ "cfg-if 1.0.0",
+ "lazy_static",
+]
+
+[[package]]
 name = "crypto-mac"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1361,6 +1372,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "device-management-endpoint"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "dotenv",
+ "drogue-cloud-database-common",
+ "env_logger",
+ "envconfig",
+ "log",
+ "serde_json",
 ]
 
 [[package]]
@@ -1472,6 +1497,17 @@ name = "dotenv"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
+
+[[package]]
+name = "drogue-cloud-database-common"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "diesel",
+ "log",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "drogue-cloud-endpoint-common"
@@ -4998,3 +5034,8 @@ checksum = "49bf2f66f0e61d65d1637523fa1faedd5aa291cf9cb8d8fb200678472279b672"
 dependencies = [
  "nom 5.1.2",
 ]
+
+[[patch.unused]]
+name = "openid"
+version = "0.6.0"
+source = "git+https://github.com/ctron/openid.git?branch=feature/custom_ca_1#d373c140a2d62532ab6ee44ddac0a64acb0d19e1"
