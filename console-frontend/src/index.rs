@@ -1,4 +1,4 @@
-use crate::Backend;
+use crate::backend::Backend;
 use anyhow::Error;
 use console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
 use patternfly_yew::*;

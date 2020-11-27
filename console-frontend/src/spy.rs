@@ -11,7 +11,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::{closure::Closure, JsValue};
 use web_sys::{EventSource, EventSourceInit};
 
-use crate::Backend;
+use crate::backend::Backend;
 
 pub struct Spy {
     source: EventSource,
