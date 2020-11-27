@@ -105,6 +105,7 @@ impl Backend {
                 ..Default::default()
             },
             callback.reform(|response: Response<_>| {
+                log::info!("Backend response code: {}", response.status().as_u16());
                 match response.status().as_u16() {
                     401 | 403 => Self::reauthenticate(),
                     _ => {}
