@@ -1,12 +1,18 @@
+mod error;
+
+use crate::error::ServiceError;
 use actix_web::{middleware, post, web, App, HttpRequest, HttpResponse, HttpServer};
 use chrono::{DateTime, Utc};
 use cloudevents::event::Data;
+use cloudevents::AttributesReader;
 use cloudevents_sdk_actix_web::HttpRequestExt;
 use envconfig::Envconfig;
-use influxdb::{Client, InfluxDbWriteable, Timestamp};
+use influxdb::{Client, InfluxDbWriteable, Timestamp, Type, WriteQuery};
+use jsonpath_lib::Selector;
 use log;
 use serde::Deserialize;
 use serde_json::Value;
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, InfluxDbWriteable, Deserialize)]
 struct TemperatureReading {
@@ -14,54 +20,145 @@ struct TemperatureReading {
     temperature: f64,
 }
 
+fn add_to_query<F>(
+    mut query: WriteQuery,
+    processor: &Processor,
+    json: &Value,
+    f: F,
+) -> Result<WriteQuery, ServiceError>
+where
+    F: Fn(WriteQuery, &String, Type) -> WriteQuery,
+{
+    for (field, path) in &processor.fields {
+        let sel = Selector::default()
+            .compiled_path(&path.node)
+            .value(&json)
+            .select()
+            .map_err(|err| ServiceError::SelectorError {
+                details: err.to_string(),
+            })?;
+
+        query = match sel.as_slice() {
+            // no value, don't add
+            [] => Ok(query),
+            // single value, process
+            [v] => match v {
+                Value::String(s) => Ok(f(query, field, Type::Text(s.clone()))),
+                Value::Bool(b) => Ok(f(query, field, Type::Boolean(*b))),
+                Value::Number(n) => {
+                    if let Some(n) = n.as_u64() {
+                        Ok(f(query, field, Type::UnsignedInteger(n)))
+                    } else if let Some(n) = n.as_i64() {
+                        Ok(f(query, field, Type::SignedInteger(n)))
+                    } else if let Some(n) = n.as_f64() {
+                        Ok(f(query, field, Type::Float(n)))
+                    } else {
+                        Err(ServiceError::PayloadParseError {
+                            details: format!(
+                                "Unknown numeric type - path: {}, value: {:?}",
+                                path.path, n
+                            ),
+                        })
+                    }
+                }
+                _ => Err(ServiceError::PayloadParseError {
+                    details: format!(
+                        "Invalid value type selected - path: {}, value: {:?}",
+                        path.path, v
+                    ),
+                }),
+            },
+            // multiple values, error
+            [..] => Err(ServiceError::SelectorError {
+                details: format!("Selector found more than one value: {}", sel.len()),
+            }),
+        }?;
+    }
+
+    Ok(query)
+}
+
+fn add_values(
+    query: WriteQuery,
+    processor: &Processor,
+    json: &Value,
+) -> Result<WriteQuery, ServiceError> {
+    add_to_query(query, processor, json, |query, field, value| {
+        query.add_field(field, value)
+    })
+}
+
+fn add_tags(
+    query: WriteQuery,
+    processor: &Processor,
+    json: &Value,
+) -> Result<WriteQuery, ServiceError> {
+    add_to_query(query, processor, json, |query, field, value| {
+        query.add_tag(field, value)
+    })
+}
+
+fn parse_payload(data: Option<&Data>) -> Result<Value, ServiceError> {
+    match data {
+        Some(Data::Json(value)) => Ok(value.clone()),
+        Some(Data::String(s)) => {
+            serde_json::from_str::<Value>(&s).map_err(|err| ServiceError::PayloadParseError {
+                details: err.to_string(),
+            })
+        }
+
+        Some(Data::Binary(b)) => {
+            serde_json::from_slice::<Value>(&b).map_err(|err| ServiceError::PayloadParseError {
+                details: err.to_string(),
+            })
+        }
+        _ => Err(ServiceError::PayloadParseError {
+            details: "Unknown event payload".to_string(),
+        }),
+    }
+}
+
 #[post("/")]
 async fn forward(
     req: HttpRequest,
     payload: web::Payload,
-    client: web::Data<Client>,
+    processor: web::Data<Processor>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let request_event = req.to_event(payload).await?;
+    let event = req.to_event(payload).await?;
 
-    log::info!("Received Event: {:?}", request_event);
+    log::info!("Received Event: {:?}", event);
 
-    let data: Option<&Data> = request_event.data();
+    let data: Option<&Data> = event.data();
 
-    let temp = match data {
-        Some(Data::Json(value)) => value["temp"].as_f64(),
-        Some(Data::String(s)) => serde_json::from_str::<Value>(&s)
-            .ok()
-            .and_then(|value| value["temp"].as_f64()),
-        Some(Data::Binary(b)) => serde_json::from_slice::<Value>(&b)
-            .ok()
-            .and_then(|value| value["temp"].as_f64()),
+    let timestamp = event
+        .time()
+        .map(|ts| ts.clone())
+        .unwrap_or_else(|| Utc::now());
+    let timestamp = Timestamp::from(timestamp);
 
-        _ => {
-            log::info!("Invalid data format: {:?}", data);
-            None
-        }
-    };
+    let mut query = timestamp.into_query(processor.table.clone());
 
-    log::info!("Temp: {:?}", temp);
+    // process values with payload only
 
-    match temp {
-        Some(temperature) => {
-            let value = TemperatureReading {
-                time: Timestamp::Now.into(),
-                temperature,
-            };
+    let json = parse_payload(data)?;
+    query = add_values(query, &processor, &json)?;
 
-            let query = value.into_query("temperatures");
+    // create full events JSON for tags
 
-            let result = client.query(&query).await;
+    let event_json = serde_json::to_value(event)?;
+    query = add_tags(query, &processor, &event_json)?;
 
-            log::info!("Result: {:?}", result);
+    // execute query
 
-            match result {
-                Ok(_) => Ok(HttpResponse::Accepted().finish()),
-                Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
-            }
-        }
-        None => Ok(HttpResponse::NoContent().finish()),
+    let result = processor.client.query(&query).await;
+
+    // process result
+
+    log::info!("Result: {:?}", result);
+
+    match result {
+        Ok(_) => Ok(HttpResponse::Accepted().finish()),
+        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
     }
 }
 
@@ -75,6 +172,8 @@ struct InfluxDb {
     pub user: String,
     #[envconfig(from = "INFLUXDB_PASSWORD")]
     pub password: String,
+    #[envconfig(from = "INFLUXDB_TABLE")]
+    pub table: String,
 }
 
 #[derive(Envconfig, Clone, Debug)]
@@ -83,6 +182,19 @@ struct Config {
     pub max_json_payload_size: usize,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
+}
+
+#[derive(Debug, Clone)]
+struct Path {
+    pub path: String,
+    pub node: jsonpath_lib::parser::Node,
+}
+
+#[derive(Debug, Clone)]
+struct Processor {
+    pub client: Client,
+    pub table: String,
+    pub fields: HashMap<String, Path>,
 }
 
 #[actix_rt::main]
@@ -95,11 +207,28 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::init_from_env()?;
     let max_json_payload_size = config.max_json_payload_size;
 
+    let mut fields = HashMap::new();
+
+    for (key, value) in std::env::vars() {
+        if let Some(field) = key.strip_prefix("FIELD_") {
+            log::info!("Adding field - {} -> {}", field, value);
+            let node = jsonpath_lib::Parser::compile(&value)
+                .map_err(|err| anyhow::anyhow!("Failed to parse JSON path: {}", err))?;
+            fields.insert(field.to_string(), Path { path: value, node });
+        }
+    }
+
+    let processor = Processor {
+        client,
+        table: influx.table,
+        fields,
+    };
+
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
-            .data(client.clone())
+            .data(processor.clone())
             .service(forward)
     })
     .bind(config.bind_addr)?
