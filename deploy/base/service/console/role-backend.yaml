@@ -3,9 +3,9 @@ kind: Role
 metadata:
   name: console-backend
 rules:
-  - apiGroups: ["route.openshift.io"]
-    resources: ["routes"]
-    verbs: ["get", "watch", "list"]
-  - apiGroups: ["serving.knative.dev"]
-    resources: ["services"]
-    verbs: ["get", "watch", "list"]
+  - apiGroups: [ "route.openshift.io" ]
+    resources: [ "routes" ]
+    verbs: [ "get", "watch", "list" ]
+  - apiGroups: [ "serving.knative.dev" ]
+    resources: [ "services" ]
+    verbs: [ "get", "watch", "list" ]
