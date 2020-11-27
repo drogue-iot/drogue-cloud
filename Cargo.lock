@@ -1760,6 +1760,7 @@ dependencies = [
  "drogue-cloud-endpoint-common",
  "drogue-ttn",
  "env_logger",
+ "envconfig",
  "futures",
  "futures-core",
  "futures-util",

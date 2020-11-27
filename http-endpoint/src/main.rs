@@ -12,13 +12,21 @@ use serde_json::json;
 
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
-
+use envconfig::Envconfig;
 use futures::StreamExt;
 
 use self::basic_auth::basic_validator;
 use actix_web::middleware::Condition;
 
-const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
+#[derive(Envconfig, Clone, Debug)]
+struct Config {
+    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    pub max_json_payload_size: usize,
+    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    pub bind_addr: String,
+    #[envconfig(from = "ENABLE_AUTH", default = "false")]
+    pub enable_auth: bool,
+}
 
 #[get("/")]
 async fn index() -> impl Responder {
@@ -124,7 +132,6 @@ async fn telemetry(
     }
 }
 
-//TODO : use envconfig
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -134,13 +141,9 @@ async fn main() -> anyhow::Result<()> {
 
     let sender = DownstreamSender::new()?;
 
-    let addr = std::env::var("BIND_ADDR").ok();
-    let addr = addr.as_deref().unwrap_or("127.0.0.1:8080");
-
-    let enable_auth = match std::env::var_os("ENABLE_AUTH") {
-        Some(str) => str == "true",
-        None => false,
-    };
+    let config = Config::init_from_env()?;
+    let enable_auth = config.enable_auth;
+    let max_json_payload_size = config.max_json_payload_size;
 
     HttpServer::new(move || {
         //let jwt_auth = HttpAuthentication::bearer(jwt_validator);
@@ -149,14 +152,14 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .wrap(Condition::new(enable_auth, basic_auth))
             .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(GLOBAL_MAX_JSON_PAYLOAD_SIZE))
+            .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone())
             .service(index)
             .service(publish)
             .service(telemetry)
             .service(ttn::publish)
     })
-    .bind(addr)?
+    .bind(config.bind_addr)?
     .run()
     .await?;
 

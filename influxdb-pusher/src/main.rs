@@ -8,8 +8,6 @@ use log;
 use serde::Deserialize;
 use serde_json::Value;
 
-const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
-
 #[derive(Debug, PartialEq, InfluxDbWriteable, Deserialize)]
 struct TemperatureReading {
     time: DateTime<Utc>,
@@ -81,10 +79,10 @@ struct InfluxDb {
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
-    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE")]
-    pub max_json_payload_size: Option<usize>,
-    #[envconfig(from = "BIND_ADDR")]
-    pub bind_addr: Option<String>,
+    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    pub max_json_payload_size: usize,
+    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    pub bind_addr: String,
 }
 
 #[actix_rt::main]
@@ -95,19 +93,16 @@ async fn main() -> anyhow::Result<()> {
     let client = Client::new(influx.uri, influx.db).with_auth(influx.user, influx.password);
 
     let config = Config::init_from_env()?;
-    let max_payload_size = config
-        .clone()
-        .max_json_payload_size
-        .unwrap_or(GLOBAL_MAX_JSON_PAYLOAD_SIZE);
+    let max_json_payload_size = config.max_json_payload_size;
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(max_payload_size))
+            .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(client.clone())
             .service(forward)
     })
-    .bind(config.bind_addr.unwrap_or_else(|| "127.0.0.1:8080".into()))?
+    .bind(config.bind_addr)?
     .run()
     .await?;
 
