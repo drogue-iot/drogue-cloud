@@ -27,7 +27,7 @@ pub async fn basic_validator(
         .map(|data| data)
         .unwrap_or_else(Default::default);
 
-    let url = format!("http://{}/auth", auth_service_url);
+    let url = format!("{}", auth_service_url);
 
     // We fetch the encoded header to avoid re-encoding
     let encoded_basic_header = req
