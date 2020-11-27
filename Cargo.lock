@@ -556,7 +556,7 @@ dependencies = [
 
 [[package]]
 name = "authentication-service"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "actix-rt",
  "actix-service",
@@ -927,7 +927,7 @@ dependencies = [
 
 [[package]]
 name = "console-backend"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "actix",
  "actix-cors",
@@ -964,7 +964,7 @@ dependencies = [
 
 [[package]]
 name = "console-common"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -972,7 +972,7 @@ dependencies = [
 
 [[package]]
 name = "console-frontend"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1196,7 +1196,7 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "ditto-pusher"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "actix",
  "actix-codec 0.3.0",
@@ -1238,7 +1238,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drogue-cloud-endpoint-common"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1893,7 +1893,7 @@ dependencies = [
 
 [[package]]
 name = "influxdb-pusher"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "actix-rt",
  "actix-service",
@@ -2245,7 +2245,7 @@ dependencies = [
 
 [[package]]
 name = "mqtt-endpoint"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "cloudevents-sdk",
