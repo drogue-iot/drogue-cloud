@@ -28,7 +28,6 @@ if [ "$INSTALL_DITTO_OPERATOR" == true ]; then
 echo -n "🧑‍🔧 Deploying Ditto operator... "
 helm upgrade --install --wait --timeout 30m --repo https://ctron.github.io/helm-charts ditto-operator ditto-operator --version "^0.1.9" -n "$DROGUE_NS" $HELMARGS_DITTO >/dev/null
 echo "OK"
-
 fi
 
 echo -n "📚 Deploying MongoDB instance... "
