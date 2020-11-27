@@ -87,7 +87,7 @@ impl Backend {
         let token = match Backend::token() {
             Some(token) => token,
             None => {
-                Self::reauth();
+                Self::reauthenticate();
                 return Err(anyhow::anyhow!("Performing re-auth"));
             }
         };
@@ -105,10 +105,10 @@ impl Backend {
                 ..Default::default()
             },
             callback.reform(|response: Response<_>| {
-                if response.status().as_u16() == 401 {
-                    // handle auth-error
-                    Self::reauth();
-                }
+                match response.status().as_u16() {
+                    401 | 403 => Self::reauthenticate(),
+                    _ => {}
+                };
                 response
             }),
         )
@@ -117,7 +117,8 @@ impl Backend {
         Ok(task)
     }
 
-    fn reauth() {
+    fn reauthenticate() {
+        log::info!("Triggering re-authentication flow");
         // need to authenticate
         let location = window().location();
         location
