@@ -31,6 +31,12 @@ spec:
                 secretKeyRef:
                   name: influxdb-secret
                   key: app.password
+            - name: INFLUXDB_TABLE
+              value: temperatures
+            - name: FIELD_TEMPERATURE
+              value: $.temp
+            - name: TAG_DEVICE_ID
+              value: $.device_id
           resources:
             limits:
               memory: 64Mi

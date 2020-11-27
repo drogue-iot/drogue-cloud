@@ -2,7 +2,7 @@ mod error;
 
 use crate::error::ServiceError;
 use actix_web::{middleware, post, web, App, HttpRequest, HttpResponse, HttpServer};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use cloudevents::event::Data;
 use cloudevents::AttributesReader;
 use cloudevents_sdk_actix_web::HttpRequestExt;
@@ -10,26 +10,26 @@ use envconfig::Envconfig;
 use influxdb::{Client, InfluxDbWriteable, Timestamp, Type, WriteQuery};
 use jsonpath_lib::Selector;
 use log;
-use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, InfluxDbWriteable, Deserialize)]
-struct TemperatureReading {
-    time: DateTime<Utc>,
-    temperature: f64,
-}
-
 fn add_to_query<F>(
     mut query: WriteQuery,
-    processor: &Processor,
+    processor: &HashMap<String, Path>,
     json: &Value,
     f: F,
-) -> Result<WriteQuery, ServiceError>
+) -> Result<(WriteQuery, usize), ServiceError>
 where
     F: Fn(WriteQuery, &String, Type) -> WriteQuery,
 {
-    for (field, path) in &processor.fields {
+    let mut num = 0;
+
+    let mut f = |query, field, value| {
+        num += 1;
+        f(query, field, value)
+    };
+
+    for (ref field, ref path) in processor {
         let sel = Selector::default()
             .compiled_path(&path.node)
             .value(&json)
@@ -75,15 +75,15 @@ where
         }?;
     }
 
-    Ok(query)
+    Ok((query, num))
 }
 
 fn add_values(
     query: WriteQuery,
     processor: &Processor,
     json: &Value,
-) -> Result<WriteQuery, ServiceError> {
-    add_to_query(query, processor, json, |query, field, value| {
+) -> Result<(WriteQuery, usize), ServiceError> {
+    add_to_query(query, &processor.fields, json, |query, field, value| {
         query.add_field(field, value)
     })
 }
@@ -92,8 +92,8 @@ fn add_tags(
     query: WriteQuery,
     processor: &Processor,
     json: &Value,
-) -> Result<WriteQuery, ServiceError> {
-    add_to_query(query, processor, json, |query, field, value| {
+) -> Result<(WriteQuery, usize), ServiceError> {
+    add_to_query(query, &processor.tags, json, |query, field, value| {
         query.add_tag(field, value)
     })
 }
@@ -136,29 +136,33 @@ async fn forward(
         .unwrap_or_else(|| Utc::now());
     let timestamp = Timestamp::from(timestamp);
 
-    let mut query = timestamp.into_query(processor.table.clone());
+    let query = timestamp.into_query(processor.table.clone());
 
     // process values with payload only
 
     let json = parse_payload(data)?;
-    query = add_values(query, &processor, &json)?;
+    let (query, num) = add_values(query, &processor, &json)?;
 
     // create full events JSON for tags
 
     let event_json = serde_json::to_value(event)?;
-    query = add_tags(query, &processor, &event_json)?;
+    let (query, _) = add_tags(query, &processor, &event_json)?;
 
     // execute query
 
-    let result = processor.client.query(&query).await;
+    if num > 0 {
+        let result = processor.client.query(&query).await;
 
-    // process result
+        // process result
 
-    log::info!("Result: {:?}", result);
+        log::info!("Result: {:?}", result);
 
-    match result {
-        Ok(_) => Ok(HttpResponse::Accepted().finish()),
-        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
+        match result {
+            Ok(_) => Ok(HttpResponse::Accepted().finish()),
+            Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
+        }
+    } else {
+        Ok(HttpResponse::NoContent().finish())
     }
 }
 
@@ -195,6 +199,7 @@ struct Processor {
     pub client: Client,
     pub table: String,
     pub fields: HashMap<String, Path>,
+    pub tags: HashMap<String, Path>,
 }
 
 #[actix_rt::main]
@@ -208,6 +213,7 @@ async fn main() -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
 
     let mut fields = HashMap::new();
+    let mut tags = HashMap::new();
 
     for (key, value) in std::env::vars() {
         if let Some(field) = key.strip_prefix("FIELD_") {
@@ -215,6 +221,11 @@ async fn main() -> anyhow::Result<()> {
             let node = jsonpath_lib::Parser::compile(&value)
                 .map_err(|err| anyhow::anyhow!("Failed to parse JSON path: {}", err))?;
             fields.insert(field.to_lowercase(), Path { path: value, node });
+        } else if let Some(tag) = key.strip_prefix("TAG_") {
+            log::info!("Adding tag - {} -> {}", tag, value);
+            let node = jsonpath_lib::Parser::compile(&value)
+                .map_err(|err| anyhow::anyhow!("Failed to parse JSON path: {}", err))?;
+            tags.insert(tag.to_lowercase(), Path { path: value, node });
         }
     }
 
@@ -222,6 +233,7 @@ async fn main() -> anyhow::Result<()> {
         client,
         table: influx.table,
         fields,
+        tags,
     };
 
     HttpServer::new(move || {

@@ -58,6 +58,7 @@ data:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
+      "iteration": 1606484649899,
       "links": [],
       "panels": [
         {
@@ -76,7 +77,7 @@ data:
           "fillGradient": 0,
           "gridPos": {
             "h": 10,
-            "w": 9,
+            "w": 14,
             "x": 0,
             "y": 0
           },
@@ -145,7 +146,13 @@ data:
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "device_id",
+                  "operator": "=~",
+                  "value": "/^$device_id$/"
+                }
+              ]
             },
             {
               "alias": "measurements",
@@ -182,7 +189,13 @@ data:
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "device_id",
+                  "operator": "=~",
+                  "value": "/^$device_id$/"
+                }
+              ]
             }
           ],
           "thresholds": [],
@@ -294,7 +307,7 @@ data:
           "gridPos": {
             "h": 10,
             "w": 10,
-            "x": 9,
+            "x": 14,
             "y": 0
           },
           "id": 4,
@@ -362,7 +375,38 @@ data:
       "style": "dark",
       "tags": [],
       "templating": {
-        "list": []
+        "list": [
+          {
+            "allValue": null,
+            "current": {
+              "selected": true,
+              "text": [
+                  "All"
+              ],
+              "value": [
+                  "$__all"
+              ]
+            },
+            "datasource": "IoT",
+            "definition": "SHOW TAG VALUES WITH KEY = \"device_id\"",
+            "hide": 0,
+            "includeAll": true,
+            "label": "Device ID",
+            "multi": true,
+            "name": "device_id",
+            "options": [],
+            "query": "SHOW TAG VALUES WITH KEY = \"device_id\"",
+            "refresh": 2,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "tagValuesQuery": "",
+            "tags": [],
+            "tagsQuery": "",
+            "type": "query",
+            "useTags": false
+          }
+        ]
       },
       "time": {
         "from": "now-30m",
