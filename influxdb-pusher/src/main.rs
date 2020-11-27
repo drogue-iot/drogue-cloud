@@ -214,7 +214,7 @@ async fn main() -> anyhow::Result<()> {
             log::info!("Adding field - {} -> {}", field, value);
             let node = jsonpath_lib::Parser::compile(&value)
                 .map_err(|err| anyhow::anyhow!("Failed to parse JSON path: {}", err))?;
-            fields.insert(field.to_string(), Path { path: value, node });
+            fields.insert(field.to_lowercase(), Path { path: value, node });
         }
     }
 
