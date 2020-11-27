@@ -1903,6 +1903,7 @@ dependencies = [
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "env_logger",
+ "envconfig",
  "futures",
  "futures-core",
  "futures-util",

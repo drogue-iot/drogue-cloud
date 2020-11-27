@@ -2,10 +2,13 @@ use actix_web::{middleware, post, web, App, HttpRequest, HttpResponse, HttpServe
 use chrono::{DateTime, Utc};
 use cloudevents::event::Data;
 use cloudevents_sdk_actix_web::HttpRequestExt;
-use influxdb::InfluxDbWriteable;
-use influxdb::{Client, Timestamp};
+use envconfig::Envconfig;
+use influxdb::{Client, InfluxDbWriteable, Timestamp};
+use log;
 use serde::Deserialize;
 use serde_json::Value;
+
+const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
 
 #[derive(Debug, PartialEq, InfluxDbWriteable, Deserialize)]
 struct TemperatureReading {
@@ -64,27 +67,47 @@ async fn forward(
     }
 }
 
-const GLOBAL_MAX_JSON_PAYLOAD_SIZE: usize = 64 * 1024;
+#[derive(Envconfig, Clone, Debug)]
+struct InfluxDb {
+    #[envconfig(from = "INFLUXDB_URI")]
+    pub uri: String,
+    #[envconfig(from = "INFLUXDB_DATABASE")]
+    pub db: String,
+    #[envconfig(from = "INFLUXDB_USERNAME")]
+    pub user: String,
+    #[envconfig(from = "INFLUXDB_PASSWORD")]
+    pub password: String,
+}
+
+#[derive(Envconfig, Clone, Debug)]
+struct Config {
+    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE")]
+    pub max_json_payload_size: Option<usize>,
+    #[envconfig(from = "BIND_ADDR")]
+    pub bind_addr: Option<String>,
+}
 
 #[actix_rt::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let influxdb_uri = std::env::var("INFLUXDB_URI")?;
-    let influxdb_db = std::env::var("INFLUXDB_DATABASE")?;
-    let influxdb_user = std::env::var("INFLUXDB_USERNAME")?;
-    let influxdb_password = std::env::var("INFLUXDB_PASSWORD")?;
+    let influx = InfluxDb::init_from_env()?;
+    let client = Client::new(influx.uri, influx.db).with_auth(influx.user, influx.password);
 
-    let client = Client::new(influxdb_uri, influxdb_db).with_auth(influxdb_user, influxdb_password);
+    let config = Config::init_from_env()?;
+    let max_payload_size = config
+        .clone()
+        .max_json_payload_size
+        .unwrap_or(GLOBAL_MAX_JSON_PAYLOAD_SIZE);
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(GLOBAL_MAX_JSON_PAYLOAD_SIZE))
+            .data(web::JsonConfig::default().limit(max_payload_size))
             .data(client.clone())
             .service(forward)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(config.bind_addr.unwrap_or_else(|| "127.0.0.1:8080".into()))?
     .run()
     .await?;
 
