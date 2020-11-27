@@ -27,8 +27,6 @@ pub async fn basic_validator(
         .map(|data| data)
         .unwrap_or_else(Default::default);
 
-    let url = format!("{}", auth_service_url);
-
     // We fetch the encoded header to avoid re-encoding
     let encoded_basic_header = req
         .headers()
@@ -36,17 +34,15 @@ pub async fn basic_validator(
         .ok_or_else(|| ErrorBadRequest("Missing Authorization header"))?;
 
     let response = Client::default()
-        .get(url)
+        .get(auth_service_url)
         .header(header::AUTHORIZATION, encoded_basic_header.clone())
         .send()
-        // todo : use a future instead of blocking
         .await;
 
     match response {
         Ok(mut r) => {
             if r.status() == StatusCode::OK {
                 log::debug!("{} authenticated successfully", cred.user_id());
-                // todo : use a future instead of blocking
                 let props = r.body().await;
                 match props {
                     Ok(p) => {
