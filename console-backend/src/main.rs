@@ -98,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
             .service(health)
             .service(auth::login)
             .service(auth::code)
+            .service(auth::refresh)
     })
     .bind(config.bind_addr.unwrap_or_else(|| "127.0.0.1:8080".into()))?
     .run()

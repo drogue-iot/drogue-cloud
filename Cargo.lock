@@ -1176,6 +1176,7 @@ dependencies = [
  "chrono-tz",
  "cloudevents-sdk",
  "console-common",
+ "env_logger",
  "headers",
  "http",
  "js-sys",

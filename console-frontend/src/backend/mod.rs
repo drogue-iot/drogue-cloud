@@ -1,8 +1,10 @@
 use anyhow::Context;
+use chrono::{DateTime, Utc};
 use http::{Response, Uri};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
+use std::time::Duration;
 use url::Url;
 use yew::{format::Text, prelude::*, services::fetch::*, utils::window};
 
@@ -15,7 +17,35 @@ pub struct BackendInformation {
 #[derive(Clone, Debug)]
 pub struct Backend {
     info: BackendInformation,
-    token: Option<String>,
+    token: Option<Token>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Token {
+    pub access_token: String,
+    pub refresh_token: Option<String>,
+    pub expires: Option<DateTime<Utc>>,
+}
+
+impl Token {
+    pub fn is_expired(&self) -> bool {
+        self.valid_for()
+            .map_or(false, |timeout| timeout.as_secs() < 30)
+    }
+
+    pub fn valid_for(&self) -> Option<Duration> {
+        self.expires
+            .map(|expires| expires.signed_duration_since(Utc::now()))
+            .and_then(|expires| expires.to_std().ok())
+    }
+
+    pub fn if_valid(&self) -> Option<&Self> {
+        if self.is_expired() {
+            None
+        } else {
+            Some(self)
+        }
+    }
 }
 
 static CONSOLE_BACKEND: Lazy<RwLock<Option<Backend>>> = Lazy::new(|| RwLock::new(None));
@@ -42,7 +72,17 @@ impl Backend {
         Self::url(path).map(|url| url.to_string())
     }
 
-    pub fn token() -> Option<String> {
+    /// Get the access token, if it is not expired yet
+    pub fn access_token() -> Option<String> {
+        Self::get()
+            .and_then(|b| b.token)
+            .as_ref()
+            .and_then(|t| t.if_valid())
+            .map(|token| token.access_token.clone())
+    }
+
+    /// Get full token information
+    pub fn token() -> Option<Token> {
         Self::get().and_then(|b| b.token)
     }
 
@@ -60,7 +100,7 @@ impl Backend {
         }
     }
 
-    pub(crate) fn update_token(token: Option<String>) {
+    pub(crate) fn update_token(token: Option<Token>) {
         Self::update(|backend| backend.token = token);
     }
 
@@ -84,7 +124,7 @@ impl Backend {
         let request =
             request.uri(Self::uri(path).ok_or_else(|| anyhow::anyhow!("Missing backend"))?);
 
-        let token = match Backend::token() {
+        let token = match Backend::access_token() {
             Some(token) => token,
             None => {
                 Self::reauthenticate();
@@ -118,12 +158,51 @@ impl Backend {
         Ok(task)
     }
 
-    fn reauthenticate() {
+    pub fn reauthenticate() {
         log::info!("Triggering re-authentication flow");
         // need to authenticate
         let location = window().location();
         location
             .set_href(&Backend::url_str("/ui/login").unwrap())
             .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use chrono::DateTime;
+
+    fn setup() {
+        /*
+        env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .init();
+         */
+    }
+
+    #[test]
+    fn test_date_parser() {
+        setup();
+
+        let str = "2020-11-30T11:33:37.437915952Z";
+        let date = DateTime::parse_from_rfc3339(str);
+        assert!(date.is_ok());
+    }
+
+    #[test]
+    fn test_valid_for() {
+        setup();
+
+        let date = Utc::now() + chrono::Duration::seconds(120);
+
+        let token = Token {
+            access_token: String::new(),
+            refresh_token: None,
+            expires: Some(date),
+        };
+
+        assert!(!token.is_expired());
+        assert!(token.valid_for().is_some());
     }
 }

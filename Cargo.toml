@@ -20,3 +20,4 @@ diesel = { git = 'https://github.com/diesel-rs/diesel', branch = 'master' }
 #openid = { git = "https://github.com/ctron/openid.git", branch = "feature/custom_ca_1" }
 actix-web-httpauth = { git = "https://github.com/actix/actix-extras", rev = "cbfd5d94ee9ed70fb47dabfb221785d4625fe6de" }
 jsonpath_lib = { git = "https://github.com/ctron/jsonpath", branch = "feature/reuse_compiled_1" }
+#reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }

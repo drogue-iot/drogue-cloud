@@ -68,7 +68,7 @@ impl Component for Spy {
         // the bearer token the normal way
 
         url.query_pairs_mut()
-            .append_pair("token", &Backend::token().unwrap_or_default());
+            .append_pair("token", &Backend::access_token().unwrap_or_default());
         let source =
             EventSource::new_with_event_source_init_dict(&url.to_string(), &EventSourceInit::new())
                 .unwrap();

@@ -5,7 +5,7 @@ use anyhow::Context;
 use envconfig::Envconfig;
 use failure::Fail;
 use failure::_core::fmt::Formatter;
-use openid::Jws;
+use openid::{Bearer, Jws};
 use reqwest::Certificate;
 use serde::Deserialize;
 use serde_json::json;
@@ -105,10 +105,52 @@ pub async fn code(
         );
 
         match response {
-            Ok(token) => HttpResponse::Ok().json(json!({ "bearer": token.bearer })),
+            Ok(token) => HttpResponse::Ok()
+                .json(json!({ "bearer": token.bearer, "expires": token.bearer.expires, })),
             Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
                 error: "Unauthorized".to_string(),
                 message: format!("Code invalid: {:?}", err),
+            }),
+        }
+    } else {
+        // if we are missing the authenticator, we hide ourselves
+        HttpResponse::NotFound().finish()
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RefreshQuery {
+    refresh_token: String,
+}
+
+#[get("/ui/refresh")]
+pub async fn refresh(
+    login_handler: web::Data<Authenticator>,
+    query: web::Query<RefreshQuery>,
+) -> impl Responder {
+    if let Some(client) = login_handler.client.as_ref() {
+        let response = client
+            .refresh_token(
+                Bearer {
+                    refresh_token: Some(query.0.refresh_token),
+                    access_token: String::new(),
+                    expires: None,
+                    id_token: None,
+                    scope: None,
+                },
+                None,
+            )
+            .await;
+
+        log::info!("Response: {:?}", response.as_ref());
+
+        match response {
+            Ok(bearer) => {
+                HttpResponse::Ok().json(json!({ "bearer": bearer, "expires": bearer.expires, }))
+            }
+            Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
+                error: "Unauthorized".to_string(),
+                message: format!("Refresh token invalid: {:?}", err),
             }),
         }
     } else {
@@ -127,7 +169,7 @@ pub struct AuthConfig {
     pub issuer_url: String,
     #[envconfig(from = "REDIRECT_URL")]
     pub redirect_url: String,
-    // "roles" is required for the "aud" claim
+    // Note: "roles" may be required for the "aud" claim when using Keycloak
     #[envconfig(from = "SCOPES", default = "openid profile email")]
     pub scopes: String,
 }
