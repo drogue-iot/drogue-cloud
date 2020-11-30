@@ -3,9 +3,9 @@
 set -ex
 
 : "${KNATIVE_SERVING_VERSION:=0.19.0}"
-: "${KNATIVE_EVENTING_VERSION:=0.19.1}"
-: "${KOURIER_VERSION:=0.19.0}"
-: "${EVENTING_KAFKA_VERSION:=0.19.0}"
+: "${KNATIVE_EVENTING_VERSION:=0.19.2}"
+: "${KOURIER_VERSION:=0.19.1}"
+: "${EVENTING_KAFKA_VERSION:=0.19.1}"
 : "${CLUSTER:=minikube}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
