@@ -1,7 +1,7 @@
 CREATE TABLE credentials (
     device_id VARCHAR PRIMARY KEY,
     secret_type INTEGER NOT NULL,
-    secret TEXT
+    secret JSONB
 );
 
 INSERT INTO credentials(device_id, secret_type, secret) VALUES
