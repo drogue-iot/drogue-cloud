@@ -178,7 +178,7 @@ fn render_data(event: &Event) -> Html {
 }
 
 fn render_blob(blob: &[u8]) -> String {
-    let max = blob.len().max(50);
+    let max = blob.len().min(50);
     let ellipsis = if blob.len() > max { ", …" } else { "" };
     format!("[{}; {:02x?}{}]", blob.len(), &blob[0..max], ellipsis)
 }
