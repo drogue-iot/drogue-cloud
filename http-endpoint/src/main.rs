@@ -2,7 +2,9 @@ mod basic_auth;
 mod error;
 mod ttn;
 
-use actix_web::{get, middleware, post, put, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    get, http::header, middleware, post, put, web, App, HttpResponse, HttpServer, Responder,
+};
 
 use drogue_cloud_endpoint_common::downstream::{
     DownstreamSender, Outcome, Publish, PublishResponse,
@@ -48,6 +50,7 @@ async fn publish(
     endpoint: web::Data<DownstreamSender>,
     web::Path((device_id, channel)): web::Path<(String, String)>,
     web::Query(opts): web::Query<PublishOptions>,
+    req: web::HttpRequest,
     mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Published to '{}'", channel);
@@ -64,6 +67,11 @@ async fn publish(
                 channel,
                 device_id,
                 model_id: opts.model_id,
+                content_type: req
+                    .headers()
+                    .get(header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .map(|s| s.to_string()),
             },
             bytes,
         )
@@ -90,6 +98,7 @@ async fn publish(
 async fn telemetry(
     endpoint: web::Data<DownstreamSender>,
     web::Path((tenant, device)): web::Path<(String, String)>,
+    req: web::HttpRequest,
     mut body: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!(
@@ -110,6 +119,11 @@ async fn telemetry(
                 channel: tenant,
                 device_id: device,
                 model_id: None,
+                content_type: req
+                    .headers()
+                    .get(header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .map(|s| s.to_string()),
             },
             bytes,
         )

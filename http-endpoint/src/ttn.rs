@@ -36,6 +36,7 @@ pub async fn publish(
                 channel: uplink.port.to_string(),
                 device_id: uplink.dev_id,
                 model_id: opts.model_id,
+                ..Default::default()
             },
             bytes,
         )

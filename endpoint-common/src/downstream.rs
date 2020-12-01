@@ -5,11 +5,12 @@ use cloudevents::{EventBuilder, EventBuilderV10};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
     pub device_id: String,
     pub model_id: Option<String>,
+    pub content_type: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -55,11 +56,17 @@ impl DownstreamSender {
             event = event.extension("model_id", model_id);
         }
 
-        // try decoding as JSON
+        log::info!("Content-Type: {:?}", publish.content_type);
 
-        let event = match serde_json::from_slice::<Value>(body.as_ref()) {
-            Ok(v) => event.data("application/json", Data::Json(v)),
-            Err(_) => event.data("application/octet-stream", Vec::from(body.as_ref())),
+        let event = match publish.content_type {
+            Some(t) => event.data(t, Vec::from(body.as_ref())),
+            None => {
+                // try decoding as JSON
+                match serde_json::from_slice::<Value>(body.as_ref()) {
+                    Ok(v) => event.data("application/json", Data::Json(v)),
+                    Err(_) => event.data("application/octet-stream", Vec::from(body.as_ref())),
+                }
+            }
         };
 
         // build event
