@@ -1183,6 +1183,7 @@ dependencies = [
  "log",
  "once_cell",
  "patternfly-yew",
+ "pretty-hex",
  "serde",
  "serde_json",
  "unicode-segmentation",
@@ -3282,6 +3283,12 @@ checksum = "6ac25eee5a0582f45a67e837e350d784e7003bd29a5f460796772061ca49ffda"
 dependencies = [
  "vcpkg",
 ]
+
+[[package]]
+name = "pretty-hex"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5c99d529f0d30937f6f4b8a86d988047327bb88d04d2c4afc356de74722131"
 
 [[package]]
 name = "proc-macro-crate"

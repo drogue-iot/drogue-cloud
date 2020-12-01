@@ -169,7 +169,7 @@ fn render_data(event: &Event) -> Html {
     match event.data() {
         None => html! {},
         Some(Data::String(text)) => html! { <pre> {text} </pre> },
-        Some(Data::Binary(blob)) => html! { <pre> { format!("{:02x?}", blob) } </pre> },
+        Some(Data::Binary(blob)) => html! { <pre> { pretty_hex::pretty_hex(&blob) } </pre> },
         Some(Data::Json(value)) => {
             let value = serde_json::to_string_pretty(&value).unwrap();
             return html! { <pre> {value} </pre> };
