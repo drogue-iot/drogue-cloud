@@ -10,7 +10,7 @@ use url::Url;
 use yew::{
     format::{Json, Nothing},
     prelude::*,
-    services::{fetch::*, storage::*, timeout::*},
+    services::{fetch::*, timeout::*},
     utils::window,
 };
 use yew_router::prelude::*;
@@ -26,7 +26,6 @@ pub enum AppRoute {
 pub struct Main {
     link: ComponentLink<Self>,
     access_code: Option<String>,
-    storage: StorageService,
     task: Option<FetchTask>,
     refresh_task: Option<TimeoutTask>,
 }
@@ -50,8 +49,6 @@ impl Component for Main {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Msg::FetchEndpoint);
 
-        let storage = StorageService::new(Area::Session).expect("storage was disabled by the user");
-
         let location = window().location();
         let url = Url::parse(&location.href().unwrap()).unwrap();
 
@@ -74,7 +71,6 @@ impl Component for Main {
         Self {
             link,
             access_code: None,
-            storage,
             task: None,
             refresh_task: None,
         }
