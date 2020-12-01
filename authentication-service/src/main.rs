@@ -1,6 +1,7 @@
 mod auth;
 
 use drogue_cloud_database_common::database;
+use drogue_cloud_database_common::models::Secret;
 
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
@@ -13,12 +14,6 @@ use dotenv::dotenv;
 use envconfig::Envconfig;
 
 use std::borrow::Cow;
-
-#[derive(Clone, Debug, Deserialize)]
-struct Secret {
-    hash: String,
-    salt: String,
-}
 
 #[derive(Debug)]
 enum AuthenticationResult {

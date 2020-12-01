@@ -5,7 +5,7 @@ use jwt::{encode, Algorithm, AlgorithmID};
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
-use serde_json::json;
+use serde_json::{json, Value};
 
 use crate::{AuthenticationResult, Secret};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -37,10 +37,10 @@ fn get_future_timestamp(seconds_from_now: u64) -> u64 {
 
 pub(super) fn verify_password(
     password: &str,
-    secret: Option<String>,
+    secret: Option<Value>,
 ) -> Result<AuthenticationResult, ()> {
     let sec: Secret = secret
-        .and_then(|s| serde_json::from_str(&s).ok())
+        .and_then(|s| serde_json::from_value(s).ok())
         .ok_or_else(|| ())?;
 
     if password.is_empty() {

@@ -1,7 +1,8 @@
 use drogue_cloud_database_common::database;
 use drogue_cloud_database_common::models;
 
-use actix_web::{delete, http::header, post, web, App, HttpResponse, HttpServer};
+use actix_web::{delete, get, http::header, post, web, App, HttpResponse, HttpServer};
+use futures::StreamExt;
 
 use actix_web::web::Buf;
 use dotenv::dotenv;
@@ -19,10 +20,10 @@ async fn create_device(
     while let Some(item) = body.next().await {
         bytes.extend_from_slice(&item?);
     }
-
-    println!("{:?}", bytes);
+    let bytes = bytes.freeze();
 
     let device_data: models::Credential = serde_json::from_slice(bytes.bytes())?;
+
     if device_data.device_id.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
@@ -63,6 +64,24 @@ async fn delete_device(
     }
 }
 
+#[get("/device/{device_id}")]
+async fn read_device(
+    data: web::Data<WebData>,
+    web::Path(device_id): web::Path<String>,
+) -> Result<HttpResponse, actix_web::Error> {
+    log::info!("Reading device: '{}'", device_id);
+
+    if device_id.is_empty() {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    let connection = database::pg_pool_handler(&data.connection_pool)?;
+    match database::get_credential(device_id.as_str(), &connection) {
+        Ok(res) => Ok(HttpResponse::Ok().body(serde_json::to_string(&res)?)),
+        Err(e) => Ok(e),
+    }
+}
+
 #[derive(Clone)]
 struct WebData {
     connection_pool: database::PgPool,
@@ -93,6 +112,7 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .service(create_device)
             .service(delete_device)
+            .service(read_device)
             .data(data.clone())
     })
     .bind(config.bind_addr)?
