@@ -1,0 +1,13 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+ name: postgres-pvc
+ labels:
+   app.kubernetes.io/name: postgres
+   app.kubernetes.io/part-of: device-registry
+spec:
+ accessModes:
+ - ReadWriteOnce
+ resources:
+   requests:
+     storage: 1G

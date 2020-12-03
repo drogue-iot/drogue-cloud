@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: authentication-service
+  labels:
+    app.kubernetes.io/name: authentication-service
+    app.kubernetes.io/part-of: device-registry
+spec:
+ ports:
+ - name: postgres
+   port: 5432
+   protocol: TCP
+   targetPort: 5432
+ selector:
+   app.kubernetes.io/name: authentication-service
+   app.kubernetes.io/part-of: device-registry

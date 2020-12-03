@@ -4,10 +4,11 @@ mod models;
 mod schema;
 
 use actix_web::http::header::ContentType;
-use actix_web::{get, web, App, HttpResponse, HttpServer};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
 use serde::Deserialize;
+use serde_json::json;
 
 use dotenv::dotenv;
 use envconfig::Envconfig;
@@ -25,6 +26,12 @@ enum AuthenticationResult {
     Success,
     Failed,
     Error,
+}
+
+// FIXME: move to a dedicated port
+#[get("/health")]
+async fn health() -> impl Responder {
+    HttpResponse::Ok().json(json!({"success": true}))
 }
 
 #[get("/auth")]
@@ -152,6 +159,7 @@ async fn main() -> std::io::Result<()> {
     if config.enable_jwt {
         HttpServer::new(move || {
             App::new()
+                .service(health)
                 .service(token_authentication)
                 .data(data.clone())
                 .service(password_authentication)
@@ -163,6 +171,7 @@ async fn main() -> std::io::Result<()> {
     } else {
         HttpServer::new(move || {
             App::new()
+                .service(health)
                 .service(password_authentication)
                 .data(data.clone())
         })
