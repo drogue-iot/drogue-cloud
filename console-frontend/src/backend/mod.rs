@@ -147,7 +147,9 @@ impl Backend {
             callback.reform(|response: Response<_>| {
                 log::info!("Backend response code: {}", response.status().as_u16());
                 match response.status().as_u16() {
-                    401 | 403 => Self::reauthenticate(),
+                    401 | 403 => {
+                        Self::reauthenticate().ok();
+                    }
                     _ => {}
                 };
                 response
@@ -158,13 +160,14 @@ impl Backend {
         Ok(task)
     }
 
-    pub fn reauthenticate() {
+    pub fn reauthenticate() -> Result<(), anyhow::Error> {
         log::info!("Triggering re-authentication flow");
         // need to authenticate
         let location = window().location();
         location
-            .set_href(&Backend::url_str("/ui/login").unwrap())
+            .set_href(&Backend::url_str("/ui/login").context("Backend information missing")?)
             .unwrap();
+        Ok(())
     }
 }
 

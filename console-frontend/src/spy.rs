@@ -1,15 +1,13 @@
-use patternfly_yew::*;
-use yew::prelude::*;
-
 use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
 };
-
+use itertools::Itertools;
+use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
-
 use wasm_bindgen::{closure::Closure, JsValue};
 use web_sys::{EventSource, EventSourceInit};
+use yew::prelude::*;
 
 use crate::backend::Backend;
 
@@ -169,7 +167,10 @@ fn render_data(event: &Event) -> Html {
     match event.data() {
         None => html! {},
         Some(Data::String(text)) => html! { <pre> {text} </pre> },
-        Some(Data::Binary(blob)) => html! { <pre> { pretty_hex::pretty_hex(&blob) } </pre> },
+        Some(Data::Binary(blob)) => html! { <>
+        <pre> { pretty_hex::pretty_hex(&blob) } </pre>
+        <pre> { base64_block(&blob) } </pre>
+        </> },
         Some(Data::Json(value)) => {
             let value = serde_json::to_string_pretty(&value).unwrap();
             return html! { <pre> {value} </pre> };
@@ -177,8 +178,17 @@ fn render_data(event: &Event) -> Html {
     }
 }
 
+fn base64_block(input: &[u8]) -> String {
+    base64::encode(input)
+        .chars()
+        .collect::<Vec<_>>()
+        .chunks(120)
+        .map(|chunk| chunk.iter().collect::<String>())
+        .join("\n")
+}
+
 fn render_blob(blob: &[u8]) -> String {
-    let max = blob.len().min(50);
+    let max = blob.len().min(25);
     let ellipsis = if blob.len() > max { ", …" } else { "" };
     format!("[{}; {:02x?}{}]", blob.len(), &blob[0..max], ellipsis)
 }

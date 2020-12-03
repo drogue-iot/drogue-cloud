@@ -7,10 +7,14 @@ use chrono::{DateTime, Utc};
 use patternfly_yew::*;
 use std::time::Duration;
 use url::Url;
+use wasm_bindgen::JsValue;
 use yew::{
     format::{Json, Nothing},
     prelude::*,
-    services::{fetch::*, timeout::*},
+    services::{
+        fetch::{Request, *},
+        timeout::*,
+    },
     utils::window,
 };
 use yew_router::prelude::*;
@@ -28,17 +32,20 @@ pub struct Main {
     access_code: Option<String>,
     task: Option<FetchTask>,
     refresh_task: Option<TimeoutTask>,
+    app_failure: bool,
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
     FetchEndpoint,
-    FetchFailed,
+    FetchBackendFailed,
+    AppFailure(Toast),
     Endpoint(BackendInformation),
     SetCode(String),
     GetToken,
     SetAccessToken(Token),
     LoginFailed,
+    RetryLogin,
     // send to trigger refreshing the access token
     RefreshToken,
 }
@@ -54,25 +61,55 @@ impl Component for Main {
 
         log::info!("href: {:?}", url);
 
-        let code = url
-            .query_pairs()
-            .find_map(|(k, v)| if k == "code" { Some(v) } else { None })
-            .map(|s| s.to_string());
+        let code = url.query_pairs().find_map(|(k, v)| {
+            if k == "code" {
+                Some(v.to_string())
+            } else {
+                None
+            }
+        });
+
+        let error = url.query_pairs().find_map(|(k, v)| {
+            if k == "error" {
+                Some(v.to_string())
+            } else {
+                None
+            }
+        });
 
         log::info!("Access code: {:?}", code);
+        log::info!("Login error: {:?}", error);
 
-        if let Some(code) = code {
+        if let Some(error) = error {
+            link.send_message(Msg::AppFailure(Toast {
+                title: "Failed to log in".into(),
+                body: html! {<p>{error}</p>},
+                r#type: Type::Danger,
+                actions: vec![link.callback(|_| Msg::RetryLogin).into_action("Retry")],
+                ..Default::default()
+            }));
+        } else if let Some(code) = code {
             link.send_message(Msg::SetCode(code));
         }
 
         // remove code, state and others from the URL bar
-        //  window().location().set_search("").ok();
+        {
+            let mut url = url.clone();
+            url.query_pairs_mut().clear();
+            let url = url.as_str().trim_end_matches('?');
+            window()
+                .history()
+                .unwrap()
+                .replace_state_with_url(&JsValue::NULL, "Drogue IoT", Some(url))
+                .ok();
+        }
 
         Self {
             link,
             access_code: None,
             task: None,
             refresh_task: None,
+            app_failure: false,
         }
     }
 
@@ -89,19 +126,42 @@ impl Component for Main {
                 log::info!("Got backend: {:?}", backend);
                 Backend::set(Some(backend));
                 self.task = None;
-                self.link.send_message(Msg::GetToken);
-                if self.access_code.is_none() {
-                    // we have no code yet, re-auth
-                    Backend::reauthenticate();
+                if !self.app_failure {
+                    self.link.send_message(Msg::GetToken);
+                    if self.access_code.is_none() {
+                        // we have no code yet, re-auth
+                        Backend::reauthenticate().ok();
+                    }
                 }
+
                 true
             }
-            Msg::FetchFailed => false,
+            Msg::FetchBackendFailed => {
+                Self::error(
+                    "Failed to fetch backend information",
+                    "Could not retrieve information for connecting to the backend.",
+                );
+                false
+            }
+            Msg::AppFailure(toast) => {
+                ToastDispatcher::default().toast(toast);
+                self.app_failure = true;
+                false
+            }
             Msg::LoginFailed => {
-                Backend::update_token(None);
-                Backend::reauthenticate();
-                // FIXME: need to show some notification
+                Self::error("Failed to log in", "Cloud not retrieve access token.");
+                self.app_failure = true;
                 true
+            }
+            Msg::RetryLogin => {
+                Backend::update_token(None);
+                if let Err(err) = Backend::reauthenticate() {
+                    Self::error(
+                        "Failed to log in",
+                        "No backed information present. Unable to trigger login.",
+                    );
+                }
+                false
             }
             Msg::SetCode(code) => {
                 // got code, convert to access token
@@ -195,40 +255,56 @@ impl Component for Main {
         };
 
         html! {
-            <Page
-                logo={html_nested!{
-                    <Logo src="/images/logo.png" alt="Drogue IoT" />
-                }}
-                sidebar=sidebar
-                >
-                {
-                    if self.is_ready() {
-                        html!{
-                            <Router<AppRoute, ()>
-                                    redirect = Router::redirect(|_|AppRoute::Index)
-                                    render = Router::render(|switch: AppRoute| {
-                                        match switch {
-                                            AppRoute::Spy => html!{<Spy/>},
-                                            AppRoute::Index => html!{<Index/>},
-                                        }
-                                    })
-                                />
-                        }
-                    } else {
-                        html!{
-                            <Placeholder/>
+            <>
+                <ToastViewer/>
+                <Page
+                    logo={html_nested!{
+                        <Logo src="/images/logo.png" alt="Drogue IoT" />
+                    }}
+                    sidebar=sidebar
+                    >
+                    {
+                        if self.is_ready() {
+                            html!{
+                                <Router<AppRoute, ()>
+                                        redirect = Router::redirect(|_|AppRoute::Index)
+                                        render = Router::render(|switch: AppRoute| {
+                                            match switch {
+                                                AppRoute::Spy => html!{<Spy/>},
+                                                AppRoute::Index => html!{<Index/>},
+                                            }
+                                        })
+                                    />
+                            }
+                        } else {
+                            html!{
+                                <Placeholder/>
+                            }
                         }
                     }
-                }
-            </Page>
+                </Page>
+            </>
         }
     }
 }
 
 impl Main {
+    fn error<S1, S2>(title: S1, description: S2)
+    where
+        S1: ToString,
+        S2: ToString,
+    {
+        ToastDispatcher::default().toast(Toast {
+            title: title.to_string(),
+            body: html! {<p>{description.to_string()}</p>},
+            r#type: Type::Danger,
+            ..Default::default()
+        });
+    }
+
     /// Check if the app and backend are ready to show the application.
     fn is_ready(&self) -> bool {
-        Backend::get().is_some() && Backend::access_token().is_some()
+        !self.app_failure && Backend::get().is_some() && Backend::access_token().is_some()
     }
 
     fn fetch_backend(&self) -> Result<FetchTask, anyhow::Error> {
@@ -250,7 +326,7 @@ impl Main {
                             return Msg::Endpoint(body);
                         }
                     }
-                    Msg::FetchFailed
+                    Msg::FetchBackendFailed
                 },
             ),
         )
