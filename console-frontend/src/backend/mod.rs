@@ -127,7 +127,7 @@ impl Backend {
         let token = match Backend::access_token() {
             Some(token) => token,
             None => {
-                Self::reauthenticate();
+                Self::reauthenticate().ok();
                 return Err(anyhow::anyhow!("Performing re-auth"));
             }
         };

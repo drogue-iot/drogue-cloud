@@ -1,3 +1,4 @@
+use crate::error::error;
 use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
@@ -18,7 +19,10 @@ pub struct Spy {
 
 pub enum Msg {
     Event(Event),
+    /// Failed when processing an event
     Error(String),
+    /// Source failed
+    Failed,
 }
 
 const DEFAULT_MAX_SIZE: usize = 200;
@@ -60,7 +64,7 @@ impl Component for Spy {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let mut url = Backend::url("/spy").unwrap();
+        let mut url = Backend::url("/spyx").unwrap();
 
         // EventSource doesn't support passing headers, so we cannot send
         // the bearer token the normal way
@@ -71,11 +75,16 @@ impl Component for Spy {
             EventSource::new_with_event_source_init_dict(&url.to_string(), &EventSourceInit::new())
                 .unwrap();
 
+        let l2 = link.clone();
         let on_message = Closure::wrap(Box::new(move |msg: &JsValue| {
             let msg = extract_event(msg);
-            link.send_message(msg);
+            l2.send_message(msg);
         }) as Box<dyn FnMut(&JsValue)>);
         source.set_onmessage(Some(&on_message.into_js_value().into()));
+        let on_error = Closure::wrap(Box::new(move || {
+            link.send_message(Msg::Failed);
+        }) as Box<dyn FnMut()>);
+        source.set_onerror(Some(&on_error.into_js_value().into()));
 
         Self {
             events: Default::default(),
@@ -92,7 +101,12 @@ impl Component for Spy {
                     self.events.pop();
                 }
             }
-            Msg::Error(_) => {}
+            Msg::Error(err) => {
+                error("Failed to process event", err);
+            }
+            Msg::Failed => {
+                error("Source error", "Failed to connect to event source");
+            }
         }
         true
     }

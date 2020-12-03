@@ -1,4 +1,5 @@
 use crate::backend::{Backend, BackendInformation, Token};
+use crate::error::error;
 use crate::index::Index;
 use crate::placeholder::Placeholder;
 use crate::spy::Spy;
@@ -137,7 +138,7 @@ impl Component for Main {
                 true
             }
             Msg::FetchBackendFailed => {
-                Self::error(
+                error(
                     "Failed to fetch backend information",
                     "Could not retrieve information for connecting to the backend.",
                 );
@@ -149,14 +150,14 @@ impl Component for Main {
                 false
             }
             Msg::LoginFailed => {
-                Self::error("Failed to log in", "Cloud not retrieve access token.");
+                error("Failed to log in", "Cloud not retrieve access token.");
                 self.app_failure = true;
                 true
             }
             Msg::RetryLogin => {
                 Backend::update_token(None);
-                if let Err(err) = Backend::reauthenticate() {
-                    Self::error(
+                if let Err(_) = Backend::reauthenticate() {
+                    error(
                         "Failed to log in",
                         "No backed information present. Unable to trigger login.",
                     );
@@ -217,13 +218,13 @@ impl Component for Main {
                         self.task = match self.refresh_token(&refresh_token) {
                             Ok(task) => Some(task),
                             Err(_) => {
-                                Backend::reauthenticate();
+                                Backend::reauthenticate().ok();
                                 None
                             }
                         }
                     }
                     None => {
-                        Backend::reauthenticate();
+                        Backend::reauthenticate().ok();
                     }
                 }
 
@@ -289,19 +290,6 @@ impl Component for Main {
 }
 
 impl Main {
-    fn error<S1, S2>(title: S1, description: S2)
-    where
-        S1: ToString,
-        S2: ToString,
-    {
-        ToastDispatcher::default().toast(Toast {
-            title: title.to_string(),
-            body: html! {<p>{description.to_string()}</p>},
-            r#type: Type::Danger,
-            ..Default::default()
-        });
-    }
-
     /// Check if the app and backend are ready to show the application.
     fn is_ready(&self) -> bool {
         !self.app_failure && Backend::get().is_some() && Backend::access_token().is_some()

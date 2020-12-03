@@ -3,6 +3,7 @@
 mod app;
 mod backend;
 mod components;
+mod error;
 mod index;
 mod placeholder;
 mod spy;
