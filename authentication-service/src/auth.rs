@@ -35,19 +35,16 @@ fn get_future_timestamp(seconds_from_now: u64) -> u64 {
     }
 }
 
-pub(super) fn verify_password(password: &str, secret: Option<String>) -> AuthenticationResult {
-    //todo this can probably be done with some 1 liner
-    let sec = match secret {
-        Some(s) => {
-            // turn s into a Secret object
-            let sec: Secret = serde_json::from_str(s.as_str()).unwrap();
-            sec
-        }
-        None => return AuthenticationResult::Error,
-    };
+pub(super) fn verify_password(
+    password: &str,
+    secret: Option<String>,
+) -> Result<AuthenticationResult, ()> {
+    let sec: Secret = secret
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .ok_or_else(|| ())?;
 
     if password.is_empty() {
-        return AuthenticationResult::Error;
+        return Err(());
     }
 
     let mut computed_hash = password.to_owned() + &sec.salt;
@@ -57,8 +54,8 @@ pub(super) fn verify_password(password: &str, secret: Option<String>) -> Authent
     computed_hash = hasher.result_str();
 
     if computed_hash.eq(&sec.hash) {
-        AuthenticationResult::Success
+        Ok(AuthenticationResult::Success)
     } else {
-        AuthenticationResult::Failed
+        Ok(AuthenticationResult::Failed)
     }
 }

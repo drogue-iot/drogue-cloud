@@ -25,7 +25,6 @@ struct Secret {
 enum AuthenticationResult {
     Success,
     Failed,
-    Error,
 }
 
 // FIXME: move to a dedicated port
@@ -46,13 +45,13 @@ async fn password_authentication(
 
     auth_result = auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
 
-    match auth_result {
-        AuthenticationResult::Success => {
-            Ok(HttpResponse::Ok().set(ContentType::json()).body(props))
+    Ok(match auth_result {
+        Ok(AuthenticationResult::Success) => {
+            HttpResponse::Ok().set(ContentType::json()).body(props)
         }
-        AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
-        AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
-    }
+        Ok(AuthenticationResult::Failed) => HttpResponse::Unauthorized().finish(),
+        Err(_) => HttpResponse::BadRequest().finish(),
+    })
 }
 
 #[get("/jwt")]
@@ -73,8 +72,8 @@ async fn token_authentication(
     let props = database::serialise_props(cred.properties);
 
     //issue token if auth is successful
-    match auth_result {
-        AuthenticationResult::Success => {
+    Ok(match auth_result {
+        Ok(AuthenticationResult::Success) => {
             let token = auth::get_jwt_token(
                 &auth.user_id(),
                 &data.token_signing_private_key,
@@ -83,22 +82,22 @@ async fn token_authentication(
             match token {
                 Ok(token) => {
                     log::debug!("Issued JWT for device {}. Token: {}", auth.user_id(), token);
-                    Ok(HttpResponse::Ok()
+                    HttpResponse::Ok()
                         .set(ContentType::json())
                         .header("Authorization", token)
-                        .body(props))
+                        .body(props)
                 }
                 Err(e) => {
                     log::error!("Could not issue JWT token: {}", e);
-                    Ok(HttpResponse::InternalServerError()
+                    HttpResponse::InternalServerError()
                         .content_type("text/plain")
-                        .body("error encoding the JWT"))
+                        .body("error encoding the JWT")
                 }
             }
         }
-        AuthenticationResult::Failed => Ok(HttpResponse::Unauthorized().finish()),
-        AuthenticationResult::Error => Ok(HttpResponse::BadRequest().finish()),
-    }
+        Ok(AuthenticationResult::Failed) => HttpResponse::Unauthorized().finish(),
+        Err(_) => HttpResponse::BadRequest().finish(),
+    })
 }
 
 #[derive(Clone)]
