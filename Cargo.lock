@@ -1366,7 +1366,7 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#91493fe47175076f330ce5fc518f0196c0476f56"
+source = "git+https://github.com/diesel-rs/diesel#91493fe47175076f330ce5fc518f0196c0476f56"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -1380,7 +1380,7 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#91493fe47175076f330ce5fc518f0196c0476f56"
+source = "git+https://github.com/diesel-rs/diesel#91493fe47175076f330ce5fc518f0196c0476f56"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1477,6 +1477,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 name = "drogue-cloud-endpoint-common"
 version = "0.2.0"
 dependencies = [
+ "actix-web",
  "anyhow",
  "chrono",
  "cloudevents-sdk",

@@ -5,6 +5,10 @@ use cloudevents::{EventBuilder, EventBuilderV10};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use actix_web::{HttpResponse};
+
+use crate::error::HttpEndpointError;
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
@@ -91,5 +95,33 @@ impl DownstreamSender {
                 outcome: Outcome::Rejected,
             }),
         }
+    }
+
+    pub async fn publish_http<B>(&self, publish: Publish, body: B) -> Result<HttpResponse, HttpEndpointError>
+        where
+            B: AsRef<[u8]>,
+    {
+        match self
+            .publish(
+                publish,
+                body,
+            )
+            .await
+            {
+                // ok, and accepted
+                Ok(PublishResponse {
+                       outcome: Outcome::Accepted,
+                   }) => Ok(HttpResponse::Accepted().finish()),
+
+                // ok, but rejected
+                Ok(PublishResponse {
+                       outcome: Outcome::Rejected,
+                   }) => Ok(HttpResponse::NotAcceptable().finish()),
+
+                // internal error
+                Err(err) => Ok(HttpResponse::InternalServerError()
+                    .content_type("text/plain")
+                    .body(err.to_string())),
+            }
     }
 }

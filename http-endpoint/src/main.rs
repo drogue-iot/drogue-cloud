@@ -1,5 +1,4 @@
 mod basic_auth;
-mod error;
 mod ttn;
 
 use actix_web::{
@@ -7,15 +6,16 @@ use actix_web::{
 };
 
 use drogue_cloud_endpoint_common::downstream::{
-    DownstreamSender, Outcome, Publish, PublishResponse,
+    DownstreamSender, Publish,
 };
+
+use drogue_cloud_endpoint_common::error::HttpEndpointError;
 use serde::Deserialize;
 use serde_json::json;
 
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 use envconfig::Envconfig;
-use futures::StreamExt;
 
 use self::basic_auth::basic_validator;
 use actix_web::middleware::Condition;
@@ -51,47 +51,23 @@ async fn publish(
     web::Path((device_id, channel)): web::Path<(String, String)>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
-    mut body: web::Payload,
-) -> Result<HttpResponse, actix_web::Error> {
+    body: web::Bytes,
+) -> Result<HttpResponse, HttpEndpointError> {
     log::info!("Published to '{}'", channel);
 
-    let mut bytes = web::BytesMut::new();
-    while let Some(item) = body.next().await {
-        bytes.extend_from_slice(&item?);
-    }
-    let bytes = bytes.freeze();
-
-    match endpoint
-        .publish(
-            Publish {
-                channel,
-                device_id,
-                model_id: opts.model_id,
-                content_type: req
-                    .headers()
-                    .get(header::CONTENT_TYPE)
-                    .and_then(|v| v.to_str().ok())
-                    .map(|s| s.to_string()),
-            },
-            bytes,
-        )
-        .await
-    {
-        // ok, and accepted
-        Ok(PublishResponse {
-            outcome: Outcome::Accepted,
-        }) => Ok(HttpResponse::Accepted().finish()),
-
-        // ok, but rejected
-        Ok(PublishResponse {
-            outcome: Outcome::Rejected,
-        }) => Ok(HttpResponse::NotAcceptable().finish()),
-
-        // internal error
-        Err(err) => Ok(HttpResponse::InternalServerError()
-            .content_type("text/plain")
-            .body(err.to_string())),
-    }
+    endpoint.publish_http(
+        Publish {
+            channel,
+            device_id,
+            model_id: opts.model_id,
+            content_type: req
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
+        },
+        body,
+    ).await
 }
 
 #[put("/telemetry/{tenant}/{device}")]
@@ -99,51 +75,26 @@ async fn telemetry(
     endpoint: web::Data<DownstreamSender>,
     web::Path((tenant, device)): web::Path<(String, String)>,
     req: web::HttpRequest,
-    mut body: web::Payload,
-) -> Result<HttpResponse, actix_web::Error> {
+    body: web::Bytes,
+) -> Result<HttpResponse, HttpEndpointError> {
     log::info!(
         "Sending telemetry for device '{}' belonging to tenant '{}'",
         device,
         tenant
     );
-
-    let mut bytes = web::BytesMut::new();
-    while let Some(item) = body.next().await {
-        bytes.extend_from_slice(&item?);
-    }
-    let bytes = bytes.freeze();
-
-    match endpoint
-        .publish(
-            Publish {
-                channel: tenant,
-                device_id: device,
-                model_id: None,
-                content_type: req
-                    .headers()
-                    .get(header::CONTENT_TYPE)
-                    .and_then(|v| v.to_str().ok())
-                    .map(|s| s.to_string()),
-            },
-            bytes,
-        )
-        .await
-    {
-        // ok, and accepted
-        Ok(PublishResponse {
-            outcome: Outcome::Accepted,
-        }) => Ok(HttpResponse::Accepted().finish()),
-
-        // ok, but rejected
-        Ok(PublishResponse {
-            outcome: Outcome::Rejected,
-        }) => Ok(HttpResponse::NotAcceptable().finish()),
-
-        // internal error
-        Err(err) => Ok(HttpResponse::InternalServerError()
-            .content_type("text/plain")
-            .body(err.to_string())),
-    }
+    endpoint.publish_http(
+        Publish {
+            channel: tenant,
+            device_id: device,
+            model_id: None,
+            content_type: req
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
+        },
+        body,
+    ).await
 }
 
 #[actix_web::main]
