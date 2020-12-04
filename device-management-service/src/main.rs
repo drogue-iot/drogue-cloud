@@ -83,10 +83,12 @@ async fn read_device(
     }
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
-    match database::get_credential(device_id.as_str(), &connection) {
-        Ok(res) => Ok(HttpResponse::Ok().body(serde_json::to_string(&res)?)),
-        Err(e) => Ok(e),
-    }
+    Ok(
+        match database::get_credential(device_id.as_str(), &connection)? {
+            Some(res) => HttpResponse::Ok().body(serde_json::to_string(&res)?),
+            None => HttpResponse::NotFound().finish(),
+        },
+    )
 }
 
 #[derive(Clone)]

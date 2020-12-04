@@ -32,11 +32,16 @@ async fn password_authentication(
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let connection = database::pg_pool_handler(&data.connection_pool)?;
-    let auth_result;
-    let cred = database::get_credential(&auth.user_id(), &connection)?;
+    let cred = match database::get_credential(&auth.user_id(), &connection)? {
+        Some(cred) => cred,
+        None => {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+    };
     let props = database::serialise_props(cred.properties);
 
-    auth_result = auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
+    let auth_result =
+        auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
 
     Ok(match auth_result {
         Ok(AuthenticationResult::Success) => {
@@ -58,10 +63,15 @@ async fn token_authentication(
     );
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
-    let auth_result;
-    let cred = database::get_credential(&auth.user_id(), &connection)?;
+    let cred = match database::get_credential(&auth.user_id(), &connection)? {
+        Some(cred) => cred,
+        None => {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+    };
 
-    auth_result = auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
+    let auth_result =
+        auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
     let props = database::serialise_props(cred.properties);
 
     //issue token if auth is successful

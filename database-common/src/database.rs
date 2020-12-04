@@ -6,6 +6,7 @@ use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 
 use serde_json::Value;
 
+use crate::error::ServiceError;
 use crate::models::Credential;
 use crate::schema;
 
@@ -24,13 +25,12 @@ pub fn pg_pool_handler(pool: &PgPool) -> Result<PgPooledConnection, HttpResponse
         .map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
 }
 
-pub fn get_credential(id: &str, pool: &PgConnection) -> Result<Credential, HttpResponse> {
+pub fn get_credential(id: &str, pool: &PgConnection) -> Result<Option<Credential>, ServiceError> {
     use schema::credentials::dsl::*;
 
     let results = credentials
         .filter(device_id.eq(id))
-        .load::<Credential>(pool)
-        .expect("Error loading credentials");
+        .load::<Credential>(pool)?;
 
     control_credentials(results, id)
 }
@@ -63,16 +63,19 @@ pub fn delete_credential(id: String, pool: &PgConnection) -> Result<usize, HttpR
     res.map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
 }
 
-fn control_credentials(creds: Vec<Credential>, id: &str) -> Result<Credential, HttpResponse> {
-    if creds.len() > 1 {
-        log::info!("More than one credential exist for {}", id);
-        Err(HttpResponse::InternalServerError().finish())
-    } else if creds.len() == 1 {
-        Ok(creds[0].clone())
-    } else if creds.is_empty() {
-        log::info!("No credentials found for {}", id);
-        Err(HttpResponse::NotFound().finish())
-    } else {
-        Err(HttpResponse::InternalServerError().finish())
+fn control_credentials(
+    credentials: Vec<Credential>,
+    id: &str,
+) -> Result<Option<Credential>, ServiceError> {
+    match credentials.as_slice() {
+        [] => {
+            log::info!("No credentials found for {}", id);
+            Ok(None)
+        }
+        [cred] => Ok(Some(cred.clone())),
+        [_, ..] => {
+            log::info!("More than one credential exist for {}", id);
+            Err(ServiceError::InvalidState)
+        }
     }
 }
