@@ -1,12 +1,19 @@
 use drogue_cloud_database_common::database;
 use drogue_cloud_database_common::models;
 
-use actix_web::{delete, get, http::header, post, web, App, HttpResponse, HttpServer};
+use actix_web::{delete, get, http::header, post, web, App, HttpResponse, HttpServer, Responder};
 use futures::StreamExt;
 
 use actix_web::web::Buf;
 use dotenv::dotenv;
 use envconfig::Envconfig;
+use serde_json::json;
+
+// FIXME: move to a dedicated port
+#[get("/health")]
+async fn health() -> impl Responder {
+    HttpResponse::Ok().json(json!({"success": true}))
+}
 
 #[post("/device/{device_id}")]
 async fn create_device(
@@ -110,6 +117,7 @@ async fn main() -> anyhow::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .service(health)
             .service(create_device)
             .service(delete_device)
             .service(read_device)
