@@ -76,6 +76,10 @@ echo
 echo "URL:"
 echo "    ${MGMT_URL}"
 echo
+echo "  Create:  http POST ${MGMT_URL}/api/v1/devices device_id=device_id password=foobar"
+echo "  Read:    http GET ${MGMT_URL}/api/v1/devices/device_id"
+echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/devices/device_id"
+echo
 echo "Publish data:"
 echo "----------------"
 echo
