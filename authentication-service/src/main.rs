@@ -135,7 +135,7 @@ async fn main() -> std::io::Result<()> {
     let data: WebData;
     let app = App::new();
 
-    let pool = database::establish_connection(config.db_url);
+    let pool = database::establish_connection(config.db_url).expect("Failed to create pool");
     if config.enable_jwt {
         data = WebData {
             connection_pool: pool,

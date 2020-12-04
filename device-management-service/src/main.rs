@@ -1,13 +1,18 @@
 use drogue_cloud_database_common::database;
 use drogue_cloud_database_common::models;
 
-use actix_web::{delete, get, http::header, post, web, App, HttpResponse, HttpServer, Responder};
-use futures::StreamExt;
-
-use actix_web::web::Buf;
+use actix_cors::Cors;
+use actix_web::{
+    delete, get, http::header, post, web, web::Json, App, HttpResponse, HttpServer, Responder,
+};
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 use dotenv::dotenv;
 use envconfig::Envconfig;
-use serde_json::json;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 // FIXME: move to a dedicated port
 #[get("/health")]
@@ -15,37 +20,57 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
 
-#[post("/device/{device_id}")]
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct CreateDevice {
+    pub device_id: String,
+    pub password: String,
+    #[serde(default)]
+    pub properties: Option<Value>,
+}
+
+impl CreateDevice {
+    pub fn as_credentials(&self) -> models::Credential {
+        let salt: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+
+        let mut hasher = Sha256::new();
+        hasher.input_str(&self.password);
+        hasher.input_str(&salt);
+
+        models::Credential {
+            secret_type: 1,
+            device_id: self.device_id.clone(),
+            properties: self.properties.clone(),
+            secret: Some(json!({
+                "hash": hasher.result_str(),
+                "salt": salt,
+            })),
+        }
+    }
+}
+
+#[post("")]
 async fn create_device(
     data: web::Data<WebData>,
-    web::Path(device_id): web::Path<String>,
-    mut body: web::Payload,
+    create: Json<CreateDevice>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::info!("Creating device: '{}'", device_id);
+    log::info!("Creating device: '{:?}'", create);
 
-    let mut bytes = web::BytesMut::new();
-    while let Some(item) = body.next().await {
-        bytes.extend_from_slice(&item?);
-    }
-    let bytes = bytes.freeze();
-
-    let device_data: models::Credential = serde_json::from_slice(bytes.bytes())?;
-
-    if device_data.device_id.is_empty() {
+    if create.device_id.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
 
-    match database::insert_credential(device_data, &connection) {
-        Ok(c) => Ok(HttpResponse::Created()
+    let response = database::insert_credential(create.as_credentials(), &connection).map(|c| {
+        HttpResponse::Created()
             .set_header(header::LOCATION, c.device_id)
-            .finish()),
-        Err(e) => Ok(e),
-    }
+            .finish()
+    })?;
+
+    Ok(response)
 }
 
-#[delete("/device/{device_id}")]
+#[delete("/{device_id}")]
 async fn delete_device(
     data: web::Data<WebData>,
     web::Path(device_id): web::Path<String>,
@@ -57,21 +82,16 @@ async fn delete_device(
     }
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
-    match database::delete_credential(device_id, &connection) {
-        Ok(n) => {
-            if n == 0 {
-                Ok(HttpResponse::NotFound().finish())
-            } else if n == 1 {
-                Ok(HttpResponse::NoContent().finish())
-            } else {
-                Ok(HttpResponse::Ok().body(format!("{} devices deleted", n)))
-            }
-        }
-        Err(e) => Ok(e),
-    }
+    let response = database::delete_credential(device_id, &connection).map(|n| match n {
+        0 => HttpResponse::NotFound().finish(),
+        1 => HttpResponse::NoContent().finish(),
+        n => HttpResponse::Ok().body(format!("{} devices deleted", n)),
+    })?;
+
+    Ok(response)
 }
 
-#[get("/device/{device_id}")]
+#[get("/{device_id}")]
 async fn read_device(
     data: web::Data<WebData>,
     web::Path(device_id): web::Path<String>,
@@ -83,12 +103,12 @@ async fn read_device(
     }
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
-    Ok(
-        match database::get_credential(device_id.as_str(), &connection)? {
-            Some(res) => HttpResponse::Ok().body(serde_json::to_string(&res)?),
-            None => HttpResponse::NotFound().finish(),
-        },
-    )
+    let response = match database::get_credential(device_id.as_str(), &connection)? {
+        Some(res) => HttpResponse::Ok().json(&res),
+        None => HttpResponse::NotFound().finish(),
+    };
+
+    Ok(response)
 }
 
 #[derive(Clone)]
@@ -114,15 +134,21 @@ async fn main() -> anyhow::Result<()> {
 
     let pool = database::establish_connection(config.db_url);
     let data = WebData {
-        connection_pool: pool,
+        connection_pool: pool.expect("Failed to create pool"),
     };
 
     HttpServer::new(move || {
         App::new()
+            .data(web::JsonConfig::default().limit(64 * 1024))
             .service(health)
-            .service(create_device)
-            .service(delete_device)
-            .service(read_device)
+            .service(
+                web::scope("/api/v1").wrap(Cors::permissive()).service(
+                    web::scope("/devices")
+                        .service(create_device)
+                        .service(delete_device)
+                        .service(read_device),
+                ),
+            )
             .data(data.clone())
     })
     .bind(config.bind_addr)?

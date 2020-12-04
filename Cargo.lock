@@ -1376,6 +1376,9 @@ dependencies = [
  "envconfig",
  "futures",
  "log",
+ "rand 0.7.3",
+ "rust-crypto",
+ "serde",
  "serde_json",
 ]
 
@@ -1494,8 +1497,10 @@ name = "drogue-cloud-database-common"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "anyhow",
  "diesel",
  "log",
+ "r2d2",
  "serde",
  "serde_json",
  "snafu",

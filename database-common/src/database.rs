@@ -13,11 +13,9 @@ use crate::schema;
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub type PgPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
-pub fn establish_connection(database_url: String) -> PgPool {
+pub fn establish_connection(database_url: String) -> Result<PgPool, r2d2::Error> {
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    Pool::builder()
-        .build(manager)
-        .expect("Failed to create pool.")
+    Pool::builder().build(manager)
 }
 
 pub fn pg_pool_handler(pool: &PgPool) -> Result<PgPooledConnection, HttpResponse> {
@@ -45,22 +43,18 @@ pub fn serialise_props(props: Option<Value>) -> String {
 pub fn insert_credential(
     data: Credential,
     pool: &PgConnection,
-) -> Result<Credential, HttpResponse> {
+) -> Result<Credential, ServiceError> {
     use schema::credentials::dsl::*;
 
-    let res = diesel::insert_into(credentials)
+    Ok(diesel::insert_into(credentials)
         .values(data)
-        .get_result(pool);
-
-    res.map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
+        .get_result(pool)?)
 }
 
-pub fn delete_credential(id: String, pool: &PgConnection) -> Result<usize, HttpResponse> {
+pub fn delete_credential(id: String, pool: &PgConnection) -> Result<usize, ServiceError> {
     use schema::credentials::dsl::*;
 
-    let res = diesel::delete(credentials.filter(device_id.eq(id))).execute(pool);
-
-    res.map_err(|e| HttpResponse::InternalServerError().json(e.to_string()))
+    Ok(diesel::delete(credentials.filter(device_id.eq(id))).execute(pool)?)
 }
 
 fn control_credentials(

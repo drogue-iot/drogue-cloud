@@ -6,12 +6,19 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1"
+
 actix-web = "3"
-dotenv = "0.15.0"
-envconfig = "0.9.1"
+actix-cors = "0.5"
+
+dotenv = "0.15"
+envconfig = "0.9"
 env_logger = "0.7"
 log = "0.4"
+
+serde = "1"
 serde_json = "1"
 futures = "0.3"
+rust-crypto = "0.2"
+rand = "0.7"
 
 drogue-cloud-database-common = { path = "../database-common" }
