@@ -7,3 +7,4 @@ resources:
   - secret.yaml
   - deployment.yaml
   - service.yaml
+  - migrate.yaml

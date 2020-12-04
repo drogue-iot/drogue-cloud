@@ -26,6 +26,7 @@ IMAGES?=\
 	console-frontend \
 	authentication-service \
 	device-management-service \
+	database-migration \
 
 
 #
