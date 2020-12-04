@@ -1,9 +1,9 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: device-management-endpoint
+  name: device-management-service
   labels:
-    app.kubernetes.io/name: device-management-endpoint
+    app.kubernetes.io/name: device-management-service
     app.kubernetes.io/part-of: device-registry
 spec:
  ports:
@@ -12,5 +12,5 @@ spec:
    protocol: TCP
    targetPort: 8080
  selector:
-   app.kubernetes.io/name: device-management-endpoint
+   app.kubernetes.io/name: device-management-service
    app.kubernetes.io/part-of: device-registry

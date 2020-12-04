@@ -1,5 +1,5 @@
 [package]
-name = "device-management-endpoint"
+name = "device-management-service"
 version = "0.1.0"
 authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2018"

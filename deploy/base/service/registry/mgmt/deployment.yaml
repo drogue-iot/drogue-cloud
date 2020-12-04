@@ -5,25 +5,25 @@ metadata:
   annotations:
     app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"postgres"}]'
   labels:
-    app.kubernetes.io/name: device-management-endpoint
+    app.kubernetes.io/name: device-management-service
     app.kubernetes.io/part-of: device-registry
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: device-management-endpoint
+      app.kubernetes.io/name: device-management-service
       app.kubernetes.io/part-of: device-registry
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: device-management-endpoint
+        app.kubernetes.io/name: device-management-service
         app.kubernetes.io/part-of: device-registry
     spec:
       containers:
         - name: service
-          image: ghcr.io/drogue-iot/authentication-service:latest
+          image: ghcr.io/drogue-iot/device-management-service:latest
           imagePullPolicy: Always
           env:
             - name: RUST_LOG

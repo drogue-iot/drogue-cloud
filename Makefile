@@ -25,7 +25,7 @@ IMAGES?=\
 	console-backend \
 	console-frontend \
 	authentication-service \
-	device-management-endpoint \
+	device-management-service \
 
 
 #
