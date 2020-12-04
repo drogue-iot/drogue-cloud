@@ -41,6 +41,29 @@ esac;
 echo "$URL"
 }
 
+
+function kservice_url() {
+  local name="$1"
+  shift
+
+URL=$(kubectl get ksvc -n $DROGUE_NS "$name" -o jsonpath='{.status.url}')
+
+case $CLUSTER in
+   kind)
+        ;;
+   minikube)
+        ;;
+   openshift)
+        URL=${URL//http:/https:}
+        ;;
+   *)
+        echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
+        exit 1
+        ;;
+esac;
+echo "$URL"
+}
+
 function wait_for_resource() {
   local resource="$1"
   shift

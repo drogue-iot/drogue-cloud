@@ -11,8 +11,6 @@ source "$SCRIPTDIR/common.sh"
 : "${MQTT:=true}"
 : "${DIGITAL_TWIN:=false}"
 
-HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}'")
-
 case $CLUSTER in
     kind)
         ;;
@@ -23,7 +21,6 @@ case $CLUSTER in
    openshift)
         MQTT_ENDPOINT_HOST=$(eval kubectl get route -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
         ;;
    *)
         echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
@@ -31,9 +28,11 @@ case $CLUSTER in
         ;;
 esac;
 
+HTTP_ENDPOINT_URL=$(kservice_url "http-endpoint")
 CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
 SSO_URL=$(ingress_url "keycloak")
+MGMT_URL=$(kservice_url "device-management-service")
 
 # Dump out the dashboard URL and sample commands for http and mqtt
 
@@ -70,6 +69,12 @@ echo "    username: admin"
 echo "    password: admin123456"
 echo "* Try this link: $DASHBOARD_URL/d/YYGTNzdMk/"
 echo "* Or search for the 'Knative test' dashboard"
+echo
+echo "Manage devices:"
+echo "------------------"
+echo
+echo "URL:"
+echo "    ${MGMT_URL}"
 echo
 echo "Publish data:"
 echo "----------------"
