@@ -1,0 +1,18 @@
+apiVersion: sources.knative.dev/v1alpha2
+kind: SinkBinding
+metadata:
+  name: bind-command-endpoint
+  labels:
+    app.kubernetes.io/part-of: endpoints
+spec:
+
+  subject:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    name: command-endpoint
+
+  sink:
+    ref:
+      apiVersion: messaging.knative.dev/v1alpha1
+      kind: KafkaChannel
+      name: iot-commands

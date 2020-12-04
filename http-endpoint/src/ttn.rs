@@ -1,4 +1,4 @@
-use actix_web::{post, web, HttpResponse};
+use actix_web::{web, HttpResponse};
 
 use drogue_cloud_endpoint_common::error::HttpEndpointError;
 
@@ -9,7 +9,6 @@ use drogue_ttn::http as ttn;
 
 use crate::PublishOptions;
 
-#[post("/ttn")]
 pub async fn publish(
     endpoint: web::Data<DownstreamSender>,
     web::Query(opts): web::Query<PublishOptions>,

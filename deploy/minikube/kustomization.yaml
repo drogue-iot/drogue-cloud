@@ -10,6 +10,7 @@ bases:
   - sso
   - ../base/source/http
   - source/mqtt
+  - ../base/source/command
   - ../base/service/influxdb
   - service/grafana
   - service/console

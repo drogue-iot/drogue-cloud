@@ -1,0 +1,18 @@
+apiVersion: messaging.knative.dev/v1
+kind: Subscription
+metadata:
+  name: commands-http
+  labels:
+    app.kubernetes.io/part-of: endpoints
+spec:
+  channel:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: KafkaChannel
+    name: iot-commands
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: http-endpoint
+    uri: /command-service
+      

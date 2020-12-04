@@ -1,0 +1,17 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: command-endpoint
+  labels:
+    app.kubernetes.io/part-of: endpoints
+spec:
+  template:
+    metadata:
+      labels:
+        bindings.knative.dev/include: "true"
+    spec:
+      containers:
+        - image: ghcr.io/drogue-iot/command-endpoint:latest
+          env:
+            - name: RUST_LOG
+              value: info

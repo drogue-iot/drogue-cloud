@@ -12,7 +12,8 @@ members = [
     "authentication-service",
     "device-management-service",
     "database-common",
-    "service-common"
+    "service-common",
+    "command-endpoint",
 ]
 
 [patch.crates-io]

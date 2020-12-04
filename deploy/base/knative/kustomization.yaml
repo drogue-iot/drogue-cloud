@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - broker.yaml
   - kafka-channel.yaml
+  - kafka-command-channel.yaml

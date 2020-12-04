@@ -2,10 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 images:
-- name: ghcr.io/drogue-iot/http-endpoint
-  newname: quay.io/dejanb/http-endpoint
+- name: ghcr.io/drogue-iot/command-endpoint
+  newname: quay.io/dejanb/command-endpoint
 
 resources:
   - service.yaml
   - sink-binding.yaml
-  - command-subscription.yaml

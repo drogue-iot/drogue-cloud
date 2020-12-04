@@ -36,6 +36,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-broker"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e075eaa04b5a9a1b36ce801fa338f7d477f6b5f28d5f8339a8c2baba5beec33"
+dependencies = [
+ "actix",
+ "fnv",
+ "log",
+]
+
+[[package]]
 name = "actix-codec"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1106,6 +1117,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "command-endpoint"
+version = "0.1.0"
+dependencies = [
+ "actix-rt",
+ "actix-service",
+ "actix-web",
+ "actix-web-httpauth",
+ "anyhow",
+ "awc",
+ "cloudevents-sdk",
+ "cloudevents-sdk-actix-web",
+ "cloudevents-sdk-reqwest",
+ "dotenv",
+ "drogue-cloud-endpoint-common",
+ "env_logger",
+ "envconfig",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "jsonwebtokens",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "snafu",
+ "uuid",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2096,9 +2136,12 @@ dependencies = [
 name = "http-endpoint"
 version = "0.2.0"
 dependencies = [
+ "actix",
+ "actix-broker",
  "actix-rt",
  "actix-service",
  "actix-web",
+ "actix-web-actors",
  "actix-web-httpauth",
  "anyhow",
  "awc",
