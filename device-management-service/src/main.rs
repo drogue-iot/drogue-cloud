@@ -3,7 +3,7 @@ use drogue_cloud_database_common::models;
 
 use actix_cors::Cors;
 use actix_web::{
-    delete, get, http::header, post, web, web::Json, App, HttpResponse, HttpServer, Responder,
+    delete, get, http::header, post, put, web, web::Json, App, HttpResponse, HttpServer, Responder,
 };
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
@@ -20,6 +20,22 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
 
+fn password_credential(password: &str) -> Option<Value> {
+    if password.is_empty() {
+        return None;
+    }
+
+    let salt: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+    let mut hasher = Sha256::new();
+    hasher.input_str(password);
+    hasher.input_str(&salt);
+
+    Some(json!({
+        "hash": hasher.result_str(),
+        "salt": salt,
+    }))
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct CreateDevice {
     pub device_id: String,
@@ -29,20 +45,11 @@ struct CreateDevice {
 }
 
 impl CreateDevice {
-    pub fn to_credentials(&self) -> models::Credential {
-        let salt: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
-
-        let mut hasher = Sha256::new();
-        hasher.input_str(&self.password);
-        hasher.input_str(&salt);
-
+    fn to_credential(&self) -> models::Credential {
         models::Credential {
             device_id: self.device_id.clone(),
             properties: self.properties.clone(),
-            secret: Some(json!({
-                "hash": hasher.result_str(),
-                "salt": salt,
-            })),
+            secret: password_credential(&self.password),
         }
     }
 }
@@ -60,11 +67,52 @@ async fn create_device(
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
 
-    let response = database::insert_credential(&create.to_credentials(), &connection).map(|c| {
+    let response = database::insert_credential(&create.to_credential(), &connection).map(|c| {
         HttpResponse::Created()
             .set_header(header::LOCATION, c.device_id)
             .finish()
     })?;
+
+    Ok(response)
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct UpdateDevice {
+    pub password: String,
+    #[serde(default)]
+    pub properties: Option<Value>,
+}
+
+impl UpdateDevice {
+    fn to_credential(&self, device_id: String) -> models::Credential {
+        models::Credential {
+            device_id,
+            properties: self.properties.clone(),
+            secret: password_credential(&self.password),
+        }
+    }
+}
+
+#[put("/{device_id}")]
+async fn update_device(
+    data: web::Data<WebData>,
+    web::Path(device_id): web::Path<String>,
+    update: Json<UpdateDevice>,
+) -> Result<HttpResponse, actix_web::Error> {
+    log::info!("Creating device: '{:?}'", update);
+
+    if device_id.is_empty() {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    let connection = database::pg_pool_handler(&data.connection_pool)?;
+
+    let response =
+        database::update_credential(&update.to_credential(device_id), &connection).map(|c| {
+            HttpResponse::NoContent()
+                .set_header(header::LOCATION, c.device_id)
+                .finish()
+        })?;
 
     Ok(response)
 }
@@ -103,7 +151,7 @@ async fn read_device(
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
     let response = match database::get_credential(device_id.as_str(), &connection)? {
-        Some(res) => HttpResponse::Ok().json(&res),
+        Some(credential) => HttpResponse::Ok().json(&credential),
         None => HttpResponse::NotFound().finish(),
     };
 
@@ -144,6 +192,7 @@ async fn main() -> anyhow::Result<()> {
                 web::scope("/api/v1").wrap(Cors::permissive()).service(
                     web::scope("/devices")
                         .service(create_device)
+                        .service(update_device)
                         .service(delete_device)
                         .service(read_device),
                 ),

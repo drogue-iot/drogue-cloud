@@ -4,8 +4,6 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 
-use serde_json::Value;
-
 use crate::error::ServiceError;
 use crate::models::Credential;
 use crate::schema;
@@ -33,13 +31,6 @@ pub fn get_credential(id: &str, pool: &PgConnection) -> Result<Option<Credential
     control_credentials(results, id)
 }
 
-pub fn serialise_props(props: Option<Value>) -> String {
-    match props {
-        Some(p) => p.as_str().unwrap_or("{}").to_string(),
-        None => "{}".to_string(),
-    }
-}
-
 pub fn insert_credential(
     data: &Credential,
     pool: &PgConnection,
@@ -49,6 +40,19 @@ pub fn insert_credential(
     Ok(diesel::insert_into(credentials)
         .values(data)
         .get_result(pool)?)
+}
+
+pub fn update_credential(
+    data: &Credential,
+    pool: &PgConnection,
+) -> Result<Credential, ServiceError> {
+    use schema::credentials::dsl::*;
+
+    Ok(
+        diesel::update(credentials.filter(device_id.eq(&data.device_id)))
+            .set((secret.eq(&data.secret), properties.eq(&data.properties)))
+            .get_result(pool)?,
+    )
 }
 
 pub fn delete_credential(id: String, pool: &PgConnection) -> Result<usize, ServiceError> {

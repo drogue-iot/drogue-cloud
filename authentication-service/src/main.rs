@@ -3,7 +3,6 @@ mod auth;
 use drogue_cloud_database_common::database;
 use drogue_cloud_database_common::models::Secret;
 
-use actix_web::http::header::ContentType;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
@@ -38,15 +37,12 @@ async fn password_authentication(
             return Ok(HttpResponse::Unauthorized().finish());
         }
     };
-    let props = database::serialise_props(cred.properties);
 
     let auth_result =
         auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
 
     Ok(match auth_result {
-        Ok(AuthenticationResult::Success) => {
-            HttpResponse::Ok().set(ContentType::json()).body(props)
-        }
+        Ok(AuthenticationResult::Success) => HttpResponse::Ok().json(cred.properties),
         Ok(AuthenticationResult::Failed) => HttpResponse::Unauthorized().finish(),
         Err(_) => HttpResponse::BadRequest().finish(),
     })
@@ -72,7 +68,6 @@ async fn token_authentication(
 
     let auth_result =
         auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
-    let props = database::serialise_props(cred.properties);
 
     //issue token if auth is successful
     Ok(match auth_result {
@@ -86,9 +81,8 @@ async fn token_authentication(
                 Ok(token) => {
                     log::debug!("Issued JWT for device {}. Token: {}", auth.user_id(), token);
                     HttpResponse::Ok()
-                        .set(ContentType::json())
                         .header("Authorization", token)
-                        .body(props)
+                        .json(cred.properties)
                 }
                 Err(e) => {
                     log::error!("Could not issue JWT token: {}", e);
