@@ -9,7 +9,6 @@ use cloudevents_sdk_actix_web::HttpRequestExt;
 use envconfig::Envconfig;
 use influxdb::{Client, InfluxDbWriteable, Timestamp, Type, WriteQuery};
 use jsonpath_lib::Selector;
-use log;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -130,10 +129,7 @@ async fn forward(
 
     let data: Option<&Data> = event.data();
 
-    let timestamp = event
-        .time()
-        .map(|ts| ts.clone())
-        .unwrap_or_else(|| Utc::now());
+    let timestamp = event.time().cloned().unwrap_or_else(Utc::now);
     let timestamp = Timestamp::from(timestamp);
 
     let query = timestamp.into_query(processor.table.clone());

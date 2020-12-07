@@ -95,7 +95,7 @@ impl Component for Main {
 
         // remove code, state and others from the URL bar
         {
-            let mut url = url.clone();
+            let mut url = url;
             url.query_pairs_mut().clear();
             let url = url.as_str().trim_end_matches('?');
             window()
@@ -156,7 +156,7 @@ impl Component for Main {
             }
             Msg::RetryLogin => {
                 Backend::update_token(None);
-                if let Err(_) = Backend::reauthenticate() {
+                if Backend::reauthenticate().is_err() {
                     error(
                         "Failed to log in",
                         "No backed information present. Unable to trigger login.",
@@ -166,7 +166,7 @@ impl Component for Main {
             }
             Msg::SetCode(code) => {
                 // got code, convert to access token
-                self.access_code = Some(code.clone());
+                self.access_code = Some(code);
                 self.link.send_message(Msg::GetToken);
                 true
             }

@@ -9,7 +9,6 @@ mod placeholder;
 mod spy;
 
 use crate::app::Main;
-use log;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

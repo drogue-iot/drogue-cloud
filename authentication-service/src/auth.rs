@@ -41,7 +41,7 @@ pub(super) fn verify_password(
 ) -> Result<AuthenticationResult, ()> {
     let sec: Secret = secret
         .and_then(|s| serde_json::from_value(s).ok())
-        .ok_or_else(|| ())?;
+        .ok_or(())?;
 
     if password.is_empty() {
         return Err(());
