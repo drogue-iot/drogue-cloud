@@ -110,7 +110,7 @@ struct WebData {
     token_signing_private_key: Vec<u8>,
 }
 
-#[derive(Envconfig)]
+#[derive(Clone, Envconfig)]
 struct Config {
     #[envconfig(from = "DATABASE_URL")]
     pub db_url: String,
@@ -157,28 +157,20 @@ async fn main() -> std::io::Result<()> {
         };
     }
 
-    //todo use a separate config function
-    if config.enable_jwt {
-        HttpServer::new(move || {
-            App::new()
-                .service(health)
-                .service(token_authentication)
-                .data(data.clone())
-                .service(password_authentication)
-                .data(data.clone())
+    let enable_jwt = config.enable_jwt;
+
+    HttpServer::new(move || {
+        App::new().service(health).data(data.clone()).service({
+            let scope = web::scope("/api/v1").service(password_authentication);
+
+            if enable_jwt {
+                scope.service(token_authentication)
+            } else {
+                scope
+            }
         })
-        .bind(config.bind_addr)?
-        .run()
-        .await
-    } else {
-        HttpServer::new(move || {
-            App::new()
-                .service(health)
-                .service(password_authentication)
-                .data(data.clone())
-        })
-        .bind(config.bind_addr)?
-        .run()
-        .await
-    }
+    })
+    .bind(config.bind_addr)?
+    .run()
+    .await
 }

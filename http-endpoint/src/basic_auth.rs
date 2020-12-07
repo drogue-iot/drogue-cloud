@@ -29,12 +29,16 @@ pub struct DeviceAuthenticator {
 impl TryFrom<AuthConfig> for DeviceAuthenticator {
     type Error = anyhow::Error;
     fn try_from(config: AuthConfig) -> Result<Self, Self::Error> {
+        let url: Url = config
+            .auth_service_url
+            .parse()
+            .context("Failed to parse URL for auth service")?;
+        let url = url
+            .join("/api/v1/auth")
+            .context("Failed to build auth URL from base URL")?;
         Ok(DeviceAuthenticator {
             client: Default::default(),
-            auth_service_url: config
-                .auth_service_url
-                .parse()
-                .context("Failed to parse URL for auth service")?,
+            auth_service_url: url,
         })
     }
 }

@@ -54,7 +54,7 @@ async fn publish(
     req: web::HttpRequest,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    log::info!("Published to '{}'", channel);
+    log::debug!("Published to '{}'", channel);
 
     endpoint
         .publish_http(
@@ -80,7 +80,7 @@ async fn telemetry(
     req: web::HttpRequest,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    log::info!(
+    log::debug!(
         "Sending telemetry for device '{}' belonging to tenant '{}'",
         device,
         tenant
@@ -118,11 +118,15 @@ async fn main() -> anyhow::Result<()> {
     // create authenticator, fails if authentication is enabled, but configuration is missing
     let authenticator = match enable_auth {
         true => {
+            log::info!("Enabling authentication");
             let authenticator: DeviceAuthenticator =
                 basic_auth::AuthConfig::init_from_env()?.try_into()?;
             Some(authenticator)
         }
-        false => None,
+        false => {
+            log::warn!("Device authentication is disabled!");
+            None
+        }
     };
 
     HttpServer::new(move || {
@@ -134,12 +138,14 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone());
+
         // add authenticator, if we have one
         let app = if let Some(authenticator) = &authenticator {
             app.app_data(authenticator.clone())
         } else {
             app
         };
+
         app.service(index)
             .service(publish)
             .service(telemetry)
