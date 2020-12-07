@@ -12,19 +12,21 @@ use std::fmt::Debug;
 
 pub async fn connect_v3<Io>(
     connect: v3::Connect<Io>,
+    downstream: DownstreamSender,
 ) -> Result<v3::ConnectAck<Io, Session>, ServerError> {
     log::info!("new connection: {:?}", connect);
     let device_id = connect.packet().client_id.to_string();
-    Ok(connect.ack(Session::new(DownstreamSender::new()?, device_id), false))
+    Ok(connect.ack(Session::new(downstream, device_id), false))
 }
 
 pub async fn connect_v5<Io>(
     connect: v5::Connect<Io>,
+    downstream: DownstreamSender,
 ) -> Result<v5::ConnectAck<Io, Session>, ServerError> {
     log::info!("new connection: {:?}", connect);
     let device_id = connect.packet().client_id.to_string();
     Ok(connect
-        .ack(Session::new(DownstreamSender::new()?, device_id))
+        .ack(Session::new(downstream, device_id))
         .with(|ack| {
             ack.wildcard_subscription_available = Some(false);
         }))

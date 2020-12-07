@@ -27,6 +27,7 @@ uuid = { version = "0.8", features = ["v4"] }
 
 env_logger = "0.7"
 log = "0.4"
+envconfig = "0.9"
 
 cloudevents-sdk = "0.3"
 cloudevents-sdk-reqwest = "0.3"

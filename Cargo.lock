@@ -2646,6 +2646,7 @@ dependencies = [
  "cloudevents-sdk-reqwest",
  "drogue-cloud-endpoint-common",
  "env_logger",
+ "envconfig",
  "futures",
  "futures-core",
  "futures-util",
