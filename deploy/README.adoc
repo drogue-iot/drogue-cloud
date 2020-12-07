@@ -109,14 +109,23 @@ You can open up the console to get some more information about the installation:
 Login in to the Grafana instance and open the dashboard "Knative test". Double check it is set to
 reload automatically.
 
+=== Device registry
+
+Before you can send data as a device, you will need to register the device and set access credentials:
+
+----
+http POST https://device-management-service-drogue-iot.apps.my.cluster/api/v1/devices device_id=device_id password=foobar
+----
+
 === Publish data using HTTP
 
 ==== Execute
 
-From the command line run (and be sure to replace the URL with your own):
+After you registered the device, you can run the following from the command line
+(and be sure to replace the URL with your own):
 
 ----
-http POST https://http-endpoint-drogue-iot.apps.my.cluster/publish/device_id/foo temp:=2.5
+http --auth device_id:foobar POST https://http-endpoint-drogue-iot.apps.my.cluster/publish/device_id/foo temp:=2.5
 ----
 
 ==== Verify
