@@ -2,11 +2,11 @@ use actix_web::{post, web, HttpResponse};
 
 use drogue_cloud_endpoint_common::error::HttpEndpointError;
 
+use drogue_cloud_endpoint_common::auth::DeviceProperties;
 use drogue_cloud_endpoint_common::downstream::{DownstreamSender, Publish};
 use drogue_cloud_endpoint_common::error::EndpointError;
 use drogue_ttn::http as ttn;
 
-use crate::basic_auth::DeviceProperties;
 use crate::PublishOptions;
 
 #[post("/ttn")]

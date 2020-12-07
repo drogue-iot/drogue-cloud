@@ -1517,9 +1517,11 @@ dependencies = [
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
  "env_logger",
+ "envconfig",
  "futures",
  "futures-core",
  "futures-util",
+ "headers",
  "log",
  "reqwest",
  "serde",
@@ -2642,6 +2644,8 @@ name = "mqtt-endpoint"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "bytes",
+ "bytestring",
  "cloudevents-sdk",
  "cloudevents-sdk-reqwest",
  "drogue-cloud-endpoint-common",

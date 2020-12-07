@@ -13,6 +13,12 @@ pub enum EndpointError {
     InvalidFormat { source: Box<dyn std::error::Error> },
     #[snafu(display("Endpoint configuration error: {}", details))]
     ConfigurationError { details: String },
+    /// The authentication process failed to evaluate an outcome.
+    #[snafu(display("Failed to authenticate: {}", source))]
+    AuthenticationServiceError { source: Box<dyn std::error::Error> },
+    /// The authentication process successfully evaluated that the access is denied.
+    #[snafu(display("Authentication failed"))]
+    AuthenticationError,
 }
 
 impl EndpointError {
@@ -20,6 +26,8 @@ impl EndpointError {
         match self {
             EndpointError::InvalidFormat { .. } => "InvalidFormat",
             EndpointError::ConfigurationError { .. } => "ConfigurationError",
+            EndpointError::AuthenticationServiceError { .. } => "AuthenticationServiceError",
+            EndpointError::AuthenticationError { .. } => "AuthenticationError",
         }
     }
 }
@@ -45,6 +53,8 @@ impl ResponseError for HttpEndpointError {
         match self.0 {
             EndpointError::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
             EndpointError::ConfigurationError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            EndpointError::AuthenticationServiceError { .. } => StatusCode::SERVICE_UNAVAILABLE,
+            EndpointError::AuthenticationError { .. } => StatusCode::FORBIDDEN,
         }
     }
 

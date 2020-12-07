@@ -1,35 +1,65 @@
-use ntex_mqtt::types::QoS;
+use crate::{error::ServerError, server::Session, App};
 
-use ntex_mqtt::v5::codec::{Auth, DisconnectReasonCode, PublishAckReason};
-use ntex_mqtt::{v3, v5};
-
-use drogue_cloud_endpoint_common::downstream::{
-    DownstreamSender, Outcome, Publish, PublishResponse,
+use ntex_mqtt::{
+    types::QoS,
+    v3,
+    v5::{
+        self,
+        codec::{Auth, ConnectAckReason, DisconnectReasonCode, PublishAckReason},
+    },
 };
 
-use crate::server::{ServerError, Session};
+use drogue_cloud_endpoint_common::{
+    auth,
+    downstream::{Outcome, Publish, PublishResponse},
+};
+
 use std::fmt::Debug;
 
 pub async fn connect_v3<Io>(
     connect: v3::Connect<Io>,
-    downstream: DownstreamSender,
+    app: App,
 ) -> Result<v3::ConnectAck<Io, Session>, ServerError> {
     log::info!("new connection: {:?}", connect);
     let device_id = connect.packet().client_id.to_string();
-    Ok(connect.ack(Session::new(downstream, device_id), false))
+
+    match app
+        .authenticate(
+            &connect.packet().username,
+            &connect.packet().password,
+            &connect.packet().client_id,
+        )
+        .await?
+    {
+        auth::Outcome::Pass(_) => Ok(connect.ack(Session::new(app.downstream, device_id), false)),
+        auth::Outcome::Fail => Ok(connect.bad_username_or_pwd()),
+    }
 }
 
 pub async fn connect_v5<Io>(
     connect: v5::Connect<Io>,
-    downstream: DownstreamSender,
+    app: App,
 ) -> Result<v5::ConnectAck<Io, Session>, ServerError> {
     log::info!("new connection: {:?}", connect);
     let device_id = connect.packet().client_id.to_string();
-    Ok(connect
-        .ack(Session::new(downstream, device_id))
-        .with(|ack| {
-            ack.wildcard_subscription_available = Some(false);
-        }))
+
+    match app
+        .authenticate(
+            &connect.packet().username,
+            &connect.packet().password,
+            &connect.packet().client_id,
+        )
+        .await?
+    {
+        auth::Outcome::Pass(_) => {
+            Ok(connect
+                .ack(Session::new(app.downstream, device_id))
+                .with(|ack| {
+                    ack.wildcard_subscription_available = Some(false);
+                }))
+        }
+        auth::Outcome::Fail => Ok(connect.failed(ConnectAckReason::BadUserNameOrPassword)),
+    }
 }
 
 pub async fn publish_v5(

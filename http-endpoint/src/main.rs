@@ -17,7 +17,8 @@ use serde_json::json;
 use dotenv::dotenv;
 use envconfig::Envconfig;
 
-use crate::basic_auth::{basic_validator, DeviceAuthenticator};
+use crate::basic_auth::basic_validator;
+use drogue_cloud_endpoint_common::auth::{AuthConfig, DeviceAuthenticator};
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
@@ -119,8 +120,7 @@ async fn main() -> anyhow::Result<()> {
     let authenticator = match enable_auth {
         true => {
             log::info!("Enabling authentication");
-            let authenticator: DeviceAuthenticator =
-                basic_auth::AuthConfig::init_from_env()?.try_into()?;
+            let authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
             Some(authenticator)
         }
         false => {
