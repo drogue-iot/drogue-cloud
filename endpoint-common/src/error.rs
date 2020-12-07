@@ -11,12 +11,15 @@ use std::fmt::Formatter;
 pub enum EndpointError {
     #[snafu(display("Invalid data format: {}", source))]
     InvalidFormat { source: Box<dyn std::error::Error> },
+    #[snafu(display("Endpoint configuration error: {}", details))]
+    ConfigurationError { details: String },
 }
 
 impl EndpointError {
     pub fn name(&self) -> &str {
         match self {
             EndpointError::InvalidFormat { .. } => "InvalidFormat",
+            EndpointError::ConfigurationError { .. } => "ConfigurationError",
         }
     }
 }
@@ -41,6 +44,7 @@ impl ResponseError for HttpEndpointError {
     fn status_code(&self) -> StatusCode {
         match self.0 {
             EndpointError::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
+            EndpointError::ConfigurationError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
