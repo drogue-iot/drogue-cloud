@@ -21,11 +21,7 @@ pub async fn basic_validator(
     //TODO : get this when initializing the app instead of pulling it each time
     let auth_service_url = std::env::var(AUTH_SERVICE_URL).expect("AUTH_SERVICE_URL must be set");
 
-    let config = req
-        .app_data::<Config>()
-        .cloned()
-        .map(|data| data)
-        .unwrap_or_else(Default::default);
+    let config = req.app_data::<Config>();
 
     // We fetch the encoded header to avoid re-encoding
     let encoded_basic_header = req
@@ -61,12 +57,12 @@ pub async fn basic_validator(
                     cred.user_id(),
                     r.status()
                 );
-                Err(AuthenticationError::from(config).into())
+                Err(AuthenticationError::from(config.cloned().unwrap_or_default()).into())
             }
         }
         Err(e) => {
             log::warn!("Error while authenticating {}. {}", cred.user_id(), e);
-            Err(AuthenticationError::from(config).into())
+            Err(AuthenticationError::from(config.cloned().unwrap_or_default()).into())
         }
     }
 }
