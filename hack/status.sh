@@ -86,7 +86,16 @@ echo "----------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
+echo "System default certificates (or none):"
+echo
 echo "  http --auth device_id:foobar POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=42"
+if [ "$MQTT" = true ] ; then
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -s -t temp -m '{\"temp\":42}' -V 3"
+fi
+echo
+echo "Local test certificates:"
+echo
+echo "  http --auth device_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=42"
 if [ "$MQTT" = true ] ; then
   echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -s --cafile tls.crt -t temp -m '{\"temp\":42}' -V 3"
 fi
