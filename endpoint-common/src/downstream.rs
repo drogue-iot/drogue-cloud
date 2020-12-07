@@ -60,7 +60,7 @@ impl DownstreamSender {
             event = event.extension("model_id", model_id);
         }
 
-        log::info!("Content-Type: {:?}", publish.content_type);
+        log::debug!("Content-Type: {:?}", publish.content_type);
 
         let event = match publish.content_type {
             Some(t) => event.data(t, Vec::from(body.as_ref())),
