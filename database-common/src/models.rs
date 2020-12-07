@@ -8,7 +8,6 @@ use crate::schema::credentials;
 #[table_name = "credentials"]
 pub struct Credential {
     pub device_id: String,
-    pub secret_type: i32,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub secret: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -32,11 +31,11 @@ mod test {
         let json = json!({
             "device_id": "12",
             "secret": "{}",
-            "secret_type": 1,
         });
         let credential: Credential = serde_json::from_value(json)?;
 
-        assert_eq!(1, credential.secret_type);
+        assert_eq!(credential.device_id, "12");
+
         Ok(())
     }
 }

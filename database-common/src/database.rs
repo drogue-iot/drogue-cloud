@@ -41,7 +41,7 @@ pub fn serialise_props(props: Option<Value>) -> String {
 }
 
 pub fn insert_credential(
-    data: Credential,
+    data: &Credential,
     pool: &PgConnection,
 ) -> Result<Credential, ServiceError> {
     use schema::credentials::dsl::*;

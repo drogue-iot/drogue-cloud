@@ -29,7 +29,7 @@ struct CreateDevice {
 }
 
 impl CreateDevice {
-    pub fn as_credentials(&self) -> models::Credential {
+    pub fn to_credentials(&self) -> models::Credential {
         let salt: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
 
         let mut hasher = Sha256::new();
@@ -37,7 +37,6 @@ impl CreateDevice {
         hasher.input_str(&salt);
 
         models::Credential {
-            secret_type: 1,
             device_id: self.device_id.clone(),
             properties: self.properties.clone(),
             secret: Some(json!({
@@ -61,7 +60,7 @@ async fn create_device(
 
     let connection = database::pg_pool_handler(&data.connection_pool)?;
 
-    let response = database::insert_credential(create.as_credentials(), &connection).map(|c| {
+    let response = database::insert_credential(&create.to_credentials(), &connection).map(|c| {
         HttpResponse::Created()
             .set_header(header::LOCATION, c.device_id)
             .finish()
