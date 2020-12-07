@@ -7,10 +7,10 @@ metadata:
     app.kubernetes.io/part-of: device-registry
 spec:
  ports:
- - name: postgres
-   port: 5432
+ - name: api
+   port: 8080
    protocol: TCP
-   targetPort: 5432
+   targetPort: 8080
  selector:
    app.kubernetes.io/name: authentication-service
    app.kubernetes.io/part-of: device-registry
