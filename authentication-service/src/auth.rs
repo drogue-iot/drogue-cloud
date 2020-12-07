@@ -47,11 +47,10 @@ pub(super) fn verify_password(
         return Err(());
     }
 
-    let mut computed_hash = password.to_owned() + &sec.salt;
     let mut hasher = Sha256::new();
-
-    hasher.input_str(&computed_hash);
-    computed_hash = hasher.result_str();
+    hasher.input_str(password);
+    hasher.input_str(&sec.salt);
+    let computed_hash = hasher.result_str();
 
     if computed_hash.eq(&sec.hash) {
         Ok(AuthenticationResult::Success)
