@@ -15,3 +15,7 @@ spec:
           env:
             - name: RUST_LOG
               value: info
+            - name: ENABLE_AUTH
+              value: "true"
+            - name: AUTH_SERVICE_URL
+              value: http://authentication-service:8080
