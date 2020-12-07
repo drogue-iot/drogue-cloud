@@ -14,4 +14,7 @@ RUN mkdir /migrations
 COPY database-common/migrations /migrations
 
 ENTRYPOINT ["/usr/local/bin/diesel"]
+
+ENV RUST_LOG "diesel=debug"
+
 CMD ["migration", "run"]
