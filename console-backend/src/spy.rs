@@ -25,9 +25,9 @@ use rdkafka::{
     consumer::{stream_consumer::StreamConsumer, CommitMode, Consumer, DefaultConsumerContext},
 };
 
-use crate::auth::Authenticator;
 use rdkafka::message::BorrowedMessage;
 use serde::Deserialize;
+use service_common::openid::Authenticator;
 use std::time::Duration;
 use uuid::Uuid;
 

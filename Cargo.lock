@@ -1154,6 +1154,7 @@ dependencies = [
  "ring",
  "serde",
  "serde_json",
+ "service-common",
  "snafu",
  "url",
  "uuid",
@@ -3910,6 +3911,23 @@ dependencies = [
  "linked-hash-map",
  "serde",
  "yaml-rust",
+]
+
+[[package]]
+name = "service-common"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "envconfig",
+ "failure",
+ "log",
+ "openid",
+ "pem 0.8.2",
+ "reqwest",
+ "serde",
+ "snafu",
+ "url",
 ]
 
 [[package]]
