@@ -19,7 +19,8 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-// FIXME: move to a dedicated port
+use futures::future;
+
 #[get("/health")]
 async fn health() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -175,6 +176,8 @@ struct Config {
     pub db_url: String,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
+    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
+    pub health_bind_addr: String,
     #[envconfig(from = "ENABLE_AUTH")]
     pub enable_auth: bool,
 }
@@ -204,7 +207,7 @@ async fn main() -> anyhow::Result<()> {
         authenticator: Authenticator { client, scopes },
     });
 
-    HttpServer::new(move || {
+    let s1 = HttpServer::new(move || {
         let auth_middleware = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 
@@ -238,8 +241,12 @@ async fn main() -> anyhow::Result<()> {
             .app_data(data.clone())
     })
     .bind(config.bind_addr)?
-    .run()
-    .await?;
+    .run();
 
+    let s2 = HttpServer::new(move || App::new().service(health))
+        .bind(config.health_bind_addr)?
+        .run();
+
+    future::try_join(s1, s2).await?;
     Ok(())
 }
