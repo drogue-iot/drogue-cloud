@@ -6,6 +6,7 @@ all: build images test push
 
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
+IMAGE_TAG ?= "latest"
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -133,7 +134,7 @@ webpack-build: cargo-build
 #
 build-images: build-image($(IMAGES))
 build-image($(IMAGES)):
-	cd $(TOP_DIR) && docker build . -f $%/Dockerfile -t $%:latest
+	cd $(TOP_DIR) && docker build . -f $%/Dockerfile -t $%:$(IMAGE_TAG)
 
 
 #
@@ -141,7 +142,7 @@ build-image($(IMAGES)):
 #
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && docker tag $%:latest $(CONTAINER_REGISTRY)/$%:latest
+	cd $(TOP_DIR) && docker tag $%:$(IMAGE_TAG) $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
@@ -149,7 +150,7 @@ tag-image($(IMAGES)): require-container-registry
 #
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && docker push $(CONTAINER_REGISTRY)/$%:latest
+	cd $(TOP_DIR) && docker push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
