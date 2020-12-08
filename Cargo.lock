@@ -1370,6 +1370,7 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
+ "actix-web-httpauth",
  "anyhow",
  "dotenv",
  "drogue-cloud-database-common",
@@ -1381,6 +1382,7 @@ dependencies = [
  "rust-crypto",
  "serde",
  "serde_json",
+ "service-common",
 ]
 
 [[package]]

@@ -1,10 +1,15 @@
 use drogue_cloud_database_common::database;
 use drogue_cloud_database_common::models;
+use service_common::error::ServiceError;
+use service_common::openid::{create_client, AuthConfig, Authenticator};
 
 use actix_cors::Cors;
+use actix_web::middleware::Condition;
 use actix_web::{
     delete, get, http::header, post, put, web, web::Json, App, HttpResponse, HttpServer, Responder,
 };
+use actix_web_httpauth::middleware::HttpAuthentication;
+
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use dotenv::dotenv;
@@ -56,7 +61,7 @@ impl CreateDevice {
 
 #[post("")]
 async fn create_device(
-    data: web::Data<WebData>,
+    data: web::Data<AppData>,
     create: Json<CreateDevice>,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Creating device: '{:?}'", create);
@@ -95,7 +100,7 @@ impl UpdateDevice {
 
 #[put("/{device_id}")]
 async fn update_device(
-    data: web::Data<WebData>,
+    data: web::Data<AppData>,
     web::Path(device_id): web::Path<String>,
     update: Json<UpdateDevice>,
 ) -> Result<HttpResponse, actix_web::Error> {
@@ -119,7 +124,7 @@ async fn update_device(
 
 #[delete("/{device_id}")]
 async fn delete_device(
-    data: web::Data<WebData>,
+    data: web::Data<AppData>,
     web::Path(device_id): web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Deleting device: '{}'", device_id);
@@ -140,7 +145,7 @@ async fn delete_device(
 
 #[get("/{device_id}")]
 async fn read_device(
-    data: web::Data<WebData>,
+    data: web::Data<AppData>,
     web::Path(device_id): web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::info!("Reading device: '{}'", device_id);
@@ -158,9 +163,10 @@ async fn read_device(
     Ok(response)
 }
 
-#[derive(Clone)]
-struct WebData {
+#[derive(Debug)]
+struct AppData {
     connection_pool: database::PgPool,
+    authenticator: Authenticator,
 }
 
 #[derive(Envconfig)]
@@ -169,6 +175,8 @@ struct Config {
     pub db_url: String,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
+    #[envconfig(from = "ENABLE_AUTH")]
+    pub enable_auth: bool,
 }
 
 #[actix_web::main]
@@ -180,24 +188,54 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::init_from_env().unwrap();
 
     let pool = database::establish_connection(config.db_url);
-    let data = WebData {
-        connection_pool: pool.expect("Failed to create pool"),
+
+    // OpenIdConnect
+    let enable_auth = config.enable_auth;
+
+    let (client, scopes) = if enable_auth {
+        let config: AuthConfig = AuthConfig::init_from_env()?;
+        (Some(create_client(&config).await?), config.scopes)
+    } else {
+        (None, "".into())
     };
 
+    let data = web::Data::new(AppData {
+        connection_pool: pool.expect("Failed to create pool"),
+        authenticator: Authenticator { client, scopes },
+    });
+
     HttpServer::new(move || {
+        let auth_middleware = HttpAuthentication::bearer(|req, auth| {
+            let token = auth.token().to_string();
+
+            async {
+                let app_data = req.app_data::<web::Data<AppData>>();
+                log::info!("App Data: {:?}", &app_data);
+                let app_data = app_data.ok_or_else(|| ServiceError::InternalError {
+                    message: "Missing app_data instance".into(),
+                })?;
+
+                app_data.authenticator.validate_token(token).await?;
+                Ok(req)
+            }
+        });
+
         App::new()
             .data(web::JsonConfig::default().limit(64 * 1024))
             .service(health)
             .service(
-                web::scope("/api/v1").wrap(Cors::permissive()).service(
-                    web::scope("/devices")
-                        .service(create_device)
-                        .service(update_device)
-                        .service(delete_device)
-                        .service(read_device),
-                ),
+                web::scope("/api/v1")
+                    .wrap(Cors::permissive())
+                    .wrap(Condition::new(enable_auth, auth_middleware))
+                    .service(
+                        web::scope("/devices")
+                            .service(create_device)
+                            .service(update_device)
+                            .service(delete_device)
+                            .service(read_device),
+                    ),
             )
-            .data(data.clone())
+            .app_data(data.clone())
     })
     .bind(config.bind_addr)?
     .run()
