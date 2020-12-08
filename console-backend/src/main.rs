@@ -21,12 +21,13 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use envconfig::Envconfig;
 use serde_json::json;
 
+use futures::future;
+
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
 
-// TODO: move to a different port
 #[get("/health")]
 async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
@@ -34,8 +35,10 @@ async fn health() -> impl Responder {
 
 #[derive(Debug, Envconfig)]
 struct Config {
-    #[envconfig(from = "BIND_ADDR")]
-    pub bind_addr: Option<String>,
+    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    pub bind_addr: String,
+    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
+    pub health_bind_addr: String,
     #[envconfig(from = "ENABLE_AUTH")]
     pub enable_auth: bool,
 }
@@ -66,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
 
     // http server
 
-    HttpServer::new(move || {
+    let s1 = HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 
@@ -95,15 +98,18 @@ async fn main() -> anyhow::Result<()> {
             )
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
             .service(index)
-            .service(health)
             .service(auth::login)
             .service(auth::code)
             .service(auth::refresh)
     })
-    .bind(config.bind_addr.unwrap_or_else(|| "127.0.0.1:8080".into()))?
-    .run()
-    .await?;
+    .bind(config.bind_addr)?
+    .run();
 
+    let s2 = HttpServer::new(move || App::new().service(health))
+        .bind(config.health_bind_addr)?
+        .run();
+
+    future::try_join(s1, s2).await?;
     Ok(())
 }
 

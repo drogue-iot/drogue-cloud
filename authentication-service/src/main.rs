@@ -11,6 +11,7 @@ use serde_json::json;
 use dotenv::dotenv;
 use envconfig::Envconfig;
 
+use futures::future;
 use std::borrow::Cow;
 
 #[derive(Debug)]
@@ -19,7 +20,6 @@ enum AuthenticationResult {
     Failed,
 }
 
-// FIXME: move to a dedicated port
 #[get("/health")]
 async fn health() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -110,6 +110,8 @@ struct Config {
     pub db_url: String,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
+    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
+    pub health_bind_addr: String,
 
     #[envconfig(from = "TOKEN_EXPIRATION", default = "300")]
     pub jwt_expiration: u64,
@@ -127,7 +129,6 @@ async fn main() -> std::io::Result<()> {
     // Initialize config from environment variables
     let config = Config::init_from_env().unwrap();
     let data: WebData;
-    let app = App::new();
 
     let pool = database::establish_connection(config.db_url).expect("Failed to create pool");
     if config.enable_jwt {
@@ -141,8 +142,6 @@ async fn main() -> std::io::Result<()> {
             )
             .unwrap(),
         };
-        // add the JWT service to the web server.
-        app.service(token_authentication).data(data.clone());
     } else {
         data = WebData {
             connection_pool: pool,
@@ -153,18 +152,26 @@ async fn main() -> std::io::Result<()> {
 
     let enable_jwt = config.enable_jwt;
 
-    HttpServer::new(move || {
-        App::new().service(health).data(data.clone()).service({
-            let scope = web::scope("/api/v1").service(password_authentication);
+    let s1 = HttpServer::new(move || {
+        App::new()
+            .service({
+                let scope = web::scope("/api/v1").service(password_authentication);
 
-            if enable_jwt {
-                scope.service(token_authentication)
-            } else {
-                scope
-            }
-        })
+                if enable_jwt {
+                    scope.service(token_authentication)
+                } else {
+                    scope
+                }
+            })
+            .data(data.clone())
     })
     .bind(config.bind_addr)?
-    .run()
-    .await
+    .run();
+
+    let s2 = HttpServer::new(move || App::new().service(health))
+        .bind(config.health_bind_addr)?
+        .run();
+
+    future::try_join(s1, s2).await?;
+    Ok(())
 }
