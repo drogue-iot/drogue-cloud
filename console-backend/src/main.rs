@@ -1,15 +1,15 @@
 mod auth;
 mod endpoints;
-mod error;
 mod info;
 mod kube;
 mod spy;
 
-use crate::auth::{create_client, AuthConfig, Authenticator};
 use crate::endpoints::{
     EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
 };
-use crate::error::ServiceError;
+use service_common::error::ServiceError;
+use service_common::openid::{create_client, AuthConfig, Authenticator};
+
 use actix_cors::Cors;
 use actix_web::{
     get,
@@ -65,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
         (None, "".into())
     };
 
-    let authenticator = web::Data::new(auth::Authenticator { client, scopes });
+    let authenticator = web::Data::new(Authenticator { client, scopes });
 
     // http server
 
