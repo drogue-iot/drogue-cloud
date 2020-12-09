@@ -14,6 +14,19 @@ jobs:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
     steps:
+
+      - name: Evaluate state
+        id: state
+        run: |
+          test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
+      - name: Dump state
+        run: |
+          echo "Should we publish artifacts? - do-publish = ${{steps.state.outputs.do-publish}}"
+
+      - name: Will publish
+        if: ${{steps.state.outputs.do-publish}}
+        run: echo Going to publish outcome.
+
       - uses: actions/checkout@v2
 
       - uses: actions/cache@v2
@@ -46,6 +59,27 @@ jobs:
         run: |
           make test
 
+      - name: Set version
+        if: ${{github.head_ref == ''}}
+        run: |
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          [ "$VERSION" == "main" ] && VERSION=latest
+          echo VERSION=$VERSION
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Create tagged installer YAMLs
+        if: ${{github.head_ref == ''}}
+        run: |
+          make -C deploy VERSION=$VERSION
+
+      - uses: actions/upload-artifact@v2
+        if: ${{github.head_ref == ''}}
+        with:
+          name: installers
+          path: deploy/build/installer-*.zip
+          if-no-files-found: error
+
       - name: Login to github container repository
         if: ${{github.head_ref == ''}}
         run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
@@ -53,11 +87,6 @@ jobs:
       - name: Build, tag, and push images
         if: ${{github.head_ref == ''}}
         run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo VERSION=$VERSION
-
           make images "IMAGE_TAG=$VERSION"
 
       - name: Fix permissions
