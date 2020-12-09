@@ -23,7 +23,10 @@ build: prepare $(patsubst %, install-%-$(VERSION).zip, $(VARIANTS))
 INSTALLER=$(basename $(notdir $@))
 install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find $(TOPDIR)/../hack -type f)
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/scripts
-	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/{base,knative,$*,digital-twin}
+	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/base
+	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/knative
+	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
+	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
 	cp -pr $(BASEDIR)/hack/* $(OUTDIR)/stage/$(INSTALLER)/scripts
 	# FIXME: remove release related script for now, reconsider mixing scripts
 	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/inject-release-images.py
