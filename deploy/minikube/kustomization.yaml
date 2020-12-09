@@ -13,4 +13,4 @@ bases:
   - ../base/service/influxdb
   - service/grafana
   - service/console
-  - service/registry
+  - ../base/service/registry
