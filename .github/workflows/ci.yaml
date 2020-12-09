@@ -27,20 +27,31 @@ jobs:
         id: state
         run: |
           test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo ::set-output name=release::true
+              echo ::set-output name=release::true
+          elif [[ ${{ github.event.ref }} =~ ^refs/tags/v.*$ ]]; then
+              echo ::set-output name=release::true
+              echo ::set-output name=prerelease::true
+          fi
 
       - name: Set version
         if: ${{github.head_ref == ''}}
+        id: version
         run: |
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           [ "$VERSION" == "main" ] && VERSION=latest
           echo VERSION=$VERSION
+          echo '::set-output name=version::$VERSION'
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Dump state
         run: |
-          echo "Tag/version: ${VERSION}"
+          echo "Tag/version: ${VERSION} / ${{steps.version.outputs.version}}"
           echo "Should we publish artifacts? - do-publish = ${{steps.state.outputs.do-publish}}"
+          echo "Release? - release = ${{steps.state.outputs.release}}"
+          echo "Pre-release? - prerelease = ${{steps.state.outputs.prerelease}}"
 
       # Start the actual build
 
@@ -89,17 +100,29 @@ jobs:
           make test
 
       - name: Login to github container repository
-        if: ${{github.head_ref == ''}}
+        if: ${{steps.state.outputs.do-publish}}
         run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build, tag, and push images
-        if: ${{github.head_ref == ''}}
+        if: ${{steps.state.outputs.do-publish}}
         run: |
           make images "IMAGE_TAG=$VERSION"
 
       - name: Fix permissions
         run: |
           make fix-permissions
+
+      - name: Create Release
+        id: create_release
+        if: ${{ steps.state.outputs.release }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ steps.state.outputs.prelease }}
 
   check:
     runs-on: ubuntu-20.04
