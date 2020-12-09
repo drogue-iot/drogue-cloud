@@ -113,16 +113,27 @@ jobs:
           make fix-permissions
 
       - name: Create Release
-        id: create_release
+        id: create-release
         if: ${{ steps.state.outputs.release }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}
           release_name: ${{ steps.version.outputs.version }}
-          draft: false
+          draft: true
           prerelease: ${{steps.state.outputs.prerelease}}
+
+      - name: Upload Release Assets
+        if: ${{ steps.state.outputs.release }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ steps.version.outputs.version }}
+        run: |
+          # add install ZIPs
+          hub release edit -m "" $(find installer/build -type f -name "install-*.zip" -printf "-a %p ") $TAG
+          # finally, remove the draft status
+          hub release edit -m "" --draft=false $TAG
 
   check:
     runs-on: ubuntu-20.04
