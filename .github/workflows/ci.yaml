@@ -2,8 +2,14 @@ name: CI
 
 on:
   push:
+    # Must only run on branches that we want to publish
     branches:
       - main
+    # Releases are tags named 'v<version>', and must have the "major.minor.micro", for example: "0.1.0".
+    # Release candidates are tagged as `v<version>-rc<num>`, for example: "0.1.0-rc1".
+    tags:
+      - "v*"
+  # Can run on PRs, as we don't publish when building a PR
   pull_request:
 
 jobs:
@@ -15,17 +21,28 @@ jobs:
 
     steps:
 
+      # Gather information for build
+
       - name: Evaluate state
         id: state
         run: |
           test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
+
+      - name: Set version
+        if: ${{github.head_ref == ''}}
+        run: |
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          [ "$VERSION" == "main" ] && VERSION=latest
+          echo VERSION=$VERSION
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Dump state
         run: |
+          echo "Tag/version: ${VERSION}"
           echo "Should we publish artifacts? - do-publish = ${{steps.state.outputs.do-publish}}"
 
-      - name: Will publish
-        if: ${{steps.state.outputs.do-publish}}
-        run: echo Going to publish outcome.
+      # Start the actual build
 
       - uses: actions/checkout@v2
 
@@ -51,6 +68,18 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Create installer archives
+        if: ${{steps.state.outputs.do-publish}}
+        run: |
+          make -C installer VERSION=$VERSION
+
+      - uses: actions/upload-artifact@v2
+        if: ${{steps.state.outputs.do-publish}}
+        with:
+          name: installers
+          path: installer/build/installer-*.zip
+          if-no-files-found: error
+
       - name: Run build
         run: |
           make build
@@ -58,27 +87,6 @@ jobs:
       - name: Run tests
         run: |
           make test
-
-      - name: Set version
-        if: ${{github.head_ref == ''}}
-        run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo VERSION=$VERSION
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Create tagged installer YAMLs
-        if: ${{github.head_ref == ''}}
-        run: |
-          make -C deploy VERSION=$VERSION
-
-      - uses: actions/upload-artifact@v2
-        if: ${{github.head_ref == ''}}
-        with:
-          name: installers
-          path: deploy/build/installer-*.zip
-          if-no-files-found: error
 
       - name: Login to github container repository
         if: ${{github.head_ref == ''}}
