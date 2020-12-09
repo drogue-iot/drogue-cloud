@@ -43,7 +43,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           [ "$VERSION" == "main" ] && VERSION=latest
           echo VERSION=$VERSION
-          echo '::set-output name=version::$VERSION'
+          echo "::set-output name=version::$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Dump state
@@ -122,7 +122,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           release_name: ${{ steps.version.outputs.version }}
           draft: false
-          prerelease: ${{ steps.state.outputs.prelease }}
+          prerelease: ${{steps.state.outputs.prerelease}}
 
   check:
     runs-on: ubuntu-20.04
