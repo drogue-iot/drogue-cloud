@@ -77,7 +77,7 @@ jobs:
         if: ${{steps.state.outputs.do-publish}}
         with:
           name: installers
-          path: installer/build/installer-*.zip
+          path: installer/build/install-*.zip
           if-no-files-found: error
 
       - name: Run build
