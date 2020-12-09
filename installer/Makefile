@@ -34,7 +34,7 @@ install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find
 	cp -pr $(BASEDIR)/deploy/knative/* $(OUTDIR)/stage/$(INSTALLER)/deploy/knative
 	cp -pr $(BASEDIR)/deploy/$*/* $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
 	cp -pr $(BASEDIR)/deploy/digital-twin/* $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
-	@echo "::group::Creating installer archived"
+	@echo "::group::Process YAML and zip"
 	cd build/stage/ && $(BASEDIR)/hack/inject-release-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
 	@echo "::endgroup::"
 
