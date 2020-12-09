@@ -41,3 +41,7 @@ spec:
           resources:
             limits:
               memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9090
