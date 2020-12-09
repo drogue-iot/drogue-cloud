@@ -60,6 +60,10 @@ spec:
           resources:
             limits:
               memory: 64Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9090
       volumes:
         - name: client-secret
           secret:
