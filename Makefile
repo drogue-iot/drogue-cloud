@@ -90,8 +90,12 @@ host-test: build-builder
 	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" builder make -j1 -C /usr/src/$(MODULE) container-test
 
 
+#
+# Change the permissions from inside the build container. Required for GitHub Actions, to make the build artifacts
+# accessible the build runner.
+#
 fix-permissions:
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME}'
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
 
 
 #
