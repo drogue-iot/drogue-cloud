@@ -10,11 +10,18 @@ yamldir = sys.argv[3]
 
 print(f"Inject tag: {version} ({policy}) for files in {yamldir}")
 
+
 def translate_image(original):
     if not original.endswith(":latest"):
         return original
 
-    return original.removesuffix(":latest") + ":" + version
+    # unfortunately we cannot use .removesuffix yet, as this was added in Python 3.9, which
+    # is too new for some distribution.
+    suffix = ':latest'
+    if original.endswith(suffix):
+        original = original[:-len(suffix)] + ":" + version
+
+    return original
 
 
 def replace_images(node):
