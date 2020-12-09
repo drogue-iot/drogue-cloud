@@ -18,7 +18,7 @@ members = [
 #ntex-mqtt = { path = "../ntex-mqtt" }
 #patternfly-yew = { path = "../patternfly-yew" }
 #drogue-ttn = { path = "../drogue-ttn" }
-diesel = { git = 'https://github.com/diesel-rs/diesel', ref = "06494e8bdfe774bac9be5cab488b3d0cbec97f4e" }
+diesel = { git = 'https://github.com/diesel-rs/diesel', rev = "06494e8bdfe774bac9be5cab488b3d0cbec97f4e" }
 #openid = { git = "https://github.com/ctron/openid.git", branch = "feature/custom_ca_1" }
 actix-web-httpauth = { git = "https://github.com/actix/actix-extras", rev = "cbfd5d94ee9ed70fb47dabfb221785d4625fe6de" }
 jsonpath_lib = { git = "https://github.com/ctron/jsonpath", branch = "feature/reuse_compiled_1" }
