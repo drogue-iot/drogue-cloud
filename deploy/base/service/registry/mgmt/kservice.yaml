@@ -18,23 +18,25 @@ spec:
               value: info
             - name: BIND_ADDR
               value: 0.0.0.0:8080
-            - name: POSTGRES_DB
+            - name: A_POSTGRES_DB
               valueFrom:
                 configMapKeyRef:
                   name: postgres-config
                   key: databaseName
-            - name: POSTGRES_USER
+            - name: A_POSTGRES_USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.username
-            - name: POSTGRES_PASSWORD
+            - name: A_POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.password
+            # DATABASE_URL must only reference variables which are sorted before `D...`
+            # see: https://github.com/knative/client/issues/1165
             - name: DATABASE_URL
-              value: postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres/$(POSTGRES_DB)
+              value: postgres://$(A_POSTGRES_USER):$(A_POSTGRES_PASSWORD)@postgres/$(A_POSTGRES_DB)
           ports:
             - containerPort: 8080
               protocol: TCP
