@@ -7,7 +7,7 @@ kind: Kustomization
 
 bases:
   - ../base/knative
-  - ../base/sso
+  - sso
   - ../base/source/http
   - source/mqtt
   - ../base/service/influxdb

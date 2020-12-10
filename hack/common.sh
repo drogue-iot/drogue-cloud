@@ -34,6 +34,15 @@ case $CLUSTER in
    openshift)
         URL="https://$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"
         ;;
+   kind)
+        # Workaround to use the node-port service
+        if [ "$name" == "keycloak" ]; then
+            name="$name-endpoint"
+        fi
+        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
+        URL=http://$name.$DOMAIN:$PORT
+        ;;
    *)
         URL="http://$(kubectl get ingress -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')"
         ;;
@@ -50,6 +59,8 @@ URL=$(kubectl get ksvc -n $DROGUE_NS "$name" -o jsonpath='{.status.url}')
 
 case $CLUSTER in
    kind)
+       HTTP_ENDPOINT_PORT=$(kubectl get service -n kourier-system kourier -o jsonpath='{.spec.ports[?(@.name == "http2")].nodePort}')
+       URL=${URL}:${HTTP_ENDPOINT_PORT}
         ;;
    minikube)
         ;;
