@@ -8,7 +8,6 @@ use cloudevents::AttributesReader;
 use cloudevents_sdk_actix_web::HttpRequestExt;
 use envconfig::Envconfig;
 use influxdb::{Client, InfluxDbWriteable, Timestamp, Type, WriteQuery};
-use jsonpath_lib::Selector;
 use serde_json::Value;
 use std::collections::HashMap;
 
