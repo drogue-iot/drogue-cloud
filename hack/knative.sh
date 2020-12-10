@@ -70,6 +70,7 @@ esac;
 # Knative Eventing
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-crds.yaml
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-core.yaml
+kubectl -n knative-eventing set env deployment/eventing-webhook SINK_BINDING_SELECTION_MODE=inclusion
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
 
 # Kafka by way of Strimzi
