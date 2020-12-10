@@ -13,6 +13,9 @@ source "$SCRIPTDIR/common.sh"
 
 case $CLUSTER in
     kind)
+       DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+       MQTT_ENDPOINT_HOST=mqtt-endpoint.$DOMAIN
+       MQTT_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.spec.ports[0].nodePort}')
         ;;
    minikube)
         MQTT_ENDPOINT_HOST=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
