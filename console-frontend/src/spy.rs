@@ -64,7 +64,7 @@ impl Component for Spy {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let mut url = Backend::url("/spyx").unwrap();
+        let mut url = Backend::url("/spy").unwrap();
 
         // EventSource doesn't support passing headers, so we cannot send
         // the bearer token the normal way
