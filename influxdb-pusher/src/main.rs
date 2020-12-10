@@ -29,10 +29,9 @@ where
     };
 
     for (ref field, ref path) in processor {
-        let sel = Selector::default()
-            .compiled_path(&path.node)
-            .value(&json)
-            .select()
+        let sel = path
+            .compiled
+            .select(&json)
             .map_err(|err| ServiceError::SelectorError {
                 details: err.to_string(),
             })?;
@@ -187,7 +186,7 @@ struct Config {
 #[derive(Debug, Clone)]
 struct Path {
     pub path: String,
-    pub node: jsonpath_lib::parser::Node,
+    pub compiled: jsonpath_lib::Compiled,
 }
 
 #[derive(Debug, Clone)]
@@ -214,14 +213,26 @@ async fn main() -> anyhow::Result<()> {
     for (key, value) in std::env::vars() {
         if let Some(field) = key.strip_prefix("FIELD_") {
             log::info!("Adding field - {} -> {}", field, value);
-            let node = jsonpath_lib::Parser::compile(&value)
+            let compiled = jsonpath_lib::Compiled::compile(&value)
                 .map_err(|err| anyhow::anyhow!("Failed to parse JSON path: {}", err))?;
-            fields.insert(field.to_lowercase(), Path { path: value, node });
+            fields.insert(
+                field.to_lowercase(),
+                Path {
+                    path: value,
+                    compiled,
+                },
+            );
         } else if let Some(tag) = key.strip_prefix("TAG_") {
             log::info!("Adding tag - {} -> {}", tag, value);
-            let node = jsonpath_lib::Parser::compile(&value)
+            let compiled = jsonpath_lib::Compiled::compile(&value)
                 .map_err(|err| anyhow::anyhow!("Failed to parse JSON path: {}", err))?;
-            tags.insert(tag.to_lowercase(), Path { path: value, node });
+            tags.insert(
+                tag.to_lowercase(),
+                Path {
+                    path: value,
+                    compiled,
+                },
+            );
         }
     }
 
