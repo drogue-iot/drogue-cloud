@@ -87,3 +87,10 @@ function wait_for_resource() {
   done
   set -x
 }
+
+# nudge because of: https://github.com/knative/serving/issues/10344
+function nudge_ksvc() {
+  local resource="$1"
+  shift
+  kn -n "$DROGUE_NS" service update "$resource" -e "N=$(uuid)"
+}

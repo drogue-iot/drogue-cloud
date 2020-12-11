@@ -43,8 +43,15 @@ case $CLUSTER in
 esac;
 
 # Wait for the HTTP endpoint to become ready
+# nudge because of: https://github.com/knative/serving/issues/10344
+while true; do
+  if ! kubectl -n "$DROGUE_NS" wait --timeout=60s --for=condition=Ready ksvc/http-endpoint; then
+    nudge_ksvc http-endpoint
+  else
+    break
+  fi
+done
 
-kubectl -n "$DROGUE_NS" wait --timeout=-1s --for=condition=Ready ksvc/http-endpoint
 HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}'")
 
 case $CLUSTER in
@@ -100,10 +107,16 @@ kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEN
 
 kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$CONSOLE_URL\"}]"
 
-# wait for all necessary components
 
-kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n "$DROGUE_NS"
+# wait for deployments first
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
+
+# wait for Knative services next
+# nudge because of: https://github.com/knative/serving/issues/10344
+nudge_ksvc influxdb-pusher
+nudge_ksvc device-management-service
+kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n "$DROGUE_NS"
+
 
 # show status
 
