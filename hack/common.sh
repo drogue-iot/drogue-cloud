@@ -92,5 +92,5 @@ function wait_for_resource() {
 function nudge_ksvc() {
   local resource="$1"
   shift
-  kn -n "$DROGUE_NS" service update "$resource" -e "N=$(uuid)" || true
+  kn -n "$DROGUE_NS" service update "$resource" -e "N=$(date)" || true
 }
