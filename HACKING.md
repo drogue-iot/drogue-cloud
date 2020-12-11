@@ -1,3 +1,19 @@
+## Building
+
+### In a container
+
+You will need:
+
+* GNU Make
+* A container engine (e.g. Docker or Podman)
+* An internet connection
+
+To build and publish, run:
+
+    make CONTAINER_REGISTRY=quay.io/your-org
+
+The makefile will use a build container to perform the actual build.
+
 ## Deploy Helm charts of local components
 
 ### Drogue Cloud
