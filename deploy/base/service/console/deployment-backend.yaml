@@ -16,6 +16,22 @@ spec:
         app: console-backend
     spec:
       serviceAccountName: console-backend
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
       containers:
         - name: endpoint
           image: ghcr.io/drogue-iot/console-backend:latest
@@ -44,3 +60,7 @@ spec:
           resources:
             limits:
               memory: 64Mi
+      volumes:
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-drogue
