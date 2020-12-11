@@ -27,10 +27,10 @@ jobs:
         id: state
         run: |
           test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
-          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "${{ github.event.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               echo ::set-output name=release::true
               echo ::set-output name=release::true
-          elif [[ ${{ github.event.ref }} =~ ^refs/tags/v.*$ ]]; then
+          elif [[ "${{ github.event.ref }}" =~ ^refs/tags/v.*$ ]]; then
               echo ::set-output name=release::true
               echo ::set-output name=prerelease::true
           fi
