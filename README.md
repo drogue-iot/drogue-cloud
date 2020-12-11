@@ -30,6 +30,7 @@ In a nutshell you need to:
 
 ~~~shell
 minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
+minikube tunnel # in a separate terminal, as it keeps running
 ./script/drogue.sh
 ~~~
 
