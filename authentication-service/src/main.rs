@@ -152,7 +152,7 @@ async fn main() -> std::io::Result<()> {
 
     let enable_jwt = config.enable_jwt;
 
-    let s1 = HttpServer::new(move || {
+    let app_server = HttpServer::new(move || {
         App::new()
             .service({
                 let scope = web::scope("/api/v1").service(password_authentication);
@@ -168,10 +168,10 @@ async fn main() -> std::io::Result<()> {
     .bind(config.bind_addr)?
     .run();
 
-    let s2 = HttpServer::new(move || App::new().service(health))
+    let health_server = HttpServer::new(move || App::new().service(health))
         .bind(config.health_bind_addr)?
         .run();
 
-    future::try_join(s1, s2).await?;
+    future::try_join(app_server, health_server).await?;
     Ok(())
 }
