@@ -207,7 +207,7 @@ async fn main() -> anyhow::Result<()> {
         authenticator: Authenticator { client, scopes },
     });
 
-    let s1 = HttpServer::new(move || {
+    let app_server = HttpServer::new(move || {
         let auth_middleware = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 
@@ -243,10 +243,10 @@ async fn main() -> anyhow::Result<()> {
     .bind(config.bind_addr)?
     .run();
 
-    let s2 = HttpServer::new(move || App::new().service(health))
+    let health_server = HttpServer::new(move || App::new().service(health))
         .bind(config.health_bind_addr)?
         .run();
 
-    future::try_join(s1, s2).await?;
+    future::try_join(app_server, health_server).await?;
     Ok(())
 }
