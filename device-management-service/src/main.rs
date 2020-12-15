@@ -187,10 +187,9 @@ async fn main() -> anyhow::Result<()> {
         connection_pool: pool.expect("Failed to create pool"),
     };
 
-    let s1 = HttpServer::new(move || {
+    let app_server = HttpServer::new(move || {
         App::new()
             .data(web::JsonConfig::default().limit(64 * 1024))
-            .service(health)
             .service(
                 web::scope("/api/v1").wrap(Cors::permissive()).service(
                     web::scope("/devices")
@@ -205,10 +204,10 @@ async fn main() -> anyhow::Result<()> {
     .bind(config.bind_addr)?
     .run();
 
-    let s2 = HttpServer::new(move || App::new().service(health))
+    let health_server = HttpServer::new(move || App::new().service(health))
         .bind(config.health_bind_addr)?
         .run();
 
-    future::try_join(s1, s2).await?;
+    future::try_join(app_server, health_server).await?;
     Ok(())
 }
