@@ -88,9 +88,16 @@ function wait_for_resource() {
   set -x
 }
 
-# nudge because of: https://github.com/knative/serving/issues/10344
-function nudge_ksvc() {
+# we nudge (delete the deploys) because of: https://github.com/knative/serving/issues/10344
+# TODO: when 10344 is fixed, replace the while loop with the 'kubectl wait'
+function wait_for_ksvc() {
   local resource="$1"
   shift
-  kn -n "$DROGUE_NS" service update "$resource" -e "N=$(date)" || true
+  while true; do
+    if ! kubectl -n "$DROGUE_NS" wait --timeout=60s --for=condition=Ready "ksvc/${resource}"; then
+      kubectl -n "$DROGUE_NS" delete deploy -l "serving.knative.dev/service=${resource}"
+    else
+      break
+    fi
+  done
 }

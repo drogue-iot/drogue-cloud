@@ -38,19 +38,12 @@ case $CLUSTER in
         ;;
    *)
         wait_for_resource ingress/keycloak
-        kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]'
+        kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]' || true
         ;;
 esac;
 
 # Wait for the HTTP endpoint to become ready
-# nudge because of: https://github.com/knative/serving/issues/10344
-while true; do
-  if ! kubectl -n "$DROGUE_NS" wait --timeout=60s --for=condition=Ready ksvc/http-endpoint; then
-    nudge_ksvc http-endpoint
-  else
-    break
-  fi
-done
+wait_for_ksvc http-endpoint
 
 HTTP_ENDPOINT_URL=$(eval "kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}'")
 
@@ -112,10 +105,8 @@ kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
 
 # wait for Knative services next
-# nudge because of: https://github.com/knative/serving/issues/10344
-nudge_ksvc influxdb-pusher
-nudge_ksvc device-management-service
-kubectl wait ksvc --all --timeout=-1s --for=condition=Ready -n "$DROGUE_NS"
+wait_for_ksvc influxdb-pusher
+wait_for_ksvc device-management-service
 
 
 # show status

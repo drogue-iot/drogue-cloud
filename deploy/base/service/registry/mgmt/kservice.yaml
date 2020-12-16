@@ -16,6 +16,8 @@ spec:
           env:
             - name: RUST_LOG
               value: info
+            - name: ENABLE_AUTH
+              value: "false"
             - name: BIND_ADDR
               value: 0.0.0.0:8080
             - name: A_POSTGRES_DB
