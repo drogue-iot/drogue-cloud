@@ -153,14 +153,19 @@ async fn main() -> anyhow::Result<()> {
             .service(publish)
             .service(telemetry)
             .service(ttn::publish)
+            //fixme : bind to a different port
+            .service(health)
     })
     .bind(config.bind_addr)?
-    .run();
+    .run()
+    .await?;
 
-    let health_server = HttpServer::new(move || App::new().service(health))
-        .bind(config.health_bind_addr)?
-        .run();
-
-    future::try_join(app_server, health_server).await?;
+    // fixme
+    //
+    // let health_server = HttpServer::new(move || App::new().service(health))
+    //     .bind(config.health_bind_addr)?
+    //     .run();
+    //
+    // future::try_join(app_server, health_server).await?;
     Ok(())
 }
