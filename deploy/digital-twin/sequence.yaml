@@ -18,4 +18,4 @@ spec:
         kind: Service
         name: vorto-converter
   reply:
-    uri: http://ditto:ditto@ditto-nginx.drogue-iot.svc.cluster.local/api/2/cloudevents
+    uri: http://ditto:ditto@ditto-nginx.drogue-iot.svc.cluster.local:8080/api/2/cloudevents
