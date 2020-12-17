@@ -1,8 +1,6 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+FROM ghcr.io/drogue-iot/frontend-base:0.1.0
 
 LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-cloud"
-
-RUN microdnf -y install nginx jq
 
 RUN mkdir /public
 
