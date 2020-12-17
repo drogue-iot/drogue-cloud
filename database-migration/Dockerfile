@@ -1,15 +1,9 @@
 # Build
 
-FROM builder as builder
-
-RUN unset CARGO_HOME && cargo install diesel_cli --no-default-features --features postgres
-
-FROM registry.access.redhat.com/ubi8-minimal
+FROM ghcr.io/drogue-iot/diesel-base:0.1.0
 
 LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-cloud"
 
-RUN microdnf install -y libpq
-COPY --from=builder /root/.cargo/bin/diesel /usr/local/bin/
 RUN mkdir /migrations
 COPY database-common/migrations /migrations
 
