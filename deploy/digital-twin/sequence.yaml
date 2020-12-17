@@ -18,9 +18,4 @@ spec:
         kind: Service
         name: vorto-converter
   reply:
-    ref:
-      kind: Service
-      apiVersion: serving.knative.dev/v1
-      name: ditto-pusher
-# When using the Ditto Cloud Events endpoint
-#    uri: http://ditto:ditto@ditto-nginx.drogue-iot.svc.cluster.local/api/2/cloudevents
+    uri: http://ditto:ditto@ditto-nginx.drogue-iot.svc.cluster.local/api/2/cloudevents
