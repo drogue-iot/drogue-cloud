@@ -26,8 +26,6 @@ fi
 
 # Install Drogue components (sources and services)
 
-source "$SCRIPTDIR/registry.sh"
-
 kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
 
 # Remove the unnecessary and wrong host entry for keycloak ingress
