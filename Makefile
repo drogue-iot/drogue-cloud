@@ -22,8 +22,6 @@ endif
 IMAGES?=\
 	http-endpoint \
 	mqtt-endpoint \
-	ditto-pusher \
-	influxdb-pusher \
 	console-backend \
 	console-frontend \
 	authentication-service \

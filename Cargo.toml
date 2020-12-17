@@ -4,8 +4,6 @@ members = [
     "endpoint-common",
     "http-endpoint",
     "mqtt-endpoint",
-    "ditto-pusher",
-    "influxdb-pusher",
     "console-common",
     "console-backend",
     "console-frontend",

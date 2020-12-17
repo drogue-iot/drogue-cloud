@@ -10,7 +10,7 @@ spec:
   template:
     spec:
       containers:
-        - image: ghcr.io/drogue-iot/influxdb-pusher:latest
+        - image: ghcr.io/drogue-iot/influxdb-pusher:0.3.0
           env:
             - name: RUST_LOG
               value: info
