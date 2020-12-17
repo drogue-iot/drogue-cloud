@@ -2,9 +2,7 @@ use actix_web::{
     get, http::header, middleware, post, web, App, HttpResponse, HttpServer, Responder,
 };
 
-use drogue_cloud_endpoint_common::downstream::{
-    DownstreamSender, Publish,
-};
+use drogue_cloud_endpoint_common::downstream::{DownstreamSender, Publish};
 
 use drogue_cloud_endpoint_common::error::HttpEndpointError;
 use serde::Deserialize;
@@ -48,19 +46,21 @@ async fn publish(
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::info!("Published to '{}'", channel);
 
-    endpoint.publish_http(
-        Publish {
-            channel,
-            device_id,
-            model_id: opts.model_id,
-            content_type: req
-                .headers()
-                .get(header::CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok())
-                .map(|s| s.to_string()),
-        },
-        body,
-    ).await
+    endpoint
+        .publish_http(
+            Publish {
+                channel,
+                device_id,
+                model_id: opts.model_id,
+                content_type: req
+                    .headers()
+                    .get(header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .map(|s| s.to_string()),
+            },
+            body,
+        )
+        .await
 }
 
 #[actix_web::main]
@@ -76,7 +76,6 @@ async fn main() -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
 
     HttpServer::new(move || {
-
         App::new()
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
