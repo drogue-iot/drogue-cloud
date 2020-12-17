@@ -51,16 +51,17 @@ impl DownstreamSender {
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
-            .extension("device_id", publish.device_id)
+            .extension("deviceid", publish.device_id)
             .subject(&publish.channel)
             .time(Utc::now())
             .ty("io.drogue.iot.message");
 
         if let Some(model_id) = publish.model_id {
-            event = event.extension("model_id", model_id);
+            event = event.extension("modelid", model_id);
         }
 
         log::debug!("Content-Type: {:?}", publish.content_type);
+        log::debug!("Payload size: {} bytes", body.as_ref().len());
 
         let event = match publish.content_type {
             Some(t) => event.data(t, Vec::from(body.as_ref())),
