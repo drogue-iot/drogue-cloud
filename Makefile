@@ -6,7 +6,7 @@ all: build images test push
 
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
-IMAGE_TAG ?= "latest"
+IMAGE_TAG ?= latest
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
