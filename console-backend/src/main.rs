@@ -39,7 +39,7 @@ struct Config {
     pub bind_addr: String,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
     pub health_bind_addr: String,
-    #[envconfig(from = "ENABLE_AUTH")]
+    #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
 }
 
