@@ -25,6 +25,8 @@ use drogue_cloud_endpoint_common::auth::{AuthConfig, DeviceAuthenticator};
 struct Config {
     #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
     pub max_json_payload_size: usize,
+    #[envconfig(from = "MAX_PAYLOAD_SIZE", default = "65536")]
+    pub max_payload_size: usize,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
@@ -117,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::init_from_env()?;
     let enable_auth = config.enable_auth;
+    let max_payload_size = config.max_payload_size;
     let max_json_payload_size = config.max_json_payload_size;
 
     // create authenticator, fails if authentication is enabled, but configuration is missing
@@ -139,6 +142,7 @@ async fn main() -> anyhow::Result<()> {
         let app = App::new()
             .wrap(Condition::new(enable_auth, basic_auth))
             .wrap(middleware::Logger::default())
+            .app_data(web::PayloadConfig::new(max_payload_size))
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone());
 
