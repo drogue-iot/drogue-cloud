@@ -4,10 +4,27 @@ use actix_web::{FromRequest, HttpRequest};
 use anyhow::Context;
 use envconfig::Envconfig;
 use futures::future::{err, ok, Ready};
-use headers::authorization::Credentials;
-use reqwest::{header, Response, StatusCode, Url};
-use serde_json::{json, Value};
+use reqwest::{Response, StatusCode, Url};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::convert::TryFrom;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthRequest {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Outcome {
+    Pass(DeviceProperties),
+    Fail,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthResponse {
+    pub outcome: Outcome,
+}
 
 #[derive(Clone, Debug, Envconfig)]
 pub struct AuthConfig {
@@ -38,49 +55,47 @@ impl TryFrom<AuthConfig> for DeviceAuthenticator {
     }
 }
 
-pub enum Outcome {
-    Pass(DeviceProperties),
-    Fail,
-}
-
 impl DeviceAuthenticator {
     pub async fn authenticate(
         &self,
-        device_id: &str,
+        username: &str,
         password: &str,
     ) -> Result<Outcome, EndpointError> {
-        let auth = headers::Authorization::basic(device_id, password);
-
         let response: Response = self
             .client
-            .get(self.auth_service_url.clone())
-            .header(header::AUTHORIZATION, auth.0.encode())
+            .post(self.auth_service_url.clone())
+            .json(&AuthRequest {
+                username: username.to_string(),
+                password: password.to_string(),
+            })
             .send()
             .await
             .map_err(|err| {
-                log::warn!("Error while authenticating {}: {}", device_id, err);
+                log::warn!("Error while authenticating {}: {}", username, err);
                 EndpointError::AuthenticationServiceError {
                     source: Box::new(err),
                 }
             })?;
 
-        match response.status() {
-            StatusCode::OK => {
-                log::debug!("{} authenticated successfully", device_id);
-                let props = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
-                Ok(Outcome::Pass(DeviceProperties(props)))
+        match (response.status(), response.json::<AuthResponse>().await) {
+            (StatusCode::OK, Ok(result)) => {
+                log::debug!("Outcome for {} is {:?}", username, result);
+                Ok(result.outcome)
             }
-            StatusCode::FORBIDDEN => {
-                // FIXME: Right now this is the result when the device could not get authenticated.
-                // However, it could also mean we are not allowed to access the service.
-                Ok(Outcome::Fail)
-            }
-            code => {
-                log::debug!(
-                    "Authentication failed for {}. Result: {}",
-                    device_id,
-                    response.status()
+            (StatusCode::OK, Err(err)) => {
+                log::debug!("Authentication failed for {}. Result: {:?}", username, err);
+
+                let err = anyhow::anyhow!(
+                    "Result from authentication service unexpected: OK: {:?}",
+                    err
                 );
+
+                Err(EndpointError::AuthenticationServiceError {
+                    source: Box::from(err),
+                })
+            }
+            (code, _) => {
+                log::debug!("Authentication failed for {}. Result: {}", username, code);
 
                 let err =
                     anyhow::anyhow!("Result from authentication service unexpected: {}", code);
@@ -93,7 +108,7 @@ impl DeviceAuthenticator {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DeviceProperties(pub Value);
 
 impl FromRequest for DeviceProperties {
@@ -106,5 +121,33 @@ impl FromRequest for DeviceProperties {
             Some(properties) => ok(properties.clone()),
             None => err(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_encode_fail() {
+        let str = serde_json::to_string(&AuthResponse {
+            outcome: Outcome::Fail,
+        });
+        assert!(str.is_ok());
+        assert_eq!(String::from(r#"{"outcome":"Fail"}"#), str.unwrap());
+    }
+
+    #[test]
+    fn test_encode_pass() {
+        let str = serde_json::to_string(&AuthResponse {
+            outcome: Outcome::Pass(DeviceProperties(json!({"foo": "bar"}))),
+        });
+        assert!(str.is_ok());
+        assert_eq!(
+            String::from(r#"{"outcome":{"Pass":{"foo":"bar"}}}"#),
+            str.unwrap()
+        );
     }
 }

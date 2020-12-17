@@ -32,3 +32,4 @@ actix-web-httpauth = "0.5.0"
 envconfig = "0.9.1"
 
 drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }

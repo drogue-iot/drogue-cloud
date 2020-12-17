@@ -8,6 +8,9 @@ use drogue_cloud_endpoint_common::{
     error::{EndpointError, HttpEndpointError},
 };
 
+// we might need to url-decode the username
+const URLDECODE: bool = true;
+
 pub async fn basic_validator(
     req: ServiceRequest,
     cred: BasicAuth,
@@ -18,9 +21,18 @@ pub async fn basic_validator(
         })
     })?;
 
-    match cred.password() {
+    let (user_id, password) = match URLDECODE {
+        true => (
+            percent_encoding::percent_decode_str(cred.user_id()).decode_utf8_lossy(),
+            cred.password()
+                .map(|password| percent_encoding::percent_decode_str(password).decode_utf8_lossy()),
+        ),
+        false => (cred.user_id().clone(), cred.password().cloned()),
+    };
+
+    match password {
         Some(password) => match authenticator
-            .authenticate(cred.user_id(), password)
+            .authenticate(&user_id, &password)
             .await
             .map_err(HttpEndpointError)?
         {

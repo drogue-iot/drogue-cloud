@@ -2,8 +2,9 @@ mod auth;
 
 use drogue_cloud_database_common::database;
 use drogue_cloud_database_common::models::Secret;
+use drogue_cloud_endpoint_common::auth::{AuthRequest, AuthResponse, DeviceProperties, Outcome};
 
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 
 use serde_json::json;
@@ -24,25 +25,34 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
 
-#[get("/auth")]
+#[post("/auth")]
 async fn password_authentication(
-    auth: BasicAuth,
+    req: web::Json<AuthRequest>,
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    log::debug!("AuthRequest - username: {}", req.username);
+
     let connection = database::pg_pool_handler(&data.connection_pool)?;
-    let cred = match database::get_credential(&auth.user_id(), &connection)? {
+    let cred = match database::get_credential(&req.username, &connection)? {
         Some(cred) => cred,
         None => {
-            return Ok(HttpResponse::Unauthorized().finish());
+            return Ok(HttpResponse::Ok().json(AuthResponse {
+                outcome: Outcome::Fail,
+            }));
         }
     };
 
-    let auth_result =
-        auth::verify_password(&auth.password().unwrap_or(&Cow::from("")), cred.secret);
+    let auth_result = auth::verify_password(&req.password, cred.secret);
 
     Ok(match auth_result {
-        Ok(AuthenticationResult::Success) => HttpResponse::Ok().json(cred.properties),
-        Ok(AuthenticationResult::Failed) => HttpResponse::Unauthorized().finish(),
+        Ok(AuthenticationResult::Success) => HttpResponse::Ok().json(AuthResponse {
+            outcome: Outcome::Pass(DeviceProperties(
+                cred.properties.unwrap_or_else(|| json!({})),
+            )),
+        }),
+        Ok(AuthenticationResult::Failed) => HttpResponse::Ok().json(AuthResponse {
+            outcome: Outcome::Fail,
+        }),
         Err(_) => HttpResponse::BadRequest().finish(),
     })
 }
@@ -109,6 +119,8 @@ struct Config {
     pub db_url: String,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
+    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    pub max_json_payload_size: usize,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
     pub health_bind_addr: String,
 
@@ -150,9 +162,11 @@ async fn main() -> std::io::Result<()> {
     }
 
     let enable_jwt = config.enable_jwt;
+    let max_json_payload_size = config.max_json_payload_size;
 
     HttpServer::new(move || {
         App::new()
+            .data(web::JsonConfig::default().limit(max_json_payload_size))
             .service({
                 let scope = web::scope("/api/v1").service(password_authentication);
 
