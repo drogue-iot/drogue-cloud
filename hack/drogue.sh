@@ -100,14 +100,12 @@ kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEN
 
 kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$CONSOLE_URL\"}]"
 
-
-# wait for deployments first
-kubectl wait deployment --all --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
-
-# wait for Knative services next
+# wait for Knative services first (possibly deleting deployments)
 wait_for_ksvc influxdb-pusher
 wait_for_ksvc device-management-service
 
+# wait for deployments next, as these include the Knative services
+kubectl wait deployment --all --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
 
 # show status
 
