@@ -7,6 +7,7 @@ all: build images test push
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.0
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -70,24 +71,17 @@ container-test: cargo-test
 
 
 #
-# Create the builder image
-#
-build-builder:
-	docker build $(TOP_DIR)/containers/builder -t builder
-
-
-#
 # Run a build on the host, forking off into the build container.
 #
-host-build: build-builder
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" builder make -j1 -C /usr/src/$(MODULE) container-build
+host-build:
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
 
 
 #
 # Run tests on the host, forking off into the build container.
 #
-host-test: build-builder
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" builder make -j1 -C /usr/src/$(MODULE) container-test
+host-test:
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
 
 
 #
@@ -95,14 +89,14 @@ host-test: build-builder
 # accessible the build runner.
 #
 fix-permissions:
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
 
 
 #
 # Run an interactive shell inside the build container.
 #
 build-shell:
-	docker run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" builder bash
+	docker run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
 
 
 #
@@ -179,7 +173,6 @@ endif
 
 
 .PHONY: all clean build test push images
-.PHONY: build-builder
 .PHONY: require-container-registry
 
 .PHONY: build-images tag-images push-images
