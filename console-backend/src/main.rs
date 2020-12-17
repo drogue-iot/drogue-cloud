@@ -21,8 +21,6 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use envconfig::Envconfig;
 use serde_json::json;
 
-use futures::future;
-
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -69,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
 
     // http server
 
-    let app_server = HttpServer::new(move || {
+    HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 
@@ -108,12 +106,6 @@ async fn main() -> anyhow::Result<()> {
     .run()
     .await?;
 
-    //fixme
-    // let health_server = HttpServer::new(move || App::new().service(health))
-    //     .bind(config.health_bind_addr)?
-    //     .run();
-    //
-    // future::try_join(app_server, health_server).await?;
     Ok(())
 }
 

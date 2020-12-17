@@ -19,8 +19,6 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use futures::future;
-
 #[get("/health")]
 async fn health() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -207,7 +205,7 @@ async fn main() -> anyhow::Result<()> {
         authenticator: Authenticator { client, scopes },
     });
 
-    let app_server = HttpServer::new(move || {
+    HttpServer::new(move || {
         let auth_middleware = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 
@@ -244,11 +242,5 @@ async fn main() -> anyhow::Result<()> {
     .run()
     .await?;
 
-    //fixme
-    // let health_server = HttpServer::new(move || App::new().service(health))
-    //     .bind(config.health_bind_addr)?
-    //     .run();
-    //
-    // future::try_join(app_server, health_server).await?;
     Ok(())
 }

@@ -16,7 +16,6 @@ use serde_json::json;
 
 use dotenv::dotenv;
 use envconfig::Envconfig;
-use futures::future;
 
 use crate::basic_auth::basic_validator;
 use drogue_cloud_endpoint_common::auth::{AuthConfig, DeviceAuthenticator};
@@ -135,7 +134,7 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    let app_server = HttpServer::new(move || {
+    HttpServer::new(move || {
         //let jwt_auth = HttpAuthentication::bearer(jwt_validator);
         let basic_auth = HttpAuthentication::basic(basic_validator);
 
@@ -164,12 +163,5 @@ async fn main() -> anyhow::Result<()> {
     .run()
     .await?;
 
-    // fixme
-    //
-    // let health_server = HttpServer::new(move || App::new().service(health))
-    //     .bind(config.health_bind_addr)?
-    //     .run();
-    //
-    // future::try_join(app_server, health_server).await?;
     Ok(())
 }
