@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: device-management-service
   labels:
+    image-source: build
     app.kubernetes.io/name: device-management-service
     app.kubernetes.io/part-of: device-registry
   annotations:

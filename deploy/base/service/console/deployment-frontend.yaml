@@ -4,15 +4,18 @@ metadata:
   name: console-frontend
   labels:
     app: console-frontend
+    image-source: build
     app.kubernetes.io/part-of: console
 spec:
   replicas: 1
   selector:
     matchLabels:
+      image-source: build
       app: console-frontend
   template:
     metadata:
       labels:
+        image-source: build
         app: console-frontend
     spec:
       containers:

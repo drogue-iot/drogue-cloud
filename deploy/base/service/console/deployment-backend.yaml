@@ -3,16 +3,19 @@ apiVersion: apps/v1
 metadata:
   name: console-backend
   labels:
+    image-source: build
     app: console-backend
     app.kubernetes.io/part-of: console
 spec:
   replicas: 1
   selector:
     matchLabels:
+      image-source: build
       app: console-backend
   template:
     metadata:
       labels:
+        image-source: build
         app: console-backend
     spec:
       serviceAccountName: console-backend

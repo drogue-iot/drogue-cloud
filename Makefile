@@ -27,6 +27,7 @@ IMAGES?=\
 	authentication-service \
 	device-management-service \
 	database-migration \
+	command-endpoint \
 
 
 #
@@ -138,7 +139,7 @@ build-image($(IMAGES)):
 #
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && docker tag $%:$(IMAGE_TAG) $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && docker tag $% $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #

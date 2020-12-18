@@ -5,12 +5,14 @@ metadata:
   annotations:
     app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"postgres"}]'
   labels:
+    image-source: build
     app.kubernetes.io/name: authentication-service
     app.kubernetes.io/part-of: device-registry
 spec:
   replicas: 1
   selector:
     matchLabels:
+      image-source: build
       app.kubernetes.io/name: authentication-service
       app.kubernetes.io/part-of: device-registry
   strategy:
@@ -18,6 +20,7 @@ spec:
   template:
     metadata:
       labels:
+        image-source: build
         app.kubernetes.io/name: authentication-service
         app.kubernetes.io/part-of: device-registry
     spec:

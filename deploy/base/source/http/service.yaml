@@ -3,11 +3,13 @@ kind: Service
 metadata:
   name: http-endpoint
   labels:
+    image-source: build
     app.kubernetes.io/part-of: endpoints
 spec:
   template:
     metadata:
       labels:
+        image-source: build
         bindings.knative.dev/include: "true"
     spec:
       containers:

@@ -1,10 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-#images:
-#- name: ghcr.io/drogue-iot/http-endpoint
-#  newname: quay.io/dejanb/http-endpoint
-
 bases:
   - ../base/knative
   - sso
@@ -15,3 +11,4 @@ bases:
   - service/grafana
   - service/console
   - ../base/service/registry
+
