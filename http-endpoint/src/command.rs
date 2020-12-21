@@ -1,3 +1,7 @@
+//! Command actors
+//!
+//! Contains actors that handles delivering commands between different components
+
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 
@@ -8,6 +12,7 @@ use actix_web_actors::HttpContext;
 
 use std::time;
 
+/// Represents command message passed to the actors
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
 pub struct CommandMessage {
@@ -15,30 +20,39 @@ pub struct CommandMessage {
     pub command: String,
 }
 
+/// Represents a message used to subscribe an actor for receiving the command
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
 pub struct CommandSubscribe(pub String, pub Device);
 
+/// Represents a message used to unsubscribe an actor from receiving the command
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
 pub struct CommandUnsubscribe(pub String);
 
+/// Recepient of commands
 type Device = Recipient<CommandMessage>;
 
+
+/// Routes commands to appropriate actors
+/// Actors can subscribe/unsubscribe for commands by sending appropriate messages
 #[derive(Default)]
 pub struct CommandRouter {
     pub devices: HashMap<String, Device>,
 }
 
 impl CommandRouter {
+
+    /// Subscribe actor to receive messages for a particular device
     fn subscribe(&mut self, id: String, device: Device) {
-        log::debug!("Subscribing device for commands '{}'", id);
+        log::debug!("Subscribe device for commands '{}'", id);
 
         self.devices.insert(id, device);
     }
 
+    /// Unsubscribe actor from receiving messages for a particular device
     fn unsubscribe(&mut self, id: String) {
-        log::info!("Unsubscribing device for commands '{}'", id);
+        log::info!("Unsubscribe device for commands '{}'", id);
 
         self.devices.remove(&id);
     }
@@ -47,6 +61,7 @@ impl CommandRouter {
 impl Actor for CommandRouter {
     type Context = Context<Self>;
 
+    /// Registers the router in the global registry when actor is started
     fn started(&mut self, ctx: &mut Self::Context) {
         self.subscribe_system_async::<CommandMessage>(ctx);
     }
@@ -55,6 +70,7 @@ impl Actor for CommandRouter {
 impl Handler<CommandMessage> for CommandRouter {
     type Result = ();
 
+    /// Routes received command messages
     fn handle(&mut self, msg: CommandMessage, _ctx: &mut Self::Context) -> Self::Result {
         match self.devices.get_mut(&msg.device_id) {
             Some(device) => {
@@ -73,6 +89,7 @@ impl Handler<CommandMessage> for CommandRouter {
 impl Handler<CommandSubscribe> for CommandRouter {
     type Result = ();
 
+    /// Subscribes actors to receive commands for a particular device
     fn handle(&mut self, msg: CommandSubscribe, _ctx: &mut Self::Context) {
         let CommandSubscribe(id, device) = msg;
 
@@ -83,6 +100,7 @@ impl Handler<CommandSubscribe> for CommandRouter {
 impl Handler<CommandUnsubscribe> for CommandRouter {
     type Result = ();
 
+    /// Unsubscribes actors from receiving commands for a particular device
     fn handle(&mut self, msg: CommandUnsubscribe, _ctx: &mut Self::Context) {
         self.unsubscribe(msg.0);
     }
@@ -91,6 +109,8 @@ impl Handler<CommandUnsubscribe> for CommandRouter {
 impl SystemService for CommandRouter {}
 impl Supervised for CommandRouter {}
 
+
+/// Actor for receiving commands
 pub struct CommandHandler {
     pub device_id: String,
     pub ttd: u64,
@@ -99,6 +119,8 @@ pub struct CommandHandler {
 impl Actor for CommandHandler {
     type Context = HttpContext<Self>;
 
+    /// Subscribes the actor with the command handler
+    /// and waits for the command for `ttd` seconds
     fn started(&mut self, ctx: &mut HttpContext<Self>) {
         let sub = CommandSubscribe(self.device_id.to_owned(), ctx.address().recipient());
         CommandRouter::from_registry()
@@ -123,6 +145,7 @@ impl Actor for CommandHandler {
         });
     }
 
+    /// Unsubscribes the actor from receiving the commands
     fn stopped(&mut self, ctx: &mut HttpContext<Self>) {
         CommandRouter::from_registry()
             .send(CommandUnsubscribe(self.device_id.to_owned()))
@@ -145,6 +168,7 @@ impl Actor for CommandHandler {
 impl Handler<CommandMessage> for CommandHandler {
     type Result = ();
 
+    /// Handles q command message by writing it into the http context
     fn handle(&mut self, msg: CommandMessage, ctx: &mut HttpContext<Self>) {
         ctx.write(Bytes::from(msg.command));
         ctx.write_eof()

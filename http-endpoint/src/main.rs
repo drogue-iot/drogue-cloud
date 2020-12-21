@@ -106,6 +106,7 @@ async fn publish(
     }
 }
 
+/// Waits for a command for a `ttd_param` seconds by creating a command handler actor
 async fn command_wait(
     device_id: String,
     ttd_param: Option<u64>,
