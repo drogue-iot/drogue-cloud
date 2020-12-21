@@ -32,6 +32,7 @@ case $CLUSTER in
 esac;
 
 HTTP_ENDPOINT_URL=$(kservice_url "http-endpoint")
+COMMAND_ENDPOINT_URL=$(kservice_url "command-endpoint")
 CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
 SSO_URL=$(ingress_url "keycloak")
@@ -102,6 +103,19 @@ echo "  http --auth device_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/pu
 if [ "$MQTT" = true ] ; then
   echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}' -V 3"
 fi
+echo
+echo "Send commands to the device"
+echo "---------------------------"
+echo
+echo "After you created a device, try these commands at a shell prompt:"
+echo
+echo "Publish data from the device and specify how long will you wait for a command with 'ttd' parameter (in seconds)"
+echo
+echo "  http --auth device_id:foobar POST $HTTP_ENDPOINT_URL/publish/device_id/foo?ttd=30 temp:=42"
+echo
+echo "Send command to that device from another terminal window:"
+echo
+echo " http POST $COMMAND_ENDPOINT_URL/command/device_id/foo set-temp:=40"
 echo
 
 #
