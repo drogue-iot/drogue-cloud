@@ -33,7 +33,6 @@ pub struct CommandUnsubscribe(pub String);
 /// Recepient of commands
 type Device = Recipient<CommandMessage>;
 
-
 /// Routes commands to appropriate actors
 /// Actors can subscribe/unsubscribe for commands by sending appropriate messages
 #[derive(Default)]
@@ -42,7 +41,6 @@ pub struct CommandRouter {
 }
 
 impl CommandRouter {
-
     /// Subscribe actor to receive messages for a particular device
     fn subscribe(&mut self, id: String, device: Device) {
         log::debug!("Subscribe device for commands '{}'", id);
@@ -79,9 +77,7 @@ impl Handler<CommandMessage> for CommandRouter {
                     log::error!("Failed to route command: {}", e);
                 }
             }
-            _ => {
-                log::debug!("No device '{}' present at this endpoint", &msg.device_id)
-            }
+            _ => log::debug!("No device '{}' present at this endpoint", &msg.device_id),
         }
     }
 }
@@ -108,7 +104,6 @@ impl Handler<CommandUnsubscribe> for CommandRouter {
 
 impl SystemService for CommandRouter {}
 impl Supervised for CommandRouter {}
-
 
 /// Actor for receiving commands
 pub struct CommandHandler {
