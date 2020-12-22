@@ -160,6 +160,11 @@ push: tag-images push-images
 #
 images: build-images tag-images push-images
 
+#
+# Quick local build without tests and pusing images
+#
+quick: build build-images tag-images
+
 
 #
 # Check if we have a container registry set.

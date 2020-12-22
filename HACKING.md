@@ -14,6 +14,20 @@ To build and publish, run:
 
 The makefile will use a build container to perform the actual build.
 
+### In minikube
+
+If you wish to use local minikube image registry, you'll need to point your docker to it
+
+    eval $(minikube -p minikube docker-env)
+
+Additionally, you have to mount your working dir to minikube VM
+
+    minikube mount --mode 0755 $(pwd):$(pwd)
+
+Now, you can build images locally without pushing them to the central registry
+
+    make CONTAINER_REGISTRY=quay.io/your-org quick
+
 ## Deploy Helm charts of local components
 
 ### Drogue Cloud
