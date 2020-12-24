@@ -1165,6 +1165,8 @@ dependencies = [
 name = "drogue-cloud-endpoint-common"
 version = "0.2.0"
 dependencies = [
+ "actix",
+ "actix-broker",
  "actix-web",
  "anyhow",
  "chrono",

@@ -27,7 +27,7 @@ use actix_web_actors::HttpContext;
 use drogue_cloud_endpoint_common::auth::{AuthConfig, DeviceAuthenticator};
 
 use crate::command::CommandHandler;
-use command::{CommandMessage, CommandRouter};
+use drogue_cloud_endpoint_common::command_router::{CommandMessage, CommandRouter};
 
 use cloudevents::event::ExtensionValue;
 use cloudevents_sdk_actix_web::HttpRequestExt;

@@ -7,6 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 
+actix = "0.10"
+actix-broker = "0.3.1"
 actix-web = "3"
 anyhow = "1"
 snafu = "0.6"
