@@ -22,8 +22,10 @@ spec:
           env:
             - name: RUST_LOG
               value: info
-            - name: BIND_ADDR
+            - name: BIND_ADDR_MQTT
               value: "0.0.0.0:8883"
+            - name: BIND_ADDR_HTTP
+              value: "0.0.0.0:8080"
             - name: CERT_FILE
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
@@ -33,6 +35,9 @@ spec:
           ports:
             - containerPort: 8883
               name: endpoint
+              protocol: TCP
+            - containerPort: 8080
+              name: http
               protocol: TCP
           resources:
             limits:

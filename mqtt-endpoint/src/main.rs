@@ -17,14 +17,21 @@ use envconfig::Envconfig;
 use serde_json::json;
 use std::convert::TryInto;
 
+use ntex::http;
+use ntex::web;
+
+use futures::future;
+
 #[derive(Clone, Debug, Envconfig)]
 struct Config {
     #[envconfig(from = "DISABLE_TLS", default = "false")]
     pub disable_tls: bool,
     #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
-    #[envconfig(from = "BIND_ADDR")]
-    pub bind_addr: Option<String>,
+    #[envconfig(from = "BIND_ADDR_MQTT")]
+    pub bind_addr_mqtt: Option<String>,
+    #[envconfig(from = "BIND_ADDR_HTTP", default = "0.0.0.0:8080")]
+    pub bind_addr_http: String,
 }
 
 #[derive(Clone, Debug)]
@@ -56,6 +63,15 @@ impl App {
     }
 }
 
+#[web::post("/command-service")]
+async fn command_service(req: web::HttpRequest) -> http::Response {
+    //let request_event = req.to_event(payload).await?;
+
+    log::info!("Received Event: {:?}", req);
+
+    web::HttpResponse::Ok().finish()
+}
+
 #[ntex::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -72,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let builder = ntex::server::Server::build();
-    let addr = config.bind_addr.as_deref();
+    let addr = config.bind_addr_mqtt.as_deref();
 
     let builder = if !config.disable_tls {
         build_tls(addr, builder, app)?
@@ -80,5 +96,16 @@ async fn main() -> anyhow::Result<()> {
         build(addr, builder, app)?
     };
 
-    Ok(builder.workers(1).run().await?)
+    log::info!("Starting web server");
+
+    let web_server = web::server(|| {
+        let app = web::App::new();
+        app.service(command_service)
+    })
+    .bind(config.bind_addr_http)?
+    .run();
+
+    future::try_join(builder.workers(1).run(), web_server).await?;
+
+    Ok(())
 }

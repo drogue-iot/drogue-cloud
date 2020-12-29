@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: mqtt-command
+  labels:
+    app: mqtt-endpoint
+spec:
+  selector:
+    app: mqtt-endpoint
+  ports:
+    - name: internal
+      protocol: TCP
+      port: 80
+      targetPort: http

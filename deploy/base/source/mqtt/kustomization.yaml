@@ -5,3 +5,5 @@ resources:
 - deployment.yaml
 - service.yaml
 - sink-binding.yaml
+- command-service.yaml
+- command-subscription.yaml
