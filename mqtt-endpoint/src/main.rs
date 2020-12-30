@@ -3,6 +3,7 @@
 mod error;
 mod mqtt;
 mod server;
+mod cloudevents;
 
 use crate::server::{build, build_tls};
 use bytes::Bytes;
@@ -17,8 +18,8 @@ use envconfig::Envconfig;
 use serde_json::json;
 use std::convert::TryInto;
 
-use ntex::http;
 use ntex::web;
+use ntex::http;
 
 use futures::future;
 
@@ -64,10 +65,18 @@ impl App {
 }
 
 #[web::post("/command-service")]
-async fn command_service(req: web::HttpRequest) -> http::Response {
-    //let request_event = req.to_event(payload).await?;
+async fn command_service(
+    req: web::HttpRequest,
+    payload: web::types::Payload,
+) -> http::Response {
 
-    log::info!("Received Event: {:?}", req);
+
+    log::info!("Request: {:?}", req);
+    log::info!("Command: {:?}", payload);
+
+    let request_event = cloudevents::request_to_event(&req, payload).await;
+
+    log::info!("Event: {:?}", request_event);
 
     web::HttpResponse::Ok().finish()
 }

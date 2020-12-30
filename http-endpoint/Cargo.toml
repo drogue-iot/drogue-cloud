@@ -37,7 +37,6 @@ log = "0.4"
 
 cloudevents-sdk = "0.3"
 cloudevents-sdk-actix-web = "0.3"
-cloudevents-sdk-reqwest = "0.3"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-ttn = "0.1.1"
