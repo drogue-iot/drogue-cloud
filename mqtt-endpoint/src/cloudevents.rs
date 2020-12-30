@@ -1,6 +1,4 @@
 use bytes::{Bytes, BytesMut};
-use http::{header, header::HeaderName, HeaderValue};
-use ntex::{web, http::HttpMessage, web::HttpRequest};
 use cloudevents::event::SpecVersion;
 use cloudevents::message::{
     BinaryDeserializer, BinarySerializer, Encoding, MessageAttributeValue, MessageDeserializer,
@@ -8,8 +6,10 @@ use cloudevents::message::{
 };
 use cloudevents::{message, Event};
 use futures::StreamExt;
-use std::convert::TryFrom;
+use http::{header, header::HeaderName, HeaderValue};
 use lazy_static::lazy_static;
+use ntex::{http::HttpMessage, web, web::HttpRequest};
+use std::convert::TryFrom;
 
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -94,10 +94,11 @@ impl<'a> BinaryDeserializer for HttpRequestDeserializer<'a> {
 
         let attributes = spec_version.attribute_names();
 
-        for (hn, hv) in
-            self.req.headers().iter().filter(|(hn, _)| {
-                SPEC_VERSION_HEADER.ne(hn) && hn.as_str().starts_with("ce-")
-            })
+        for (hn, hv) in self
+            .req
+            .headers()
+            .iter()
+            .filter(|(hn, _)| SPEC_VERSION_HEADER.ne(hn) && hn.as_str().starts_with("ce-"))
         {
             let name = &hn.as_str()["ce-".len()..];
 

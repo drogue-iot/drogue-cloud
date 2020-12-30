@@ -1,9 +1,9 @@
 #![type_length_limit = "6000000"]
 
+mod cloudevents;
 mod error;
 mod mqtt;
 mod server;
-mod cloudevents;
 
 use crate::server::{build, build_tls};
 use bytes::Bytes;
@@ -18,8 +18,8 @@ use envconfig::Envconfig;
 use serde_json::json;
 use std::convert::TryInto;
 
-use ntex::web;
 use ntex::http;
+use ntex::web;
 
 use futures::future;
 
@@ -65,12 +65,7 @@ impl App {
 }
 
 #[web::post("/command-service")]
-async fn command_service(
-    req: web::HttpRequest,
-    payload: web::types::Payload,
-) -> http::Response {
-
-
+async fn command_service(req: web::HttpRequest, payload: web::types::Payload) -> http::Response {
     log::info!("Request: {:?}", req);
     log::info!("Command: {:?}", payload);
 
