@@ -4,7 +4,6 @@ mod ttn;
 
 use std::convert::TryInto;
 
-use actix::SystemService;
 use actix_web::middleware::Condition;
 use actix_web::{
     get, http, http::header, middleware, post, web, App, HttpResponse, HttpServer, Responder,
@@ -27,9 +26,8 @@ use actix_web_actors::HttpContext;
 use drogue_cloud_endpoint_common::auth::{AuthConfig, DeviceAuthenticator};
 
 use crate::command::CommandHandler;
-use drogue_cloud_endpoint_common::command_router::{CommandMessage, CommandRouter};
+use drogue_cloud_endpoint_common::command_router::CommandRouter;
 
-use cloudevents::event::ExtensionValue;
 use cloudevents_sdk_actix_web::HttpRequestExt;
 
 #[derive(Envconfig, Clone, Debug)]
@@ -159,30 +157,19 @@ async fn command_service(
     req: web::HttpRequest,
     payload: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let request_event = req.to_event(payload).await?;
+    log::debug!("Req: {:?}", req);
 
-    log::debug!("Received Event: {:?}", request_event);
+    let mut request_event = req.to_event(payload).await?;
+    request_event.set_data(
+        "application/json",
+        String::from_utf8(body.as_ref().to_vec()).unwrap(),
+    );
 
-    let device_id_ext = request_event.extension("device_id");
-
-    match device_id_ext {
-        Some(ExtensionValue::String(device_id)) => {
-            let command_msg = CommandMessage {
-                device_id: device_id.to_string(),
-                command: String::from_utf8(body.as_ref().to_vec()).unwrap(),
-            };
-
-            if let Err(e) = CommandRouter::from_registry().send(command_msg).await {
-                log::error!("Failed to route command: {}", e);
-                HttpResponse::BadRequest().await
-            } else {
-                HttpResponse::Ok().await
-            }
-        }
-        _ => {
-            log::error!("No device-id provided");
-            HttpResponse::BadRequest().await
-        }
+    if let Err(e) = CommandRouter::send(request_event).await {
+        log::error!("Failed to route command: {}", e);
+        HttpResponse::BadRequest().await
+    } else {
+        HttpResponse::Ok().await
     }
 }
 

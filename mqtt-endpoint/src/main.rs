@@ -66,12 +66,12 @@ impl App {
 
 #[web::post("/command-service")]
 async fn command_service(req: web::HttpRequest, payload: web::types::Payload) -> http::Response {
-    log::info!("Request: {:?}", req);
-    log::info!("Command: {:?}", payload);
+    log::debug!("Request: {:?}", req);
 
     let request_event = cloudevents::request_to_event(&req, payload).await;
 
     log::info!("Event: {:?}", request_event);
+    log::info!("Command: {:?}", request_event.unwrap().data());
 
     web::HttpResponse::Ok().finish()
 }

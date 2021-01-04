@@ -5,7 +5,10 @@
 
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
+use cloudevents::event::ExtensionValue;
+use cloudevents::Event;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 
 /// Represents command message passed to the actors
 #[derive(Clone, Message)]
@@ -35,6 +38,30 @@ pub struct CommandRouter {
 }
 
 impl CommandRouter {
+    pub async fn send(event: Event) -> Result<(), String> {
+        let device_id_ext = event.extension("device_id");
+
+        match device_id_ext {
+            Some(ExtensionValue::String(device_id)) => {
+                let command_msg = CommandMessage {
+                    device_id: device_id.to_string(),
+                    command: String::try_from(event.data().unwrap().clone()).unwrap(),
+                };
+
+                if let Err(e) = CommandRouter::from_registry().send(command_msg).await {
+                    log::error!("Failed to route command: {}", e);
+                    Err("Failed to route command".to_string())
+                } else {
+                    Ok(())
+                }
+            }
+            _ => {
+                log::error!("No device-id provided");
+                Err("No device-id provided".to_string())
+            }
+        }
+    }
+
     /// Subscribe actor to receive messages for a particular device
     fn subscribe(&mut self, id: String, device: Device) {
         log::debug!("Subscribe device for commands '{}'", id);
