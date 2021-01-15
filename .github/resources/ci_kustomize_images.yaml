@@ -22,8 +22,6 @@ images:
     newTag: REPLACE-TAG
 
 # https://github.com/kubernetes-sigs/kustomize/issues/1493
-# Todo : add labels to the services.
-# i.e labelSelector: ci-image-pull=never
 # https://github.com/kubernetes-sigs/kustomize/blob/master/examples/patchMultipleObjects.md
 patches:
   - path: image_pull_policy.yaml
@@ -33,4 +31,4 @@ patches:
 # not supported in kubectl -k
 # https://github.com/kubernetes-sigs/kustomize/issues/1373#issuecomment-618439078
 # this works but need to be done after the deployment
-#kubectl get deployments -n drogue-iot -l image-source=build
+# kubectl get deployments -n drogue-iot -l image-source=build
