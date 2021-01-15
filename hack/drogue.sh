@@ -25,9 +25,14 @@ fi
 [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]] && source "$SCRIPTDIR/sso.sh"
 
 # Install Drogue components (sources and services)
-
-kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
-
+# Use kustomize binary in the CI environment
+# https://github.com/kubernetes-sigs/kustomize/issues/1373#issuecomment-618439078
+# TL;DR: kubectl ships an old version of kustomize that doesn't support patching multiple resources.
+if [ -n "$GITHUB_WORKFLOW" ]; then
+  "$SCRIPTDIR/../kustomize" build "$SCRIPTDIR/../deploy/$CLUSTER/" | kubectl -n "$DROGUE_NS" apply -f -
+else
+  kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
+fi
 # Remove the unnecessary and wrong host entry for keycloak ingress
 
 case $CLUSTER in
@@ -60,7 +65,7 @@ case $CLUSTER in
    openshift)
         MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n $DROGUE_NS http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
+        HTTP_ENDPOINT_URL=$(kubectl get ksvc -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.url}' | sed 's/http:/https:/')
         ;;
    *)
         echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
@@ -74,7 +79,7 @@ SSO_URL="$(ingress_url "keycloak")"
 
 # Provide a TLS certificate for the MQTT endpoint
 
-if  [ "$MQTT" = true ] && [ "$(kubectl -n $DROGUE_NS get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] ; then
+if  [ "$MQTT" = true ] && [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] ; then
   if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
     echo "Creating custom certificate..."
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext "subjectAltName = DNS:$MQTT_ENDPOINT_HOST"

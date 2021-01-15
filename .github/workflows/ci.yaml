@@ -5,136 +5,10 @@ on:
     # Must only run on branches that we want to publish
     branches:
       - main
-    # Releases are tags named 'v<version>', and must have the "major.minor.micro", for example: "0.1.0".
-    # Release candidates are tagged as `v<version>-rc<num>`, for example: "0.1.0-rc1".
-    tags:
-      - "v*"
   # Can run on PRs, as we don't publish when building a PR
   pull_request:
 
 jobs:
-  build:
-    runs-on: ubuntu-20.04
-
-    env:
-      CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
-
-    steps:
-
-      # Gather information for build
-
-      - name: Evaluate state
-        id: state
-        run: |
-          test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
-          if [[ "${{ github.event.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo ::set-output name=release::true
-              echo ::set-output name=release::true
-          elif [[ "${{ github.event.ref }}" =~ ^refs/tags/v.*$ ]]; then
-              echo ::set-output name=release::true
-              echo ::set-output name=prerelease::true
-          fi
-
-      - name: Set version
-        if: ${{github.head_ref == ''}}
-        id: version
-        run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo VERSION=$VERSION
-          echo "::set-output name=version::$VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Dump state
-        run: |
-          echo "Tag/version: ${VERSION} / ${{steps.version.outputs.version}}"
-          echo "Should we publish artifacts? - do-publish = ${{steps.state.outputs.do-publish}}"
-          echo "Release? - release = ${{steps.state.outputs.release}}"
-          echo "Pre-release? - prerelease = ${{steps.state.outputs.prerelease}}"
-
-      # Start the actual build
-
-      - uses: actions/checkout@v2
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            .cargo-container-home/registry
-            .cargo-container-home/git
-            target
-          key: ${{ runner.os }}-cargo-container-${{ hashFiles('**/Cargo.lock') }}
-
-      - uses: actions/cache@v2
-        with:
-          path: console-frontend/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Create installer archives
-        if: ${{steps.state.outputs.do-publish}}
-        run: |
-          make -C installer VERSION=$VERSION
-
-      - uses: actions/upload-artifact@v2
-        if: ${{steps.state.outputs.do-publish}}
-        with:
-          name: installers
-          path: installer/build/install-*.zip
-          if-no-files-found: error
-
-      - name: Run build
-        run: |
-          make build
-
-      - name: Run tests
-        run: |
-          make test
-
-      - name: Login to github container repository
-        if: ${{steps.state.outputs.do-publish}}
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build, tag, and push images
-        if: ${{steps.state.outputs.do-publish}}
-        run: |
-          make images "IMAGE_TAG=$VERSION"
-
-      - name: Fix permissions
-        run: |
-          make fix-permissions
-
-      - name: Create Release
-        id: create-release
-        if: ${{ steps.state.outputs.release }}
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          release_name: ${{ steps.version.outputs.version }}
-          draft: true
-          prerelease: ${{steps.state.outputs.prerelease}}
-
-      - name: Upload Release Assets
-        if: ${{ steps.state.outputs.release }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v${{ steps.version.outputs.version }}
-        run: |
-          # add install ZIPs
-          hub release edit -m "" $(find installer/build -type f -name "install-*.zip" -printf "-a %p ") $TAG
-          # finally, remove the draft status
-          hub release edit -m "" --draft=false $TAG
-
   check:
     runs-on: ubuntu-20.04
     steps:
@@ -143,6 +17,7 @@ jobs:
         with:
           path: |
             ~/.cargo/registry
+            .cargo-container-home
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -157,7 +32,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get -y install libsasl2-dev libpq-dev
+          sudo apt-get -y install libsasl2-dev
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
@@ -175,3 +50,91 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
+
+  build:
+    name: build and deploy
+    runs-on: ubuntu-20.04
+    needs: [check]
+    env:
+      CLUSTER: "kind"
+    steps:
+
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .cargo-container-home
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get -y install libsasl2-dev
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+
+      - name: Run build
+        run: |
+          make build
+
+      - name: Run tests
+        run: |
+          make test
+
+      - uses: docker/setup-buildx-action@v1
+
+      - uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-cache-ci
+
+      #todo : move this step from the makefile to the CI makefile.
+      - name: Fix permissions
+        run: make fix-permissions
+
+      - name: Build images
+        run: make -C .github/scripts build-images-ci
+
+      # todo put dev.local into a variable.
+      # "dev.local" prefixed images won't be resolved by the knative operator
+      - name: Tag images
+        run: make tag-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
+
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.1.0
+        with:
+          wait: 300s
+          cluster_name: kind
+
+      - name: load images in Kind
+        run: make -C .github/scripts kind-load-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
+
+      - name: Update kustomize images names
+        run:  .github/scripts/patch_kustomize.sh ${{ github.sha }} dev.local
+
+      - name: Deploy drogue
+        run: ./hack/drogue.sh
+        timeout-minutes: 20
+
+      - name: Collect logs
+        if: failure()
+        run: |
+          kubectl get deployments -n drogue-iot -l '!serving.knative.dev/service'
+          ./.github/scripts/collect_logs.sh /tmp drogue-iot
+
+      - name: Upload artifacts
+        if: failure()
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: drogue-iot-logs
+          path: /tmp/logs

@@ -92,12 +92,23 @@ function wait_for_resource() {
 # TODO: when 10344 is fixed, replace the while loop with the 'kubectl wait'
 function wait_for_ksvc() {
   local resource="$1"
+  if [ -z "$2" ] ; then
+    local timeout=$(($(date +%s) + 600))
+  else
+    local timeout=$(($(date +%s) + $2))
+  fi
   shift
-  while true; do
+
+  while (( ${timeout} > $(date +%s) )) ; do
     if ! kubectl -n "$DROGUE_NS" wait --timeout=60s --for=condition=Ready "ksvc/${resource}"; then
       kubectl -n "$DROGUE_NS" delete deploy -l "serving.knative.dev/service=${resource}"
     else
       break
     fi
   done
+
+  if [ ${timeout} \< $(date +%s) ] ; then
+    echo "Error: timed out while waiting for ${resource} to become ready."
+    exit 1
+  fi
 }
