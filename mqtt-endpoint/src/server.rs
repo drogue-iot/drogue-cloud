@@ -18,17 +18,33 @@ use crate::{
     mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
     App,
 };
+
 use anyhow::Context;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc::Sender;
 
 #[derive(Clone)]
 pub struct Session {
     pub sender: DownstreamSender,
     pub device_id: String,
+    pub devices: Arc<Mutex<HashMap<String, Sender<String>>>>,
+    pub tx: Sender<String>,
 }
 
 impl Session {
-    pub fn new(sender: DownstreamSender, device_id: String) -> Self {
-        Session { sender, device_id }
+    pub fn new(
+        sender: DownstreamSender,
+        device_id: String,
+        devices: Arc<Mutex<HashMap<String, Sender<String>>>>,
+        tx: Sender<String>,
+    ) -> Self {
+        Session {
+            sender,
+            device_id,
+            devices,
+            tx,
+        }
     }
 }
 
@@ -56,6 +72,7 @@ macro_rules! create_server {
     ($app:expr) => {{
         let app3 = $app.clone();
         let app5 = $app.clone();
+
         MqttServer::new()
             // MQTTv3
             .v3(v3::MqttServer::new(fn_factory_with_config(move |_| {

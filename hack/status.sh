@@ -113,6 +113,10 @@ echo "Publish data from the device and specify how long will you wait for a comm
 echo
 echo "  http --auth device_id:foobar POST $HTTP_ENDPOINT_URL/publish/device_id/foo?ttd=30 temp:=42"
 echo
+echo "Or subscribe with the MQTT device"
+echo
+echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id -pw foobar -i device_id -s --cafile tls.crt -t cmd -V 3"
+echo
 echo "Send command to that device from another terminal window:"
 echo
 echo " http POST $COMMAND_ENDPOINT_URL/command/device_id/foo set-temp:=40"

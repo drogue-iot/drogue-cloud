@@ -1,5 +1,8 @@
 use crate::{error::ServerError, server::Session, App};
 
+use bytes::Bytes;
+use bytestring::ByteString;
+
 use ntex_mqtt::{
     types::QoS,
     v3,
@@ -15,6 +18,7 @@ use drogue_cloud_endpoint_common::{
 };
 
 use std::fmt::Debug;
+use tokio::sync::mpsc;
 
 pub async fn connect_v3<Io>(
     connect: v3::Connect<Io>,
@@ -31,7 +35,32 @@ pub async fn connect_v3<Io>(
         )
         .await?
     {
-        auth::Outcome::Pass(_) => Ok(connect.ack(Session::new(app.downstream, device_id), false)),
+        auth::Outcome::Pass(_) => {
+            let (tx, mut rx) = mpsc::channel(32);
+
+            let session = Session::new(app.downstream, device_id.clone(), app.devices.clone(), tx);
+
+            let sink = connect.sink().clone();
+            ntex::rt::spawn(async move {
+                while let Some(cmd) = rx.recv().await {
+                    match sink
+                        .publish(ByteString::from_static("cmd"), Bytes::from(cmd))
+                        .send_at_least_once()
+                        .await
+                    {
+                        Ok(_) => log::debug!(
+                            "Command sent to device subscription {:?}",
+                            device_id.clone()
+                        ),
+                        Err(e) => {
+                            log::error!("Failed to send a command to device subscription {:?}", e)
+                        }
+                    }
+                }
+            });
+
+            Ok(connect.ack(session, false))
+        }
         auth::Outcome::Fail => Ok(connect.bad_username_or_pwd()),
     }
 }
@@ -52,11 +81,32 @@ pub async fn connect_v5<Io>(
         .await?
     {
         auth::Outcome::Pass(_) => {
-            Ok(connect
-                .ack(Session::new(app.downstream, device_id))
-                .with(|ack| {
-                    ack.wildcard_subscription_available = Some(false);
-                }))
+            let (tx, mut rx) = mpsc::channel(32);
+
+            let session = Session::new(app.downstream, device_id.clone(), app.devices.clone(), tx);
+
+            let sink = connect.sink().clone();
+            ntex::rt::spawn(async move {
+                while let Some(cmd) = rx.recv().await {
+                    match sink
+                        .publish(ByteString::from_static("cmd"), Bytes::from(cmd))
+                        .send_at_least_once()
+                        .await
+                    {
+                        Ok(_) => log::debug!(
+                            "Command sent to device subscription {:?}",
+                            device_id.clone()
+                        ),
+                        Err(e) => {
+                            log::error!("Failed to send a command to device subscription {:?}", e)
+                        }
+                    }
+                }
+            });
+
+            Ok(connect.ack(session).with(|ack| {
+                ack.wildcard_subscription_available = Some(false);
+            }))
         }
         auth::Outcome::Fail => Ok(connect.failed(ConnectAckReason::BadUserNameOrPassword)),
     }
@@ -139,7 +189,7 @@ pub async fn publish_v3(
 }
 
 pub async fn control_v3(
-    _: v3::Session<Session>,
+    session: v3::Session<Session>,
     control: v3::ControlMessage,
 ) -> Result<v3::ControlResult, ServerError> {
     match control {
@@ -149,6 +199,18 @@ pub async fn control_v3(
             s.iter_mut().for_each(|mut sub| {
                 sub.subscribe(QoS::AtLeastOnce);
             });
+
+            let mut devices = session.state().devices.lock().unwrap();
+            devices.insert(
+                session.state().device_id.clone(),
+                session.state().tx.clone(),
+            );
+
+            log::debug!(
+                "Device '{:?}' subscribed to receive commands",
+                session.state().device_id.clone()
+            );
+
             Ok(s.ack())
         }
         v3::ControlMessage::Unsubscribe(u) => Ok(u.ack()),
@@ -157,7 +219,7 @@ pub async fn control_v3(
 }
 
 pub async fn control_v5<E: Debug>(
-    _: v5::Session<Session>,
+    session: v5::Session<Session>,
     control: v5::ControlMessage<E>,
 ) -> Result<v5::ControlResult, ServerError> {
     // log::info!("Control message: {:?}", control);
@@ -172,6 +234,18 @@ pub async fn control_v5<E: Debug>(
             s.iter_mut().for_each(|mut sub| {
                 sub.subscribe(QoS::AtLeastOnce);
             });
+
+            let mut devices = session.state().devices.lock().unwrap();
+            devices.insert(
+                session.state().device_id.clone(),
+                session.state().tx.clone(),
+            );
+
+            log::debug!(
+                "Device '{:?}' subscribed to receive commands",
+                session.state().device_id.clone()
+            );
+
             Ok(s.ack())
         }
         v5::ControlMessage::Unsubscribe(u) => Ok(u.ack()),

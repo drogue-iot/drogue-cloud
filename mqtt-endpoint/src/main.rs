@@ -1,6 +1,6 @@
 #![type_length_limit = "6000000"]
 
-mod cloudevents;
+mod cloudevents_sdk_ntex;
 mod error;
 mod mqtt;
 mod server;
@@ -16,12 +16,16 @@ use drogue_cloud_endpoint_common::{
 };
 use envconfig::Envconfig;
 use serde_json::json;
+use std::collections::HashMap;
 use std::convert::TryInto;
 
 use ntex::http;
 use ntex::web;
 
+use cloudevents::event::ExtensionValue;
 use futures::future;
+use std::convert::TryFrom;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone, Debug, Envconfig)]
 struct Config {
@@ -39,6 +43,7 @@ struct Config {
 pub struct App {
     pub downstream: DownstreamSender,
     pub authenticator: Option<DeviceAuthenticator>,
+    pub devices: Arc<Mutex<HashMap<String, tokio::sync::mpsc::Sender<String>>>>,
 }
 
 impl App {
@@ -65,15 +70,55 @@ impl App {
 }
 
 #[web::post("/command-service")]
-async fn command_service(req: web::HttpRequest, payload: web::types::Payload) -> http::Response {
-    log::debug!("Request: {:?}", req);
+async fn command_service(
+    req: web::HttpRequest,
+    payload: web::types::Payload,
+    app: web::types::Data<App>,
+) -> http::Response {
+    log::debug!("Command request: {:?}", req);
 
-    let request_event = cloudevents::request_to_event(&req, payload).await;
+    let request_event = cloudevents_sdk_ntex::request_to_event(&req, payload)
+        .await
+        .unwrap();
 
-    log::info!("Event: {:?}", request_event);
-    log::info!("Command: {:?}", request_event.unwrap().data());
+    let devices = app.devices.lock().unwrap();
 
-    web::HttpResponse::Ok().finish()
+    let device_id_ext = request_event.extension("device_id");
+
+    match device_id_ext {
+        Some(ExtensionValue::String(device_id)) => {
+            if let Some(sender) = devices.get(device_id) {
+                if let Some(command) = request_event.data() {
+                    match sender
+                        .send(String::try_from(command.clone()).unwrap())
+                        .await
+                    {
+                        Ok(_) => {
+                            log::debug!("Command sent to device {:?}", device_id);
+                            web::HttpResponse::Ok().finish()
+                        }
+                        Err(e) => {
+                            log::error!("Failed to send a command {:?}", e);
+                            web::HttpResponse::BadRequest().finish()
+                        }
+                    }
+                } else {
+                    log::error!("Failed to route command: No command provided!");
+                    web::HttpResponse::BadRequest().finish()
+                }
+            } else {
+                log::debug!(
+                    "Failed to route command: No device {:?} found on this endpoint!",
+                    device_id
+                );
+                web::HttpResponse::Ok().finish()
+            }
+        }
+        _ => {
+            log::error!("Failed to route command: No device provided!");
+            web::HttpResponse::BadRequest().finish()
+        }
+    }
 }
 
 #[ntex::main]
@@ -89,7 +134,10 @@ async fn main() -> anyhow::Result<()> {
             true => Some(AuthConfig::init_from_env()?.try_into()?),
             false => None,
         },
+        devices: Arc::new(Mutex::new(HashMap::new())),
     };
+
+    let web_app = app.clone();
 
     let builder = ntex::server::Server::build();
     let addr = config.bind_addr_mqtt.as_deref();
@@ -102,9 +150,10 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting web server");
 
-    let web_server = web::server(|| {
-        let app = web::App::new();
-        app.service(command_service)
+    let web_server = web::server(move || {
+        web::App::new()
+            .data(web_app.clone())
+            .service(command_service)
     })
     .bind(config.bind_addr_http)?
     .run();
