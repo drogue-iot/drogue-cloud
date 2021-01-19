@@ -11,6 +11,7 @@ members = [
     "device-management-service",
     "database-common",
     "service-common",
+    "service-api",
     "command-endpoint",
 ]
 
