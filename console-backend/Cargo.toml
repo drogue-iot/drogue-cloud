@@ -1,13 +1,13 @@
 [package]
-name = "console-backend"
+name = "drogue-cloud-console-backend"
 version = "0.2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
 
 [dependencies]
 
-console-common = { path = "../console-common" }
-service-common = { path = "../service-common" }
+drogue-cloud-console-common = { path = "../console-common" }
+drogue-cloud-service-common = { path = "../service-common" }
 
 actix = "0.10"
 actix-cors = "0.5"

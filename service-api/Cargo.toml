@@ -1,0 +1,12 @@
+[package]
+name = "drogue-cloud-service-api"
+version = "0.1.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2018"
+
+[dependencies]
+
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"

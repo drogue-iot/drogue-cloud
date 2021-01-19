@@ -1,5 +1,5 @@
 [package]
-name = "console-frontend"
+name = "drogue-cloud-console-frontend"
 version = "0.2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1"
 
-console-common = { path = "../console-common" }
+drogue-cloud-console-common = { path = "../console-common" }
 
 yew = "0.17"
 yew-router = "0.14"

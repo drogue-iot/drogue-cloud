@@ -1,5 +1,5 @@
 [package]
-name = "console-common"
+name = "drogue-cloud-console-common"
 version = "0.2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"

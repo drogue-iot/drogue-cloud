@@ -1,5 +1,5 @@
 [package]
-name = "mqtt-endpoint"
+name = "drogue-cloud-mqtt-endpoint"
 version = "0.2.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
