@@ -1,7 +1,7 @@
 use crate::service::ServiceError;
 use async_trait::async_trait;
 use deadpool_postgres::ClientWrapper;
-use drogue_cloud_service_api::{Tenant, TenantData};
+use drogue_cloud_service_api::Tenant;
 use tokio_postgres::types::Json;
 use tokio_postgres::Row;
 
