@@ -108,7 +108,7 @@ impl AuthenticationService for PostgresAuthenticationService {
             match validate_credential(&tenant, &device, &request.credential) {
                 true => Outcome::Pass {
                     tenant,
-                    device: strip_creds(device),
+                    device: strip_credentials(device),
                 },
                 false => Outcome::Fail,
             },
@@ -121,16 +121,23 @@ impl AuthenticationService for PostgresAuthenticationService {
     }
 }
 
-fn strip_creds(mut device: Device) -> Device {
+fn strip_credentials(mut device: Device) -> Device {
     device.data.credentials.clear();
     device
 }
 
-fn validate_credential(tenant: &Tenant, device: &Device, cred: &Credential) -> bool {
+fn validate_credential(_: &Tenant, device: &Device, cred: &Credential) -> bool {
     match cred {
         Credential::Password(provided_password) => {
             device.data.credentials.iter().any(|c| match c {
-                Credential::Password(stored_password) => provided_password == stored_password,
+                // match passwords
+                Credential::Password(stored_password) => stored_password == provided_password,
+                // match passwords if the stored username is equal to the device id
+                Credential::UsernamePassword {
+                    username: stored_username,
+                    password: stored_password,
+                } if stored_username == &device.id => stored_password == provided_password,
+                // no match
                 _ => false,
             })
         }
@@ -138,10 +145,16 @@ fn validate_credential(tenant: &Tenant, device: &Device, cred: &Credential) -> b
             username: provided_username,
             password: provided_password,
         } => device.data.credentials.iter().any(|c| match c {
+            // match passwords if the provided username is equal to the device id
+            Credential::Password(stored_password) if provided_username == &device.id => {
+                stored_password == provided_password
+            }
+            // match username/password against username/password
             Credential::UsernamePassword {
                 username: stored_username,
                 password: stored_password,
             } => stored_username == provided_username && stored_password == provided_password,
+            // no match
             _ => false,
         }),
         _ => false,
