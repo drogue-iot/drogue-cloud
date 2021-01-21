@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS tenants;
+DROP TABLE IF EXISTS tenant_aliases;
+
+DROP TABLE IF EXISTS devices;
+DROP TABLE IF EXISTS device_aliases;
