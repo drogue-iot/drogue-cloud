@@ -1,28 +1,75 @@
-use serde::{Deserialize, Serialize};
-use snafu::Snafu;
-
-use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
+use deadpool_postgres::PoolError;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use tokio_postgres::error::SqlState;
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum ServiceError {
-    #[snafu(display("Database error: {}", source))]
-    DatabaseError { source: diesel::result::Error },
-    #[snafu(display("Invalid database state"))]
-    InvalidState,
-    #[snafu(display("Conflict: {}", reason))]
-    Conflict {
-        reason: String,
-        source: diesel::result::Error,
-    },
+    #[error("Internal error: {0}")]
+    Internal(String),
+    #[error("Pool error: {0}")]
+    Pool(#[from] PoolError),
+    #[error("Database error: {0}")]
+    Database(#[from] tokio_postgres::Error),
+    #[error("Not authorized")]
+    NotAuthorized,
+    #[error("Not found")]
+    NotFound,
+    #[error("Conflict")]
+    Conflict,
+    #[error("Referenced a non-existing entity")]
+    ReferenceNotFound,
 }
 
 impl ServiceError {
-    pub fn name(&self) -> &str {
+    /// return the underlying database error code, if there is one
+    pub fn db_code(&self) -> Option<&str> {
+        self.sql_state().map(|state| state.code())
+    }
+
+    /// return the underlying database error state, if there is one
+    pub fn sql_state(&self) -> Option<&SqlState> {
         match self {
-            ServiceError::DatabaseError { .. } => "DatabaseError",
-            ServiceError::InvalidState => "InvalidState",
-            ServiceError::Conflict { .. } => "Conflict",
+            ServiceError::Database(err) => err.code(),
+            _ => None,
+        }
+    }
+}
+
+impl ResponseError for ServiceError {
+    fn error_response(&self) -> HttpResponse {
+        match self {
+            ServiceError::Internal(message) => {
+                HttpResponse::InternalServerError().json(ErrorResponse {
+                    error: "InternalError".into(),
+                    message: message.clone(),
+                })
+            }
+            ServiceError::Pool(..) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
+                error: "PoolError".into(),
+                message: format!("{}", self),
+            }),
+            ServiceError::Database(..) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
+                error: "DatabaseError".into(),
+                message: format!("{}", self),
+            }),
+            ServiceError::NotAuthorized => HttpResponse::Forbidden().json(ErrorResponse {
+                error: "AuthenticationError".into(),
+                message: format!("{}", self),
+            }),
+            ServiceError::NotFound => HttpResponse::NotFound().json(ErrorResponse {
+                error: "NotFound".into(),
+                message: format!("{}", self),
+            }),
+            ServiceError::Conflict => HttpResponse::Conflict().json(ErrorResponse {
+                error: "Conflict".into(),
+                message: format!("{}", self),
+            }),
+            ServiceError::ReferenceNotFound => HttpResponse::NotFound().json(ErrorResponse {
+                error: "ReferenceNotFound".into(),
+                message: format!("{}", self),
+            }),
         }
     }
 }
@@ -31,38 +78,4 @@ impl ServiceError {
 pub struct ErrorResponse {
     pub error: String,
     pub message: String,
-}
-
-impl ResponseError for ServiceError {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            ServiceError::DatabaseError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-            ServiceError::InvalidState => StatusCode::INTERNAL_SERVER_ERROR,
-            ServiceError::Conflict { .. } => StatusCode::CONFLICT,
-        }
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        let status_code = self.status_code();
-        let error_response = ErrorResponse {
-            message: self.to_string(),
-            error: self.name().into(),
-        };
-        HttpResponse::build(status_code).json(error_response)
-    }
-}
-
-impl From<diesel::result::Error> for ServiceError {
-    fn from(source: diesel::result::Error) -> Self {
-        match source {
-            diesel::result::Error::DatabaseError(
-                diesel::result::DatabaseErrorKind::UniqueViolation,
-                _,
-            ) => ServiceError::Conflict {
-                reason: "Duplicate item".into(),
-                source,
-            },
-            _ => ServiceError::DatabaseError { source },
-        }
-    }
 }

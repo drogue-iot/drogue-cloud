@@ -6,8 +6,11 @@ use log::LevelFilter;
 use serde_json::json;
 use serial_test::serial;
 use std::{env, time::Duration};
-use testcontainers::images::generic::WaitFor;
-use testcontainers::{clients, images::generic::GenericImage, Container, Docker};
+use testcontainers::{
+    clients,
+    images::generic::{GenericImage, WaitFor},
+    Container, Docker,
+};
 
 pub struct PostgresRunner<'c, C: Docker> {
     pub config: service::AuthenticationServiceConfig,
@@ -143,7 +146,7 @@ async fn test_auth_passes_password_with_device_username() -> anyhow::Result<()> 
     test_auth!(AuthenticationRequest{
         tenant: "tenant1".into(),
         device: "device1".into(),
-        credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into()}
+        credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into(), unique: false}
     } => json!({"pass":{
         "tenant": {"id": "tenant1", "data": {}},
         "device": {"tenant_id": "tenant1", "id": "device1", "data": {}}}
@@ -158,7 +161,7 @@ async fn test_auth_fails_password_with_non_matching_device_username() -> anyhow:
     test_auth!(AuthenticationRequest{
         tenant: "tenant1".into(),
         device: "device1".into(),
-        credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into()}
+        credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into(), unique: false}
     } => json!("fail"))
 }
 
@@ -198,7 +201,7 @@ async fn test_auth_passes_username_password() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             tenant: "tenant1".into(),
             device: "device3".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()}
+            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into(),  unique: false}
     } => json!({"pass":{
         "tenant": {"id": "tenant1", "data": {}},
         "device": {"tenant_id": "tenant1", "id": "device3", "data": {}}}
@@ -211,7 +214,7 @@ async fn test_auth_passes_username_password_by_alias() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             tenant: "tenant1".into(),
             device: "12:34:56".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()}
+            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into(),  unique: false}
     } => json!({"pass":{
         "tenant": {"id": "tenant1", "data": {}},
         "device": {"tenant_id": "tenant1", "id": "device3", "data": {}}}

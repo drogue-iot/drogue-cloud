@@ -1,5 +1,3 @@
-use crate::error::ServiceError;
-
 use anyhow::Context;
 use envconfig::Envconfig;
 use failure::Fail;
@@ -10,6 +8,7 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use thiserror::Error;
 use url::Url;
 
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
@@ -27,6 +26,14 @@ pub struct AuthConfig {
     // Note: "roles" may be required for the "aud" claim when using Keycloak
     #[envconfig(from = "SCOPES", default = "openid profile email")]
     pub scopes: String,
+}
+
+#[derive(Debug, Error)]
+pub enum AuthenticatorError {
+    #[error("Missing authenticator instance")]
+    Missing,
+    #[error("Authentication failed")]
+    Failed,
 }
 
 pub struct Authenticator {
@@ -52,20 +59,15 @@ impl Debug for Authenticator {
 }
 
 impl Authenticator {
-    pub async fn validate_token(&self, token: String) -> Result<(), actix_web::Error> {
-        let client = self
-            .client
-            .as_ref()
-            .ok_or_else(|| ServiceError::InternalError {
-                message: "Missing an authenticator, when performing authentication".into(),
-            })?;
+    pub async fn validate_token(&self, token: String) -> Result<(), AuthenticatorError> {
+        let client = self.client.as_ref().ok_or(AuthenticatorError::Missing)?;
 
         let mut token = Jws::new_encoded(&token);
         match client.decode_token(&mut token) {
             Ok(_) => Ok(()),
             Err(err) => {
                 log::info!("Failed to decode token: {}", err);
-                Err(ServiceError::AuthenticationError)
+                Err(AuthenticatorError::Failed)
             }
         }?;
 
@@ -75,7 +77,7 @@ impl Authenticator {
             Ok(_) => Ok(()),
             Err(err) => {
                 log::info!("Validation failed: {}", err);
-                Err(ServiceError::AuthenticationError.into())
+                Err(AuthenticatorError::Failed)
             }
         }
     }

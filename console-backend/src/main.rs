@@ -7,8 +7,10 @@ mod spy;
 use crate::endpoints::{
     EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
 };
-use service_common::error::ServiceError;
-use service_common::openid::{create_client, AuthConfig, Authenticator};
+use drogue_cloud_service_common::error::ServiceError;
+use drogue_cloud_service_common::openid::{
+    create_client, AuthConfig, Authenticator, AuthenticatorError,
+};
 
 use actix_cors::Cors;
 use actix_web::{
@@ -78,8 +80,19 @@ async fn main() -> anyhow::Result<()> {
                     message: "Missing authenticator instance".into(),
                 })?;
 
-                authenticator.validate_token(token).await?;
-                Ok(req)
+                // authenticator.validate_token(token).await?;
+                // Ok(req)
+
+                match authenticator.validate_token(token).await {
+                    Ok(_) => Ok(req),
+                    Err(AuthenticatorError::Missing) => Err(ServiceError::InternalError {
+                        message: "Missing authenticator".into(),
+                    }
+                    .into()),
+                    Err(AuthenticatorError::Failed) => {
+                        Err(ServiceError::AuthenticationError.into())
+                    }
+                }
             }
         });
 

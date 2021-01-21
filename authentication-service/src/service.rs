@@ -1,11 +1,12 @@
-use crate::db::{device::*, tenant::*};
-use actix_web::{HttpResponse, ResponseError};
+use actix_web::ResponseError;
 use async_trait::async_trait;
-use deadpool_postgres::{Pool, PoolError};
+use deadpool_postgres::Pool;
+use drogue_cloud_database_common::{
+    error::ServiceError,
+    models::{device::*, tenant::*},
+};
 use drogue_cloud_service_api::{AuthenticationRequest, Credential, Device, Outcome, Tenant};
-use drogue_cloud_service_common::error::ErrorResponse;
 use serde::Deserialize;
-use thiserror::Error;
 use tokio_postgres::NoTls;
 
 #[async_trait]
@@ -26,39 +27,6 @@ impl AuthenticationServiceConfig {
         let mut cfg = config::Config::new();
         cfg.merge(config::Environment::new().separator("__"))?;
         cfg.try_into()
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ServiceError {
-    #[error("Internal error: {0}")]
-    Internal(String),
-    #[error("Pool error: {0}")]
-    Pool(#[from] PoolError),
-    #[error("Database error: {0}")]
-    Database(#[from] tokio_postgres::Error),
-}
-
-impl ResponseError for ServiceError {
-    fn error_response(&self) -> HttpResponse {
-        match self {
-            ServiceError::Internal(message) => {
-                HttpResponse::InternalServerError().json(ErrorResponse {
-                    error: "InternalError".into(),
-                    message: message.clone(),
-                })
-            }
-            ServiceError::Pool(cause) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
-                error: "PoolError".into(),
-                message: format!("{}", cause),
-            }),
-            ServiceError::Database(cause) => {
-                HttpResponse::ServiceUnavailable().json(ErrorResponse {
-                    error: "DatabaseError".into(),
-                    message: format!("{}", cause),
-                })
-            }
-        }
     }
 }
 
@@ -136,6 +104,7 @@ fn validate_credential(_: &Tenant, device: &Device, cred: &Credential) -> bool {
                 Credential::UsernamePassword {
                     username: stored_username,
                     password: stored_password,
+                    ..
                 } if stored_username == &device.id => stored_password == provided_password,
                 // no match
                 _ => false,
@@ -144,6 +113,7 @@ fn validate_credential(_: &Tenant, device: &Device, cred: &Credential) -> bool {
         Credential::UsernamePassword {
             username: provided_username,
             password: provided_password,
+            ..
         } => device.data.credentials.iter().any(|c| match c {
             // match passwords if the provided username is equal to the device id
             Credential::Password(stored_password) if provided_username == &device.id => {
@@ -153,6 +123,7 @@ fn validate_credential(_: &Tenant, device: &Device, cred: &Credential) -> bool {
             Credential::UsernamePassword {
                 username: stored_username,
                 password: stored_password,
+                ..
             } => stored_username == provided_username && stored_password == provided_password,
             // no match
             _ => false,

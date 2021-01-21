@@ -112,6 +112,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-cors"
+version = "0.6.0-beta.1"
+source = "git+https://github.com/ctron/actix-extras?rev=8718685f0237ac8cf39c8f73a272bd1d7205ba8e#8718685f0237ac8cf39c8f73a272bd1d7205ba8e"
+dependencies = [
+ "actix-web 4.0.0-beta.1",
+ "derive_more",
+ "futures-util",
+ "log",
+ "once_cell",
+ "tinyvec",
+]
+
+[[package]]
 name = "actix-http"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -522,11 +535,23 @@ dependencies = [
 [[package]]
 name = "actix-web-httpauth"
 version = "0.5.0"
-source = "git+https://github.com/actix/actix-extras?rev=cbfd5d94ee9ed70fb47dabfb221785d4625fe6de#cbfd5d94ee9ed70fb47dabfb221785d4625fe6de"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "536a75d767c5c2b3e64d3f569621f38ed7609359a0c82d149c88290a6ba41b22"
 dependencies = [
+ "actix-service 1.0.6",
  "actix-web 3.3.2",
- "base64 0.13.0",
+ "base64 0.12.3",
  "bytes 0.5.6",
+ "futures-util",
+]
+
+[[package]]
+name = "actix-web-httpauth"
+version = "0.6.0-beta.1"
+source = "git+https://github.com/ctron/actix-extras?rev=8718685f0237ac8cf39c8f73a272bd1d7205ba8e#8718685f0237ac8cf39c8f73a272bd1d7205ba8e"
+dependencies = [
+ "actix-web 4.0.0-beta.1",
+ "base64 0.13.0",
  "futures-util",
 ]
 
@@ -1245,30 +1270,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diesel"
-version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=06494e8bdfe774bac9be5cab488b3d0cbec97f4e#06494e8bdfe774bac9be5cab488b3d0cbec97f4e"
-dependencies = [
- "bitflags",
- "byteorder",
- "diesel_derives",
- "itoa",
- "pq-sys",
- "r2d2",
- "serde_json",
-]
-
-[[package]]
-name = "diesel_derives"
-version = "2.0.0"
-source = "git+https://github.com/diesel-rs/diesel?rev=06494e8bdfe774bac9be5cab488b3d0cbec97f4e#06494e8bdfe774bac9be5cab488b3d0cbec97f4e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1330,7 +1331,7 @@ version = "0.2.0"
 dependencies = [
  "actix-rt 2.0.0-beta.2",
  "actix-web 4.0.0-beta.1",
- "actix-web-httpauth",
+ "actix-web-httpauth 0.5.0",
  "anyhow",
  "async-trait",
  "chrono",
@@ -1366,7 +1367,7 @@ dependencies = [
  "actix-rt 1.1.1",
  "actix-service 1.0.6",
  "actix-web 3.3.2",
- "actix-web-httpauth",
+ "actix-web-httpauth 0.5.0",
  "anyhow",
  "awc 2.0.3",
  "cloudevents-sdk",
@@ -1393,9 +1394,9 @@ name = "drogue-cloud-console-backend"
 version = "0.2.0"
 dependencies = [
  "actix",
- "actix-cors",
+ "actix-cors 0.5.4",
  "actix-web 3.3.2",
- "actix-web-httpauth",
+ "actix-web-httpauth 0.5.0",
  "anyhow",
  "async-trait",
  "chrono",
@@ -1468,26 +1469,35 @@ dependencies = [
 name = "drogue-cloud-database-common"
 version = "0.2.0"
 dependencies = [
- "actix-web 3.3.2",
+ "actix-web 4.0.0-beta.1",
  "anyhow",
- "diesel",
+ "async-trait",
+ "deadpool",
+ "deadpool-postgres",
+ "drogue-cloud-service-api",
  "log",
- "r2d2",
  "serde 1.0.120",
  "serde_json",
- "snafu",
+ "thiserror",
+ "tokio-postgres",
 ]
 
 [[package]]
 name = "drogue-cloud-device-management-service"
 version = "0.2.0"
 dependencies = [
- "actix-cors",
- "actix-web 3.3.2",
- "actix-web-httpauth",
+ "actix-cors 0.6.0-beta.1",
+ "actix-rt 2.0.0-beta.2",
+ "actix-web 4.0.0-beta.1",
+ "actix-web-httpauth 0.6.0-beta.1",
  "anyhow",
+ "async-trait",
+ "config",
+ "deadpool",
+ "deadpool-postgres",
  "dotenv",
  "drogue-cloud-database-common",
+ "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger",
  "envconfig",
@@ -1497,6 +1507,9 @@ dependencies = [
  "rust-crypto",
  "serde 1.0.120",
  "serde_json",
+ "serial_test",
+ "testcontainers",
+ "tokio-postgres",
 ]
 
 [[package]]
@@ -1535,7 +1548,7 @@ dependencies = [
  "actix-service 1.0.6",
  "actix-web 3.3.2",
  "actix-web-actors",
- "actix-web-httpauth",
+ "actix-web-httpauth 0.5.0",
  "anyhow",
  "awc 2.0.3",
  "cloudevents-sdk",
@@ -1612,6 +1625,7 @@ dependencies = [
  "reqwest",
  "serde 1.0.120",
  "snafu",
+ "thiserror",
  "url",
 ]
 
@@ -3298,15 +3312,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 
 [[package]]
-name = "pq-sys"
-version = "0.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ac25eee5a0582f45a67e837e350d784e7003bd29a5f460796772061ca49ffda"
-dependencies = [
- "vcpkg",
-]
-
-[[package]]
 name = "pretty-hex"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3379,17 +3384,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "991431c3519a3f36861882da93630ce66b52918dcf1b8e2fd66b397fc96f28df"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "r2d2"
-version = "0.8.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "545c5bc2b880973c9c10e4067418407a0ccaa3091781d1671d46eb35107cb26f"
-dependencies = [
- "log",
- "parking_lot",
- "scheduled-thread-pool",
 ]
 
 [[package]]
@@ -3774,15 +3768,6 @@ checksum = "8f05ba609c234e60bee0d547fe94a4c7e9da733d1c962cf6e59efa4cd9c8bc75"
 dependencies = [
  "lazy_static",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "scheduled-thread-pool"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc6f74fd1204073fa02d5d5d68bec8021be4c38690b61264b2fdb48083d0e7d7"
-dependencies = [
- "parking_lot",
 ]
 
 [[package]]

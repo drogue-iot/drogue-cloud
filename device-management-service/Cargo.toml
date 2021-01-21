@@ -7,9 +7,11 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 
-actix-web = "3"
-actix-cors = "0.5"
-actix-web-httpauth = "0.5"
+async-trait = "0.1"
+
+actix-web = "4.0.0-beta.1" # we need v4 as we need tokio 1
+actix-cors = "0.6.0-beta.1"
+actix-web-httpauth = "0.6.0-beta.1"
 
 dotenv = "0.15"
 envconfig = "0.9"
@@ -24,4 +26,15 @@ rand = "0.7"
 
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-api = { path = "../service-api" }
 
+config = "0.10"
+
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+
+[dev-dependencies]
+actix-rt = "2.0.0-beta.2"
+testcontainers = "0.11"
+serial_test = "0.5"

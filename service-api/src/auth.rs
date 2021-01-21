@@ -46,7 +46,12 @@ pub struct AuthenticationRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Credential {
     #[serde(rename = "user")]
-    UsernamePassword { username: String, password: String },
+    UsernamePassword {
+        username: String,
+        password: String,
+        #[serde(default)]
+        unique: bool,
+    },
     #[serde(rename = "pass")]
     Password(String),
     #[serde(rename = "cert")]
