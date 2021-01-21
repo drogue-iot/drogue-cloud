@@ -25,9 +25,9 @@ use rdkafka::{
     consumer::{stream_consumer::StreamConsumer, CommitMode, Consumer, DefaultConsumerContext},
 };
 
+use drogue_cloud_service_common::openid::Authenticator;
 use rdkafka::message::BorrowedMessage;
 use serde::Deserialize;
-use service_common::openid::Authenticator;
 use std::time::Duration;
 use uuid::Uuid;
 

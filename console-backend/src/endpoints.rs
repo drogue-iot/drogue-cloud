@@ -1,7 +1,7 @@
 use crate::kube::knative;
 
 use async_trait::async_trait;
-use console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
+use drogue_cloud_console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
 use envconfig::Envconfig;
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;

@@ -1,5 +1,5 @@
-use service_common::error::ErrorResponse;
-use service_common::openid::Authenticator;
+use drogue_cloud_service_common::error::ErrorResponse;
+use drogue_cloud_service_common::openid::Authenticator;
 
 use actix_web::{get, http, web, HttpResponse, Responder};
 use openid::Bearer;
