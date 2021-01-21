@@ -2,9 +2,6 @@ name: Release
 
 on:
   push:
-    # Must only run on branches that we want to publish
-    branches:
-      - main
     # Releases are tags named 'v<version>', and must have the "major.minor.micro", for example: "0.1.0".
     # Release candidates are tagged as `v<version>-rc<num>`, for example: "0.1.0-rc1".
     tags:
