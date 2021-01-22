@@ -16,5 +16,5 @@ build-image-ci($(IMAGES)):
 # Load local images into kind.
 #
 kind-load-images: kind-load-images($(IMAGES))
-kind-load-images($(IMAGES)):
+kind-load-images($(IMAGES)): require-container-registry
 	kind load docker-image $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
