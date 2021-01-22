@@ -15,6 +15,7 @@ tmp/
 # Build
 
 .cargo-container-home/
+build/
 
 # Example files
 

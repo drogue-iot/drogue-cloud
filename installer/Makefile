@@ -29,13 +29,13 @@ install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
 	cp -pr $(BASEDIR)/hack/* $(OUTDIR)/stage/$(INSTALLER)/scripts
 	# FIXME: remove release related script for now, reconsider mixing scripts
-	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/inject-release-images.py
+	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/replace-images.py
 	cp -pr $(BASEDIR)/deploy/base/* $(OUTDIR)/stage/$(INSTALLER)/deploy/base
 	cp -pr $(BASEDIR)/deploy/knative/* $(OUTDIR)/stage/$(INSTALLER)/deploy/knative
 	cp -pr $(BASEDIR)/deploy/$*/* $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
 	cp -pr $(BASEDIR)/deploy/digital-twin/* $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
 	@echo "::group::Process YAML and zip"
-	cd build/stage/ && $(BASEDIR)/hack/inject-release-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
+	cd build/stage/ && $(BASEDIR)/hack/replace-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
 	@echo "::endgroup::"
 
 

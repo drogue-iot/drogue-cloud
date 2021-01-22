@@ -9,7 +9,7 @@ set -ex
 : "${CLUSTER:=minikube}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DEPLOYDIR="$SCRIPTDIR/../deploy"
+: "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../deploy")}"
 
 # Knative Serving
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml

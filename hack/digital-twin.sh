@@ -9,6 +9,8 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 
+: "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../deploy")}"
+
 source "$SCRIPTDIR/common.sh"
 
 HELMARGS_DITTO=""
@@ -35,7 +37,7 @@ helm upgrade --install --wait --timeout 30m --repo https://charts.bitnami.com/bi
 echo "OK"
 
 echo -n "🪞 Deploying digital twin... "
-kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/digital-twin/" >/dev/null
+kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/digital-twin/" >/dev/null
 echo "OK"
 
 # wait for ingress IP to appear
@@ -71,7 +73,7 @@ echo "OK"
 
 # show status
 
-DIGITAL_TWIN=true source $SCRIPTDIR/status.sh
+DIGITAL_TWIN=true source "$SCRIPTDIR/status.sh"
 
 tput setaf 7 && tput dim || true
 echo -----
