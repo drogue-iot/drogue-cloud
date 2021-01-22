@@ -13,8 +13,6 @@ pub struct WebData<S: ManagementService> {
 
 #[derive(Envconfig)]
 pub struct Config {
-    #[envconfig(from = "DATABASE_URL")]
-    pub db_url: String,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
