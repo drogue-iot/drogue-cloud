@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -ex
-
 : "${CLUSTER:=minikube}"
 : "${MQTT:=true}"
 
@@ -10,8 +8,52 @@ set -ex
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
 source "$SCRIPTDIR/common.sh"
+: "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../deploy")}"
+
+# process arguments
+
+help() {
+cat << EOF
+Usage: ./drogue.sh
+Deploys Drogue IoT cloud
+
+  -c, --cluster      The cluster type (default: $CLUSTER)
+                     one of: minikube, kind, openshift
+  -d, --directory    The base directory for the deployment scripts (default: $DEPLOYDIR)
+
+EOF
+}
+
+opts=$(getopt --name "${BASH_SOURCE[0]}" -l "help,cluster:,directory:" -o "hc:d:" -- "$@")
+eval set --$opts
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -c|--cluster)
+      CLUSTER="$2"
+      shift 2
+      ;;
+    -d|--directory)
+      DEPLOYDIR="$2"
+      shift 2
+      ;;
+    -h|--help)
+      help
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      help
+      exit 1
+      ;;
+  esac
+done
+
+set -ex
 
 # Create the namespace first
 if ! kubectl get ns "$DROGUE_NS" >/dev/null 2>&1; then
@@ -25,14 +67,7 @@ fi
 [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]] && source "$SCRIPTDIR/sso.sh"
 
 # Install Drogue components (sources and services)
-# Use kustomize binary in the CI environment
-# https://github.com/kubernetes-sigs/kustomize/issues/1373#issuecomment-618439078
-# TL;DR: kubectl ships an old version of kustomize that doesn't support patching multiple resources.
-if [ -n "$GITHUB_WORKFLOW" ]; then
-  "$SCRIPTDIR/../kustomize" build "$SCRIPTDIR/../deploy/$CLUSTER/" | kubectl -n "$DROGUE_NS" apply -f -
-else
-  kubectl -n "$DROGUE_NS" apply -k "$SCRIPTDIR/../deploy/$CLUSTER/"
-fi
+kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/$CLUSTER/"
 # Remove the unnecessary and wrong host entry for keycloak ingress
 
 case $CLUSTER in

@@ -1,3 +1,10 @@
+## Deploying
+
+Use custom-built images with the "hack" script:
+
+    ./hack/replace-images.py latest Always quay.io/your-org tmp/deploy
+    ./hack/drogue.sh -d tmp/deploy
+
 ## Building
 
 ### In a container

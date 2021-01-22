@@ -2,6 +2,8 @@
 
 : "${DROGUE_NS:=drogue-iot}"
 
+die() { echo "$*" 1>&2 ; exit 1; }
+
 function service_url() {
   local name="$1"
   shift
@@ -107,7 +109,7 @@ function wait_for_ksvc() {
     fi
   done
 
-  if [ ${timeout} \< $(date +%s) ] ; then
+  if [ ${timeout} \< "$(date +%s)" ] ; then
     echo "Error: timed out while waiting for ${resource} to become ready."
     exit 1
   fi

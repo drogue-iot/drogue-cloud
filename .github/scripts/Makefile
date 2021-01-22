@@ -7,9 +7,9 @@ build-images-ci: build-image-ci($(IMAGES))
 build-image-ci($(IMAGES)):
 	cd $(TOP_DIR) && docker buildx build \
 							--cache-from "type=local,src=/tmp/.buildx-cache" \
-                            --cache-to "type=local,dest=/tmp/.buildx-cache" \
-                            --load \
-                            . -f $%/Dockerfile -t $%:$(IMAGE_TAG)
+							--cache-to "type=local,dest=/tmp/.buildx-cache" \
+							--load \
+							. -f $%/Dockerfile -t $%:$(IMAGE_TAG)
 
 
 #

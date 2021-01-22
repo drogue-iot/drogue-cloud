@@ -79,7 +79,6 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get -y install libsasl2-dev
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
 
       - name: Run build
         run: |
@@ -119,11 +118,13 @@ jobs:
       - name: load images in Kind
         run: make -C .github/scripts kind-load-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
 
-      - name: Update kustomize images names
-        run:  .github/scripts/patch_kustomize.sh ${{ github.sha }} dev.local
+      - name: Update image names
+        run: |
+          mkdir tmp
+          ./hack/replace-images.py ${{ github.sha }} Always deploy dev.local tmp/deploy
 
       - name: Deploy drogue
-        run: ./hack/drogue.sh
+        run: ./hack/drogue.sh -d tmp/deploy
         timeout-minutes: 20
 
       - name: Collect logs
