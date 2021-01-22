@@ -112,10 +112,7 @@ async fn command_wait(
 ) -> Result<HttpResponse, HttpEndpointError> {
     match ttd_param {
         Some(ttd) => {
-            let handler = CommandHandler {
-                device_id: device_id.to_owned(),
-                ttd: ttd,
-            };
+            let handler = CommandHandler { device_id, ttd };
             let context = HttpContext::create(handler);
             Ok(HttpResponse::build(status).streaming(context))
         }
