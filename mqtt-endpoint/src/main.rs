@@ -81,13 +81,12 @@ async fn command_service(
         .await
         .unwrap();
 
-    let devices = app.devices.lock().unwrap();
-
     let device_id_ext = request_event.extension("device_id");
 
     match device_id_ext {
         Some(ExtensionValue::String(device_id)) => {
-            if let Some(sender) = devices.get(device_id) {
+            let device = { app.devices.lock().unwrap().get(device_id).cloned() };
+            if let Some(sender) = device {
                 if let Some(command) = request_event.data() {
                     match sender
                         .send(String::try_from(command.clone()).unwrap())
