@@ -211,7 +211,7 @@ fn truncate_str(len: usize, string: &str) -> String {
     let mut r = String::new();
     for c in string.graphemes(true) {
         if r.len() > len || r.contains('\n') || r.contains('\r') {
-            r.push_str("…");
+            r.push('…');
             break;
         }
         r.push_str(c);
