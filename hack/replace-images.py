@@ -75,7 +75,7 @@ def process_yaml(p_root, p_name):
         yaml.dump_all(newdocs, f)
 
 
-for root, dirs, files in os.walk(yamldir):
+for root, dirs, files in os.walk(yamldir, followlinks=True):
     for name in files:
         if name.endswith(".yaml"):
             process_yaml(root, name)
