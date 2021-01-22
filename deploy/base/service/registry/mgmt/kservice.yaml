@@ -20,25 +20,30 @@ spec:
               value: "false"
             - name: BIND_ADDR
               value: 0.0.0.0:8080
-            - name: A_POSTGRES_DB
+            - name: PG__HOST
+              value: postgres
+            - name: PG__DBNAME
               valueFrom:
                 configMapKeyRef:
                   name: postgres-config
                   key: databaseName
-            - name: A_POSTGRES_USER
+            - name: PG__USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.username
-            - name: A_POSTGRES_PASSWORD
+            - name: PG__PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.password
-            # DATABASE_URL must only reference variables which are sorted before `D...`
-            # see: https://github.com/knative/client/issues/1165
-            - name: DATABASE_URL
-              value: postgres://$(A_POSTGRES_USER):$(A_POSTGRES_PASSWORD)@postgres/$(A_POSTGRES_DB)
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            failureThreshold: 3 # required by knative webhook
+            timeoutSeconds: 1 # required by knative webhook
+            httpGet:
+              path: /health
           ports:
             - containerPort: 8080
               protocol: TCP

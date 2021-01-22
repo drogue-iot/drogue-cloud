@@ -30,23 +30,31 @@ spec:
               value: info
             - name: BIND_ADDR
               value: 0.0.0.0:8080
-            - name: POSTGRES_DB
+            - name: PG__HOST
+              value: postgres
+            - name: PG__DBNAME
               valueFrom:
                 configMapKeyRef:
                   name: postgres-config
                   key: databaseName
-            - name: POSTGRES_USER
+            - name: PG__USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.username
-            - name: POSTGRES_PASSWORD
+            - name: PG__PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.password
-            - name: DATABASE_URL
-              value: postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres/$(POSTGRES_DB)
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 8080
+              path: /health
           ports:
             - containerPort: 8080
               name: api
