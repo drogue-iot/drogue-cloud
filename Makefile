@@ -161,6 +161,7 @@ push: tag-images push-images
 #
 images: build-images tag-images push-images
 
+
 #
 # Quick local build without tests and pushing images
 #
@@ -170,11 +171,14 @@ quick: build build-images tag-images
 #
 # Do a local deploy
 #
-deploy: require-container-registry
+deploy: gen-deploy
+	./hack/drogue.sh -d build/deploy
+
+gen-deploy: require-container-registry
 	rm -Rf build
 	mkdir -p build
 	./hack/replace-images.py latest Always deploy "$(CONTAINER_REGISTRY)" build/deploy
-	./hack/drogue.sh -d build/deploy
+
 
 #
 # Check if we have a container registry set.
@@ -187,7 +191,7 @@ endif
 
 .PHONY: all clean build test push images
 .PHONY: require-container-registry
-.PHONY: deploy
+.PHONY: deploy gen-deploy
 
 .PHONY: build-images tag-images push-images
 .PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
