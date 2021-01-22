@@ -121,7 +121,7 @@ jobs:
       - name: Update image names
         run: |
           mkdir tmp
-          ./hack/replace-images.py ${{ github.sha }} Always deploy dev.local tmp/deploy
+          ./hack/replace-images.py ${{ github.sha }} IfNotPresent deploy dev.local tmp/deploy
 
       - name: Deploy drogue
         run: ./hack/drogue.sh -d tmp/deploy
