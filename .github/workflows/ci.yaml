@@ -121,7 +121,10 @@ jobs:
       - name: Update image names
         run: |
           mkdir tmp
-          ./hack/replace-images.py ${{ github.sha }} IfNotPresent deploy dev.local tmp/deploy
+          # A policy of "Always" is not going to work, as the images are pushed into the kind cluster
+          # and cannot be pulled. Using "Always" would result in attempts to try to pull from a location
+          # that does not exist.
+          ./hack/replace-images.py ${{ github.sha }} Never deploy dev.local tmp/deploy
 
       - name: Deploy drogue
         run: ./hack/drogue.sh -d tmp/deploy
