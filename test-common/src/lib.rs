@@ -1,6 +1,5 @@
 use deadpool::managed::{PoolConfig, Timeouts};
 use std::{fs, path::PathBuf, time::Duration};
-use testcontainers::core::Port;
 use testcontainers::{
     images::generic::{GenericImage, WaitFor},
     Container, Docker, RunArgs,
@@ -27,10 +26,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
                 "[1] LOG:  database system is ready to accept connections", // listening on pid 1
             ));
 
-        let args = RunArgs::default().with_mapped_port(Port {
-            local: 5432,
-            internal: 5432,
-        });
+        let args = RunArgs::default().with_mapped_port((5432, 5432));
 
         let db = cli.run_with_args(image, args);
 
@@ -44,7 +40,9 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
 
         let target = manifest_dir.join("target/sql");
 
-        std::fs::remove_dir_all(&target)?;
+        if target.exists() {
+            std::fs::remove_dir_all(&target)?;
+        }
         std::fs::create_dir_all(&target)?;
 
         Self::copy_sql(&manifest_dir.join("../database-common/migrations"), &target)?;
