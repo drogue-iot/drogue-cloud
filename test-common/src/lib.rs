@@ -1,8 +1,9 @@
 use deadpool::managed::{PoolConfig, Timeouts};
 use std::{fs, path::PathBuf, time::Duration};
+use testcontainers::core::Port;
 use testcontainers::{
     images::generic::{GenericImage, WaitFor},
-    Container, Docker,
+    Container, Docker, RunArgs,
 };
 
 pub struct PostgresRunner<'c, C: Docker, SC> {
@@ -14,20 +15,24 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
     pub fn new(cli: &'c C, config: SC) -> anyhow::Result<Self> {
         log::info!("Starting postgres");
 
-        let db = cli.run(
-            GenericImage::new("docker.io/library/postgres:12")
-                .with_mapped_port((5432, 5432))
-                .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
-                .with_volume(
-                    Self::gather_sql()?
-                        .to_str()
-                        .ok_or_else(|| anyhow::anyhow!("Failed to generate SQL path"))?,
-                    "/docker-entrypoint-initdb.d",
-                )
-                .with_wait_for(WaitFor::message_on_stdout(
-                    "[1] LOG:  database system is ready to accept connections", // listening on pid 1
-                )),
-        );
+        let image = GenericImage::new("docker.io/library/postgres:12")
+            .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
+            .with_volume(
+                Self::gather_sql()?
+                    .to_str()
+                    .ok_or_else(|| anyhow::anyhow!("Failed to generate SQL path"))?,
+                "/docker-entrypoint-initdb.d",
+            )
+            .with_wait_for(WaitFor::message_on_stdout(
+                "[1] LOG:  database system is ready to accept connections", // listening on pid 1
+            ));
+
+        let args = RunArgs::default().with_mapped_port(Port {
+            local: 5432,
+            internal: 5432,
+        });
+
+        let db = cli.run_with_args(image, args);
 
         Ok(Self { config, db })
     }
