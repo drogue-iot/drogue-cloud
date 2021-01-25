@@ -33,6 +33,7 @@ pub struct DeviceData {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub credentials: Vec<Credential>,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Value::is_null")]
     pub properties: Value,
 }
 
