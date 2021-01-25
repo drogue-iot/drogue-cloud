@@ -3,7 +3,7 @@ use crate::{
     WebData,
 };
 use actix_web::{delete, get, http::header, post, put, web, web::Json, HttpResponse};
-use drogue_cloud_service_api::TenantData;
+use drogue_cloud_service_api::management::TenantData;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -28,7 +28,7 @@ async fn create_tenant(
 
     // FIXME: we need to allow passing in the full structure
     let tenant_data = TenantData {
-        enabled: !create.disabled,
+        disabled: create.disabled,
     };
 
     data.service.create_tenant(&tenant_id, &tenant_data).await?;
@@ -61,7 +61,7 @@ async fn update_tenant(
 
     // FIXME: we need to allow passing in the full structure
     let tenant_data = TenantData {
-        enabled: !update.disabled,
+        disabled: update.disabled,
     };
 
     data.service.update_tenant(&tenant_id, &tenant_data).await?;

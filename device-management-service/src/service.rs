@@ -6,7 +6,7 @@ use drogue_cloud_database_common::{
     error::ServiceError,
     models::device::{DeviceAccessor, PostgresDeviceAccessor},
 };
-use drogue_cloud_service_api::{Device, DeviceData, Tenant, TenantData};
+use drogue_cloud_service_api::management::{Device, DeviceData, Tenant, TenantData};
 use serde::Deserialize;
 use tokio_postgres::NoTls;
 

@@ -1,18 +1,16 @@
-use actix_web::{web, HttpResponse};
-
-use drogue_cloud_endpoint_common::error::HttpEndpointError;
-
-use drogue_cloud_endpoint_common::auth::DeviceProperties;
-use drogue_cloud_endpoint_common::downstream::{DownstreamSender, Publish};
-use drogue_cloud_endpoint_common::error::EndpointError;
-use drogue_ttn::http as ttn;
-
 use crate::PublishOptions;
+use actix_web::{web, HttpResponse};
+use drogue_cloud_endpoint_common::{
+    auth::DeviceAuthDetails,
+    downstream::{DownstreamSender, Publish},
+    error::{EndpointError, HttpEndpointError},
+};
+use drogue_ttn::http as ttn;
 
 pub async fn publish(
     endpoint: web::Data<DownstreamSender>,
     web::Query(opts): web::Query<PublishOptions>,
-    props: Option<DeviceProperties>,
+    props: Option<DeviceAuthDetails>,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let uplink: ttn::Uplink = serde_json::from_slice(&body).map_err(|err| {
@@ -28,11 +26,14 @@ pub async fn publish(
 
     let fport = uplink.port.to_string();
     let model_id = opts.model_id.or_else(|| {
-        props.as_ref().map(|props| &props.0).and_then(|props| {
-            props["lorawan"]["ports"][fport]["model_id"]
-                .as_str()
-                .map(|str| str.to_string())
-        })
+        props
+            .as_ref()
+            .map(|props| &props.device.data.properties)
+            .and_then(|props| {
+                props["lorawan"]["ports"][fport]["model_id"]
+                    .as_str()
+                    .map(|str| str.to_string())
+            })
     });
 
     log::info!("Model ID: {:?}", model_id);

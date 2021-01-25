@@ -2,7 +2,7 @@ use crate::service;
 use crate::service::AuthenticationService;
 use crate::WebData;
 use actix_web::{get, post, web, HttpResponse};
-use drogue_cloud_service_api::AuthenticationRequest;
+use drogue_cloud_service_api::auth::{AuthenticationRequest, AuthenticationResponse};
 use serde_json::json;
 
 #[get("/health")]
@@ -20,7 +20,7 @@ pub async fn authenticate(
     data: web::Data<WebData<service::PostgresAuthenticationService>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let result = match data.service.authenticate(req.0).await {
-        Ok(r) => Ok(HttpResponse::Ok().json(r)),
+        Ok(r) => Ok(HttpResponse::Ok().json(AuthenticationResponse { outcome: r })),
         Err(e) => Err(e.into()),
     };
 

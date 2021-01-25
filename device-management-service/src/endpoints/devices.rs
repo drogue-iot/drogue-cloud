@@ -3,13 +3,15 @@ use crate::{
     WebData,
 };
 use actix_web::{delete, get, http::header, post, put, web, web::Json, HttpResponse};
-use drogue_cloud_service_api::{Credential, DeviceData};
+use drogue_cloud_service_api::management::{Credential, DeviceData};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct CreateDevice {
     pub device_id: String,
     pub password: String,
+    #[serde(default)]
+    pub properties: serde_json::Value,
 }
 
 #[post("/{tenant_id}")]
@@ -29,6 +31,7 @@ async fn create_device(
     // FIXME: we need to allow passing in the full structure
     let device_data = DeviceData {
         credentials: vec![Credential::Password(create.password.clone())],
+        properties: create.properties.clone(),
     };
 
     data.service
@@ -46,6 +49,8 @@ async fn create_device(
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct UpdateDevice {
     pub password: String,
+    #[serde(default)]
+    pub properties: serde_json::Value,
 }
 
 #[put("/{tenant_id}/{device_id}")]
@@ -63,6 +68,7 @@ async fn update_device(
     // FIXME: we need to allow passing in the full structure
     let device_data = DeviceData {
         credentials: vec![Credential::Password(update.password.clone())],
+        properties: update.properties.clone(),
     };
 
     data.service
