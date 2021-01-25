@@ -3,19 +3,16 @@ apiVersion: apps/v1
 metadata:
   name: mqtt-endpoint
   labels:
-    image-source: build
     app: mqtt-endpoint
     app.kubernetes.io/part-of: endpoints
 spec:
   replicas: 1
   selector:
     matchLabels:
-      image-source: build
       app: mqtt-endpoint
   template:
     metadata:
       labels:
-        image-source: build
         app: mqtt-endpoint
     spec:
       containers:
