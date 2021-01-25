@@ -1,30 +1,19 @@
-use crate::error::EndpointError;
 use actix_web::dev::{Payload, PayloadStream};
 use actix_web::{FromRequest, HttpRequest};
 use anyhow::Context;
+use drogue_cloud_service_api::{
+    auth::{
+        AuthenticationClient, AuthenticationClientError, AuthenticationRequest,
+        AuthenticationResponse, Credential,
+    },
+    management::{Device, Tenant},
+};
+use drogue_cloud_service_common::auth::ReqwestAuthenticatorClient;
 use envconfig::Envconfig;
 use futures::future::{err, ok, Ready};
-use reqwest::{Response, StatusCode, Url};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::convert::TryFrom;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AuthRequest {
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum Outcome {
-    Pass(DeviceProperties),
-    Fail,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AuthResponse {
-    pub outcome: Outcome,
-}
 
 #[derive(Clone, Debug, Envconfig)]
 pub struct AuthConfig {
@@ -34,8 +23,7 @@ pub struct AuthConfig {
 
 #[derive(Clone, Debug)]
 pub struct DeviceAuthenticator {
-    client: reqwest::Client,
-    auth_service_url: Url,
+    client: ReqwestAuthenticatorClient,
 }
 
 impl TryFrom<AuthConfig> for DeviceAuthenticator {
@@ -49,105 +37,66 @@ impl TryFrom<AuthConfig> for DeviceAuthenticator {
             .join("/api/v1/auth")
             .context("Failed to build auth URL from base URL")?;
         Ok(DeviceAuthenticator {
-            client: Default::default(),
-            auth_service_url: url,
+            client: ReqwestAuthenticatorClient::new(Default::default(), url),
         })
     }
 }
 
 impl DeviceAuthenticator {
+    /// authenticate with a combination of `<device>@<tenant>` / `<password>`.
+    pub async fn authenticate_simple(
+        &self,
+        device: &str,
+        password: &str,
+    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>> {
+        let tok: Vec<_> = device
+            .split('@')
+            .map(|s| percent_encoding::percent_decode_str(s).decode_utf8())
+            .collect();
+
+        match (
+            tok.as_slice(),
+            percent_encoding::percent_decode_str(password).decode_utf8(),
+        ) {
+            ([Ok(device), Ok(tenant)], Ok(password)) => {
+                self.authenticate(tenant, device, Credential::Password(password.to_string()))
+                    .await
+            }
+            _ => Ok(AuthenticationResponse::failed()),
+        }
+    }
+
     pub async fn authenticate(
         &self,
-        username: &str,
-        password: &str,
-    ) -> Result<Outcome, EndpointError> {
-        let response: Response = self
-            .client
-            .post(self.auth_service_url.clone())
-            .json(&AuthRequest {
-                username: username.to_string(),
-                password: password.to_string(),
+        tenant: &str,
+        device: &str,
+        credential: Credential,
+    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>> {
+        self.client
+            .authenticate(AuthenticationRequest {
+                tenant: tenant.to_string(),
+                device: device.to_string(),
+                credential,
             })
-            .send()
             .await
-            .map_err(|err| {
-                log::warn!("Error while authenticating {}: {}", username, err);
-                EndpointError::AuthenticationServiceError {
-                    source: Box::new(err),
-                }
-            })?;
-
-        match (response.status(), response.json::<AuthResponse>().await) {
-            (StatusCode::OK, Ok(result)) => {
-                log::debug!("Outcome for {} is {:?}", username, result);
-                Ok(result.outcome)
-            }
-            (StatusCode::OK, Err(err)) => {
-                log::debug!("Authentication failed for {}. Result: {:?}", username, err);
-
-                let err = anyhow::anyhow!(
-                    "Result from authentication service unexpected: OK: {:?}",
-                    err
-                );
-
-                Err(EndpointError::AuthenticationServiceError {
-                    source: Box::from(err),
-                })
-            }
-            (code, _) => {
-                log::debug!("Authentication failed for {}. Result: {}", username, code);
-
-                let err =
-                    anyhow::anyhow!("Result from authentication service unexpected: {}", code);
-
-                Err(EndpointError::AuthenticationServiceError {
-                    source: Box::from(err),
-                })
-            }
-        }
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DeviceProperties(pub Value);
+pub struct DeviceAuthDetails {
+    pub tenant: Tenant,
+    pub device: Device,
+}
 
-impl FromRequest for DeviceProperties {
+impl FromRequest for DeviceAuthDetails {
     type Error = ();
     type Future = Ready<Result<Self, Self::Error>>;
     type Config = ();
 
     fn from_request(req: &HttpRequest, _: &mut Payload<PayloadStream>) -> Self::Future {
-        match req.extensions().get::<DeviceProperties>() {
+        match req.extensions().get::<DeviceAuthDetails>() {
             Some(properties) => ok(properties.clone()),
             None => err(()),
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn test_encode_fail() {
-        let str = serde_json::to_string(&AuthResponse {
-            outcome: Outcome::Fail,
-        });
-        assert!(str.is_ok());
-        assert_eq!(String::from(r#"{"outcome":"Fail"}"#), str.unwrap());
-    }
-
-    #[test]
-    fn test_encode_pass() {
-        let str = serde_json::to_string(&AuthResponse {
-            outcome: Outcome::Pass(DeviceProperties(json!({"foo": "bar"}))),
-        });
-        assert!(str.is_ok());
-        assert_eq!(
-            String::from(r#"{"outcome":{"Pass":{"foo":"bar"}}}"#),
-            str.unwrap()
-        );
     }
 }

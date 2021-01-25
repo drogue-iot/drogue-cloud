@@ -39,6 +39,8 @@ envconfig = "0.9"
 cloudevents-sdk = "0.3"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-service-api = { path = "../service-api"}
+drogue-cloud-service-common = { path = "../service-common"}
 
 [dependencies.rust-tls]
 version = "0.19"

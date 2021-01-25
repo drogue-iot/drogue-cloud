@@ -1,12 +1,12 @@
 use actix_web::dev::ServiceRequest;
 use actix_web::{Error, HttpMessage};
 use actix_web_httpauth::extractors::basic::BasicAuth;
-
-use drogue_cloud_endpoint_common::auth::Outcome;
+use drogue_cloud_endpoint_common::auth::DeviceAuthDetails;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     error::{EndpointError, HttpEndpointError},
 };
+use drogue_cloud_service_api::auth::Outcome;
 
 // we might need to url-decode the username
 const URLDECODE: bool = true;
@@ -32,12 +32,14 @@ pub async fn basic_validator(
 
     match password {
         Some(password) => match authenticator
-            .authenticate(&user_id, &password)
+            .authenticate_simple(&user_id, &password)
             .await
-            .map_err(HttpEndpointError)?
+            .map_err(|err| HttpEndpointError(err.into()))?
+            .outcome
         {
-            Outcome::Pass(props) => {
-                req.extensions_mut().insert(props);
+            Outcome::Pass { tenant, device } => {
+                req.extensions_mut()
+                    .insert(DeviceAuthDetails { tenant, device });
                 Ok(req)
             }
             Outcome::Fail => Err(HttpEndpointError(EndpointError::AuthenticationError).into()),

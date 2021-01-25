@@ -5,6 +5,7 @@ use actix_web::error::PayloadError;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 
+use drogue_cloud_service_api::auth::AuthenticationClientError;
 use std::fmt::Formatter;
 
 #[derive(Debug, Snafu)]
@@ -28,6 +29,14 @@ impl EndpointError {
             EndpointError::ConfigurationError { .. } => "ConfigurationError",
             EndpointError::AuthenticationServiceError { .. } => "AuthenticationServiceError",
             EndpointError::AuthenticationError { .. } => "AuthenticationError",
+        }
+    }
+}
+
+impl<E: std::error::Error> From<AuthenticationClientError<E>> for EndpointError {
+    fn from(err: AuthenticationClientError<E>) -> Self {
+        Self::AuthenticationServiceError {
+            source: Box::new(err),
         }
     }
 }

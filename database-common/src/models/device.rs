@@ -1,7 +1,7 @@
 use crate::error::ServiceError;
 use crate::Client;
 use async_trait::async_trait;
-use drogue_cloud_service_api::{Credential, Device, DeviceData};
+use drogue_cloud_service_api::management::{Credential, Device, DeviceData};
 use std::collections::HashSet;
 use tokio_postgres::types::Json;
 use tokio_postgres::Row;

@@ -1,8 +1,8 @@
 use crate::{error::ServerError, server::Session, App};
-
 use bytes::Bytes;
 use bytestring::ByteString;
-
+use drogue_cloud_endpoint_common::downstream::{Outcome, Publish, PublishResponse};
+use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use ntex_mqtt::{
     types::QoS,
     v3,
@@ -11,12 +11,6 @@ use ntex_mqtt::{
         codec::{Auth, ConnectAckReason, DisconnectReasonCode, PublishAckReason},
     },
 };
-
-use drogue_cloud_endpoint_common::{
-    auth,
-    downstream::{Outcome, Publish, PublishResponse},
-};
-
 use std::fmt::Debug;
 use tokio::sync::mpsc;
 
@@ -32,7 +26,7 @@ macro_rules! connect {
             )
             .await?
         {
-            auth::Outcome::Pass(_) => {
+            AuthOutcome::Pass { .. } => {
                 let (tx, mut rx) = mpsc::channel(32);
 
                 let session =
@@ -60,7 +54,7 @@ macro_rules! connect {
 
                 Ok(session)
             }
-            auth::Outcome::Fail => Err("Failed"),
+            AuthOutcome::Fail => Err("Failed"),
         }
     }};
 }

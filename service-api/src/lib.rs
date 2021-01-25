@@ -1,3 +1,2 @@
-mod auth;
-
-pub use auth::*;
+pub mod auth;
+pub mod management;

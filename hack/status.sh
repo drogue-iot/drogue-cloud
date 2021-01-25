@@ -83,7 +83,7 @@ echo
 echo "Tenants:"
 echo "  Create:  http POST   ${MGMT_URL}/api/v1/tenants tenant_id=tenant_id"
 echo "  Read:    http GET    ${MGMT_URL}/api/v1/tenants/tenant_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id disabled=true"
 echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/tenants/tenant_id"
 echo
 echo "Devices:"
@@ -99,16 +99,16 @@ echo "After you created a device, try these commands at a shell prompt:"
 echo
 echo "System default certificates (or none):"
 echo
-echo "  http --auth device_id:foobar POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=42"
+echo "  http --auth device_id@tenant_id:foobar POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=42"
 if [ "$MQTT" = true ] ; then
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id -pw foobar -s -t temp -m '{\"temp\":42}' -V 3"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@tenant_id -pw foobar -s -t temp -m '{\"temp\":42}' -V 3"
 fi
 echo
 echo "Local test certificates:"
 echo
-echo "  http --auth device_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=42"
+echo "  http --auth device_id@tenant_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/publish/device_id/foo temp:=42"
 if [ "$MQTT" = true ] ; then
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}' -V 3"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@tenant_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}' -V 3"
 fi
 echo
 echo "Send commands to the device"

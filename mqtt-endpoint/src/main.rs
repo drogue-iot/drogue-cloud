@@ -8,24 +8,22 @@ mod server;
 use crate::server::{build, build_tls};
 use bytes::Bytes;
 use bytestring::ByteString;
-use drogue_cloud_endpoint_common::auth::DeviceProperties;
+use cloudevents::event::ExtensionValue;
 use drogue_cloud_endpoint_common::{
-    auth::{AuthConfig, DeviceAuthenticator, Outcome as AuthOutcome},
+    auth::{AuthConfig, DeviceAuthenticator},
     downstream::DownstreamSender,
     error::EndpointError,
 };
+use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use envconfig::Envconfig;
-use serde_json::json;
-use std::collections::HashMap;
-use std::convert::TryInto;
-
-use ntex::http;
-use ntex::web;
-
-use cloudevents::event::ExtensionValue;
 use futures::future;
-use std::convert::TryFrom;
-use std::sync::{Arc, Mutex};
+use ntex::{http, web};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    convert::TryInto,
+    sync::{Arc, Mutex},
+};
 
 #[derive(Clone, Debug, Envconfig)]
 struct Config {
@@ -53,17 +51,23 @@ impl App {
         password: &Option<Bytes>,
         _: &ByteString,
     ) -> Result<AuthOutcome, EndpointError> {
-        match (&self.authenticator, username, password) {
-            (None, ..) => Ok(AuthOutcome::Pass(DeviceProperties(json!({})))),
-            (Some(authenticator), Some(username), Some(password)) => {
-                authenticator
-                    .authenticate(
-                        &username,
-                        &String::from_utf8(password.to_vec())
-                            .map_err(|_| EndpointError::AuthenticationError)?,
-                    )
-                    .await
-            }
+        match (
+            &self.authenticator,
+            username,
+            password.as_ref().map(|p| String::from_utf8(p.to_vec())),
+        ) {
+            (None, ..) => Ok(AuthOutcome::Pass {
+                tenant: Default::default(),
+                device: Default::default(),
+            }),
+            (Some(authenticator), Some(username), Some(Ok(password))) => Ok(authenticator
+                // FIXME: need to implement other variants as well
+                .authenticate_simple(&username, &password)
+                .await
+                .map_err(|err| EndpointError::AuthenticationServiceError {
+                    source: Box::new(err),
+                })?
+                .outcome),
             (Some(_), _, _) => Ok(AuthOutcome::Fail),
         }
     }
