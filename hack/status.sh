@@ -83,7 +83,7 @@ echo
 echo "Tenants:"
 echo "  Create:  http POST   ${MGMT_URL}/api/v1/tenants tenant_id=tenant_id"
 echo "  Read:    http GET    ${MGMT_URL}/api/v1/tenants/tenant_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id disabled=true"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id disabled:=true"
 echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/tenants/tenant_id"
 echo
 echo "Devices:"
