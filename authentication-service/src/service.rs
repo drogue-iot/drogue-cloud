@@ -98,6 +98,7 @@ impl AuthenticationService for PostgresAuthenticationService {
     }
 }
 
+/// Strip the credentials from the device information, so that we do not leak them.
 fn strip_credentials(mut device: Device) -> Device {
     device.data.credentials.clear();
     device
