@@ -13,6 +13,7 @@ members = [
     "service-common",
     "service-api",
     "command-endpoint",
+    "test-common",
 ]
 
 [patch.crates-io]

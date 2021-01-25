@@ -1,54 +1,11 @@
 use actix_web::{test, web, App};
-use deadpool::managed::{PoolConfig, Timeouts};
 use drogue_cloud_authentication_service::{endpoints, service, WebData};
-use drogue_cloud_service_api::{AuthenticationRequest, Credential};
+use drogue_cloud_service_api::auth::{AuthenticationRequest, Credential};
+use drogue_cloud_test_common::db;
 use log::LevelFilter;
 use serde_json::json;
 use serial_test::serial;
-use std::{env, time::Duration};
-use testcontainers::{
-    clients,
-    images::generic::{GenericImage, WaitFor},
-    Container, Docker,
-};
-
-pub struct PostgresRunner<'c, C: Docker> {
-    pub config: service::AuthenticationServiceConfig,
-    db: Container<'c, C, GenericImage>,
-}
-
-impl<'c, C: Docker> PostgresRunner<'c, C> {
-    pub fn new(cli: &'c C, config: service::AuthenticationServiceConfig) -> anyhow::Result<Self> {
-        log::info!("Starting postgres");
-
-        let db = cli.run(
-            GenericImage::new("docker.io/library/postgres:12")
-                .with_mapped_port((5432, 5432))
-                .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
-                .with_volume(
-                    env::current_dir()?
-                        .join("sql")
-                        .to_str()
-                        .ok_or_else(|| anyhow::anyhow!("Failed to generate SQL path"))?,
-                    "/docker-entrypoint-initdb.d",
-                )
-                .with_wait_for(WaitFor::message_on_stdout(
-                    "[1] LOG:  database system is ready to accept connections", // listening on pid 1
-                )),
-        );
-
-        // sleep(time::Duration::from_secs(1));
-
-        Ok(Self { config, db })
-    }
-}
-
-impl<'c, C: Docker> Drop for PostgresRunner<'c, C> {
-    fn drop(&mut self) {
-        log::info!("Stopping postgres");
-        self.db.stop();
-    }
-}
+use testcontainers::clients;
 
 fn init() {
     let _ = env_logger::builder()
@@ -57,35 +14,14 @@ fn init() {
         .try_init();
 }
 
-fn db<C: Docker>(cli: &C) -> anyhow::Result<PostgresRunner<C>> {
-    let config = service::AuthenticationServiceConfig {
-        pg: deadpool_postgres::Config {
-            host: Some("localhost".into()),
-            user: Some("postgres".into()),
-            password: Some("mysecretpassword".into()),
-            dbname: Some("postgres".into()),
-
-            pool: Some(PoolConfig {
-                max_size: 15,
-                timeouts: Timeouts {
-                    wait: Some(Duration::from_secs(5)),
-                    ..Default::default()
-                },
-            }),
-
-            ..Default::default()
-        },
-    };
-
-    Ok(PostgresRunner::new(cli, config)?)
-}
-
 macro_rules! test {
    ($v:ident => $($code:block)*) => {{
         init();
 
         let cli = clients::Cli::default();
-        let db = db(&cli)?;
+        let db = db(&cli, |pg| service::AuthenticationServiceConfig{
+            pg
+        })?;
 
         let data = WebData {
             service: service::PostgresAuthenticationService::new(db.config.clone()).unwrap(),
@@ -146,7 +82,7 @@ async fn test_auth_passes_password_with_device_username() -> anyhow::Result<()> 
     test_auth!(AuthenticationRequest{
         tenant: "tenant1".into(),
         device: "device1".into(),
-        credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into(), unique: false}
+        credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into()}
     } => json!({"pass":{
         "tenant": {"id": "tenant1", "data": {}},
         "device": {"tenant_id": "tenant1", "id": "device1", "data": {}}}
@@ -161,7 +97,7 @@ async fn test_auth_fails_password_with_non_matching_device_username() -> anyhow:
     test_auth!(AuthenticationRequest{
         tenant: "tenant1".into(),
         device: "device1".into(),
-        credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into(), unique: false}
+        credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into()}
     } => json!("fail"))
 }
 
@@ -201,7 +137,7 @@ async fn test_auth_passes_username_password() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             tenant: "tenant1".into(),
             device: "device3".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into(),  unique: false}
+            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()}
     } => json!({"pass":{
         "tenant": {"id": "tenant1", "data": {}},
         "device": {"tenant_id": "tenant1", "id": "device3", "data": {}}}
@@ -214,7 +150,7 @@ async fn test_auth_passes_username_password_by_alias() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             tenant: "tenant1".into(),
             device: "12:34:56".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into(),  unique: false}
+            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()}
     } => json!({"pass":{
         "tenant": {"id": "tenant1", "data": {}},
         "device": {"tenant_id": "tenant1", "id": "device3", "data": {}}}
