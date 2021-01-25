@@ -1,5 +1,5 @@
 use deadpool::managed::{PoolConfig, Timeouts};
-use std::{env, time::Duration};
+use std::{fs, path::PathBuf, time::Duration};
 use testcontainers::{
     images::generic::{GenericImage, WaitFor},
     Container, Docker,
@@ -10,7 +10,7 @@ pub struct PostgresRunner<'c, C: Docker, SC> {
     db: Container<'c, C, GenericImage>,
 }
 
-impl<'c, C: Docker, SC> PostgresRunner<'c, C, SC> {
+impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
     pub fn new(cli: &'c C, config: SC) -> anyhow::Result<Self> {
         log::info!("Starting postgres");
 
@@ -19,8 +19,7 @@ impl<'c, C: Docker, SC> PostgresRunner<'c, C, SC> {
                 .with_mapped_port((5432, 5432))
                 .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
                 .with_volume(
-                    env::current_dir()?
-                        .join("sql")
+                    Self::gather_sql()?
                         .to_str()
                         .ok_or_else(|| anyhow::anyhow!("Failed to generate SQL path"))?,
                     "/docker-entrypoint-initdb.d",
@@ -30,9 +29,48 @@ impl<'c, C: Docker, SC> PostgresRunner<'c, C, SC> {
                 )),
         );
 
-        // sleep(time::Duration::from_secs(1));
-
         Ok(Self { config, db })
+    }
+
+    fn gather_sql() -> anyhow::Result<PathBuf> {
+        let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
+            .ok_or_else(|| anyhow::anyhow!("Missing environment variable 'CARGO_MANIFEST_DIR'"))?;
+        let manifest_dir = PathBuf::from(manifest_dir);
+
+        let target = manifest_dir.join("target/sql");
+
+        std::fs::remove_dir_all(&target)?;
+        std::fs::create_dir_all(&target)?;
+
+        Self::copy_sql(&manifest_dir.join("../database-common/migrations"), &target)?;
+        Self::copy_sql(&manifest_dir.join("tests/sql"), &target)?;
+
+        // done
+        Ok(target)
+    }
+
+    fn copy_sql(source: &PathBuf, target: &PathBuf) -> anyhow::Result<()> {
+        for up in walkdir::WalkDir::new(&source)
+            .contents_first(true)
+            .into_iter()
+            .filter_entry(|entry| entry.file_name() == "up.sql")
+        {
+            let up = up?;
+            let name = up
+                .path()
+                .parent()
+                .ok_or_else(|| anyhow::anyhow!("Missing parent component"))?;
+            let name = name
+                .file_name()
+                .and_then(|s| s.to_str())
+                .ok_or_else(|| anyhow::anyhow!(""))?;
+            let target = target.join(format!("{}-up.sql", name));
+            log::debug!("Add SQL file: {:?} -> {:?}", up, target);
+
+            fs::copy(up.path(), target)?;
+        }
+
+        Ok(())
     }
 }
 
