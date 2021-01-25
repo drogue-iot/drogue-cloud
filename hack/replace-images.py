@@ -18,17 +18,19 @@ if len(sys.argv) > 5:
 
 print(f"Inject tag: {version} ({policy}) for files in {yamldir}")
 
+prefix = 'ghcr.io/drogue-iot'
+suffix = ':latest'
+
+
+def is_drogue_image(image):
+    if not image.startswith(prefix):
+        return False
+    if not image.endswith(suffix):
+        return False
+    return True
+
 
 def translate_image(original):
-
-    prefix = 'ghcr.io/drogue-iot'
-    suffix = ':latest'
-
-    if not original.startswith(prefix):
-        return original
-    if not original.endswith(suffix):
-        return original
-
     if org and original.startswith(prefix):
         original = org + original[len(prefix):]
 
@@ -41,10 +43,11 @@ def translate_image(original):
 
 
 def replace_images(node):
-    if isinstance(node,dict):
+    if isinstance(node, dict):
         if "image" in node:
-            node["image"] = translate_image(node["image"])
-            node["imagePullPolicy"] = policy
+            if is_drogue_image(node["image"]):
+                node["image"] = translate_image(node["image"])
+                node["imagePullPolicy"] = policy
 
         for key, value in node.items():
             replace_images(value)
