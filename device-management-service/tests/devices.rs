@@ -1,6 +1,6 @@
 mod common;
 
-use crate::common::{db, init};
+use crate::common::init;
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -11,6 +11,7 @@ use drogue_cloud_device_management_service::{
     WebData,
 };
 use drogue_cloud_service_common::openid::AuthenticatorError;
+use drogue_cloud_test_common::db;
 use serde_json::json;
 use serial_test::serial;
 use testcontainers::clients;

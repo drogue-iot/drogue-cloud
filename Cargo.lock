@@ -1343,6 +1343,7 @@ dependencies = [
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
+ "drogue-cloud-test-common",
  "env_logger",
  "envconfig",
  "futures",
@@ -1499,6 +1500,7 @@ dependencies = [
  "drogue-cloud-database-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
+ "drogue-cloud-test-common",
  "env_logger",
  "envconfig",
  "futures",
@@ -1636,6 +1638,17 @@ dependencies = [
  "snafu",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "drogue-cloud-test-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "deadpool",
+ "deadpool-postgres",
+ "log",
+ "testcontainers",
 ]
 
 [[package]]

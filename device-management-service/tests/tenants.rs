@@ -1,6 +1,6 @@
 mod common;
 
-use crate::common::{db, init};
+use crate::common::init;
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -11,6 +11,7 @@ use drogue_cloud_device_management_service::{
     WebData,
 };
 use drogue_cloud_service_common::openid::AuthenticatorError;
+use drogue_cloud_test_common::db;
 use serde_json::json;
 use serial_test::serial;
 use testcontainers::clients;
@@ -59,7 +60,7 @@ async fn test_crud_tenant() -> anyhow::Result<()> {
         let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
-        assert_eq!(result, json!({"id": "tenant1", "data": {"enabled": false}}));
+        assert_eq!(result, json!({"id": "tenant1", "data": {"disabled": true}}));
 
         // delete, must succeed
         let resp = test::TestRequest::delete().uri("/api/v1/tenants/tenant1").send_request(&mut app).await;

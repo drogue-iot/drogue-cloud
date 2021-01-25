@@ -49,3 +49,4 @@ drogue-cloud-service-common = { path = "../service-common" }
 actix-rt = "2.0.0-beta.2"
 testcontainers = "0.11"
 serial_test = "0.5"
+drogue-cloud-test-common = { path = "../test-common" }
