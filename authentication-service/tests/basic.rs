@@ -43,7 +43,9 @@ macro_rules! test_auth {
             let is_success = resp.status().is_success();
             let result: serde_json::Value = test::read_body_json(resp).await;
 
-            assert_eq!(result, $res);
+            let outcome = $res;
+
+            assert_eq!(result, json!({"outcome": outcome}));
             assert!(is_success);
         })
     };
