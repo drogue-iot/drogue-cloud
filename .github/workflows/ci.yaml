@@ -147,13 +147,13 @@ jobs:
       - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry registry:2
 
       # Pull previous images
-      - run: make pull-images CONTAINER_REGISTRY=localhost:5000 || true
+      - run: make  -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000 || true
 
       - name: Build images
         run: make -C .github/scripts build-images-ci
 
       # Push images in local registry
-      - run: make push-images CONTAINER_REGISTRY=localhost:5000
+      - run: make push CONTAINER_REGISTRY=localhost:5000
 
   deploy:
     name: deploy drogue on Kind
