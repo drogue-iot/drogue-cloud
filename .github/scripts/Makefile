@@ -20,3 +20,12 @@ build-image-ci($(IMAGES)):
 kind-load-images: kind-load-image($(IMAGES))
 kind-load-image($(IMAGES)): require-container-registry
 	kind load docker-image $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+
+
+#
+# Pull docker images and retag them
+#
+pull-images: pull-images($(IMAGES))
+pull-images($(IMAGES)): require-container-registry
+	docker pull $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	docker tag $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG) $%:$(IMAGE_TAG) || true
