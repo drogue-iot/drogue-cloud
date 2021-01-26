@@ -29,18 +29,24 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         // we cannot use "wait for" as we need to look for the same message twice
         // FIXME: we should also have a timeout for this operation
         {
-            let out = db.logs().stdout;
+            let logs = db.logs();
+            let out = logs.stdout;
             let reader = BufReader::new(out);
             let mut n = 0;
             for line in reader.lines() {
                 let line = line?;
                 log::debug!("{}", line);
                 if line.contains("database system is ready to accept connections") {
+                    log::debug!("Count: {}", n);
                     n += 1;
                     if n > 1 {
                         break;
                     }
                 }
+            }
+            if n < 2 {
+                log::warn!("Stream aborted");
+                anyhow::bail!("Stream aborted, not ready.")
             }
         }
         log::info!("Waiting for postgres to become ready... done!");
