@@ -1,5 +1,5 @@
 use crate::PublishOptions;
-use actix_web::{web, HttpResponse};
+use actix_web::{put, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthDetails,
     downstream::{DownstreamSender, Publish},
@@ -7,6 +7,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_ttn::http as ttn;
 
+#[put("")]
 pub async fn publish(
     endpoint: web::Data<DownstreamSender>,
     web::Query(opts): web::Query<PublishOptions>,

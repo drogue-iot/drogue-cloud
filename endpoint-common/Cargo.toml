@@ -35,6 +35,8 @@ cloudevents-sdk-actix-web = "0.3"
 cloudevents-sdk-reqwest = "0.3"
 
 percent-encoding = "2"
+base64 = "0.13"
+http = "0.2"
 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
