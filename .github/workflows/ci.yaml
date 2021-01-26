@@ -39,16 +39,18 @@ jobs:
           command: fmt
           args: --all -- --check
 
-      - name: Clippy check
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
-
       - name: Check
         uses: actions-rs/cargo@v1
         with:
           command: check
+          args: --release
+
+      - name: Clippy check
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --release --all-features
+
 
   test:
     name: run tests

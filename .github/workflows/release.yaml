@@ -86,6 +86,10 @@ jobs:
           path: installer/build/install-*.zip
           if-no-files-found: error
 
+      - name: Run tests
+        run: |
+          make container-test
+
       - name: Run build
         run: |
           make build
@@ -93,10 +97,6 @@ jobs:
       - name: Fix permissions
         run: |
           make fix-permissions
-
-      - name: Run tests
-        run: |
-          make container-test
 
       - name: Login to github container repository
         if: ${{steps.state.outputs.do-publish}}
