@@ -34,6 +34,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
             let mut n = 0;
             for line in reader.lines() {
                 let line = line?;
+                log::debug!("{}", line);
                 if line.contains("database system is ready to accept connections") {
                     n += 1;
                     if n > 1 {
