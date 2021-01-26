@@ -79,7 +79,7 @@ jobs:
 
       - name: Run tests
         run: |
-          make container-test
+          make container-test CARGO_TEST_OPTS="--test-threads 1"
 
   build:
     name: build and deploy
