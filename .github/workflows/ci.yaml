@@ -84,11 +84,9 @@ jobs:
           make container-test CARGO_TEST_OPTS="--nocapture"
 
   build:
-    name: build and deploy
+    name: build
     runs-on: ubuntu-20.04
     needs: [check]
-    env:
-      CLUSTER: "kind"
     steps:
 
       - uses: actions/checkout@v2
@@ -107,6 +105,11 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
+
+      - name: Extract branch name
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -133,10 +136,43 @@ jobs:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-cache-ci
+            ${{ runner.os }}-buildx-${{ steps.extract_branch.outputs.branch }}
+
+      - id: cache-docker
+        uses: actions/cache@v1
+        with:
+          path: /tmp/docker-registry
+          key: docker-registry-${{ steps.extract_branch.outputs.branch }}
+
+      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry registry:2
+
+      # Pull previous images
+      - run: make pull-images CONTAINER_REGISTRY=localhost:5000 || true
 
       - name: Build images
         run: make -C .github/scripts build-images-ci
+
+      # Push images in local registry
+      - run: make push-images CONTAINER_REGISTRY=localhost:5000
+
+  deploy:
+    name: deploy drogue on Kind
+    runs-on: ubuntu-20.04
+    needs: [check, build]
+    env:
+      CLUSTER: "kind"
+    steps:
+
+      - id: cache-docker
+        uses: actions/cache@v1
+        with:
+          path: /tmp/docker-registry
+          key: docker-registry-${{ steps.extract_branch.outputs.branch }}
+
+      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry registry:2
+
+      # Pull and tag previous images
+      - run: make pull-images CONTAINER_REGISTRY=localhost:5000 || true
 
       # todo put dev.local into a variable.
       # "dev.local" prefixed images won't be resolved by the knative operator
@@ -166,9 +202,7 @@ jobs:
 
       - name: Collect logs
         if: failure()
-        run: |
-          kubectl get deployments -n drogue-iot -l '!serving.knative.dev/service'
-          ./.github/scripts/collect_logs.sh /tmp drogue-iot
+        run: ./.github/scripts/collect_logs.sh /tmp drogue-iot
 
       - name: Upload artifacts
         if: failure()
