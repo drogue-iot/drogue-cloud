@@ -120,6 +120,14 @@ fix-permissions:
 
 
 #
+# Change the permissions from inside the build container. Required for GitHub Actions, to make the build artifacts
+# accessible the build runner.
+#
+fix-permissions:
+	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
+
+
+#
 # Run an interactive shell inside the build container.
 #
 build-shell:
