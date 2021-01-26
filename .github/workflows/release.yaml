@@ -92,7 +92,7 @@ jobs:
 
       - name: Run tests
         run: |
-          make test
+          make container-test
 
       - name: Login to github container repository
         if: ${{steps.state.outputs.do-publish}}

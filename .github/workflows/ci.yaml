@@ -86,7 +86,7 @@ jobs:
 
       - name: Run tests
         run: |
-          make test
+          make container-test
 
       - uses: docker/setup-buildx-action@v1
 
