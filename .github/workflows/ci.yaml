@@ -17,7 +17,6 @@ jobs:
         with:
           path: |
             ~/.cargo/registry
-            .cargo-container-home
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -25,7 +24,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.49 # must be aligned with the builder image
           components: rustfmt, clippy
           profile: minimal
           override: true
@@ -51,10 +50,39 @@ jobs:
         with:
           command: check
 
+  test:
+    name: run tests
+    runs-on: ubuntu-20.04
+    needs: [check]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.49 # must be aligned with the builder image
+          profile: minimal
+          override: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get -y install libsasl2-dev
+
+      - name: Run tests
+        run: |
+          make container-test
+
   build:
     name: build and deploy
     runs-on: ubuntu-20.04
-    needs: [check]
+    needs: [test]
     env:
       CLUSTER: "kind"
     steps:
@@ -72,7 +100,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.49 # must be aligned with the builder image
           profile: minimal
           override: true
 
@@ -86,10 +114,6 @@ jobs:
 
       - name: Fix permissions
         run: make fix-permissions
-
-      - name: Run tests
-        run: |
-          make container-test
 
       - uses: docker/setup-buildx-action@v1
 
