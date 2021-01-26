@@ -90,6 +90,10 @@ jobs:
         run: |
           make build
 
+      - name: Fix permissions
+        run: |
+          make fix-permissions
+
       - name: Run tests
         run: |
           make container-test
@@ -102,10 +106,6 @@ jobs:
         if: ${{steps.state.outputs.do-publish}}
         run: |
           make images "IMAGE_TAG=$VERSION"
-
-      - name: Fix permissions
-        run: |
-          make fix-permissions
 
       - name: Create Release
         id: create-release
