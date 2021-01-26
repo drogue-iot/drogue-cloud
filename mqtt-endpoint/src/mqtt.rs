@@ -149,7 +149,6 @@ pub async fn publish_v5(
 macro_rules! subscribe {
     ($s: expr, $session: expr, $fail: expr) => {{
         $s.iter_mut().for_each(|mut sub| {
-
             if sub.topic() == "command" {
                 let mut devices = $session.state().devices.lock().unwrap();
                 devices.insert(
@@ -196,7 +195,11 @@ pub async fn control_v5<E: Debug>(
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
         v5::ControlMessage::Disconnect(d) => Ok(d.ack()),
-        v5::ControlMessage::Subscribe(mut s) => subscribe!(s, session, "sub.fail(v5::codec::SubscribeAckReason::NotAuthorized);"),
+        v5::ControlMessage::Subscribe(mut s) => subscribe!(
+            s,
+            session,
+            "sub.fail(v5::codec::SubscribeAckReason::NotAuthorized);"
+        ),
         v5::ControlMessage::Unsubscribe(u) => Ok(u.ack()),
         v5::ControlMessage::Closed(c) => Ok(c.ack()),
     }
