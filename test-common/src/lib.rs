@@ -1,9 +1,7 @@
 use deadpool::managed::{PoolConfig, Timeouts};
+use std::io::{BufRead, BufReader};
 use std::{fs, path::PathBuf, time::Duration};
-use testcontainers::{
-    images::generic::{GenericImage, WaitFor},
-    Container, Docker, RunArgs,
-};
+use testcontainers::{images::generic::GenericImage, Container, Docker, RunArgs};
 
 pub struct PostgresRunner<'c, C: Docker, SC> {
     pub config: SC,
@@ -21,14 +19,30 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
                     .to_str()
                     .ok_or_else(|| anyhow::anyhow!("Failed to generate SQL path"))?,
                 "/docker-entrypoint-initdb.d",
-            )
-            .with_wait_for(WaitFor::message_on_stdout(
-                "[1] LOG:  database system is ready to accept connections", // listening on pid 1
-            ));
+            );
 
         let args = RunArgs::default().with_mapped_port((5432, 5432));
 
         let db = cli.run_with_args(image, args);
+
+        log::info!("Waiting for postgres to become ready...");
+        // we cannot use "wait for" as we need to look for the same message twice
+        // FIXME: we should also have a timeout for this operation
+        {
+            let out = db.logs().stdout;
+            let reader = BufReader::new(out);
+            let mut n = 0;
+            for line in reader.lines() {
+                let line = line?;
+                if line.contains("database system is ready to accept connections") {
+                    n += 1;
+                    if n > 1 {
+                        break;
+                    }
+                }
+            }
+        }
+        log::info!("Waiting for postgres to become ready... done!");
 
         Ok(Self { config, db })
     }
@@ -53,6 +67,10 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
     }
 
     fn copy_sql(source: &PathBuf, target: &PathBuf) -> anyhow::Result<()> {
+        if !source.exists() {
+            return Ok(());
+        }
+
         for up in walkdir::WalkDir::new(&source)
             .contents_first(true)
             .into_iter()
