@@ -95,7 +95,14 @@ jobs:
             ~/.cargo/git
             .cargo-container-home
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-container-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions/cache@v2
+        with:
+          path: console-frontend/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
