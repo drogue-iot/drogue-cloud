@@ -70,7 +70,7 @@ jobs:
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: 1.49 # must be aligned with the builder image
           profile: minimal
           override: true
 
