@@ -163,6 +163,7 @@ jobs:
       CLUSTER: "kind"
     steps:
 
+      - uses: actions/checkout@v2
       - id: cache-docker
         uses: actions/cache@v1
         with:
