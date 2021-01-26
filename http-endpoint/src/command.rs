@@ -3,14 +3,12 @@
 //! Contains actors that handles commands for HTTP endpoint
 
 use actix::prelude::*;
-
+use actix_web::{http, web::Bytes, HttpResponse};
+use actix_web_actors::HttpContext;
 use drogue_cloud_endpoint_common::command_router::{
     CommandMessage, CommandRouter, CommandSubscribe, CommandUnsubscribe,
 };
-
-use actix_web::web::Bytes;
-use actix_web_actors::HttpContext;
-
+use drogue_cloud_endpoint_common::error::HttpEndpointError;
 use std::time;
 
 /// Actor for receiving commands
@@ -75,5 +73,25 @@ impl Handler<CommandMessage> for CommandHandler {
     fn handle(&mut self, msg: CommandMessage, ctx: &mut HttpContext<Self>) {
         ctx.write(Bytes::from(msg.command));
         ctx.write_eof()
+    }
+}
+
+/// Waits for a command for a `ttd_param` seconds by creating a command handler actor
+pub async fn command_wait<T: Into<String>, D: Into<String>>(
+    _tenant_id: T,
+    device_id: D,
+    ttd_param: Option<u64>,
+    status: http::StatusCode,
+) -> Result<HttpResponse, HttpEndpointError> {
+    match ttd_param {
+        Some(ttd) => {
+            let handler = CommandHandler {
+                device_id: device_id.into(),
+                ttd,
+            };
+            let context = HttpContext::create(handler);
+            Ok(HttpResponse::build(status).streaming(context))
+        }
+        _ => Ok(HttpResponse::build(status).finish()),
     }
 }

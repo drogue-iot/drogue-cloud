@@ -12,6 +12,7 @@ use crate::error::HttpEndpointError;
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
+    pub tenant_id: String,
     pub device_id: String,
     pub model_id: Option<String>,
     pub content_type: Option<String>,

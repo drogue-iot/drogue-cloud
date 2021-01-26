@@ -1,34 +1,27 @@
 mod basic_auth;
 mod command;
+mod telemetry;
 mod ttn;
 
-use std::convert::TryInto;
-
+use crate::basic_auth::basic_validator;
+use crate::command::command_wait;
 use actix_web::middleware::Condition;
 use actix_web::{
     get, http, http::header, middleware, post, web, App, HttpResponse, HttpServer, Responder,
 };
-
 use actix_web_httpauth::middleware::HttpAuthentication;
-
-use drogue_cloud_endpoint_common::downstream::{
-    DownstreamSender, Outcome, Publish, PublishResponse,
+use cloudevents_sdk_actix_web::HttpRequestExt;
+use dotenv::dotenv;
+use drogue_cloud_endpoint_common::{
+    auth::{AuthConfig, DeviceAuthenticator},
+    command_router::CommandRouter,
+    downstream::{DownstreamSender, Outcome, Publish, PublishResponse},
+    error::HttpEndpointError,
 };
-use drogue_cloud_endpoint_common::error::HttpEndpointError;
+use envconfig::Envconfig;
 use serde::Deserialize;
 use serde_json::json;
-
-use dotenv::dotenv;
-use envconfig::Envconfig;
-
-use crate::basic_auth::basic_validator;
-use actix_web_actors::HttpContext;
-use drogue_cloud_endpoint_common::auth::{AuthConfig, DeviceAuthenticator};
-
-use crate::command::CommandHandler;
-use drogue_cloud_endpoint_common::command_router::CommandRouter;
-
-use cloudevents_sdk_actix_web::HttpRequestExt;
+use std::convert::TryInto;
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
@@ -75,6 +68,7 @@ async fn publish(
         .publish(
             Publish {
                 channel,
+                tenant_id: "default".into(),
                 device_id: device_id.to_owned(),
                 model_id: opts.model_id,
                 content_type: req
@@ -90,33 +84,25 @@ async fn publish(
         // ok, and accepted
         Ok(PublishResponse {
             outcome: Outcome::Accepted,
-        }) => command_wait(device_id, opts.ttd, http::StatusCode::ACCEPTED).await,
+        }) => command_wait("default", device_id, opts.ttd, http::StatusCode::ACCEPTED).await,
 
         // ok, but rejected
         Ok(PublishResponse {
             outcome: Outcome::Rejected,
-        }) => command_wait(device_id, opts.ttd, http::StatusCode::NOT_ACCEPTABLE).await,
+        }) => {
+            command_wait(
+                "default",
+                device_id,
+                opts.ttd,
+                http::StatusCode::NOT_ACCEPTABLE,
+            )
+            .await
+        }
 
         // internal error
         Err(err) => Ok(HttpResponse::InternalServerError()
             .content_type("text/plain")
             .body(err.to_string())),
-    }
-}
-
-/// Waits for a command for a `ttd_param` seconds by creating a command handler actor
-async fn command_wait(
-    device_id: String,
-    ttd_param: Option<u64>,
-    status: http::StatusCode,
-) -> Result<HttpResponse, HttpEndpointError> {
-    match ttd_param {
-        Some(ttd) => {
-            let handler = CommandHandler { device_id, ttd };
-            let context = HttpContext::create(handler);
-            Ok(HttpResponse::build(status).streaming(context))
-        }
-        _ => Ok(HttpResponse::build(status).finish()),
     }
 }
 
@@ -134,7 +120,8 @@ async fn telemetry(
     endpoint
         .publish_http(
             Publish {
-                channel: tenant,
+                channel: "telemetry".into(),
+                tenant_id: tenant,
                 device_id: device,
                 model_id: None,
                 content_type: req
@@ -213,6 +200,15 @@ async fn main() -> anyhow::Result<()> {
 
         app.service(index)
             .service(
+                web::scope("/v1")
+                    .wrap(Condition::new(
+                        enable_auth,
+                        HttpAuthentication::basic(basic_validator),
+                    ))
+                    .service(telemetry::publish_plain)
+                    .service(telemetry::publish_tail),
+            )
+            .service(
                 web::resource("/publish/{device_id}/{channel}")
                     .wrap(Condition::new(
                         enable_auth,
@@ -229,12 +225,12 @@ async fn main() -> anyhow::Result<()> {
                     .route(web::put().to(telemetry)),
             )
             .service(
-                web::resource("/ttn")
+                web::scope("/ttn")
                     .wrap(Condition::new(
                         enable_auth,
                         HttpAuthentication::basic(basic_validator),
                     ))
-                    .route(web::put().to(ttn::publish)),
+                    .service(ttn::publish),
             )
             .service(command_service)
             //fixme : bind to a different port

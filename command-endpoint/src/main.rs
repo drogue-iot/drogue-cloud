@@ -50,6 +50,7 @@ async fn publish(
         .publish_http(
             Publish {
                 channel,
+                tenant_id: "default".into(),
                 device_id,
                 model_id: opts.model_id,
                 content_type: req
