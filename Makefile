@@ -113,7 +113,7 @@ cargo-build:
 # Run the cargo tests.
 #
 cargo-test:
-	cargo test --release
+	cargo test --release -- $(CARGO_TEST_OPTS)
 
 
 #
