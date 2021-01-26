@@ -88,7 +88,9 @@ jobs:
 
       - name: Run tests
         run: |
-          make container-test CARGO_TEST_OPTS="--test-threads 1"
+          # single thread because of the database
+          # nocapture to see the logs
+          make container-test CARGO_TEST_OPTS="--test-threads 1 --nocapture"
 
       - name: Run build
         run: |
