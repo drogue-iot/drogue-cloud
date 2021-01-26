@@ -147,21 +147,27 @@ pub async fn publish_v5(
 }
 
 macro_rules! subscribe {
-    ($s: expr, $session: expr) => {{
+    ($s: expr, $session: expr, $fail: expr) => {{
         $s.iter_mut().for_each(|mut sub| {
-            sub.subscribe(QoS::AtLeastOnce);
+
+            if sub.topic() == "command" {
+                let mut devices = $session.state().devices.lock().unwrap();
+                devices.insert(
+                    $session.state().device_id.clone(),
+                    $session.state().tx.clone(),
+                );
+
+                sub.subscribe(QoS::AtLeastOnce);
+
+                log::debug!(
+                    "Device '{:?}' subscribed to receive commands",
+                    $session.state().device_id.clone()
+                );
+            } else {
+                log::info!("Subscribing to topic {:?} not allowed", sub.topic());
+                $fail;
+            }
         });
-
-        let mut devices = $session.state().devices.lock().unwrap();
-        devices.insert(
-            $session.state().device_id.clone(),
-            $session.state().tx.clone(),
-        );
-
-        log::debug!(
-            "Device '{:?}' subscribed to receive commands",
-            $session.state().device_id.clone()
-        );
 
         Ok($s.ack())
     }};
@@ -174,7 +180,7 @@ pub async fn control_v3(
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
-        v3::ControlMessage::Subscribe(mut s) => subscribe!(s, session),
+        v3::ControlMessage::Subscribe(mut s) => subscribe!(s, session, "sub.fail();"),
         v3::ControlMessage::Unsubscribe(u) => Ok(u.ack()),
         v3::ControlMessage::Closed(c) => Ok(c.ack()),
     }
@@ -190,7 +196,7 @@ pub async fn control_v5<E: Debug>(
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
         v5::ControlMessage::Disconnect(d) => Ok(d.ack()),
-        v5::ControlMessage::Subscribe(mut s) => subscribe!(s, session),
+        v5::ControlMessage::Subscribe(mut s) => subscribe!(s, session, "sub.fail(v5::codec::SubscribeAckReason::NotAuthorized);"),
         v5::ControlMessage::Unsubscribe(u) => Ok(u.ack()),
         v5::ControlMessage::Closed(c) => Ok(c.ack()),
     }
