@@ -172,16 +172,25 @@ macro_rules! subscribe {
     }};
 }
 
+macro_rules! unsubscribe {
+    ($ack: expr, $session: expr, $log: expr) => {{
+        let mut devices = $session.state().devices.lock().unwrap();
+        devices.remove(&$session.state().device_id.clone());
+        log::debug!($log, $session.state().device_id.clone());
+        Ok($ack.ack())
+    }};
+}
+
 pub async fn control_v3(
     session: v3::Session<Session>,
     control: v3::ControlMessage,
 ) -> Result<v3::ControlResult, ServerError> {
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
-        v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
+        v3::ControlMessage::Disconnect(d) => unsubscribe!(d, session, "Disconnecting device {:?}"),
         v3::ControlMessage::Subscribe(mut s) => subscribe!(s, session, "sub.fail();"),
-        v3::ControlMessage::Unsubscribe(u) => Ok(u.ack()),
-        v3::ControlMessage::Closed(c) => Ok(c.ack()),
+        v3::ControlMessage::Unsubscribe(u) => unsubscribe!(u, session, "Unsubscribing device {:?}"),
+        v3::ControlMessage::Closed(c) => unsubscribe!(c, session, "Closing device connection {:?}"),
     }
 }
 
@@ -194,13 +203,13 @@ pub async fn control_v5<E: Debug>(
         v5::ControlMessage::Error(e) => Ok(e.ack(DisconnectReasonCode::UnspecifiedError)),
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
-        v5::ControlMessage::Disconnect(d) => Ok(d.ack()),
+        v5::ControlMessage::Disconnect(d) => unsubscribe!(d, session, "Disconnecting device {:?}"),
         v5::ControlMessage::Subscribe(mut s) => subscribe!(
             s,
             session,
             "sub.fail(v5::codec::SubscribeAckReason::NotAuthorized);"
         ),
-        v5::ControlMessage::Unsubscribe(u) => Ok(u.ack()),
-        v5::ControlMessage::Closed(c) => Ok(c.ack()),
+        v5::ControlMessage::Unsubscribe(u) => unsubscribe!(u, session, "Unsubscribing device {:?}"),
+        v5::ControlMessage::Closed(c) => unsubscribe!(c, session, "Closing device connection {:?}"),
     }
 }
