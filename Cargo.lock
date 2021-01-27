@@ -4238,7 +4238,7 @@ dependencies = [
 [[package]]
 name = "testcontainers"
 version = "0.11.0"
-source = "git+https://github.com/testcontainers/testcontainers-rs?rev=e1e5f8469aa004b2ab6f07d7332012d6287ea1cb#e1e5f8469aa004b2ab6f07d7332012d6287ea1cb"
+source = "git+https://github.com/ctron/testcontainers-rs.git?branch=feature/podman_1#471fb0b39df193719f5f186761205df3d2154571"
 dependencies = [
  "hex",
  "hmac",

@@ -1,7 +1,7 @@
 use deadpool::managed::{PoolConfig, Timeouts};
 use std::io::{BufRead, BufReader};
 use std::{fs, path::PathBuf, time::Duration};
-use testcontainers::{images::generic::GenericImage, Container, Docker, RunArgs};
+use testcontainers::{clients::Cli, images::generic::GenericImage, Container, Docker, RunArgs};
 
 pub struct PostgresRunner<'c, C: Docker, SC> {
     pub config: SC,
@@ -37,8 +37,8 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
                 let line = line?;
                 log::debug!("{}", line);
                 if line.contains("database system is ready to accept connections") {
-                    log::debug!("Count: {}", n);
                     n += 1;
+                    log::debug!("Count: {}", n);
                     if n > 1 {
                         break;
                     }
@@ -107,6 +107,10 @@ impl<'c, C: Docker, SC> Drop for PostgresRunner<'c, C, SC> {
         log::info!("Stopping postgres");
         self.db.stop();
     }
+}
+
+pub fn client() -> Cli {
+    Cli::podman()
 }
 
 pub fn db<C, SC, F>(cli: &C, f: F) -> anyhow::Result<PostgresRunner<C, SC>>
