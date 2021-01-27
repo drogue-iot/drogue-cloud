@@ -2,21 +2,21 @@ use crate::{
     service::{ManagementService, PostgresManagementService},
     WebData,
 };
-use actix_web::{delete, get, http::header, post, put, web, web::Json, HttpResponse};
+use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_cloud_service_api::management::TenantData;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct CreateTenant {
+pub struct CreateTenant {
     pub tenant_id: String,
     #[serde(default)]
     pub disabled: bool,
 }
 
-#[post("")]
-async fn create_tenant(
+pub async fn create(
     data: web::Data<WebData<PostgresManagementService>>,
     create: Json<CreateTenant>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::debug!("Creating tenant: '{:?}'", create);
 
@@ -33,25 +33,26 @@ async fn create_tenant(
 
     data.service.create_tenant(&tenant_id, &tenant_data).await?;
 
+    let location = req.url_for("tenant", &[tenant_id])?;
+
     let response = HttpResponse::Created()
-        // FIXME: create proper URL
-        .set_header(header::LOCATION, tenant_id.clone())
+        .set_header(header::LOCATION, location.into_string())
         .finish();
 
     Ok(response)
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct UpdateTenant {
+pub struct UpdateTenant {
     #[serde(default)]
     pub disabled: bool,
 }
 
-#[put("/{tenant_id}")]
-async fn update_tenant(
+pub async fn update(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path(tenant_id): web::Path<String>,
     update: Json<UpdateTenant>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::debug!("Updating tenant: '{}' / '{:?}'", tenant_id, update);
 
@@ -66,16 +67,16 @@ async fn update_tenant(
 
     data.service.update_tenant(&tenant_id, &tenant_data).await?;
 
+    let location = req.url_for("tenant", &[tenant_id])?;
+
     let response = HttpResponse::NoContent()
-        // FIXME: create proper URL
-        .set_header(header::LOCATION, tenant_id.clone())
+        .set_header(header::LOCATION, location.into_string())
         .finish();
 
     Ok(response)
 }
 
-#[delete("/{tenant_id}")]
-async fn delete_tenant(
+pub async fn delete(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path(tenant_id): web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
@@ -95,8 +96,7 @@ async fn delete_tenant(
     Ok(result)
 }
 
-#[get("/{tenant_id}")]
-async fn read_tenant(
+pub async fn read(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path(tenant_id): web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error> {

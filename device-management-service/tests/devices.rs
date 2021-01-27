@@ -12,6 +12,7 @@ use drogue_cloud_device_management_service::{
 };
 use drogue_cloud_service_common::openid::AuthenticatorError;
 use drogue_cloud_test_common::{client, db};
+use http::{header, HeaderValue};
 use serde_json::json;
 use serial_test::serial;
 
@@ -24,14 +25,16 @@ async fn test_create_device() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/tenants/tenant1")));
 
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo",
         })).send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/tenants/tenant1")));
     })
 }
 
@@ -39,7 +42,7 @@ async fn test_create_device() -> anyhow::Result<()> {
 #[serial]
 async fn test_create_device_no_tenant() -> anyhow::Result<()> {
     test!(app => {
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo",
@@ -63,7 +66,7 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "",
             "password": "foo",
@@ -83,7 +86,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo",
@@ -91,7 +94,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo",
@@ -107,7 +110,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
     test!(app => {
 
         // read, must not exist
-        let resp = test::TestRequest::get().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -119,12 +122,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // read, must still not exist
-        let resp = test::TestRequest::get().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // create device
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo",
@@ -133,7 +136,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // read, must exist now
-        let resp = test::TestRequest::get().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -142,7 +145,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         ]}}));
 
         // update device
-        let resp = test::TestRequest::put().uri("/api/v1/devices/tenant1/device1").set_json(&json!({
+        let resp = test::TestRequest::put().uri("/api/v1/tenants/tenant1/devices/device1").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo2",
@@ -151,7 +154,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // read, must have changed
-        let resp = test::TestRequest::get().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -160,17 +163,17 @@ async fn test_crud_device() -> anyhow::Result<()> {
         ]}}));
 
         // delete, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // read, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // update non existing device
-        let resp = test::TestRequest::put().uri("/api/v1/devices/tenant1/device1").set_json(&json!({
+        let resp = test::TestRequest::put().uri("/api/v1/tenants/tenant1/devices/device1").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo2",
@@ -179,7 +182,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // delete, second time, must result in "not found"
-        let resp = test::TestRequest::delete().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     })
@@ -198,7 +201,7 @@ async fn test_delete_tenant_deletes_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // create device
-        let resp = test::TestRequest::post().uri("/api/v1/devices/tenant1").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/v1/tenants/tenant1/devices").set_json(&json!({
             "tenant_id": "tenant1",
             "device_id": "device1",
             "password": "foo",
@@ -211,7 +214,7 @@ async fn test_delete_tenant_deletes_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // read device, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/devices/tenant1/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/tenants/tenant1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     })

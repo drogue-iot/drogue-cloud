@@ -22,6 +22,41 @@ pub struct Config {
 }
 
 #[macro_export]
+macro_rules! crud {
+    ($scope:ident, $base:literal, $module:path, $name:ident) => {{
+        $scope
+            .service({
+                let resource = concat!($base, stringify!($name), "s");
+                log::info!("{}", resource);
+                web::resource(resource).route(web::post().to({
+                    use $module as m;
+                    m::create
+                }))
+            })
+            .service({
+                let resource = concat!($base, stringify!($name), "s/{", stringify!($name), "_id}");
+                log::info!("{}", resource);
+
+                web::resource(resource)
+                    .name(stringify!($name))
+                    // "use" is required due to: https://github.com/rust-lang/rust/issues/48067
+                    .route(web::get().to({
+                        use $module as m;
+                        m::read
+                    }))
+                    .route(web::put().to({
+                        use $module as m;
+                        m::update
+                    }))
+                    .route(web::delete().to({
+                        use $module as m;
+                        m::delete
+                    }))
+            })
+    }};
+}
+
+#[macro_export]
 macro_rules! app {
     ($data:expr, $enable_auth:expr, $max_json_payload_size:expr) => {{
         let auth_middleware = HttpAuthentication::bearer(|req, auth| {
@@ -42,29 +77,34 @@ macro_rules! app {
             }
         });
 
-        App::new()
+        let app = App::new()
             .data(web::JsonConfig::default().limit($max_json_payload_size))
-            .service(
-                web::scope("/api/v1")
-                    .wrap(Cors::permissive())
-                    .wrap(Condition::new($enable_auth, auth_middleware))
-                    .service(
-                        web::scope("/tenants")
-                            .service(endpoints::tenants::create_tenant)
-                            .service(endpoints::tenants::read_tenant)
-                            .service(endpoints::tenants::update_tenant)
-                            .service(endpoints::tenants::delete_tenant),
-                    )
-                    .service(
-                        web::scope("/devices")
-                            .service(endpoints::devices::create_device)
-                            .service(endpoints::devices::read_device)
-                            .service(endpoints::devices::update_device)
-                            .service(endpoints::devices::delete_device),
-                    ),
-            )
             // FIXME: bind to a different port
             .service(endpoints::health::health)
-            .app_data($data.clone())
+            .app_data($data.clone());
+
+        let app = {
+            let scope = web::scope("/api/v1")
+                .wrap(Cors::permissive())
+                .wrap(Condition::new($enable_auth, auth_middleware));
+
+            let scope = drogue_cloud_device_management_service::crud!(
+                scope,
+                "/",
+                endpoints::tenants,
+                tenant
+            );
+
+            let scope = drogue_cloud_device_management_service::crud!(
+                scope,
+                "/tenants/{tenant_id}/",
+                endpoints::devices,
+                device
+            );
+
+            app.service(scope)
+        };
+
+        app
     }};
 }

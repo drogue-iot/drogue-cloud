@@ -1494,6 +1494,7 @@ dependencies = [
  "env_logger",
  "envconfig",
  "futures",
+ "http",
  "log",
  "rand 0.7.3",
  "rust-crypto",

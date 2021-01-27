@@ -2,23 +2,23 @@ use crate::{
     service::{ManagementService, PostgresManagementService},
     WebData,
 };
-use actix_web::{delete, get, http::header, post, put, web, web::Json, HttpResponse};
+use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_cloud_service_api::management::{Credential, DeviceData};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct CreateDevice {
+pub struct CreateDevice {
     pub device_id: String,
     pub password: String,
     #[serde(default)]
     pub properties: serde_json::Value,
 }
 
-#[post("/{tenant_id}")]
-async fn create_device(
+pub async fn create(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path(tenant_id): web::Path<String>,
     create: Json<CreateDevice>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
     log::debug!("Creating device: '{}' / '{:?}'", tenant_id, create);
 
@@ -38,23 +38,23 @@ async fn create_device(
         .create_device(&tenant_id, device_id, &device_data)
         .await?;
 
+    let location = req.url_for("device", &[&tenant_id, &device_id])?;
+
     let response = HttpResponse::Created()
-        // FIXME: create proper URL
-        .set_header(header::LOCATION, device_id.clone())
+        .set_header(header::LOCATION, location.into_string())
         .finish();
 
     Ok(response)
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct UpdateDevice {
+pub struct UpdateDevice {
     pub password: String,
     #[serde(default)]
     pub properties: serde_json::Value,
 }
 
-#[put("/{tenant_id}/{device_id}")]
-async fn update_device(
+pub async fn update(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path((tenant_id, device_id)): web::Path<(String, String)>,
     update: Json<UpdateDevice>,
@@ -83,8 +83,7 @@ async fn update_device(
     Ok(response)
 }
 
-#[delete("/{tenant_id}/{device_id}")]
-async fn delete_device(
+pub async fn delete(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path((tenant_id, device_id)): web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error> {
@@ -104,8 +103,7 @@ async fn delete_device(
     Ok(result)
 }
 
-#[get("/{tenant_id}/{device_id}")]
-async fn read_device(
+pub async fn read(
     data: web::Data<WebData<PostgresManagementService>>,
     web::Path((tenant_id, device_id)): web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error> {
