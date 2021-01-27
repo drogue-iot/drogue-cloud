@@ -53,6 +53,7 @@ impl DownstreamSender {
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
             .extension("deviceid", publish.device_id)
+            .extension("tenant", publish.tenant_id)
             .subject(&publish.channel)
             .time(Utc::now())
             .ty("io.drogue.iot.message");
