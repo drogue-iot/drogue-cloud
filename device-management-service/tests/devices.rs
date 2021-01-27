@@ -34,7 +34,7 @@ async fn test_create_device() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
-        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/tenants/tenant1")));
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/tenants/tenant1/devices/device1")));
     })
 }
 
