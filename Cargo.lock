@@ -1547,6 +1547,7 @@ dependencies = [
  "actix-web-actors",
  "actix-web-httpauth 0.5.0",
  "anyhow",
+ "async-trait",
  "awc 2.0.3",
  "cloudevents-sdk",
  "cloudevents-sdk-actix-web",
@@ -4238,7 +4239,7 @@ dependencies = [
 [[package]]
 name = "testcontainers"
 version = "0.11.0"
-source = "git+https://github.com/ctron/testcontainers-rs.git?branch=feature/podman_1#636cd324c88617482c5f41d6ecaf9aa6beac760f"
+source = "git+https://github.com/ctron/testcontainers-rs.git?branch=feature/podman_1#0b4f898830b26f9a8bee4f637294eaa8d5059f73"
 dependencies = [
  "hex",
  "hmac",

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::command::command_wait;
+use crate::command::{command_wait, CommandWait};
 use actix_web::{http::header, post, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
@@ -12,12 +12,12 @@ use drogue_cloud_service_api::auth;
 
 #[derive(Deserialize)]
 pub struct PublishOptions {
-    tenant: Option<String>,
-    device: Option<String>,
-    r#as: Option<String>,
+    pub tenant: Option<String>,
+    pub device: Option<String>,
+    pub r#as: Option<String>,
 
-    model_id: Option<String>,
-    ttd: Option<u64>,
+    pub model_id: Option<String>,
+    pub ttd: Option<u64>,
 }
 
 #[post("/{channel}")]
@@ -48,7 +48,7 @@ pub async fn publish(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     channel: String,
-    _suffix: Option<String>,
+    suffix: Option<String>,
     opts: PublishOptions,
     req: web::HttpRequest,
     body: web::Bytes,
@@ -65,9 +65,7 @@ pub async fn publish(
         .map_err(|err| HttpEndpointError(err.into()))?
         .outcome
     {
-        auth::Outcome::Fail => {
-            return Err(HttpEndpointError(EndpointError::AuthenticationError).into())
-        }
+        auth::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
         auth::Outcome::Pass { tenant, device } => (tenant, device),
     };
 
@@ -89,6 +87,7 @@ pub async fn publish(
                 tenant_id: tenant.id.clone(),
                 device_id: device_id.clone(),
                 model_id: opts.model_id,
+                topic: suffix,
                 content_type: req
                     .headers()
                     .get(header::CONTENT_TYPE)
@@ -102,7 +101,15 @@ pub async fn publish(
         // ok, and accepted
         Ok(PublishResponse {
             outcome: Outcome::Accepted,
-        }) => command_wait(tenant.id, device_id, opts.ttd, http::StatusCode::ACCEPTED).await,
+        }) => {
+            command_wait(
+                tenant.id,
+                device_id,
+                CommandWait::from_secs(opts.ttd),
+                http::StatusCode::ACCEPTED,
+            )
+            .await
+        }
 
         // ok, but rejected
         Ok(PublishResponse {
@@ -111,7 +118,7 @@ pub async fn publish(
             command_wait(
                 tenant.id,
                 device_id,
-                opts.ttd,
+                CommandWait::from_secs(opts.ttd),
                 http::StatusCode::NOT_ACCEPTABLE,
             )
             .await

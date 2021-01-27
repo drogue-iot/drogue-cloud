@@ -1,19 +1,19 @@
+use crate::error::HttpEndpointError;
+use actix_web::HttpResponse;
 use anyhow::Context;
 use chrono::Utc;
 use cloudevents::event::Data;
 use cloudevents::{EventBuilder, EventBuilderV10};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use actix_web::HttpResponse;
-
-use crate::error::HttpEndpointError;
+use std::future::Future;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
     pub tenant_id: String,
     pub device_id: String,
+    pub topic: Option<String>,
     pub model_id: Option<String>,
     pub content_type: Option<String>,
 }
@@ -99,7 +99,30 @@ impl DownstreamSender {
         }
     }
 
-    pub async fn publish_http<B>(
+    pub async fn publish_http<B, H, F>(
+        &self,
+        publish: Publish,
+        body: B,
+        f: H,
+    ) -> Result<HttpResponse, HttpEndpointError>
+    where
+        B: AsRef<[u8]>,
+        // F: FnOnce(Outcome) -> Result<HttpResponse, HttpEndpointError>,
+        H: FnOnce(Outcome) -> F,
+        F: Future<Output = Result<HttpResponse, HttpEndpointError>>,
+    {
+        match self.publish(publish, body).await {
+            // ok
+            Ok(PublishResponse { outcome }) => f(outcome).await,
+
+            // internal error
+            Err(err) => Ok(HttpResponse::InternalServerError()
+                .content_type("text/plain")
+                .body(err.to_string())),
+        }
+    }
+
+    pub async fn publish_http_default<B>(
         &self,
         publish: Publish,
         body: B,
@@ -107,21 +130,12 @@ impl DownstreamSender {
     where
         B: AsRef<[u8]>,
     {
-        match self.publish(publish, body).await {
-            // ok, and accepted
-            Ok(PublishResponse {
-                outcome: Outcome::Accepted,
-            }) => Ok(HttpResponse::Accepted().finish()),
-
-            // ok, but rejected
-            Ok(PublishResponse {
-                outcome: Outcome::Rejected,
-            }) => Ok(HttpResponse::NotAcceptable().finish()),
-
-            // internal error
-            Err(err) => Ok(HttpResponse::InternalServerError()
-                .content_type("text/plain")
-                .body(err.to_string())),
-        }
+        self.publish_http(publish, body, |outcome| async move {
+            match outcome {
+                Outcome::Accepted => Ok(HttpResponse::Accepted().finish()),
+                Outcome::Rejected => Ok(HttpResponse::NotAcceptable().finish()),
+            }
+        })
+        .await
     }
 }

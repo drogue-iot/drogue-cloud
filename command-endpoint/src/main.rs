@@ -47,12 +47,13 @@ async fn publish(
     log::info!("Published to '{}'", channel);
 
     endpoint
-        .publish_http(
+        .publish_http_default(
             Publish {
                 channel,
                 tenant_id: "default".into(),
                 device_id,
                 model_id: opts.model_id,
+                topic: None,
                 content_type: req
                     .headers()
                     .get(header::CONTENT_TYPE)
