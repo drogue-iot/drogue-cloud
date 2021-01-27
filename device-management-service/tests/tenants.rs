@@ -12,6 +12,7 @@ use drogue_cloud_device_management_service::{
 };
 use drogue_cloud_service_common::openid::AuthenticatorError;
 use drogue_cloud_test_common::{client, db};
+use http::{header, HeaderValue};
 use serde_json::json;
 use serial_test::serial;
 
@@ -24,6 +25,7 @@ async fn test_create_tenant() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/tenants/tenant1")));
     })
 }
 
