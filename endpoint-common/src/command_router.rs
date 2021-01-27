@@ -1,6 +1,6 @@
 //! Command router
 //!
-//! Routes commands to appropriate actors
+//! Route commands to appropriate actors.
 //! Actors can subscribe/unsubscribe for commands by sending appropriate messages
 
 use actix::prelude::*;
