@@ -113,7 +113,7 @@ echo "After you created a device, try these commands at a shell prompt:"
 echo
 echo "Publish data from the device and specify how long will you wait for a command with 'ttd' parameter (in seconds)"
 echo
-echo "  http --auth device_id@tenant_id:foobar POST $HTTP_ENDPOINT_URL/publish/device_id/foo?ttd=30 temp:=42"
+echo "  http --auth device_id@tenant_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ttd=30 temp:=42"
 echo
 echo "Or subscribe with the MQTT device"
 echo
