@@ -1,4 +1,5 @@
 use actix_web::dev::ServiceRequest;
+use actix_web::web::Data;
 use actix_web::{Error, HttpMessage};
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use drogue_cloud_endpoint_common::auth::DeviceAuthDetails;
@@ -15,7 +16,7 @@ pub async fn basic_validator(
     req: ServiceRequest,
     cred: BasicAuth,
 ) -> Result<ServiceRequest, Error> {
-    let authenticator = req.app_data::<DeviceAuthenticator>().ok_or_else(|| {
+    let authenticator = req.app_data::<Data<DeviceAuthenticator>>().ok_or_else(|| {
         HttpEndpointError(EndpointError::ConfigurationError {
             details: "Missing authentication configuration".into(),
         })
