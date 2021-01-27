@@ -86,7 +86,7 @@ jobs:
   build:
     name: build and deploy
     runs-on: ubuntu-20.04
-    needs: [test]
+    needs: [check]
     env:
       CLUSTER: "kind"
     steps:
