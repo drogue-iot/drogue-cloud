@@ -86,13 +86,13 @@ echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id disabled:=true
 echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/tenants/tenant_id"
 echo
 echo "Devices:"
-echo "  Create:  http POST   ${MGMT_URL}/api/v1/devices/tenant_id device_id=device_id password=foobar"
-echo "  Read:    http GET    ${MGMT_URL}/api/v1/devices/tenant_id/device_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/devices/tenant_id/device_id password=foobar"
-echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/devices/tenant_id/device_id"
+echo "  Create:  http POST   ${MGMT_URL}/api/v1/tenants/tenant_id/devices device_id=device_id password=foobar"
+echo "  Read:    http GET    ${MGMT_URL}/api/v1/tenants/tenant_id/devices/device_id"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id/devices/device_id password=foobar"
+echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/tenants/tenant_id/devices/device_id"
 echo
 echo "Publish data:"
-echo "----------------"
+echo "---------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
@@ -106,8 +106,8 @@ echo
 echo "  http --auth device_id@tenant_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
 echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@tenant_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}'"
 echo
-echo "Send commands to the device"
-echo "---------------------------"
+echo "Send commands to the device:"
+echo "------------------------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
