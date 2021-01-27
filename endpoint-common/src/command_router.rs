@@ -28,7 +28,7 @@ pub struct CommandSubscribe(pub String, pub Device);
 #[rtype(result = "()")]
 pub struct CommandUnsubscribe(pub String);
 
-/// Recepient of commands
+/// Recipient of commands
 type Device = Recipient<CommandMessage>;
 
 /// Routes commands to appropriate actors

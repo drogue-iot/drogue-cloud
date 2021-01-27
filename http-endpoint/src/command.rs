@@ -76,15 +76,37 @@ impl Handler<CommandMessage> for CommandHandler {
     }
 }
 
-/// Waits for a command for a `ttd_param` seconds by creating a command handler actor
+/// Settings for waiting on commands.
+///
+/// The default is to not wait for commands.
+#[derive(Clone, Debug, Default)]
+pub struct CommandWait {
+    /// The duration to wait for an incoming command.
+    ///
+    /// If the duration is `None` or considered "zero", then the operation will not wait for a
+    /// command. **Note:** If the duration is expected to be seconds based, but the provided
+    /// duration shorter than a second, that may be treated as zero.
+    pub duration: Option<time::Duration>,
+}
+
+impl CommandWait {
+    /// Conveniently map a number of seconds value into a command wait operation.
+    pub fn from_secs(secs: Option<u64>) -> Self {
+        Self {
+            duration: secs.map(time::Duration::from_secs),
+        }
+    }
+}
+
+/// Waits for a command for a `command.duration` seconds by creating a command handler actor
 pub async fn command_wait<T: Into<String>, D: Into<String>>(
     _tenant_id: T,
     device_id: D,
-    ttd_param: Option<u64>,
+    command: CommandWait,
     status: http::StatusCode,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    match ttd_param {
-        Some(ttd) => {
+    match command.duration.map(|d| d.as_secs()) {
+        Some(ttd) if ttd > 0 => {
             let handler = CommandHandler {
                 device_id: device_id.into(),
                 ttd,

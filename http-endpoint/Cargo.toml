@@ -9,6 +9,7 @@ license = "Apache-2.0"
 
 anyhow = "1"
 snafu = "0.6"
+async-trait = "0.1"
 
 actix = "0.10"
 actix-broker = "0.3.1"
