@@ -186,7 +186,7 @@ impl<S: AsRef<str>> From<S> for Username {
     fn from(s: S) -> Self {
         let s = s.as_ref();
         match s.splitn(2, '@').collect::<Vec<_>>().as_slice() {
-            [scope, device] => Username::Scoped {
+            [device, scope] => Username::Scoped {
                 scope: scope.to_string(),
                 device: device.to_string(),
             },
@@ -247,6 +247,18 @@ impl From<HeaderValue> for AuthValue {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_user_scoped() {
+        let user = Username::from("device@scope");
+        assert_eq!(
+            user,
+            Username::Scoped {
+                scope: "scope".into(),
+                device: "device".into()
+            }
+        )
+    }
 
     #[test]
     fn test_basic_rfc() {

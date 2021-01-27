@@ -6,6 +6,7 @@ mod ttn;
 use crate::basic_auth::basic_validator;
 use crate::command::command_wait;
 use actix_web::middleware::Condition;
+use actix_web::web::Data;
 use actix_web::{
     get, http, http::header, middleware, post, web, App, HttpResponse, HttpServer, Responder,
 };
@@ -193,7 +194,7 @@ async fn main() -> anyhow::Result<()> {
 
         // add authenticator, if we have one
         let app = if let Some(authenticator) = &authenticator {
-            app.app_data(authenticator.clone())
+            app.app_data(Data::new(authenticator.clone()))
         } else {
             app
         };
@@ -201,10 +202,6 @@ async fn main() -> anyhow::Result<()> {
         app.service(index)
             .service(
                 web::scope("/v1")
-                    .wrap(Condition::new(
-                        enable_auth,
-                        HttpAuthentication::basic(basic_validator),
-                    ))
                     .service(telemetry::publish_plain)
                     .service(telemetry::publish_tail),
             )
