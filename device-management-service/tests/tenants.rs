@@ -11,10 +11,9 @@ use drogue_cloud_device_management_service::{
     WebData,
 };
 use drogue_cloud_service_common::openid::AuthenticatorError;
-use drogue_cloud_test_common::db;
+use drogue_cloud_test_common::{client, db};
 use serde_json::json;
 use serial_test::serial;
-use testcontainers::clients;
 
 #[actix_rt::test]
 #[serial]

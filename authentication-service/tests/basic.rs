@@ -1,11 +1,10 @@
 use actix_web::{test, web, App};
 use drogue_cloud_authentication_service::{endpoints, service, WebData};
 use drogue_cloud_service_api::auth::{AuthenticationRequest, Credential};
-use drogue_cloud_test_common::db;
+use drogue_cloud_test_common::{client, db};
 use log::LevelFilter;
 use serde_json::json;
 use serial_test::serial;
-use testcontainers::clients;
 
 fn init() {
     let _ = env_logger::builder()
@@ -18,7 +17,7 @@ macro_rules! test {
    ($v:ident => $($code:block)*) => {{
         init();
 
-        let cli = clients::Cli::default();
+        let cli = client();
         let db = db(&cli, |pg| service::AuthenticationServiceConfig{
             pg
         })?;

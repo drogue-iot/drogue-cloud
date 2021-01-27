@@ -17,7 +17,8 @@ members = [
 ]
 
 [patch.crates-io]
-testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "e1e5f8469aa004b2ab6f07d7332012d6287ea1cb"}
+#testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "e1e5f8469aa004b2ab6f07d7332012d6287ea1cb"}
+testcontainers = { git = "https://github.com/ctron/testcontainers-rs.git", branch="feature/podman_1"}
 #ntex-mqtt = { path = "../ntex-mqtt" }
 #patternfly-yew = { path = "../patternfly-yew" }
 #drogue-ttn = { path = "../drogue-ttn" }
