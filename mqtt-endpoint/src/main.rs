@@ -29,8 +29,6 @@ use std::{
 struct Config {
     #[envconfig(from = "DISABLE_TLS", default = "false")]
     pub disable_tls: bool,
-    #[envconfig(from = "ENABLE_AUTH", default = "true")]
-    pub enable_auth: bool,
     #[envconfig(from = "BIND_ADDR_MQTT")]
     pub bind_addr_mqtt: Option<String>,
     #[envconfig(from = "BIND_ADDR_HTTP", default = "0.0.0.0:8080")]
@@ -40,35 +38,28 @@ struct Config {
 #[derive(Clone, Debug)]
 pub struct App {
     pub downstream: DownstreamSender,
-    pub authenticator: Option<DeviceAuthenticator>,
+    pub authenticator: DeviceAuthenticator,
     pub devices: Arc<Mutex<HashMap<String, tokio::sync::mpsc::Sender<String>>>>,
 }
 
 impl App {
+    /// authenticate a client
     async fn authenticate(
         &self,
         username: &Option<ByteString>,
         password: &Option<Bytes>,
-        _: &ByteString,
+        client_id: &ByteString,
     ) -> Result<AuthOutcome, EndpointError> {
-        match (
-            &self.authenticator,
-            username,
-            password.as_ref().map(|p| String::from_utf8(p.to_vec())),
-        ) {
-            (None, ..) => Ok(AuthOutcome::Pass {
-                tenant: Default::default(),
-                device: Default::default(),
-            }),
-            (Some(authenticator), Some(username), Some(Ok(password))) => Ok(authenticator
-                // FIXME: need to implement other variants as well
-                .authenticate_simple(&username, &password)
+        match password.as_ref().map(|p| String::from_utf8(p.to_vec())) {
+            Some(Ok(password)) => Ok(self
+                .authenticator
+                .authenticate_mqtt(username.as_ref(), Some(password), &client_id)
                 .await
                 .map_err(|err| EndpointError::AuthenticationServiceError {
                     source: Box::new(err),
                 })?
                 .outcome),
-            (Some(_), _, _) => Ok(AuthOutcome::Fail),
+            _ => Ok(AuthOutcome::Fail),
         }
     }
 }
@@ -130,13 +121,9 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::init_from_env()?;
 
-    // test to see if we can create one, although we don't use it now, we would fail early
     let app = App {
         downstream: DownstreamSender::new()?,
-        authenticator: match config.enable_auth {
-            true => Some(AuthConfig::init_from_env()?.try_into()?),
-            false => None,
-        },
+        authenticator: AuthConfig::init_from_env()?.try_into()?,
         devices: Arc::new(Mutex::new(HashMap::new())),
     };
 
