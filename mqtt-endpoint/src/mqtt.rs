@@ -164,7 +164,7 @@ macro_rules! subscribe {
                 );
             } else {
                 log::info!("Subscribing to topic {:?} not allowed", sub.topic());
-                $fail;
+                $fail(sub);
             }
         });
 
@@ -188,7 +188,9 @@ pub async fn control_v3(
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => unsubscribe!(d, session, "Disconnecting device {:?}"),
-        v3::ControlMessage::Subscribe(mut s) => subscribe!(s, session, "sub.fail();"),
+        v3::ControlMessage::Subscribe(mut s) => {
+            subscribe!(s, session, |mut sub: v3::control::Subscription| sub.fail())
+        }
         v3::ControlMessage::Unsubscribe(u) => unsubscribe!(u, session, "Unsubscribing device {:?}"),
         v3::ControlMessage::Closed(c) => unsubscribe!(c, session, "Closing device connection {:?}"),
     }
@@ -204,11 +206,10 @@ pub async fn control_v5<E: Debug>(
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
         v5::ControlMessage::Disconnect(d) => unsubscribe!(d, session, "Disconnecting device {:?}"),
-        v5::ControlMessage::Subscribe(mut s) => subscribe!(
-            s,
-            session,
-            "sub.fail(v5::codec::SubscribeAckReason::NotAuthorized);"
-        ),
+        v5::ControlMessage::Subscribe(mut s) => {
+            subscribe!(s, session, |mut sub: v5::control::Subscription| sub
+                .fail(v5::codec::SubscribeAckReason::NotAuthorized))
+        }
         v5::ControlMessage::Unsubscribe(u) => unsubscribe!(u, session, "Unsubscribing device {:?}"),
         v5::ControlMessage::Closed(c) => unsubscribe!(c, session, "Closing device connection {:?}"),
     }
