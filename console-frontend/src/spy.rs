@@ -36,17 +36,7 @@ impl TableRenderer for Entry {
             // timestamp
             0 => render_timestamp(&self.0),
             // device id
-            1 => self
-                .0
-                .extension("deviceid")
-                .map(|s| match s {
-                    ExtensionValue::String(s) => s.clone(),
-                    ExtensionValue::Integer(i) => i.to_string(),
-                    ExtensionValue::Boolean(true) => "true".into(),
-                    ExtensionValue::Boolean(false) => "false".into(),
-                })
-                .unwrap_or_default()
-                .into(),
+            1 => self.device().into(),
             // payload
             2 => render_data_short(&self.0),
             // ignore
@@ -56,6 +46,27 @@ impl TableRenderer for Entry {
 
     fn render_details(&self) -> Vec<Span> {
         vec![Span::max(render_details(&self.0))]
+    }
+}
+
+impl Entry {
+    fn device(&self) -> String {
+        let tenant_id = self.extension_as_string("tenant");
+        let device_id = self.extension_as_string("device");
+
+        format!("{} / {}", tenant_id, device_id)
+    }
+
+    fn extension_as_string(&self, name: &str) -> String {
+        self.0
+            .extension(name)
+            .map(|s| match s {
+                ExtensionValue::String(s) => s.clone(),
+                ExtensionValue::Integer(i) => i.to_string(),
+                ExtensionValue::Boolean(true) => "true".into(),
+                ExtensionValue::Boolean(false) => "false".into(),
+            })
+            .unwrap_or_default()
     }
 }
 

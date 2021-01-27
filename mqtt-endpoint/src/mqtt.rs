@@ -17,7 +17,6 @@ use tokio::sync::mpsc;
 macro_rules! connect {
     ($connect:expr, $app: expr) => {{
         log::info!("new connection: {:?}", $connect);
-        let device_id = $connect.packet().client_id.to_string();
         match $app
             .authenticate(
                 &$connect.packet().username,
@@ -26,11 +25,19 @@ macro_rules! connect {
             )
             .await?
         {
-            AuthOutcome::Pass { .. } => {
+            AuthOutcome::Pass { tenant, device } => {
                 let (tx, mut rx) = mpsc::channel(32);
 
-                let session =
-                    Session::new($app.downstream, device_id.clone(), $app.devices.clone(), tx);
+                let tenant_id = tenant.id.clone();
+                let device_id = device.id.clone();
+
+                let session = Session::new(
+                    $app.downstream,
+                    tenant_id.clone(),
+                    device_id.clone(),
+                    $app.devices.clone(),
+                    tx,
+                );
 
                 let sink = $connect.sink().clone();
                 ntex::rt::spawn(async move {
@@ -40,10 +47,13 @@ macro_rules! connect {
                             .send_at_least_once()
                             .await
                         {
-                            Ok(_) => log::debug!(
-                                "Command sent to device subscription {:?}",
-                                device_id.clone()
-                            ),
+                            Ok(_) => {
+                                log::debug!(
+                                    "Command sent to device subscription {} / {}",
+                                    tenant_id,
+                                    device_id
+                                )
+                            }
                             Err(e) => log::error!(
                                 "Failed to send a command to device subscription {:?}",
                                 e
@@ -94,8 +104,8 @@ macro_rules! publish {
         $session.state().sender.publish(
             Publish {
                 channel: channel.into(),
+                tenant_id: $session.tenant_id.clone(),
                 device_id: $session.device_id.clone(),
-                model_id: None,
                 ..Default::default()
             },
             $publish.payload(),

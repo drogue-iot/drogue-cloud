@@ -27,6 +27,7 @@ use tokio::sync::mpsc::Sender;
 #[derive(Clone)]
 pub struct Session {
     pub sender: DownstreamSender,
+    pub tenant_id: String,
     pub device_id: String,
     pub devices: Arc<Mutex<HashMap<String, Sender<String>>>>,
     pub tx: Sender<String>,
@@ -35,12 +36,14 @@ pub struct Session {
 impl Session {
     pub fn new(
         sender: DownstreamSender,
+        tenant_id: String,
         device_id: String,
         devices: Arc<Mutex<HashMap<String, Sender<String>>>>,
         tx: Sender<String>,
     ) -> Self {
         Session {
             sender,
+            tenant_id,
             device_id,
             devices,
             tx,
