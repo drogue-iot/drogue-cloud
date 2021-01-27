@@ -86,6 +86,50 @@ impl DeviceAuthenticator {
             .await
     }
 
+    /// authenticate for a typical MQTT request
+    pub async fn authenticate_mqtt<U, P, C>(
+        &self,
+        username: Option<U>,
+        password: Option<P>,
+        client_id: C,
+    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>>
+    where
+        U: AsRef<str>,
+        P: Into<String>,
+        C: AsRef<str>,
+    {
+        match (
+            username.map(Username::from),
+            password,
+            Username::from(client_id),
+        ) {
+            // Username/password <device>@<tenant> / <password>, Client ID: ???
+            (Some(Username::Scoped { scope, device }), Some(password), _) => {
+                self.authenticate(&scope, &device, Credential::Password(password.into()))
+                    .await
+            }
+            // Username/password <username> / <password>, Client ID: <device>@<tenant>
+            (
+                Some(Username::NonScoped(username)),
+                Some(password),
+                Username::Scoped { scope, device },
+            ) => {
+                self.authenticate(
+                    &scope,
+                    &device,
+                    Credential::UsernamePassword {
+                        username,
+                        password: password.into(),
+                    },
+                )
+                .await
+            }
+            // everything else is failed
+            _ => Ok(AuthenticationResponse::failed()),
+        }
+    }
+
+    /// authenticate for a typical HTTP request
     pub async fn authenticate_http<T, D>(
         &self,
         tenant: Option<T>,
