@@ -39,7 +39,7 @@ pub struct CommandRouter {
 
 impl CommandRouter {
     pub async fn send(event: Event) -> Result<(), String> {
-        let device_id_ext = event.extension("device_id");
+        let device_id_ext = event.extension("deviceid");
 
         match device_id_ext {
             Some(ExtensionValue::String(device_id)) => {

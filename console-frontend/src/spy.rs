@@ -38,7 +38,7 @@ impl TableRenderer for Entry {
             // device id
             1 => self
                 .0
-                .extension("device_id")
+                .extension("deviceid")
                 .map(|s| match s {
                     ExtensionValue::String(s) => s.clone(),
                     ExtensionValue::Integer(i) => i.to_string(),

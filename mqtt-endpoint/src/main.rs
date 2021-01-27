@@ -76,7 +76,7 @@ async fn command_service(
         .await
         .unwrap();
 
-    let device_id_ext = request_event.extension("device_id");
+    let device_id_ext = request_event.extension("deviceid");
 
     match device_id_ext {
         Some(ExtensionValue::String(device_id)) => {
