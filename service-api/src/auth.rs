@@ -5,7 +5,7 @@ use std::fmt;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthenticationRequest {
-    pub tenant: String,
+    pub application: String,
     pub device: String,
     pub credential: Credential,
 }
@@ -24,7 +24,7 @@ pub enum Credential {
 #[serde(rename_all = "snake_case")]
 pub enum Outcome {
     Pass {
-        tenant: management::Tenant,
+        application: management::Application,
         device: management::Device,
     },
     Fail,
@@ -115,14 +115,20 @@ mod test {
     fn test_encode_pass() {
         let str = serde_json::to_string(&AuthenticationResponse {
             outcome: Outcome::Pass {
-                tenant: management::Tenant {
-                    id: "t1".to_string(),
-                    data: Default::default(),
+                application: management::Application {
+                    metadata: management::ApplicationMetadata {
+                        name: "a1".to_string(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
                 },
                 device: management::Device {
-                    tenant_id: "t1".to_string(),
-                    id: "d1".to_string(),
-                    data: Default::default(),
+                    metadata: management::DeviceMetadata {
+                        application: "a1".to_string(),
+                        name: "d1".to_string(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
                 },
             },
         });
@@ -130,7 +136,7 @@ mod test {
         assert!(str.is_ok());
         assert_eq!(
             String::from(
-                r#"{"outcome":{"pass":{"tenant":{"id":"t1","data":{}},"device":{"tenant_id":"t1","id":"d1","data":{}}}}}"#
+                r#"{"outcome":{"pass":{"application":{"metadata":{"name":"a1"}},"device":{"metadata":{"application":"a1","name":"d1"}}}}}"#
             ),
             str.unwrap()
         );

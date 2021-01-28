@@ -88,16 +88,12 @@ macro_rules! app {
                 .wrap(Cors::permissive())
                 .wrap(Condition::new($enable_auth, auth_middleware));
 
-            let scope = drogue_cloud_device_management_service::crud!(
-                scope,
-                "/",
-                endpoints::tenants,
-                tenant
-            );
+            let scope =
+                drogue_cloud_device_management_service::crud!(scope, "/", endpoints::apps, app);
 
             let scope = drogue_cloud_device_management_service::crud!(
                 scope,
-                "/tenants/{tenant_id}/",
+                "/apps/{app_id}/",
                 endpoints::devices,
                 device
             );

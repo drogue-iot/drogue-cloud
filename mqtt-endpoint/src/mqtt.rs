@@ -25,15 +25,18 @@ macro_rules! connect {
             )
             .await?
         {
-            AuthOutcome::Pass { tenant, device } => {
+            AuthOutcome::Pass {
+                application,
+                device,
+            } => {
                 let (tx, mut rx) = mpsc::channel(32);
 
-                let tenant_id = tenant.id.clone();
-                let device_id = device.id.clone();
+                let app_id = application.metadata.name.clone();
+                let device_id = device.metadata.name.clone();
 
                 let session = Session::new(
                     $app.downstream,
-                    tenant_id.clone(),
+                    app_id.clone(),
                     device_id.clone(),
                     $app.devices.clone(),
                     tx,
@@ -50,7 +53,7 @@ macro_rules! connect {
                             Ok(_) => {
                                 log::debug!(
                                     "Command sent to device subscription {} / {}",
-                                    tenant_id,
+                                    app_id,
                                     device_id
                                 )
                             }

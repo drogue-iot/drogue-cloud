@@ -2,22 +2,22 @@
 -- tenant1
 --
 
-INSERT INTO TENANTS (
+INSERT INTO APPLICATIONS (
     ID,
     DATA
 ) VALUES (
-    'tenant1',
+    'app1',
     '{}'::JSONB
 );
 
-INSERT INTO TENANT_ALIASES (
+INSERT INTO APPLICATION_ALIASES (
     ID,
     TYPE,
     ALIAS
 ) VALUES (
-    'tenant1',
+    'app1',
     'id',
-    'tenant1'
+    'app1'
 );
 
 --
@@ -25,26 +25,30 @@ INSERT INTO TENANT_ALIASES (
 --
 
 INSERT INTO DEVICES (
-    TENANT_ID,
+    APP_ID,
     ID,
     DATA
 ) VALUES (
-    'tenant1',
+    'app1',
     'device1',
     '{
-      "credentials": [
-        { "pass": "foo"}
-      ]
+      "spec": {
+        "credentials": {
+          "credentials": [
+            { "pass": "foo"}
+          ]
+        }
+      }
     }'::JSONB
 );
 
 INSERT INTO DEVICE_ALIASES(
-    TENANT_ID,
+    APP_ID,
     ID,
     TYPE,
     ALIAS
 ) VALUES (
-    'tenant1',
+    'app1',
     'device1',
     'id',
     'device1'
@@ -59,39 +63,43 @@ INSERT INTO DEVICE_ALIASES(
 --
 
 INSERT INTO DEVICES (
-    TENANT_ID,
+    APP_ID,
     ID,
     DATA
 ) VALUES (
-    'tenant1',
+    'app1',
     'device3',
     '{
-       "credentials": [
-         { "user": { "username": "device3", "password": "baz"}},
-         { "user": { "username": "foo", "password": "bar" }}
-       ]
+       "spec": {
+         "credentials": {
+           "credentials": [
+             { "user": { "username": "device3", "password": "baz"}},
+             { "user": { "username": "foo", "password": "bar" }}
+           ]
+         }
+       }
      }'::JSONB
 );
 
 INSERT INTO DEVICE_ALIASES(
-    TENANT_ID,
+    APP_ID,
     ID,
     TYPE,
     ALIAS
 ) VALUES (
-    'tenant1',
+    'app1',
     'device3',
     'id',
     'device3'
 );
 
 INSERT INTO DEVICE_ALIASES(
-    TENANT_ID,
+    APP_ID,
     ID,
     TYPE,
     ALIAS
 ) VALUES (
-    'tenant1',
+    'app1',
     'device3',
     'hwaddr',
     '12:34:56'

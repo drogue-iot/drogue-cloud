@@ -6,7 +6,7 @@ use drogue_cloud_service_api::{
         AuthenticationClient, AuthenticationClientError, AuthenticationRequest,
         AuthenticationResponse, Credential,
     },
-    management::{Device, Tenant},
+    management::{Application, Device},
 };
 use drogue_cloud_service_common::auth::ReqwestAuthenticatorClient;
 use envconfig::Envconfig;
@@ -67,19 +67,19 @@ impl DeviceAuthenticator {
         }
     }
 
-    pub async fn authenticate<T, D>(
+    pub async fn authenticate<A, D>(
         &self,
-        tenant: T,
+        application: A,
         device: D,
         credential: Credential,
     ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>>
     where
-        T: ToString,
+        A: ToString,
         D: ToString,
     {
         self.client
             .authenticate(AuthenticationRequest {
-                tenant: tenant.to_string(),
+                application: application.to_string(),
                 device: device.to_string(),
                 credential,
             })
@@ -203,7 +203,7 @@ impl DeviceAuthenticator {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DeviceAuthDetails {
-    pub tenant: Tenant,
+    pub application: Application,
     pub device: Device,
 }
 

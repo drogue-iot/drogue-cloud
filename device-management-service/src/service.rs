@@ -1,14 +1,23 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use deadpool_postgres::Pool;
-use drogue_cloud_database_common::models::tenant::{PostgresTenantAccessor, TenantAccessor};
 use drogue_cloud_database_common::{
     error::ServiceError,
-    models::device::{DeviceAccessor, PostgresDeviceAccessor},
+    models::{
+        self,
+        app::{ApplicationAccessor, PostgresApplicationAccessor},
+        device::{DeviceAccessor, PostgresDeviceAccessor},
+        TypedAlias,
+    },
 };
-use drogue_cloud_service_api::management::{Device, DeviceData, Tenant, TenantData};
+use drogue_cloud_service_api::{
+    management::{Application, Credential, Device, DeviceSpecCredentials},
+    Translator,
+};
 use serde::Deserialize;
-use tokio_postgres::NoTls;
+use serde_json::json;
+use std::collections::HashSet;
+use tokio_postgres::{error::SqlState, NoTls};
 
 #[async_trait]
 pub trait ManagementService: Clone {
@@ -16,32 +25,19 @@ pub trait ManagementService: Clone {
 
     async fn is_ready(&self) -> Result<(), Self::Error>;
 
-    async fn create_tenant(&self, tenant_id: &str, data: &TenantData) -> Result<(), Self::Error>;
-    async fn update_tenant(&self, tenant_id: &str, data: &TenantData) -> Result<(), Self::Error>;
-    async fn delete_tenant(&self, tenant_id: &str) -> Result<bool, Self::Error>;
-    async fn get_tenant(&self, tenant_id: &str) -> Result<Option<Tenant>, Self::Error>;
+    async fn create_app(&self, data: Application) -> Result<(), Self::Error>;
+    async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error>;
+    async fn update_app(&self, data: Application) -> Result<(), Self::Error>;
+    async fn delete_app(&self, id: &str) -> Result<bool, Self::Error>;
 
-    async fn create_device(
-        &self,
-        tenant_id: &str,
-        device_id: &str,
-        data: &DeviceData,
-    ) -> Result<(), Self::Error>;
-
-    async fn update_device(
-        &self,
-        tenant_id: &str,
-        device_id: &str,
-        data: &DeviceData,
-    ) -> Result<(), Self::Error>;
-
-    async fn delete_device(&self, tenant_id: &str, device_id: &str) -> Result<bool, Self::Error>;
-
+    async fn create_device(&self, device: Device) -> Result<(), Self::Error>;
     async fn get_device(
         &self,
-        tenant_id: &str,
+        app_id: &str,
         device_id: &str,
     ) -> Result<Option<Device>, Self::Error>;
+    async fn update_device(&self, device: Device) -> Result<(), Self::Error>;
+    async fn delete_device(&self, app_id: &str, device_id: &str) -> Result<bool, Self::Error>;
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -68,9 +64,66 @@ impl PostgresManagementService {
             pool: config.pg.create_pool(NoTls)?,
         })
     }
-}
 
-use tokio_postgres::error::SqlState;
+    fn app_to_entity(app: Application) -> (models::app::Application, HashSet<TypedAlias>) {
+        // convert payload
+
+        let app = models::app::Application {
+            id: app.metadata.name,
+            labels: app.metadata.labels,
+            data: json!({
+                "spec": app.spec,
+                "status": app.status,
+            }),
+        };
+
+        // extract aliases
+
+        let mut aliases = HashSet::with_capacity(1);
+        aliases.insert(TypedAlias("id".into(), app.id.clone()));
+
+        // return result
+
+        (app, aliases)
+    }
+
+    fn device_to_entity(device: Device) -> (models::device::Device, HashSet<TypedAlias>) {
+        // extract aliases
+
+        let mut aliases = HashSet::new();
+
+        aliases.insert(TypedAlias("id".into(), device.metadata.name.clone()));
+
+        if let Some(Ok(credentials)) = device.spec_as::<DeviceSpecCredentials, _>("credentials") {
+            for credential in credentials.credentials {
+                match credential {
+                    Credential::UsernamePassword {
+                        username, unique, ..
+                    } if unique => {
+                        aliases.insert(TypedAlias("username".into(), username));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // convert payload
+
+        let device = models::device::Device {
+            id: device.metadata.name,
+            application_id: device.metadata.application,
+            labels: device.metadata.labels,
+            data: json!({
+                "spec": device.spec,
+                "status": device.status,
+            }),
+        };
+
+        // return result
+
+        (device, aliases)
+    }
+}
 
 #[async_trait]
 impl ManagementService for PostgresManagementService {
@@ -81,12 +134,14 @@ impl ManagementService for PostgresManagementService {
         Ok(())
     }
 
-    async fn create_tenant(&self, tenant_id: &str, data: &TenantData) -> Result<(), Self::Error> {
+    async fn create_app(&self, application: Application) -> Result<(), Self::Error> {
+        let (app, aliases) = Self::app_to_entity(application);
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        let result = PostgresTenantAccessor::new(&t)
-            .create(tenant_id, data)
+        let result = PostgresApplicationAccessor::new(&t)
+            .create(app, aliases)
             .await
             .map_err(|err| match err.sql_state() {
                 Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
@@ -98,12 +153,14 @@ impl ManagementService for PostgresManagementService {
         result
     }
 
-    async fn update_tenant(&self, tenant_id: &str, data: &TenantData) -> Result<(), Self::Error> {
+    async fn update_app(&self, application: Application) -> Result<(), Self::Error> {
+        let (app, aliases) = Self::app_to_entity(application);
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        let result = PostgresTenantAccessor::new(&t)
-            .update(tenant_id, data)
+        let result = PostgresApplicationAccessor::new(&t)
+            .update(app, aliases)
             .await
             .map_err(|err| match err.sql_state() {
                 Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
@@ -115,36 +172,33 @@ impl ManagementService for PostgresManagementService {
         result
     }
 
-    async fn delete_tenant(&self, tenant_id: &str) -> Result<bool, Self::Error> {
+    async fn delete_app(&self, id: &str) -> Result<bool, Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        let result = PostgresTenantAccessor::new(&t).delete(tenant_id).await;
+        let result = PostgresApplicationAccessor::new(&t).delete(id).await;
 
         t.commit().await?;
 
         result
     }
 
-    async fn get_tenant(&self, tenant_id: &str) -> Result<Option<Tenant>, Self::Error> {
+    async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error> {
         let c = self.pool.get().await?;
 
-        let result = PostgresTenantAccessor::new(&c).get(tenant_id).await;
+        let app = PostgresApplicationAccessor::new(&c).get(id).await?;
 
-        result
+        Ok(app.map(Into::into))
     }
 
-    async fn create_device(
-        &self,
-        tenant_id: &str,
-        device_id: &str,
-        data: &DeviceData,
-    ) -> Result<(), Self::Error> {
+    async fn create_device(&self, device: Device) -> Result<(), Self::Error> {
+        let (device, aliases) = Self::device_to_entity(device);
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
         let result = PostgresDeviceAccessor::new(&t)
-            .create(tenant_id, device_id, data)
+            .create(device, aliases)
             .await
             .map_err(|err| match err.sql_state() {
                 Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
@@ -159,17 +213,14 @@ impl ManagementService for PostgresManagementService {
         result
     }
 
-    async fn update_device(
-        &self,
-        tenant_id: &str,
-        device_id: &str,
-        data: &DeviceData,
-    ) -> Result<(), Self::Error> {
+    async fn update_device(&self, device: Device) -> Result<(), Self::Error> {
+        let (device, aliases) = Self::device_to_entity(device);
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
         let result = PostgresDeviceAccessor::new(&t)
-            .update(tenant_id, device_id, data)
+            .update(device, aliases)
             .await
             .map_err(|err| match err.sql_state() {
                 Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
@@ -196,15 +247,15 @@ impl ManagementService for PostgresManagementService {
 
     async fn get_device(
         &self,
-        tenant_id: &str,
+        app_id: &str,
         device_id: &str,
     ) -> Result<Option<Device>, Self::Error> {
         let c = self.pool.get().await?;
 
-        let result = PostgresDeviceAccessor::new(&c)
-            .get(tenant_id, device_id)
-            .await;
+        let device = PostgresDeviceAccessor::new(&c)
+            .get(app_id, device_id)
+            .await?;
 
-        result
+        Ok(device.map(Into::into))
     }
 }
