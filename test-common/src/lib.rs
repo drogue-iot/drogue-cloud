@@ -1,7 +1,10 @@
 use deadpool::managed::{PoolConfig, Timeouts};
-use std::path::Path;
-use std::process::Command;
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+    time::Duration,
+};
 use testcontainers::{
     clients::Cli, core::WaitFor, images::generic::GenericImage, Container, Docker, RunArgs,
 };

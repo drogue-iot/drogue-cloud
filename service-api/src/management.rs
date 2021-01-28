@@ -1,5 +1,7 @@
+use crate::Translator;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
+use std::collections::HashMap;
 
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
@@ -20,32 +22,81 @@ pub enum Credential {
     Certificate(String),
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct Device {
-    pub tenant_id: String,
-    pub id: String,
-    pub data: DeviceData,
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Application {
+    pub metadata: ApplicationMetadata,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub spec: Map<String, Value>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub status: Map<String, Value>,
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct DeviceData {
+impl Translator for Application {
+    fn spec(&self) -> &Map<String, Value> {
+        &self.spec
+    }
+
+    fn status(&self) -> &Map<String, Value> {
+        &self.status
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ApplicationMetadata {
+    pub name: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub labels: HashMap<String, String>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub annotations: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Device {
+    pub metadata: DeviceMetadata,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub spec: Map<String, Value>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Map::is_empty")]
+    pub status: Map<String, Value>,
+}
+
+impl Translator for Device {
+    fn spec(&self) -> &Map<String, Value> {
+        &self.spec
+    }
+
+    fn status(&self) -> &Map<String, Value> {
+        &self.status
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct DeviceMetadata {
+    pub application: String,
+    pub name: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub labels: HashMap<String, String>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub annotations: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct DeviceSpecCore {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "is_default")]
+    pub disabled: bool,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct DeviceSpecCredentials {
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub credentials: Vec<Credential>,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Value::is_null")]
-    pub properties: Value,
-}
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct Tenant {
-    pub id: String,
-
-    pub data: TenantData,
-}
-
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-pub struct TenantData {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub disabled: bool,
 }

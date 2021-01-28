@@ -9,10 +9,11 @@ use drogue_cloud_endpoint_common::{
     error::HttpEndpointError,
 };
 use drogue_cloud_service_api::auth;
+use drogue_cloud_service_api::auth::ErrorInformation;
 
 #[derive(Deserialize)]
 pub struct PublishOptions {
-    pub tenant: Option<String>,
+    pub application: Option<String>,
     pub device: Option<String>,
     pub r#as: Option<String>,
 
@@ -55,9 +56,9 @@ pub async fn publish(
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
-    let (tenant, device) = match auth
+    let (application, device) = match auth
         .authenticate_http(
-            opts.tenant,
+            opts.application,
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
         )
@@ -66,7 +67,10 @@ pub async fn publish(
         .outcome
     {
         auth::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
-        auth::Outcome::Pass { tenant, device } => (tenant, device),
+        auth::Outcome::Pass {
+            application,
+            device,
+        } => (application, device),
     };
 
     // If we have an "as" parameter, we publish as another device.
@@ -75,7 +79,7 @@ pub async fn publish(
         // use the "as" information as device id
         Some(device_id) => device_id,
         // use the original device id
-        None => device.id,
+        None => device.metadata.name,
     };
 
     // publish
@@ -84,7 +88,7 @@ pub async fn publish(
         .publish(
             Publish {
                 channel,
-                tenant_id: tenant.id.clone(),
+                tenant_id: application.metadata.name.clone(),
                 device_id: device_id.clone(),
                 model_id: opts.model_id,
                 topic: suffix,
@@ -103,7 +107,7 @@ pub async fn publish(
             outcome: Outcome::Accepted,
         }) => {
             command_wait(
-                tenant.id,
+                application.metadata.name,
                 device_id,
                 CommandWait::from_secs(opts.ttd),
                 http::StatusCode::ACCEPTED,
@@ -116,7 +120,7 @@ pub async fn publish(
             outcome: Outcome::Rejected,
         }) => {
             command_wait(
-                tenant.id,
+                application.metadata.name,
                 device_id,
                 CommandWait::from_secs(opts.ttd),
                 http::StatusCode::NOT_ACCEPTABLE,
@@ -125,8 +129,9 @@ pub async fn publish(
         }
 
         // internal error
-        Err(err) => Ok(HttpResponse::InternalServerError()
-            .content_type("text/plain")
-            .body(err.to_string())),
+        Err(err) => Ok(HttpResponse::InternalServerError().json(ErrorInformation {
+            error: "InternalError".into(),
+            message: err.to_string(),
+        })),
     }
 }

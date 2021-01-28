@@ -3,11 +3,13 @@ use async_trait::async_trait;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     error::ServiceError,
-    models::{device::*, tenant::*},
+    models::{app::*, device::*},
 };
+use drogue_cloud_service_api::management::{DeviceSpecCore, DeviceSpecCredentials};
 use drogue_cloud_service_api::{
     auth::{self, AuthenticationRequest, Outcome},
-    management::{self, Device, Tenant},
+    management::{self, Application, Device},
+    Translator,
 };
 use serde::Deserialize;
 use tokio_postgres::NoTls;
@@ -55,9 +57,9 @@ impl AuthenticationService for PostgresAuthenticationService {
 
         // lookup the tenant
 
-        let tenant = PostgresTenantAccessor::new(&c);
-        let tenant = match tenant.lookup(&request.tenant).await? {
-            Some(tenant) => tenant,
+        let application = PostgresApplicationAccessor::new(&c);
+        let application = match application.lookup(&request.application).await? {
+            Some(application) => application.into(),
             None => {
                 return Ok(Outcome::Fail);
             }
@@ -65,15 +67,18 @@ impl AuthenticationService for PostgresAuthenticationService {
 
         // validate tenant
 
-        if !validate_tenant(&tenant) {
+        if !validate_app(&application) {
             return Ok(Outcome::Fail);
         }
 
         // lookup the device
 
         let device = PostgresDeviceAccessor::new(&c);
-        let device = match device.lookup(&tenant.id, &request.device).await? {
-            Some(device) => device,
+        let device = match device
+            .lookup(&application.metadata.name, &request.device)
+            .await?
+        {
+            Some(device) => device.into(),
             None => {
                 return Ok(Outcome::Fail);
             }
@@ -82,9 +87,9 @@ impl AuthenticationService for PostgresAuthenticationService {
         // validate credential
 
         Ok(
-            match validate_credential(&tenant, &device, &request.credential) {
+            match validate_credential(&application, &device, &request.credential) {
                 true => Outcome::Pass {
-                    tenant,
+                    application,
                     device: strip_credentials(device),
                 },
                 false => Outcome::Fail,
@@ -99,26 +104,42 @@ impl AuthenticationService for PostgresAuthenticationService {
 }
 
 /// Strip the credentials from the device information, so that we do not leak them.
-fn strip_credentials(mut device: Device) -> Device {
-    device.data.credentials.clear();
+fn strip_credentials(mut device: management::Device) -> Device {
+    // FIXME: we need to do a better job here, maybe add a "secrets" section instead
+    device.spec.remove("credentials");
     device
 }
 
-/// Validate if a tenant is "ok" to be used for authentication.
-fn validate_tenant(tenant: &Tenant) -> bool {
-    // validate "disabled"
-    if tenant.data.disabled {
-        return false;
-    }
+/// Validate if an application is "ok" to be used for authentication.
+fn validate_app(app: &management::Application) -> bool {
+    match app.spec_as::<DeviceSpecCore, _>("core") {
+        // found "core", decoded successfully -> check
+        Some(Ok(core)) => {
+            if core.disabled {
+                return false;
+            }
+        }
+        // found "core", but could not decode -> fail
+        Some(Err(_)) => {
+            return false;
+        }
+        // no "core" section
+        _ => {}
+    };
 
     // done
     true
 }
 
-fn validate_credential(_: &Tenant, device: &Device, cred: &auth::Credential) -> bool {
+fn validate_credential(_: &Application, device: &Device, cred: &auth::Credential) -> bool {
+    let credentials = match device.spec_as::<DeviceSpecCredentials, _>("credentials") {
+        Some(Ok(credentials)) => credentials.credentials,
+        _ => return false,
+    };
+
     match cred {
         auth::Credential::Password(provided_password) => {
-            device.data.credentials.iter().any(|c| match c {
+            credentials.iter().any(|c| match c {
                 // match passwords
                 management::Credential::Password(stored_password) => {
                     stored_password == provided_password
@@ -128,7 +149,9 @@ fn validate_credential(_: &Tenant, device: &Device, cred: &auth::Credential) -> 
                     username: stored_username,
                     password: stored_password,
                     ..
-                } if stored_username == &device.id => stored_password == provided_password,
+                } if stored_username == &device.metadata.name => {
+                    stored_password == provided_password
+                }
                 // no match
                 _ => false,
             })
@@ -137,10 +160,10 @@ fn validate_credential(_: &Tenant, device: &Device, cred: &auth::Credential) -> 
             username: provided_username,
             password: provided_password,
             ..
-        } => device.data.credentials.iter().any(|c| match c {
+        } => credentials.iter().any(|c| match c {
             // match passwords if the provided username is equal to the device id
             management::Credential::Password(stored_password)
-                if provided_username == &device.id =>
+                if provided_username == &device.metadata.name =>
             {
                 stored_password == provided_password
             }

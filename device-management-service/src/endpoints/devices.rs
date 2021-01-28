@@ -3,7 +3,7 @@ use crate::{
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
-use drogue_cloud_service_api::management::{Credential, DeviceData};
+use drogue_cloud_service_api::management::Device;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -16,29 +16,19 @@ pub struct CreateDevice {
 
 pub async fn create(
     data: web::Data<WebData<PostgresManagementService>>,
-    web::Path(tenant_id): web::Path<String>,
-    create: Json<CreateDevice>,
+    web::Path(app_id): web::Path<String>,
+    device: Json<Device>,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Creating device: '{}' / '{:?}'", tenant_id, create);
+    log::debug!("Creating device: '{}' / '{:?}'", app_id, device);
 
-    let device_id = &create.device_id;
-
-    if tenant_id.is_empty() || device_id.is_empty() {
+    if device.metadata.name.is_empty() || device.metadata.application.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    // FIXME: we need to allow passing in the full structure
-    let device_data = DeviceData {
-        credentials: vec![Credential::Password(create.password.clone())],
-        properties: create.properties.clone(),
-    };
+    let location = req.url_for("device", &[&app_id, &device.metadata.name])?;
 
-    data.service
-        .create_device(&tenant_id, device_id, &device_data)
-        .await?;
-
-    let location = req.url_for("device", &[&tenant_id, &device_id])?;
+    data.service.create_device(device.0).await?;
 
     let response = HttpResponse::Created()
         .set_header(header::LOCATION, location.into_string())
@@ -56,44 +46,41 @@ pub struct UpdateDevice {
 
 pub async fn update(
     data: web::Data<WebData<PostgresManagementService>>,
-    web::Path((tenant_id, device_id)): web::Path<(String, String)>,
-    update: Json<UpdateDevice>,
+    web::Path((app_id, device_id)): web::Path<(String, String)>,
+    device: Json<Device>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Updating device: '{}' / '{:?}'", tenant_id, update);
+    log::debug!(
+        "Updating device: '{}' / '{}' / '{:?}'",
+        app_id,
+        device_id,
+        device
+    );
 
-    if tenant_id.is_empty() || device_id.is_empty() {
+    if app_id.is_empty() || device_id.is_empty() {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+    if app_id != device.metadata.application || device_id != device.metadata.name {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    // FIXME: we need to allow passing in the full structure
-    let device_data = DeviceData {
-        credentials: vec![Credential::Password(update.password.clone())],
-        properties: update.properties.clone(),
-    };
+    data.service.update_device(device.0).await?;
 
-    data.service
-        .update_device(&tenant_id, &device_id, &device_data)
-        .await?;
-
-    let response = HttpResponse::NoContent()
-        // FIXME: create proper URL
-        .set_header(header::LOCATION, device_id.clone())
-        .finish();
+    let response = HttpResponse::NoContent().finish();
 
     Ok(response)
 }
 
 pub async fn delete(
     data: web::Data<WebData<PostgresManagementService>>,
-    web::Path((tenant_id, device_id)): web::Path<(String, String)>,
+    web::Path((app_id, device_id)): web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Deleting device: '{}' / '{}'", tenant_id, device_id);
+    log::debug!("Deleting device: '{}' / '{}'", app_id, device_id);
 
-    if tenant_id.is_empty() || device_id.is_empty() {
+    if app_id.is_empty() || device_id.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    let found = data.service.delete_device(&tenant_id, &device_id).await?;
+    let found = data.service.delete_device(&app_id, &device_id).await?;
 
     let result = match found {
         false => HttpResponse::NotFound().finish(),
@@ -105,15 +92,15 @@ pub async fn delete(
 
 pub async fn read(
     data: web::Data<WebData<PostgresManagementService>>,
-    web::Path((tenant_id, device_id)): web::Path<(String, String)>,
+    web::Path((app_id, device_id)): web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Reading device: '{}' / '{}'", tenant_id, device_id);
+    log::debug!("Reading device: '{}' / '{}'", app_id, device_id);
 
-    if tenant_id.is_empty() || device_id.is_empty() {
+    if app_id.is_empty() || device_id.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    let device = data.service.get_device(&tenant_id, &device_id).await?;
+    let device = data.service.get_device(&app_id, &device_id).await?;
 
     let result = match device {
         None => HttpResponse::NotFound().finish(),

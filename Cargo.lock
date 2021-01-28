@@ -1495,6 +1495,7 @@ dependencies = [
  "envconfig",
  "futures",
  "http",
+ "indexmap",
  "log",
  "rand 0.7.3",
  "rust-crypto",
@@ -1609,6 +1610,7 @@ name = "drogue-cloud-service-api"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "indexmap",
  "log",
  "serde 1.0.120",
  "serde_json",
@@ -2286,6 +2288,7 @@ checksum = "4fb1fa934250de4de8aef298d81c729a7d33d8c239daa3a7575e6b92bfc7313b"
 dependencies = [
  "autocfg",
  "hashbrown",
+ "serde 1.0.120",
 ]
 
 [[package]]

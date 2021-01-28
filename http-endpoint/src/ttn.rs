@@ -27,7 +27,7 @@ pub async fn publish(
     req: web::HttpRequest,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    let (tenant, device) = match auth
+    let (application, device) = match auth
         .authenticate_http(
             opts.tenant,
             opts.device,
@@ -38,7 +38,10 @@ pub async fn publish(
         .outcome
     {
         auth::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
-        auth::Outcome::Pass { tenant, device } => (tenant, device),
+        auth::Outcome::Pass {
+            application,
+            device,
+        } => (application, device),
     };
 
     let uplink: ttn::Uplink = serde_json::from_slice(&body).map_err(|err| {
@@ -48,12 +51,16 @@ pub async fn publish(
         }
     })?;
 
-    log::info!("Tenant / Device properties: {:?} / {:?}", tenant, device);
+    log::info!(
+        "Application / Device properties: {:?} / {:?}",
+        application,
+        device
+    );
 
     // eval model_id from query and function port mapping
     let model_id = opts.model_id.or_else(|| {
         let fport = uplink.port.to_string();
-        device.data.properties["lorawan"]["ports"][fport]["model_id"]
+        device.spec["lorawan"]["ports"][fport]["model_id"]
             .as_str()
             .map(|str| str.to_string())
     });
