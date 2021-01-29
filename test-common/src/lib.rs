@@ -1,8 +1,11 @@
 use deadpool::managed::{PoolConfig, Timeouts};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, Lines};
 use std::process::Command;
+use std::thread::sleep;
 use std::{fs, path::PathBuf, time::Duration};
-use testcontainers::{clients::Cli, images::generic::GenericImage, Container, Docker, RunArgs};
+use testcontainers::{
+    clients::Cli, images::generic::GenericImage, Container, Docker, Image, RunArgs,
+};
 
 fn is_containerized() -> bool {
     std::env::var_os("container").is_some()
@@ -15,7 +18,7 @@ pub struct PostgresRunner<'c, C: Docker, SC> {
 
 impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
     pub fn new(cli: &'c C, config: SC) -> anyhow::Result<Self> {
-        log::info!("Starting postgres");
+        log::info!("Starting postgres (containerized: {})", is_containerized());
 
         let image = GenericImage::new("docker.io/library/postgres:12")
             .with_env_var("POSTGRES_PASSWORD", "mysecretpassword")
@@ -36,32 +39,75 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         let db = cli.run_with_args(image, args);
 
         log::info!("Waiting for postgres to become ready...");
-        // we cannot use "wait for" as we need to look for the same message twice
-        // FIXME: we should also have a timeout for this operation
-        {
-            let logs = db.logs();
-            let out = logs.stdout;
-            let reader = BufReader::new(out);
-            let mut n = 0;
-            for line in reader.lines() {
-                let line = line?;
-                log::debug!("{}", line);
-                if line.contains("database system is ready to accept connections") {
-                    n += 1;
-                    log::debug!("Count: {}", n);
-                    if n > 1 {
-                        break;
-                    }
-                }
-            }
-            if n < 2 {
-                log::warn!("Stream aborted");
-                anyhow::bail!("Stream aborted, not ready.")
-            }
-        }
+        Self::wait_startup(&db)?;
         log::info!("Waiting for postgres to become ready... done!");
 
         Ok(Self { config, db })
+    }
+
+    fn wait_startup<D, I>(db: &Container<D, I>) -> anyhow::Result<()>
+    where
+        D: Docker,
+        I: Image,
+    {
+        // we cannot use "wait for" as we need to look for the same message twice
+        // we also cannot use "log", as that drops messages every now and then
+
+        /*
+        let logs = db.logs();
+        let out = logs.stdout;
+        let reader = BufReader::new(out);
+        let mut n = 0;
+        for line in reader.lines() {
+            let line = line?;
+            log::debug!("{}", line);
+            if line.contains("database system is ready to accept connections") {
+                n += 1;
+                log::debug!("Count: {}", n);
+                if n > 1 {
+                    return Ok(());
+                }
+            }
+        }*/
+
+        let mut n = 10;
+
+        loop {
+            let logs = Self::logs(db.id())?;
+
+            if Self::is_ready(logs.lines())? {
+                break;
+            }
+
+            sleep(Duration::from_secs(1));
+            n -= 1;
+            if n == 0 {
+                anyhow::bail!("Stream aborted, not ready.")
+            }
+        }
+
+        Ok(())
+    }
+
+    fn is_ready<B: BufRead>(lines: Lines<B>) -> anyhow::Result<bool> {
+        let mut n = 0;
+        for line in lines {
+            let line = line?;
+            log::debug!("{}", line);
+            if line.contains("database system is ready to accept connections") {
+                n += 1;
+                log::debug!("Count: {}", n);
+                if n > 1 {
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
+
+    fn logs(id: &str) -> anyhow::Result<Vec<u8>> {
+        let out = Command::new("docker").args(&["logs", id]).output()?;
+        Ok(out.stdout)
     }
 
     fn gather_sql() -> anyhow::Result<PathBuf> {
