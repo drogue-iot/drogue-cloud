@@ -4,6 +4,10 @@ use std::process::Command;
 use std::{fs, path::PathBuf, time::Duration};
 use testcontainers::{clients::Cli, images::generic::GenericImage, Container, Docker, RunArgs};
 
+fn is_containerized() -> bool {
+    std::env::var_os("container").is_some()
+}
+
 pub struct PostgresRunner<'c, C: Docker, SC> {
     pub config: SC,
     db: Container<'c, C, GenericImage>,
@@ -23,6 +27,11 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
             );
 
         let args = RunArgs::default().with_mapped_port((5432, 5432));
+        let args = if is_containerized() {
+            args.with_network("drogue").with_name("postgres")
+        } else {
+            args
+        };
 
         let db = cli.run_with_args(image, args);
 
@@ -123,8 +132,13 @@ where
     C: Docker,
     F: FnOnce(deadpool_postgres::Config) -> SC,
 {
+    let host = match is_containerized() {
+        true => "postgres",
+        false => "localhost",
+    };
+
     let config = f(deadpool_postgres::Config {
-        host: Some("localhost".into()),
+        host: Some(host.into()),
         user: Some("postgres".into()),
         password: Some("mysecretpassword".into()),
         dbname: Some("postgres".into()),
