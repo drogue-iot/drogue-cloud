@@ -1,53 +1,73 @@
-## Deploying
 
-Use custom-built images with the "hack" script:
-
-    ./hack/replace-images.py latest Always quay.io/your-org tmp/deploy
-    ./hack/drogue.sh -d tmp/deploy
-
-## Building
-
-### In a container
+## Pre-requisites
 
 You will need:
 
-* GNU Make
-* A container engine (e.g. Docker or Podman)
-* An internet connection
+* Linux, Mac OS X, or Windows
+* Podman or Docker
+* Some tools
+  * Make
+  * npm
+  * kubectl
+* A lot of cores, patience, memory, and disk space
 
-To build and publish, run:
+### Fedora
 
-    make CONTAINER_REGISTRY=quay.io/your-org
+Use an "update to date" version of Fedora. Install the following dependencies:
 
-The makefile will use a build container to perform the actual build.
+    dnf install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel kubectl podman podman-docker
 
-### In minikube
+## Building
 
-If you wish to use local minikube image registry, you'll need to point your docker to it
+While the build is based on `cargo`, the build is still driven by the main `Makefile`, located in
+the root of the repository. By default, the cargo build running inside a build container. This reduces
+the number of pre-requisites you need to install, and makes it easier on platforms like Windows or Mac OS.
 
-    eval $(minikube -p minikube docker-env)
+To perform a full build execute:
 
-Additionally, you have to mount your working dir to minikube VM
+    make
 
-    minikube mount --mode 0755 $(pwd):$(pwd)
+This builds the cargo based projects, the frontend, and the container images. It does not tag and push
+the images.
 
-Now, you can build images locally without pushing them to the central registry
+## Testing
 
-    make CONTAINER_REGISTRY=quay.io/your-org quick
+To run all tests:
 
-## Deploy Helm charts of local components
+    make test
 
-### Drogue Cloud
+**Note:** When using podman, you currently cannot use `make test`. You need to revert
+to `make container-test`, see below.
 
-~~~
-helm install --dependency-update -n drogue-iot drogue-iot --set sources.mqtt.enabled=true --set services.console.enabled=true deploy/helm/drogue-iot --values deploy/helm/drogue-iot/profile-openshift.yaml
-helm upgrade -n drogue-iot drogue-iot --set sources.mqtt.enabled=true --set services.console.enabled=true deploy/helm/drogue-iot --values deploy/helm/drogue-iot/profile-openshift.yaml
-~~~
+### Running test on the host
 
+If you have a full build environment on your machine, you can also execute the tests on the host machine,
+rather than forking them off in the build container:
 
-### Digital Twin
+    make container-test
 
-~~~
-helm install --dependency-update -n drogue-iot digital-twin deploy/helm/digital-twin --values deploy/helm/digital-twin/profile-openshift.yaml
-helm upgrade -n drogue-iot digital-twin deploy/helm/digital-twin --values deploy/helm/digital-twin/profile-openshift.yaml 
-~~~
+### IDE based testing
+
+You can also run cargo tests directly from your IDE. How this works, depends on your IDE.
+
+However, as tests are compiled and executed on the host machine, the same requirements as when running
+tests on the host machine apply (see above).
+
+## Publishing images
+
+The locally built images can be published with the Makefile as well. For this you need a location to push to.
+You can, for example use [quay.io](https://quay.io). Assuming your username on quay.io is "rodney", and
+you did log in using `docker login`, then you could do:
+
+    make push CONTAINER_REGISTRY=quay.io/rodney
+
+## Deploying
+
+By default, the installation scripts will use the official images from `ghcr.io/drogue-iot`.
+
+However, when you created and published custom images, you can deploy them using `make` as well. Before you
+do that, you will need to have access to a Kubernetes cluster. You can run a local cluster using `minikube`.
+Once the instance is up, and you have ensured that you can access the cluster with `kubectl`, you can run
+the following command to run the deployment:
+
+    make deploy CONTAINER_REGISTRY=quay.io/rodney
