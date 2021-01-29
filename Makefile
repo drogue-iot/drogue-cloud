@@ -7,7 +7,7 @@ all: build images test push
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.1
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.3
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -87,7 +87,7 @@ host-build:
 # Run tests on the host, forking off into the build container.
 #
 host-test:
-	if [ -n "$($(CONTAINER) network ls --format '{{.Name}} | grep drogue')" ]; then $(CONTAINER) network create drogue; fi
+	if [ -z "$$($(CONTAINER) network ls --format '{{.Name}} | grep drogue')" ]; then $(CONTAINER) network create drogue; fi
 	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
 
 
