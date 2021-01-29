@@ -15,6 +15,13 @@ ifneq ($(MODULE),)
 	IMAGES=$(MODULE)
 endif
 
+CONTAINER ?= docker
+ifeq ($(CONTAINER),docker)
+TEST_CONTAINER_ARGS ?= -v /var/run/docker.sock:/var/run/docker.sock:z
+endif
+ifeq ($(CONTAINER),podman)
+TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
+endif
 
 #
 # all container images that we build and push (so it does not include the "builder")
@@ -73,14 +80,14 @@ container-test: cargo-test
 # Run a build on the host, forking off into the build container.
 #
 host-build:
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
 
 
 #
 # Run tests on the host, forking off into the build container.
 #
 host-test:
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
 
 
 #
@@ -88,14 +95,14 @@ host-test:
 # accessible the build runner.
 #
 fix-permissions:
-	docker run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
 
 
 #
 # Run an interactive shell inside the build container.
 #
 build-shell:
-	docker run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
+	$(CONTAINER) run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
 
 
 #
@@ -131,7 +138,7 @@ webpack-build: cargo-build
 #
 build-images: build-image($(IMAGES))
 build-image($(IMAGES)):
-	cd $(TOP_DIR) && docker build . -f $%/Dockerfile -t $%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t $%:$(IMAGE_TAG)
 
 
 #
@@ -139,7 +146,7 @@ build-image($(IMAGES)):
 #
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && docker tag $% $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) tag $% $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
@@ -147,7 +154,7 @@ tag-image($(IMAGES)): require-container-registry
 #
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && docker push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
