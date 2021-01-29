@@ -1,5 +1,6 @@
 use deadpool::managed::{PoolConfig, Timeouts};
 use std::io::{BufRead, BufReader};
+use std::process::Command;
 use std::{fs, path::PathBuf, time::Duration};
 use testcontainers::{clients::Cli, images::generic::GenericImage, Container, Docker, RunArgs};
 
@@ -110,7 +111,11 @@ impl<'c, C: Docker, SC> Drop for PostgresRunner<'c, C, SC> {
 }
 
 pub fn client() -> Cli {
-    Cli::podman()
+    let out = Command::new("podman").args(&["version"]).output();
+    match out {
+        Ok(_) => Cli::podman(),
+        _ => Cli::docker(),
+    }
 }
 
 pub fn db<C, SC, F>(cli: &C, f: F) -> anyhow::Result<PostgresRunner<C, SC>>
