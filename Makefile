@@ -17,7 +17,7 @@ endif
 
 CONTAINER ?= docker
 ifeq ($(CONTAINER),docker)
-TEST_CONTAINER_ARGS ?= -v /var/run/docker.sock:/var/run/docker.sock:z
+TEST_CONTAINER_ARGS ?= -v /var/run/docker.sock:/var/run/docker.sock:z --network drogue
 endif
 ifeq ($(CONTAINER),podman)
 TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
@@ -87,6 +87,7 @@ host-build:
 # Run tests on the host, forking off into the build container.
 #
 host-test:
+	if [ -n "$($(CONTAINER) network ls --format '{{.Name}} | grep drogue')" ]; then $(CONTAINER) network create drogue; fi
 	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
 
 
