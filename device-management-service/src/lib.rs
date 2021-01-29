@@ -27,7 +27,7 @@ macro_rules! crud {
         $scope
             .service({
                 let resource = concat!($base, stringify!($name), "s");
-                log::info!("{}", resource);
+                log::debug!("{}", resource);
                 web::resource(resource).route(web::post().to({
                     use $module as m;
                     m::create
@@ -35,7 +35,7 @@ macro_rules! crud {
             })
             .service({
                 let resource = concat!($base, stringify!($name), "s/{", stringify!($name), "_id}");
-                log::info!("{}", resource);
+                log::debug!("{}", resource);
 
                 web::resource(resource)
                     .name(stringify!($name))
