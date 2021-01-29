@@ -15,7 +15,7 @@ You will need:
 
 Use an "update to date" version of Fedora. Install the following dependencies:
 
-    dnf install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel kubectl podman podman-docker
+    sudo dnf install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel podman podman-docker
 
 ## Building
 
@@ -25,10 +25,9 @@ the number of pre-requisites you need to install, and makes it easier on platfor
 
 To perform a full build execute:
 
-    make
+    make build
 
-This builds the cargo based projects, the frontend, and the container images. It does not tag and push
-the images.
+This builds the cargo based projects and the frontend. It does not build the images.
 
 ## Testing
 
