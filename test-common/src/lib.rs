@@ -1,10 +1,10 @@
 use deadpool::managed::{PoolConfig, Timeouts};
-use std::io::{BufRead, Lines};
 use std::process::Command;
-use std::thread::sleep;
 use std::{fs, path::PathBuf, time::Duration};
 use testcontainers::{
-    clients::Cli, images::generic::GenericImage, Container, Docker, Image, RunArgs,
+    clients::Cli,
+    images::generic::{GenericImage, WaitFor},
+    Container, Docker, RunArgs,
 };
 
 fn is_containerized() -> bool {
@@ -15,6 +15,8 @@ pub struct PostgresRunner<'c, C: Docker, SC> {
     pub config: SC,
     db: Container<'c, C, GenericImage>,
 }
+
+const MSG: &str = "[1] LOG:  database system is ready to accept connections";
 
 impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
     pub fn new(cli: &'c C, config: SC) -> anyhow::Result<Self> {
@@ -29,6 +31,13 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
                 "/docker-entrypoint-initdb.d",
             );
 
+        let image = match is_podman() {
+            false => image.with_wait_for(WaitFor::message_on_stderr(MSG)),
+            // "podman logs" merges all logs into stdout
+            // see: https://github.com/containers/podman/issues/9159
+            true => image.with_wait_for(WaitFor::message_on_stdout(MSG)),
+        };
+
         let args = RunArgs::default().with_mapped_port((5432, 5432));
         let args = if is_containerized() {
             args.with_network("drogue").with_name("postgres")
@@ -38,76 +47,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
 
         let db = cli.run_with_args(image, args);
 
-        log::info!("Waiting for postgres to become ready...");
-        Self::wait_startup(&db)?;
-        log::info!("Waiting for postgres to become ready... done!");
-
         Ok(Self { config, db })
-    }
-
-    fn wait_startup<D, I>(db: &Container<D, I>) -> anyhow::Result<()>
-    where
-        D: Docker,
-        I: Image,
-    {
-        // we cannot use "wait for" as we need to look for the same message twice
-        // we also cannot use "log", as that drops messages every now and then
-
-        /*
-        let logs = db.logs();
-        let out = logs.stdout;
-        let reader = BufReader::new(out);
-        let mut n = 0;
-        for line in reader.lines() {
-            let line = line?;
-            log::debug!("{}", line);
-            if line.contains("database system is ready to accept connections") {
-                n += 1;
-                log::debug!("Count: {}", n);
-                if n > 1 {
-                    return Ok(());
-                }
-            }
-        }*/
-
-        let mut n = 10;
-
-        loop {
-            let logs = Self::logs(db.id())?;
-
-            if Self::is_ready(logs.lines())? {
-                break;
-            }
-
-            sleep(Duration::from_secs(1));
-            n -= 1;
-            if n == 0 {
-                anyhow::bail!("Stream aborted, not ready.")
-            }
-        }
-
-        Ok(())
-    }
-
-    fn is_ready<B: BufRead>(lines: Lines<B>) -> anyhow::Result<bool> {
-        let mut n = 0;
-        for line in lines {
-            let line = line?;
-            log::debug!("{}", line);
-            if line.contains("database system is ready to accept connections") {
-                n += 1;
-                log::debug!("Count: {}", n);
-                if n > 1 {
-                    return Ok(true);
-                }
-            }
-        }
-        Ok(false)
-    }
-
-    fn logs(id: &str) -> anyhow::Result<Vec<u8>> {
-        let out = Command::new("docker").args(&["logs", id]).output()?;
-        Ok(out.stdout)
     }
 
     fn gather_sql() -> anyhow::Result<PathBuf> {
@@ -166,11 +106,15 @@ impl<'c, C: Docker, SC> Drop for PostgresRunner<'c, C, SC> {
 }
 
 pub fn client() -> Cli {
-    let out = Command::new("podman").args(&["version"]).output();
-    match out {
-        Ok(_) => Cli::podman(),
-        _ => Cli::docker(),
+    match is_podman() {
+        true => Cli::podman(),
+        false => Cli::docker(),
     }
+}
+
+fn is_podman() -> bool {
+    let out = Command::new("podman").args(&["version"]).output();
+    matches!(out, Ok(_))
 }
 
 pub fn db<C, SC, F>(cli: &C, f: F) -> anyhow::Result<PostgresRunner<C, SC>>
