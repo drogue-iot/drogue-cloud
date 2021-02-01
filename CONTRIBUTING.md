@@ -66,7 +66,7 @@ systems also might require some additional settings. This section should help to
 
 Use an "update to date" version of Fedora. Install the following dependencies:
 
-    sudo dnf install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel kubectl podman podman-docker
+    sudo dnf install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel postgresql podman podman-docker
 
 ### Windows
 
@@ -97,7 +97,7 @@ To perform a full build execute:
 
     make build
 
-This builds the cargo based projects and the frontend. It does not build the images.
+This builds the cargo based projects, the frontend, and the container images.
 
 ## Testing
 

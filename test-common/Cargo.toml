@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 log = "0.4"
-testcontainers = "0.11"
+testcontainers = "0.12"
 deadpool = "0.7"
 deadpool-postgres = "0.7"
 walkdir = "2"
