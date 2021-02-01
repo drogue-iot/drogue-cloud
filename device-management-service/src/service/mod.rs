@@ -1,3 +1,5 @@
+mod x509;
+
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use deadpool_postgres::Pool;
@@ -11,7 +13,9 @@ use drogue_cloud_database_common::{
     },
 };
 use drogue_cloud_service_api::{
-    management::{Application, Credential, Device, DeviceSpecCredentials},
+    management::{
+        Application, ApplicationSpecTrustAnchors, Credential, Device, DeviceSpecCredentials,
+    },
     Translator,
 };
 use serde::Deserialize;
@@ -65,7 +69,34 @@ impl PostgresManagementService {
         })
     }
 
-    fn app_to_entity(app: Application) -> (models::app::Application, HashSet<TypedAlias>) {
+    fn app_to_entity(
+        mut app: Application,
+    ) -> Result<(models::app::Application, HashSet<TypedAlias>), ServiceError> {
+        // extract aliases
+
+        let mut aliases = HashSet::with_capacity(1);
+        aliases.insert(TypedAlias("id".into(), app.metadata.name.clone()));
+
+        // extract trust anchors
+
+        match app.spec_as::<ApplicationSpecTrustAnchors, _>("trustAnchors") {
+            Some(Ok(anchors)) => {
+                log::debug!("Anchors: {:?}", anchors);
+                let status = x509::process_anchors(anchors)?;
+
+                // add aliases
+                aliases.extend(status.1);
+
+                // inject status section
+                app.status.insert(
+                    "trustAnchors".into(),
+                    serde_json::to_value(status.0)
+                        .map_err(|err| ServiceError::BadRequest(err.to_string()))?,
+                );
+            }
+            r => log::debug!("No-anchors: {:?}", r),
+        }
+
         // convert payload
 
         let app = models::app::Application {
@@ -77,17 +108,14 @@ impl PostgresManagementService {
             }),
         };
 
-        // extract aliases
-
-        let mut aliases = HashSet::with_capacity(1);
-        aliases.insert(TypedAlias("id".into(), app.id.clone()));
-
         // return result
 
-        (app, aliases)
+        Ok((app, aliases))
     }
 
-    fn device_to_entity(device: Device) -> (models::device::Device, HashSet<TypedAlias>) {
+    fn device_to_entity(
+        device: Device,
+    ) -> Result<(models::device::Device, HashSet<TypedAlias>), ServiceError> {
         // extract aliases
 
         let mut aliases = HashSet::new();
@@ -121,7 +149,7 @@ impl PostgresManagementService {
 
         // return result
 
-        (device, aliases)
+        Ok((device, aliases))
     }
 }
 
@@ -135,7 +163,7 @@ impl ManagementService for PostgresManagementService {
     }
 
     async fn create_app(&self, application: Application) -> Result<(), Self::Error> {
-        let (app, aliases) = Self::app_to_entity(application);
+        let (app, aliases) = Self::app_to_entity(application)?;
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -153,8 +181,16 @@ impl ManagementService for PostgresManagementService {
         result
     }
 
+    async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error> {
+        let c = self.pool.get().await?;
+
+        let app = PostgresApplicationAccessor::new(&c).get(id).await?;
+
+        Ok(app.map(Into::into))
+    }
+
     async fn update_app(&self, application: Application) -> Result<(), Self::Error> {
-        let (app, aliases) = Self::app_to_entity(application);
+        let (app, aliases) = Self::app_to_entity(application)?;
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -183,16 +219,8 @@ impl ManagementService for PostgresManagementService {
         result
     }
 
-    async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error> {
-        let c = self.pool.get().await?;
-
-        let app = PostgresApplicationAccessor::new(&c).get(id).await?;
-
-        Ok(app.map(Into::into))
-    }
-
     async fn create_device(&self, device: Device) -> Result<(), Self::Error> {
-        let (device, aliases) = Self::device_to_entity(device);
+        let (device, aliases) = Self::device_to_entity(device)?;
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -213,8 +241,22 @@ impl ManagementService for PostgresManagementService {
         result
     }
 
+    async fn get_device(
+        &self,
+        app_id: &str,
+        device_id: &str,
+    ) -> Result<Option<Device>, Self::Error> {
+        let c = self.pool.get().await?;
+
+        let device = PostgresDeviceAccessor::new(&c)
+            .get(app_id, device_id)
+            .await?;
+
+        Ok(device.map(Into::into))
+    }
+
     async fn update_device(&self, device: Device) -> Result<(), Self::Error> {
-        let (device, aliases) = Self::device_to_entity(device);
+        let (device, aliases) = Self::device_to_entity(device)?;
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -243,19 +285,5 @@ impl ManagementService for PostgresManagementService {
         t.commit().await?;
 
         result
-    }
-
-    async fn get_device(
-        &self,
-        app_id: &str,
-        device_id: &str,
-    ) -> Result<Option<Device>, Self::Error> {
-        let c = self.pool.get().await?;
-
-        let device = PostgresDeviceAccessor::new(&c)
-            .get(app_id, device_id)
-            .await?;
-
-        Ok(device.map(Into::into))
     }
 }

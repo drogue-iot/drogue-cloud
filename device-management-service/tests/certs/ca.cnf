@@ -1,0 +1,28 @@
+[req]
+distinguished_name = subject
+
+[ subject ]
+countryName_default = US
+stateOrProvinceName_default =
+localityName_default =
+organizationName_default = Drogue IoT test application
+commonName_default = drogue-iot-app
+
+[x509_ext]
+
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+basicConstraints = critical,CA:true
+keyUsage = keyCertSign,cRLSign
+
+[intermediate_ext]
+
+subjectKeyIdentifier = hash
+basicConstraints = critical,CA:true
+keyUsage = keyCertSign,cRLSign
+
+[san_ext]
+
+subjectKeyIdentifier = hash
+keyUsage = keyAgreement,keyEncipherment,digitalSignature
+extendedKeyUsage = serverAuth, clientAuth

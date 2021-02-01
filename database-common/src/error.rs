@@ -20,6 +20,8 @@ pub enum ServiceError {
     Conflict,
     #[error("Referenced a non-existing entity")]
     ReferenceNotFound,
+    #[error("Bad request: {0}")]
+    BadRequest(String),
 }
 
 impl ServiceError {
@@ -69,6 +71,10 @@ impl ResponseError for ServiceError {
             ServiceError::ReferenceNotFound => HttpResponse::NotFound().json(ErrorResponse {
                 error: "ReferenceNotFound".into(),
                 message: format!("{}", self),
+            }),
+            ServiceError::BadRequest(message) => HttpResponse::BadRequest().json(ErrorResponse {
+                error: "BadRequest".into(),
+                message: message.clone(),
             }),
         }
     }
