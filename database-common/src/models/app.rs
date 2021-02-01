@@ -1,7 +1,7 @@
 use crate::{error::ServiceError, models::TypedAlias, Client};
 use async_trait::async_trait;
 use drogue_cloud_service_api::management::{self, ApplicationMetadata};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::collections::{HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
 
@@ -12,16 +12,33 @@ pub struct Application {
     pub data: Value,
 }
 
+/// Extract a section from the application data. Prevents cloning the whole struct.
+fn extract_sect(mut app: Application, key: &str) -> (Application, Option<Map<String, Value>>) {
+    let sect = app
+        .data
+        .get_mut(key)
+        .map(|v| v.take())
+        .and_then(|v| match v {
+            Value::Object(v) => Some(v),
+            _ => None,
+        });
+
+    (app, sect)
+}
+
 impl From<Application> for management::Application {
     fn from(app: Application) -> Self {
+        let (app, spec) = extract_sect(app, "spec");
+        let (app, status) = extract_sect(app, "status");
+
         management::Application {
             metadata: ApplicationMetadata {
                 name: app.id,
                 labels: app.labels,
                 ..Default::default()
             },
-            spec: app.data["spec"].as_object().cloned().unwrap_or_default(),
-            status: app.data["status"].as_object().cloned().unwrap_or_default(),
+            spec: spec.unwrap_or_default(),
+            status: status.unwrap_or_default(),
         }
     }
 }
