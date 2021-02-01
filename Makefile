@@ -2,7 +2,7 @@
 #
 # By default, build and push artifacts and containers.
 #
-all: build images test push
+all: build test
 
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
@@ -46,15 +46,27 @@ clean:
 
 
 #
+# Check the code
+#
+check: host-check
+
+
+#
 # Build artifacts and containers.
 #
-build: host-build
+build: host-build build-images
 
 
 #
 # Run all tests.
 #
 test: host-test
+
+
+#
+# Run checks on the source code
+#
+container-check: cargo-check
 
 
 #
@@ -74,6 +86,13 @@ endif
 # If you have the same environment as the build container, you can also run this on the host, instead of `host-test`.
 #
 container-test: cargo-test
+
+
+#
+# Run checks on the host, forking off into the build container.
+#
+host-check:
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check
 
 
 #
@@ -104,6 +123,15 @@ fix-permissions:
 #
 build-shell:
 	$(CONTAINER) run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
+
+
+#
+# Check the code
+#
+cargo-check:
+	cargo fmt --all -- --check
+	cargo check --release
+	cargo clippy --release --all-features
 
 
 #
@@ -197,13 +225,13 @@ ifndef CONTAINER_REGISTRY
 endif
 
 
-.PHONY: all clean build test push images
+.PHONY: all clean check build test push images
 .PHONY: require-container-registry
 .PHONY: deploy gen-deploy
 
 .PHONY: build-images tag-images push-images
 .PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
 
-.PHONY: container-build container-test
-.PHONY: host-build host-test
-.PHONY: cargo-build cargo-test
+.PHONY: container-check container-build container-test
+.PHONY: host-check host-build host-test
+.PHONY: cargo-check cargo-build cargo-test
