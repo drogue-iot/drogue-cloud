@@ -5,11 +5,10 @@ use drogue_cloud_database_common::{
     error::ServiceError,
     models::{app::*, device::*},
 };
-use drogue_cloud_service_api::management::{DeviceSpecCore, DeviceSpecCredentials};
 use drogue_cloud_service_api::{
     auth::{self, AuthenticationRequest, Outcome},
-    management::{self, Application, Device},
-    Translator,
+    management::{self, Application, Device, DeviceSpecCore, DeviceSpecCredentials},
+    Dialect, Translator,
 };
 use serde::Deserialize;
 use tokio_postgres::NoTls;
@@ -106,13 +105,13 @@ impl AuthenticationService for PostgresAuthenticationService {
 /// Strip the credentials from the device information, so that we do not leak them.
 fn strip_credentials(mut device: management::Device) -> Device {
     // FIXME: we need to do a better job here, maybe add a "secrets" section instead
-    device.spec.remove("credentials");
+    device.spec.remove(DeviceSpecCredentials::key());
     device
 }
 
 /// Validate if an application is "ok" to be used for authentication.
 fn validate_app(app: &management::Application) -> bool {
-    match app.spec_as::<DeviceSpecCore, _>("core") {
+    match app.section::<DeviceSpecCore>() {
         // found "core", decoded successfully -> check
         Some(Ok(core)) => {
             if core.disabled {
@@ -132,7 +131,7 @@ fn validate_app(app: &management::Application) -> bool {
 }
 
 fn validate_credential(_: &Application, device: &Device, cred: &auth::Credential) -> bool {
-    let credentials = match device.spec_as::<DeviceSpecCredentials, _>("credentials") {
+    let credentials = match device.section::<DeviceSpecCredentials>() {
         Some(Ok(credentials)) => credentials.credentials,
         _ => return false,
     };
