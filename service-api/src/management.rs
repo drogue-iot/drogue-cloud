@@ -1,4 +1,4 @@
-use crate::Translator;
+use crate::{Dialect, Section, Translator};
 use base64_serde::base64_serde_type;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -64,6 +64,16 @@ pub struct ApplicationSpecTrustAnchors {
     pub anchors: Vec<ApplicationSpecTrustAnchorEntry>,
 }
 
+impl Dialect for ApplicationSpecTrustAnchors {
+    fn key() -> &'static str {
+        "trustAnchors"
+    }
+
+    fn section() -> Section {
+        Section::Spec
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ApplicationSpecTrustAnchorEntry {
     #[serde(with = "Base64Standard")]
@@ -73,6 +83,16 @@ pub struct ApplicationSpecTrustAnchorEntry {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ApplicationStatusTrustAnchors {
     pub anchors: Vec<ApplicationStatusTrustAnchorEntry>,
+}
+
+impl Dialect for ApplicationStatusTrustAnchors {
+    fn key() -> &'static str {
+        "trustAnchors"
+    }
+
+    fn section() -> Section {
+        Section::Status
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -132,9 +152,27 @@ pub struct DeviceSpecCore {
     pub disabled: bool,
 }
 
+impl Dialect for DeviceSpecCore {
+    fn key() -> &'static str {
+        "core"
+    }
+    fn section() -> Section {
+        Section::Spec
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct DeviceSpecCredentials {
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub credentials: Vec<Credential>,
+}
+
+impl Dialect for DeviceSpecCredentials {
+    fn key() -> &'static str {
+        "credentials"
+    }
+    fn section() -> Section {
+        Section::Spec
+    }
 }

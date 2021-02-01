@@ -79,7 +79,7 @@ impl PostgresManagementService {
 
         // extract trust anchors
 
-        match app.spec_as::<ApplicationSpecTrustAnchors, _>("trustAnchors") {
+        match app.section::<ApplicationSpecTrustAnchors>() {
             Some(Ok(anchors)) => {
                 log::debug!("Anchors: {:?}", anchors);
                 let status = x509::process_anchors(anchors)?;
@@ -122,7 +122,7 @@ impl PostgresManagementService {
 
         aliases.insert(TypedAlias("id".into(), device.metadata.name.clone()));
 
-        if let Some(Ok(credentials)) = device.spec_as::<DeviceSpecCredentials, _>("credentials") {
+        if let Some(Ok(credentials)) = device.section::<DeviceSpecCredentials>() {
             for credential in credentials.credentials {
                 match credential {
                     Credential::UsernamePassword {
