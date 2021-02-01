@@ -23,10 +23,14 @@ pub enum Credential {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Outcome {
+    /// The authentication request passed. The outcome also contains application and device
+    /// details for further processing.
     Pass {
         application: management::Application,
         device: management::Device,
     },
+    /// The authentication request failed. The device is not authenticated, and the device's
+    /// request must be rejected.
     Fail,
 }
 
@@ -35,10 +39,13 @@ pub enum AuthenticationClientError<E: 'static>
 where
     E: std::error::Error,
 {
+    /// An error from the underlying API client (e.g. reqwest).
     #[error("client error: {0}")]
     Client(#[from] Box<E>),
+    /// A local error, performing the request.
     #[error("request error: {0}")]
     Request(String),
+    /// A remote error, performing the request.
     #[error("service error: {0}")]
     Service(ErrorInformation),
 }
@@ -56,17 +63,26 @@ impl fmt::Display for ErrorInformation {
     }
 }
 
+/// A client, authenticating devices.
 #[async_trait]
 pub trait AuthenticationClient {
     type Error: std::error::Error;
+
+    /// Authenticate a device.
+    ///
+    /// Any kind of error should always be treated as an authentication failure. A successful
+    /// call still doesn't mean that the authentication service authenticated the device. The
+    /// caller needs to inspect the outcome in the [AuthenticationResponse](drogue_cloud_service_api::auth::AuthenticationResponse).
     async fn authenticate(
         &self,
         request: AuthenticationRequest,
     ) -> Result<AuthenticationResponse, AuthenticationClientError<Self::Error>>;
 }
 
+/// The result of an authentication request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AuthenticationResponse {
+    /// The outcome, if the request.
     pub outcome: Outcome,
 }
 
