@@ -15,7 +15,8 @@ actix = "0.10"
 actix-broker = "0.3.1"
 actix-rt = "1.1"
 actix-service = "1"
-actix-web = "3.3.2"
+actix-tls = "2"
+actix-web = "3"
 actix-web-httpauth = "0.5.0"
 actix-web-actors = "3"
 
@@ -48,3 +49,16 @@ dotenv = "0.15.0"
 jsonwebtokens = "1.0.0-alpha.13"
 
 awc = "2.0.0"
+
+[dependencies.rust-tls]
+version = "0.19"
+package = "rustls"
+
+[dependencies.open-ssl]
+version = "0.10"
+package = "openssl"
+
+[features]
+default = ["openssl"]
+openssl = ["actix-web/openssl"]
+rustls = ["actix-web/rustls"]

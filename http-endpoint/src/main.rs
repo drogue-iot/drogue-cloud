@@ -2,9 +2,14 @@ mod command;
 mod downstream;
 mod telemetry;
 mod ttn;
+mod x509;
 
-use actix_web::web::Data;
-use actix_web::{get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use crate::x509::ClientCertificateChain;
+use actix_web::{
+    get, middleware, post,
+    web::{self, Data},
+    App, HttpResponse, HttpServer, Responder,
+};
 use cloudevents_sdk_actix_web::HttpRequestExt;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
@@ -14,7 +19,7 @@ use drogue_cloud_endpoint_common::{
 };
 use envconfig::Envconfig;
 use serde_json::json;
-use std::convert::TryInto;
+use std::{any::Any, convert::TryInto};
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
@@ -22,12 +27,18 @@ struct Config {
     pub max_json_payload_size: usize,
     #[envconfig(from = "MAX_PAYLOAD_SIZE", default = "65536")]
     pub max_payload_size: usize,
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8443")]
     pub bind_addr: String,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:8081")]
     pub health_bind_addr: String,
     #[envconfig(from = "AUTH_SERVICE_URL")]
     pub auth_service_url: Option<String>,
+    #[envconfig(from = "DISABLE_TLS", default = "false")]
+    pub disable_tls: bool,
+    #[envconfig(from = "CERT_BUNDLE_FILE")]
+    pub cert_file: Option<String>,
+    #[envconfig(from = "KEY_FILE")]
+    pub key_file: Option<String>,
 }
 
 #[get("/")]
@@ -77,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
 
     let authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
 
-    HttpServer::new(move || {
+    let http = HttpServer::new(move || {
         let app = App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))
@@ -99,9 +110,47 @@ async fn main() -> anyhow::Result<()> {
             //fixme : bind to a different port
             .service(health)
     })
-    .bind(config.bind_addr)?
-    .run()
-    .await?;
+    .on_connect(|con, ext| {
+        if let Some(cert) = extract_client_cert(con) {
+            if !cert.0.is_empty() {
+                ext.insert(cert);
+            }
+        }
+    });
+
+    let http = match (config.disable_tls, config.key_file, config.cert_file) {
+        (false, Some(key), Some(cert)) => {
+            if cfg!(feature = "openssl") {
+                use open_ssl::ssl;
+                let method = ssl::SslMethod::tls_server();
+                let mut builder = ssl::SslAcceptor::mozilla_intermediate(method)?;
+                builder.set_private_key_file(key, ssl::SslFiletype::PEM)?;
+                builder.set_certificate_chain_file(cert)?;
+                // we ask for client certificates, but don't enforce them
+                builder.set_verify_callback(ssl::SslVerifyMode::PEER, |_, ctx| {
+                    log::debug!(
+                        "Accepting client certificates: {:?}",
+                        ctx.current_cert()
+                            .map(|cert| format!("{:?}", cert.subject_name()))
+                            .unwrap_or_else(|| "<unknown>".into())
+                    );
+                    true
+                });
+
+                http.bind_openssl(config.bind_addr, builder)?
+            } else {
+                panic!("TLS is required, but no TLS implementation enabled")
+            }
+        }
+        (true, None, None) => http.bind(config.bind_addr)?,
+        (false, _, _) => panic!("Wrong TLS configuration: TLS enabled, but key or cert is missing"),
+        (true, Some(_), _) | (true, _, Some(_)) => {
+            // the TLS configuration must be consistent, to prevent configuration errors.
+            panic!("Wrong TLS configuration: key or cert specified, but TLS is disabled")
+        }
+    };
+
+    http.run().await?;
 
     // fixme
     //
@@ -112,4 +161,48 @@ async fn main() -> anyhow::Result<()> {
     // future::try_join(app_server, health_server).await?;
 
     Ok(())
+}
+
+fn extract_client_cert(con: &dyn Any) -> Option<ClientCertificateChain> {
+    log::debug!("Try extracting client cert");
+
+    #[cfg(feature = "openssl")]
+    if let Some(con) =
+        con.downcast_ref::<actix_tls::openssl::SslStream<actix_web::rt::net::TcpStream>>()
+    {
+        log::debug!("Try extracting client cert: using OpenSSL");
+        let chain = con.ssl().verified_chain();
+        // **NOTE:** This chain (despite the function name) is **NOT** verified.
+        // These are the client certificates, which will be passed on to the authentication service.
+        let chain = chain
+            .map(|chain| {
+                log::debug!("Peer cert chain len: {}", chain.len());
+                chain
+                    .into_iter()
+                    .map(|cert| cert.to_der())
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()
+            .unwrap_or_else(|err| {
+                log::info!("Failed to retrieve client certificate: {}", err);
+                None
+            });
+        log::debug!("Client certificates: {:?}", chain);
+        return chain.map(ClientCertificateChain);
+    }
+    #[cfg(feature = "rustls")]
+    if let Some(con) =
+        con.downcast_ref::<actix_tls::rustls::TlsStream<actix_web::rt::net::TcpStream>>()
+    {
+        log::debug!("Try extracting client cert: using rustls");
+        use actix_tls::rustls::Session;
+        return con
+            .get_ref()
+            .1
+            .get_peer_certificates()
+            .map(|certs| certs.iter().map(|cert| cert.0.clone()).collect())
+            .map(ClientCertificateChain);
+    }
+
+    None
 }

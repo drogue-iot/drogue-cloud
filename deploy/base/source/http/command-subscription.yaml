@@ -15,4 +15,3 @@ spec:
       kind: Service
       name: http-endpoint
     uri: /command-service
-      

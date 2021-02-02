@@ -1,5 +1,6 @@
 use crate::command::CommandWait;
 use crate::downstream::HttpCommandSender;
+use crate::x509::ClientCertificateChain;
 use actix_web::{put, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
@@ -26,12 +27,14 @@ pub async fn publish(
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
+    cert: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let (application, device) = match auth
         .authenticate_http(
             opts.tenant,
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
+            cert.map(|c| c.0),
         )
         .await
         .map_err(|err| HttpEndpointError(err.into()))?

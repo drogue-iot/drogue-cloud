@@ -1,17 +1,14 @@
-apiVersion: serving.knative.dev/v1
 kind: Service
+apiVersion: v1
 metadata:
   name: command-endpoint
   labels:
-    app.kubernetes.io/part-of: endpoints
+    app: command-endpoint
 spec:
-  template:
-    metadata:
-      labels:
-        bindings.knative.dev/include: "true"
-    spec:
-      containers:
-        - image: ghcr.io/drogue-iot/command-endpoint:latest
-          env:
-            - name: RUST_LOG
-              value: info
+  selector:
+    app: command-endpoint
+  ports:
+    - name: endpoint
+      protocol: TCP
+      port: 443
+      targetPort: endpoint

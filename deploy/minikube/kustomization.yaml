@@ -4,11 +4,11 @@ kind: Kustomization
 bases:
   - ../base/knative
   - sso
-  - ../base/source/http
   - source/mqtt
-  - ../base/source/command
+  - source/http
+  - source/command
   - ../base/service/influxdb
   - service/grafana
   - service/console
-  - ../base/service/registry
+  - service/registry
 

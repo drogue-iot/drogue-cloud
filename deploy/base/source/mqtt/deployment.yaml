@@ -3,17 +3,19 @@ apiVersion: apps/v1
 metadata:
   name: mqtt-endpoint
   labels:
-    app: mqtt-endpoint
+    app.kubernetes.io/name: mqtt-endpoint
     app.kubernetes.io/part-of: endpoints
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mqtt-endpoint
+      app.kubernetes.io/name: mqtt-endpoint
+      app.kubernetes.io/part-of: endpoints
   template:
     metadata:
       labels:
-        app: mqtt-endpoint
+        app.kubernetes.io/name: mqtt-endpoint
+        app.kubernetes.io/part-of: endpoints
     spec:
       containers:
         - name: endpoint
@@ -21,7 +23,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: RUST_LOG
-              value: info
+              value: debug
             - name: BIND_ADDR_MQTT
               value: "0.0.0.0:8883"
             - name: BIND_ADDR_HTTP
@@ -39,6 +41,9 @@ spec:
             - containerPort: 8080
               name: http
               protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 8883
           resources:
             limits:
               memory: 64Mi

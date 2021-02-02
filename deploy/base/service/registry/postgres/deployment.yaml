@@ -39,6 +39,11 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.password
+            - name: PGPASSWORD # used in combination with psql
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: admin.password
           readinessProbe:
             initialDelaySeconds: 5
             periodSeconds: 5

@@ -4,4 +4,4 @@ kind: Kustomization
 bases:
   - postgres
   - auth
-  - mgmt
+  - registry
