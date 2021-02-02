@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 use crate::command::{command_wait, CommandWait};
+use crate::x509::ClientCertificateChain;
 use actix_web::{http::header, post, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
@@ -29,8 +30,9 @@ pub async fn publish_plain(
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
+    certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    publish(sender, auth, channel, None, opts, req, body).await
+    publish(sender, auth, channel, None, opts, req, body, certs).await
 }
 
 #[post("/{channel}/{suffix:.*}")]
@@ -41,8 +43,9 @@ pub async fn publish_tail(
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
+    certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    publish(sender, auth, channel, Some(suffix), opts, req, body).await
+    publish(sender, auth, channel, Some(suffix), opts, req, body, certs).await
 }
 
 pub async fn publish(
@@ -53,6 +56,7 @@ pub async fn publish(
     opts: PublishOptions,
     req: web::HttpRequest,
     body: web::Bytes,
+    certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
@@ -61,6 +65,7 @@ pub async fn publish(
             opts.application,
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
+            certs.map(|c| c.0),
         )
         .await
         .map_err(|err| HttpEndpointError(err.into()))?

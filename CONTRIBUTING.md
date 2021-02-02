@@ -35,6 +35,7 @@ In any case, you will need:
   * GNU Make
   * npm
   * kubectl
+  * HTTPie 2.2+
 * A lot of cores, patience, memory, and disk space
 * Some form of Kubernetes cluster
   * **Minikube** is what seems to work best for development, and is easy to get started with.

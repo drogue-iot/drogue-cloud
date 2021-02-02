@@ -30,12 +30,12 @@ case $CLUSTER in
         ;;
 esac;
 
-HTTP_ENDPOINT_URL=$(kservice_url "http-endpoint")
-COMMAND_ENDPOINT_URL=$(kservice_url "command-endpoint")
+HTTP_ENDPOINT_URL=$(service_url "http-endpoint")
+COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
 CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
 SSO_URL=$(ingress_url "keycloak")
-MGMT_URL=$(kservice_url "device-management-service")
+MGMT_URL=$(service_url "registry")
 
 # Dump out the dashboard URL and sample commands for http and mqtt
 
@@ -80,16 +80,16 @@ echo "URL:"
 echo "    ${MGMT_URL}"
 echo
 echo "Tenants:"
-echo "  Create:  http POST   ${MGMT_URL}/api/v1/tenants tenant_id=tenant_id"
-echo "  Read:    http GET    ${MGMT_URL}/api/v1/tenants/tenant_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id disabled:=true"
-echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/tenants/tenant_id"
+echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps metadata:='{\"name\":\"app_id\"}'"
+echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id metadata:='{\"name\":\"app_id\"}' spec:='{\"core\": {\"disabled\": true}}'"
+echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/apps/app_id"
 echo
 echo "Devices:"
-echo "  Create:  http POST   ${MGMT_URL}/api/v1/tenants/tenant_id/devices device_id=device_id password=foobar"
-echo "  Read:    http GET    ${MGMT_URL}/api/v1/tenants/tenant_id/devices/device_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/tenants/tenant_id/devices/device_id password=foobar"
-echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/tenants/tenant_id/devices/device_id"
+echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps/app_id/devices metadata:='{\"application\": \"app_id\", \"name\":\"device_id\"}' spec:='{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id/devices/device_id"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id/devices/device_id metadata:='{\"application\": \"app_id\", \"name\":\"device_id\"}' spec:='{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/apps/app_id/devices/device_id"
 echo
 echo "Publish data:"
 echo "---------------"
@@ -98,13 +98,13 @@ echo "After you created a device, try these commands at a shell prompt:"
 echo
 echo "System default certificates (or none):"
 echo
-echo "  http --auth device_id@tenant_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@tenant_id -pw foobar -s -t temp -m '{\"temp\":42}'"
+echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s -t temp -m '{\"temp\":42}'"
 echo
 echo "Local test certificates:"
 echo
-echo "  http --auth device_id@tenant_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@tenant_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}'"
+echo "  http --auth device_id@app_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}'"
 echo
 echo "Send commands to the device:"
 echo "------------------------------"
@@ -113,11 +113,11 @@ echo "After you created a device, try these commands at a shell prompt:"
 echo
 echo "Publish data from the device and specify how long will you wait for a command with 'ttd' parameter (in seconds)"
 echo
-echo "  http --auth device_id@tenant_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ttd=30 temp:=42"
+echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ttd=30 temp:=42"
 echo
 echo "Or subscribe with the MQTT device"
 echo
-echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@tenant_id -pw foobar -i device_id -s --cafile tls.crt -t cmd"
+echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile tls.crt -t cmd"
 echo
 echo "Send command to that device from another terminal window:"
 echo

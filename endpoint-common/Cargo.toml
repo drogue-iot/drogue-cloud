@@ -40,3 +40,5 @@ http = "0.2"
 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
+
+x509-parser = "0.9"

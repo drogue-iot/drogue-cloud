@@ -93,8 +93,13 @@ dependencies = [
  "futures-util",
  "http",
  "log",
+ "openssl",
+ "rustls 0.18.1",
+ "tokio-openssl",
+ "tokio-rustls 0.14.1",
  "trust-dns-proto 0.19.6",
  "trust-dns-resolver 0.19.6",
+ "webpki",
 ]
 
 [[package]]
@@ -135,6 +140,7 @@ dependencies = [
  "actix-rt 1.1.1",
  "actix-service 1.0.6",
  "actix-threadpool",
+ "actix-tls 2.0.0",
  "actix-utils 2.0.0",
  "base64 0.13.0",
  "bitflags",
@@ -374,6 +380,12 @@ dependencies = [
  "actix-service 1.0.6",
  "actix-utils 2.0.0",
  "futures-util",
+ "openssl",
+ "rustls 0.18.1",
+ "tokio-openssl",
+ "tokio-rustls 0.14.1",
+ "webpki",
+ "webpki-roots 0.20.0",
 ]
 
 [[package]]
@@ -458,8 +470,10 @@ dependencies = [
  "fxhash",
  "log",
  "mime",
+ "openssl",
  "pin-project 1.0.4",
  "regex",
+ "rustls 0.18.1",
  "serde 1.0.120",
  "serde_json",
  "serde_urlencoded",
@@ -710,8 +724,10 @@ dependencies = [
  "futures-core",
  "log",
  "mime",
+ "openssl",
  "percent-encoding",
  "rand 0.7.3",
+ "rustls 0.18.1",
  "serde 1.0.120",
  "serde_json",
  "serde_urlencoded",
@@ -1579,6 +1595,7 @@ dependencies = [
  "serde_json",
  "snafu",
  "uuid",
+ "x509-parser",
 ]
 
 [[package]]
@@ -1589,6 +1606,7 @@ dependencies = [
  "actix-broker",
  "actix-rt 1.1.1",
  "actix-service 1.0.6",
+ "actix-tls 2.0.0",
  "actix-web 3.3.2",
  "actix-web-actors",
  "actix-web-httpauth 0.5.0",
@@ -1609,8 +1627,10 @@ dependencies = [
  "http",
  "jsonwebtokens",
  "log",
+ "openssl",
  "percent-encoding",
  "reqwest",
+ "rustls 0.19.0",
  "serde 1.0.120",
  "serde_json",
  "snafu",
