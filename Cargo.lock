@@ -1379,6 +1379,8 @@ dependencies = [
  "futures-util",
  "log",
  "native-tls",
+ "pem 0.8.2",
+ "rustls 0.19.0",
  "serde 1.0.120",
  "serde_json",
  "serial_test",

@@ -1,54 +1,11 @@
+mod common;
+
 use actix_web::{test, web, App};
 use drogue_cloud_authentication_service::{endpoints, service, WebData};
 use drogue_cloud_service_api::auth::{AuthenticationRequest, Credential};
 use drogue_cloud_test_common::{client, db};
-use log::LevelFilter;
 use serde_json::{json, Value};
 use serial_test::serial;
-
-fn init() {
-    let _ = env_logger::builder()
-        .is_test(true)
-        .filter_level(LevelFilter::Debug)
-        .try_init();
-}
-
-macro_rules! test {
-   ($v:ident => $($code:block)*) => {{
-        init();
-
-        let cli = client();
-        let db = db(&cli, |pg| service::AuthenticationServiceConfig{
-            pg
-        })?;
-
-        let data = WebData {
-            service: service::PostgresAuthenticationService::new(db.config.clone()).unwrap(),
-        };
-
-        let mut $v =
-            test::init_service(drogue_cloud_authentication_service::app!(data, 16 * 1024)).await;
-
-        $($code)*
-
-        Ok(())
-    }};
-}
-
-macro_rules! test_auth {
-    ($rep:expr => $res:expr) => {
-        test!(app => {
-            let resp = test::TestRequest::post().uri("/api/v1/auth").set_json(&$rep).send_request(&mut app).await;
-            let is_success = resp.status().is_success();
-            let result: serde_json::Value = test::read_body_json(resp).await;
-
-            let outcome = $res;
-
-            assert_eq!(result, json!({"outcome": outcome}));
-            assert!(is_success);
-        })
-    };
-}
 
 fn device1_json() -> Value {
     json!({"pass":{
@@ -80,17 +37,6 @@ fn device3_json() -> Value {
             },
         }
     }})
-}
-
-#[actix_rt::test]
-#[serial]
-async fn test_health() -> anyhow::Result<()> {
-    test!(app => {
-        let req = test::TestRequest::get().uri("/health").to_request();
-        let resp: serde_json::Value = test::read_response_json(&mut app, req).await;
-
-        assert_eq!(resp, json!({"success": true}));
-    })
 }
 
 /// Authorize a device using a password.

@@ -1,16 +1,22 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{app::*, device::*},
+};
+use drogue_cloud_service_api::management::{
+    ApplicationStatusTrustAnchorEntry, ApplicationStatusTrustAnchors,
 };
 use drogue_cloud_service_api::{
     auth::{self, AuthenticationRequest, Outcome},
     management::{self, Application, Device, DeviceSpecCore, DeviceSpecCredentials},
     Dialect, Translator,
 };
+use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use serde::Deserialize;
+use std::io::Cursor;
 use tokio_postgres::NoTls;
 
 #[async_trait]
@@ -86,7 +92,7 @@ impl AuthenticationService for PostgresAuthenticationService {
         // validate credential
 
         Ok(
-            match validate_credential(&application, &device, &request.credential) {
+            match validate_credential(&application, &device, request.credential) {
                 true => Outcome::Pass {
                     application,
                     device: strip_credentials(device),
@@ -130,51 +136,145 @@ fn validate_app(app: &management::Application) -> bool {
     true
 }
 
-fn validate_credential(_: &Application, device: &Device, cred: &auth::Credential) -> bool {
+fn validate_credential(app: &Application, device: &Device, cred: auth::Credential) -> bool {
     let credentials = match device.section::<DeviceSpecCredentials>() {
         Some(Ok(credentials)) => credentials.credentials,
-        _ => return false,
+        _ => {
+            log::debug!("Missing or invalid device credentials section");
+            return false;
+        }
     };
 
     match cred {
         auth::Credential::Password(provided_password) => {
-            credentials.iter().any(|c| match c {
-                // match passwords
-                management::Credential::Password(stored_password) => {
-                    stored_password == provided_password
-                }
-                // match passwords if the stored username is equal to the device id
-                management::Credential::UsernamePassword {
-                    username: stored_username,
-                    password: stored_password,
-                    ..
-                } if stored_username == &device.metadata.name => {
-                    stored_password == provided_password
-                }
-                // no match
-                _ => false,
-            })
+            validate_password(device, &credentials, &provided_password)
         }
         auth::Credential::UsernamePassword {
             username: provided_username,
             password: provided_password,
             ..
-        } => credentials.iter().any(|c| match c {
-            // match passwords if the provided username is equal to the device id
-            management::Credential::Password(stored_password)
-                if provided_username == &device.metadata.name =>
-            {
-                stored_password == provided_password
-            }
-            // match username/password against username/password
-            management::Credential::UsernamePassword {
-                username: stored_username,
-                password: stored_password,
-                ..
-            } => stored_username == provided_username && stored_password == provided_password,
-            // no match
-            _ => false,
-        }),
+        } => {
+            validate_username_password(device, &credentials, &provided_username, &provided_password)
+        }
+        auth::Credential::Certificate(chain) => {
+            let now = Utc::now();
+            validate_certificate(app, device, &credentials, chain, &now)
+        }
+    }
+}
+
+/// validate if a provided password matches
+fn validate_password(
+    device: &Device,
+    credentials: &[management::Credential],
+    provided_password: &str,
+) -> bool {
+    credentials.iter().any(|c| match c {
+        // match passwords
+        management::Credential::Password(stored_password) => stored_password == provided_password,
+        // match passwords if the stored username is equal to the device id
+        management::Credential::UsernamePassword {
+            username: stored_username,
+            password: stored_password,
+            ..
+        } if stored_username == &device.metadata.name => stored_password == provided_password,
+        // no match
         _ => false,
+    })
+}
+
+/// validate if a provided username/password combination matches
+fn validate_username_password(
+    device: &Device,
+    credentials: &[management::Credential],
+    provided_username: &str,
+    provided_password: &str,
+) -> bool {
+    credentials.iter().any(|c| match c {
+        // match passwords if the provided username is equal to the device id
+        management::Credential::Password(stored_password)
+            if provided_username == &device.metadata.name =>
+        {
+            stored_password == provided_password
+        }
+        // match username/password against username/password
+        management::Credential::UsernamePassword {
+            username: stored_username,
+            password: stored_password,
+            ..
+        } => stored_username == provided_username && stored_password == provided_password,
+        // no match
+        _ => false,
+    })
+}
+
+/// validate if a provided certificate chain matches
+fn validate_certificate(
+    app: &Application,
+    _device: &Device,
+    _credentials: &[management::Credential],
+    provided_chain: Vec<Vec<u8>>,
+    now: &DateTime<Utc>,
+) -> bool {
+    if provided_chain.is_empty() {
+        return false;
+    }
+
+    if let Some(Ok(anchors)) = app.section::<ApplicationStatusTrustAnchors>() {
+        // if we have some trust anchors
+        let mut presented_certs = Vec::with_capacity(provided_chain.len());
+        for cert in provided_chain {
+            presented_certs.push(Certificate(cert));
+        }
+
+        // test them
+        anchors
+            .anchors
+            .iter()
+            .any(|a| validate_trust_anchor(a, now, &presented_certs))
+    } else {
+        false
+    }
+}
+
+/// validate if a provided certificate chain matches the trust anchor to test
+fn validate_trust_anchor(
+    anchor: &ApplicationStatusTrustAnchorEntry,
+    now: &DateTime<Utc>,
+    presented_certs: &[Certificate],
+) -> bool {
+    if let ApplicationStatusTrustAnchorEntry::Valid {
+        subject: _,
+        certificate,
+        not_before,
+        not_after,
+    } = anchor
+    {
+        // quick validity period check before actually checking the chain
+        if now < not_before {
+            return false;
+        }
+        if now > not_after {
+            return false;
+        }
+
+        // create root from trust anchor entry
+        let mut roots = RootCertStore::empty();
+        let mut c = Cursor::new(certificate);
+        if roots.add_pem_file(&mut c).is_err() {
+            log::debug!("Failed to parse certificates");
+            return false;
+        }
+
+        let v = AllowAnyAuthenticatedClient::new(roots);
+        match v.verify_client_cert(presented_certs, None) {
+            Ok(_) => true,
+            Err(err) => {
+                log::debug!("Failed to verify client certificate: {}", err);
+                false
+            }
+        }
+    } else {
+        false
     }
 }
