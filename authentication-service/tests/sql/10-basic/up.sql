@@ -1,5 +1,5 @@
 --
--- tenant1
+-- app1
 --
 
 INSERT INTO APPLICATIONS (

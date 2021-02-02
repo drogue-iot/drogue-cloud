@@ -15,10 +15,10 @@ clean-certs:
 
 create-certs: $(CA_FILES)
 create-certs: $(BASE)/trusted-certs.pem
-create-certs: $(BASE)/device.1.fullchain.crt
+create-certs: $(BASE)/device.1.key $(BASE)/device.1.crt $(BASE)/device.1.fullchain.crt
 
 $(BASE)/trusted-certs.pem: $(BASE)/ca-cert.pem $(BASE)/root-cert.pem
-	cat $< > $@
+	cat $^ > $@
 
 $(CA_FILES):
 	openssl req -x509 -config "$(BASE)/ca.cnf" -nodes -newkey rsa:4096 -keyout "$(BASE)/root-key.pem" -out "$(BASE)/root-cert.pem" -days 3650 -subj "/O=Drogue IoT/OU=Cloud/CN=Application 1"
@@ -33,4 +33,4 @@ $(BASE)/device.%.crt $(BASE)/%.pem: $(BASE)/device.%.key $(BASE)/device.%.req $(
 	cat $(BASE)/device.$*.req | openssl x509 -req -extfile "$(BASE)/ca.cnf" -extensions "san_ext" -out "$(BASE)/device.$*.crt" -days 3650 -CA "$(BASE)/ca-cert.pem" -CAkey "$(BASE)/ca-key.pem" -CAcreateserial
 
 $(BASE)/device.%.fullchain.crt: $(BASE)/device.%.crt $(BASE)/ca-cert.pem
-	cat "$(BASE)/device.$*.crt" "$(BASE)/ca-cert.pem" > "$(BASE)/device.$*.fullchain.crt"
+	cat $^ > $@

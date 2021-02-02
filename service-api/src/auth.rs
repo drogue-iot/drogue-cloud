@@ -17,7 +17,7 @@ pub enum Credential {
     #[serde(rename = "pass")]
     Password(String),
     #[serde(rename = "cert")]
-    Certificate(String),
+    Certificate(Vec<Vec<u8>>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

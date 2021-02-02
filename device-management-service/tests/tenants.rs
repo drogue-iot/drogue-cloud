@@ -241,8 +241,8 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
                         "valid": {
                             "subject": "O=Drogue IoT, OU=Cloud, CN=Application 1",
                             "certificate": ca,
-                            "notBefore": "2021-02-01T13:43:29Z",
-                            "notAfter": "2031-01-30T13:43:29Z",
+                            "notBefore": "2021-02-02T08:39:17Z",
+                            "notAfter": "2031-01-31T08:39:17Z",
                         }
                     }]
                 }
