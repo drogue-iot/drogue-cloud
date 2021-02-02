@@ -20,7 +20,7 @@ pub async fn authenticate(
     data: web::Data<WebData<service::PostgresAuthenticationService>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let result = match data.service.authenticate(req.0).await {
-        Ok(r) => Ok(HttpResponse::Ok().json(AuthenticationResponse { outcome: r })),
+        Ok(outcome) => Ok(HttpResponse::Ok().json(AuthenticationResponse { outcome })),
         Err(e) => Err(e.into()),
     };
 
