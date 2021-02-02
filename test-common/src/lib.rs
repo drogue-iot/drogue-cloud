@@ -130,24 +130,22 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
             return Ok(());
         }
 
-        for up in walkdir::WalkDir::new(&source)
-            .contents_first(true)
-            .into_iter()
-            .filter_entry(|entry| entry.file_name() == "up.sql")
-        {
+        for up in walkdir::WalkDir::new(&source) {
             let up = up?;
-            let name = up
-                .path()
-                .parent()
-                .ok_or_else(|| anyhow::anyhow!("Missing parent component"))?;
-            let name = name
-                .file_name()
-                .and_then(|s| s.to_str())
-                .ok_or_else(|| anyhow::anyhow!(""))?;
-            let target = target.join(format!("{}-up.sql", name));
-            log::debug!("Add SQL file: {:?} -> {:?}", up, target);
+            if up.file_type().is_file() && up.file_name() == "up.sql" {
+                let name = up
+                    .path()
+                    .parent()
+                    .ok_or_else(|| anyhow::anyhow!("Missing parent component"))?;
+                let name = name
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| anyhow::anyhow!(""))?;
+                let target = target.join(format!("{}-up.sql", name));
+                log::debug!("Add SQL file: {:?} -> {:?}", up, target);
 
-            f(up.path(), &target)?;
+                f(up.path(), &target)?;
+            }
         }
 
         Ok(())
