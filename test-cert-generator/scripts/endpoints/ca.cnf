@@ -22,7 +22,7 @@ basicConstraints = critical,CA:true
 keyUsage = keyCertSign,cRLSign
 
 [san_ext]
-
+subjectAltName=${ENV::CERT_ALTNAMES}
 subjectKeyIdentifier = hash
 keyUsage = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage = serverAuth, clientAuth

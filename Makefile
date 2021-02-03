@@ -7,7 +7,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.4
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.5
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -35,6 +35,7 @@ IMAGES?=\
 	device-management-service \
 	database-migration \
 	command-endpoint \
+	test-cert-generator \
 
 
 #
@@ -208,11 +209,11 @@ quick: build build-images tag-images
 # Do a local deploy
 #
 deploy: gen-deploy
-	./hack/drogue.sh -d build/deploy
+	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./hack/drogue.sh -d build/deploy
 
 gen-deploy: require-container-registry
-	rm -Rf build
-	mkdir -p build
+	rm -Rf build/deploy
+	mkdir -p build/deploy
 	./hack/replace-images.py latest Always deploy "$(CONTAINER_REGISTRY)" build/deploy
 
 

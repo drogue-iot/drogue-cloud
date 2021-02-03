@@ -2,20 +2,24 @@
 
 : "${DROGUE_NS:=drogue-iot}"
 
+: "${CONTAINER:=docker}"
+: "${TEST_CERTS_IMAGE:=ghcr.io/drogue-iot/test-cert-generator:latest}"
+
 die() { echo "$*" 1>&2 ; exit 1; }
 
 function service_url() {
   local name="$1"
   shift
+  local scheme="${1:http}"
 
 case $CLUSTER in
    kind)
        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-       URL=http://$name.$DOMAIN:$PORT
+       URL=https://$name.$DOMAIN:$PORT
        ;;
    minikube)
-        URL=$(eval minikube service -n "$DROGUE_NS" --url "$name")
+        URL=$(eval minikube service -n "$DROGUE_NS" "--$scheme" --url "$name")
         ;;
    openshift)
         URL="https://$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"

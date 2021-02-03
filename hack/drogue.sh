@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 : "${CLUSTER:=minikube}"
-: "${MQTT:=true}"
+
 
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
@@ -110,7 +110,7 @@ case $CLUSTER in
         ;;
 esac;
 
-HTTP_ENDPOINT_URL=${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}
+HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
 
 BACKEND_URL="$(service_url "console-backend")"
 CONSOLE_URL="$(service_url "console")"
@@ -122,16 +122,22 @@ if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)
   if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
     echo "Creating custom certificate..."
     CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$HTTP_ENDPOINT_HOST"
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls_tmp.key -out tls.crt -subj "/CN=foo.bar.com" -addext "subjectAltName = $CERT_ALTNAMES"
-    openssl rsa -in tls_tmp.key -out tls.key
-    TLS_KEY=tls.key
-    TLS_CRT=tls.crt
+    "$SCRIPTDIR/gen-certs.sh" "$CERT_ALTNAMES"
+    OUT="${SCRIPTDIR}/../build/certs/endpoints"
+    MQTT_TLS_KEY=$OUT/mqtt-endpoint.key
+    MQTT_TLS_CRT=$OUT/mqtt-endpoint.fullchain.crt
+    HTTP_TLS_KEY=$OUT/http-endpoint.key
+    HTTP_TLS_CRT=$OUT/http-endpoint.fullchain.crt
   else
     echo "Using provided certificate..."
+    MQTT_TLS_KEY=$TLS_KEY
+    MQTT_TLS_CRT=$TLS_CRT
+    HTTP_TLS_KEY=$TLS_KEY
+    HTTP_TLS_CRT=$TLS_CRT
   fi
   # create or update secrets
-  kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key "$TLS_KEY" --cert "$TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
-  kubectl -n "$DROGUE_NS" create secret tls http-endpoint-tls --key "$TLS_KEY" --cert "$TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
+  kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key "$MQTT_TLS_KEY" --cert "$MQTT_TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
+  kubectl -n "$DROGUE_NS" create secret tls http-endpoint-tls --key "$HTTP_TLS_KEY" --cert "$HTTP_TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
 fi
 
 # Update the console endpoints
