@@ -82,6 +82,7 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone())
+            .service(health)
             .service(index)
             .service(publish)
     })
