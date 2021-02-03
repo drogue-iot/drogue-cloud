@@ -8,7 +8,7 @@ use ntex::{fn_factory_with_config, fn_service};
 use ntex_mqtt::{v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
 use rust_tls::{
-    internal::pemfile::certs, internal::pemfile::rsa_private_keys, NoClientAuth, ServerConfig,
+    internal::pemfile::certs, internal::pemfile::pkcs8_private_keys, NoClientAuth, ServerConfig,
 };
 
 use drogue_cloud_endpoint_common::downstream::DownstreamSender;
@@ -16,7 +16,7 @@ use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 use crate::{
     error::ServerError,
     mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
-    App,
+    App, Config,
 };
 
 use anyhow::Context;
@@ -53,20 +53,37 @@ impl Session {
 
 const DEFAULT_MAX_SIZE: u32 = 1024;
 
-fn tls_config() -> anyhow::Result<ServerConfig> {
+fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
     let mut tls_config = ServerConfig::new(NoClientAuth::new());
 
-    let key = std::env::var("KEY_FILE").unwrap_or_else(|_| "./examples/key.pem".into());
-    let cert = std::env::var("CERT_FILE").unwrap_or_else(|_| "./examples/cert.pem".into());
+    let key = config
+        .key_file
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Missing key file"))?;
+    let cert = config
+        .cert_file
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Missing cert file"))?;
 
     let cert_file = &mut BufReader::new(File::open(cert).unwrap());
     let key_file = &mut BufReader::new(File::open(key).unwrap());
 
     let cert_chain = certs(cert_file).unwrap();
-    let mut keys = rsa_private_keys(key_file).unwrap();
-    tls_config
-        .set_single_cert(cert_chain, keys.remove(0))
-        .context("Failed to set TLS certificate")?;
+    let mut keys = pkcs8_private_keys(key_file).unwrap();
+
+    if keys.len() > 1 {
+        anyhow::bail!("Found too many key in the key file - found: {}", keys.len());
+    }
+
+    let key = keys.pop();
+
+    if let Some(key) = key {
+        tls_config
+            .set_single_cert(cert_chain, key)
+            .context("Failed to set TLS certificate")?;
+    } else {
+        anyhow::bail!("No key found in the key file")
+    }
 
     Ok(tls_config)
 }
@@ -118,11 +135,12 @@ pub fn build_tls(
     addr: Option<&str>,
     builder: ServerBuilder,
     app: App,
+    config: &Config,
 ) -> anyhow::Result<ServerBuilder> {
     let addr = addr.unwrap_or("127.0.0.1:8883");
     log::info!("Starting MQTT (TLS) server: {}", addr);
 
-    let tls_acceptor = Acceptor::new(tls_config()?);
+    let tls_acceptor = Acceptor::new(tls_config(config)?);
 
     Ok(builder.bind("mqtt", addr, move || {
         pipeline_factory(tls_acceptor.clone())

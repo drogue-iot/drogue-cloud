@@ -9,6 +9,7 @@ use crate::server::{build, build_tls};
 use bytes::Bytes;
 use bytestring::ByteString;
 use cloudevents::event::ExtensionValue;
+use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
     downstream::DownstreamSender,
@@ -26,9 +27,13 @@ use std::{
 };
 
 #[derive(Clone, Debug, Envconfig)]
-struct Config {
+pub struct Config {
     #[envconfig(from = "DISABLE_TLS", default = "false")]
     pub disable_tls: bool,
+    #[envconfig(from = "CERT_BUNDLE_FILE")]
+    pub cert_file: Option<String>,
+    #[envconfig(from = "KEY_FILE")]
+    pub key_file: Option<String>,
     #[envconfig(from = "BIND_ADDR_MQTT")]
     pub bind_addr_mqtt: Option<String>,
     #[envconfig(from = "BIND_ADDR_HTTP", default = "0.0.0.0:8080")]
@@ -118,6 +123,7 @@ async fn command_service(
 #[ntex::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+    dotenv().ok();
 
     let config = Config::init_from_env()?;
 
@@ -133,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
     let addr = config.bind_addr_mqtt.as_deref();
 
     let builder = if !config.disable_tls {
-        build_tls(addr, builder, app)?
+        build_tls(addr, builder, app, &config)?
     } else {
         build(addr, builder, app)?
     };
