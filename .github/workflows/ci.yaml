@@ -161,7 +161,7 @@ jobs:
           ./hack/replace-images.py ${{ github.sha }} Never deploy dev.local tmp/deploy
 
       - name: Deploy drogue
-        run: ./hack/drogue.sh -d tmp/deploy
+        run: env TEST_CERTS_IMAGE=dev.local/test-cert-generator:${{ github.sha }} ./hack/drogue.sh -d tmp/deploy
         timeout-minutes: 20
 
       - name: Collect logs
