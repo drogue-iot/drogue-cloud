@@ -30,7 +30,7 @@ case $CLUSTER in
         ;;
 esac;
 
-HTTP_ENDPOINT_URL=$(service_url "http-endpoint")
+HTTP_ENDPOINT_URL=$(service_url "http-endpoint" https)
 COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
 CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
@@ -103,8 +103,8 @@ echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@a
 echo
 echo "Local test certificates:"
 echo
-echo "  http --auth device_id@app_id:foobar --verify tls.crt POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile tls.crt -t temp -m '{\"temp\":42}'"
+echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'"
 echo
 echo "Send commands to the device:"
 echo "------------------------------"

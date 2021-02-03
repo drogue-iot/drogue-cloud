@@ -28,7 +28,7 @@ spec:
               value: "0.0.0.0:8883"
             - name: BIND_ADDR_HTTP
               value: "0.0.0.0:8080"
-            - name: CERT_FILE
+            - name: CERT_BUNDLE_FILE
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
               value: /etc/endpoint/tls.key

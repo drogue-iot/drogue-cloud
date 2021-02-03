@@ -23,6 +23,8 @@ spec:
           env:
             - name: RUST_LOG
               value: debug
+            - name: BIND_ADDR
+              value: "0.0.0.0:8080"
           ports:
             - containerPort: 8080
               name: endpoint
