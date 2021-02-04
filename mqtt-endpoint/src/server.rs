@@ -15,7 +15,7 @@ use ntex_mqtt::{v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
 use rust_tls::{
     internal::pemfile::{certs, pkcs8_private_keys},
-    NoClientAuth, ServerConfig,
+    ServerConfig,
 };
 use std::{
     collections::HashMap,
