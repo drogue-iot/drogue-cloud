@@ -54,7 +54,7 @@ $(EGEN)/ca-cert.pem: $(EBASE)/ca.cnf $(EGEN)/ca-cert.req $(EGEN)/root-cert.pem $
 
 $(EGEN)/%-endpoint.key $(EGEN)/%-endpoint.req: $(EBASE)/ca.cnf
 	openssl req -nodes -newkey rsa:4096 -keyout "$(EGEN)/$*-endpoint.key" -subj "/O=Drogue IoT/OU=Cloud/CN=$* endpoint" -addext "subjectAltName = $(CERT_ALTNAMES)" > $(EGEN)/$*-endpoint.req
-	chmod a+r $(EGEN)/%-endpoint.key $(EGEN)/%-endpoint.req
+	chmod a+r $(EGEN)/$*-endpoint.key $(EGEN)/$*-endpoint.req
 
 $(EGEN)/%-endpoint.crt: $(EBASE)/ca.cnf $(EGEN)/%-endpoint.key $(EGEN)/%-endpoint.req
 	cat $(EGEN)/$*-endpoint.req | openssl x509 -req -out "$(EGEN)/$*-endpoint.crt" -extensions san_ext -extfile $(EBASE)/ca.cnf  -days 3650 -CA "$(EGEN)/ca-cert.pem" -CAkey "$(EGEN)/ca-key.pem" -CAcreateserial
