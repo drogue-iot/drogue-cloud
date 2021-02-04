@@ -77,8 +77,6 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
         );
     }
 
-    tls_config.set_client_certificate_verifier()
-
     if let Some(key) = keys.pop() {
         tls_config
             .set_single_cert(cert_chain, key)
