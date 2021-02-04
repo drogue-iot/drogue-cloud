@@ -10,7 +10,7 @@ die() { echo "$*" 1>&2 ; exit 1; }
 function service_url() {
   local name="$1"
   shift
-  local scheme="${1:http}"
+  local scheme="$1"
 
 case $CLUSTER in
    kind)
@@ -19,7 +19,8 @@ case $CLUSTER in
        URL=https://$name.$DOMAIN:$PORT
        ;;
    minikube)
-        URL=$(eval minikube service -n "$DROGUE_NS" "--$scheme" --url "$name")
+        test -n "$scheme" && scheme="--$scheme"
+        URL=$(eval minikube service -n "$DROGUE_NS" $scheme --url "$name")
         ;;
    openshift)
         URL="https://$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"
