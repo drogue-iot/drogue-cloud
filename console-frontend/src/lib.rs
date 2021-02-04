@@ -1,5 +1,5 @@
 #![recursion_limit = "512"]
-
+#![allow(clippy::needless_return)]
 mod app;
 mod backend;
 mod components;

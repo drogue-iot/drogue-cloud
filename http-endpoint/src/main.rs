@@ -4,6 +4,8 @@ mod telemetry;
 mod ttn;
 mod x509;
 
+#[cfg(feature = "rustls")]
+use actix_tls::rustls::Session;
 use actix_web::{
     get, middleware, post,
     web::{self, Data},
