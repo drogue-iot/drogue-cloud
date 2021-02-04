@@ -78,9 +78,7 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
         );
     }
 
-    let key = keys.pop();
-
-    if let Some(key) = key {
+    if let Some(key) = keys.pop() {
         tls_config
             .set_single_cert(cert_chain, key)
             .context("Failed to set TLS certificate")?;
