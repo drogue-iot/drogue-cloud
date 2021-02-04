@@ -1,4 +1,5 @@
 use crate::{
+    auth::AcceptAllClientCertVerifier,
     error::ServerError,
     mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
     App, Config,
@@ -13,7 +14,8 @@ use ntex::{
 use ntex_mqtt::{v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
 use rust_tls::{
-    internal::pemfile::certs, internal::pemfile::pkcs8_private_keys, NoClientAuth, ServerConfig,
+    internal::pemfile::{certs, pkcs8_private_keys},
+    NoClientAuth, ServerConfig,
 };
 use std::{
     collections::HashMap,
@@ -76,6 +78,10 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
             keys.len()
         );
     }
+
+    // This seems dangerous, as we simply accept all client certificates. However,
+    // we validate them later during the "connect" packet validation.
+    tls_config.set_client_certificate_verifier(Arc::new(AcceptAllClientCertVerifier));
 
     if let Some(key) = keys.pop() {
         tls_config

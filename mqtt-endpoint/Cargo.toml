@@ -40,15 +40,25 @@ envconfig = "0.9"
 cloudevents-sdk = "0.3"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
-drogue-cloud-service-api = { path = "../service-api"}
-drogue-cloud-service-common = { path = "../service-common"}
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+
+webpki = "0.21"
+
+[dependencies.open-ssl]
+version = "0.10"
+optional = true
+package = "openssl"
 
 [dependencies.rust-tls]
 version = "0.19"
 optional = true
 package = "rustls"
+# "dangerous" is required in order to implement ther ClientCertVerified trait
+# see: https://github.com/ctz/rustls/issues/467
+features = ["dangerous_configuration"]
 
 [features]
 default = ["rustls"]
-openssl = ["ntex/openssl"]
+openssl = ["open-ssl", "ntex/openssl"]
 rustls = ["rust-tls", "ntex/rustls"]

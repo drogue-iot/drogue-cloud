@@ -1,11 +1,11 @@
 use crate::command::CommandWait;
 use crate::downstream::HttpCommandSender;
-use crate::x509::ClientCertificateChain;
 use actix_web::{put, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     downstream::{DownstreamSender, Publish},
     error::{EndpointError, HttpEndpointError},
+    x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth;
 use drogue_ttn::http as ttn;
