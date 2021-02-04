@@ -59,11 +59,11 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
     let key = config
         .key_file
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Missing key file"))?;
+        .ok_or_else(|| anyhow::anyhow!("TLS configuration error: Missing key file"))?;
     let cert = config
         .cert_file
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("Missing cert file"))?;
+        .ok_or_else(|| anyhow::anyhow!("TLS configuration error: Missing cert file"))?;
 
     let cert_file = &mut BufReader::new(File::open(cert).unwrap());
     let key_file = &mut BufReader::new(File::open(key).unwrap());
@@ -72,7 +72,10 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
     let mut keys = pkcs8_private_keys(key_file).unwrap();
 
     if keys.len() > 1 {
-        anyhow::bail!("Found too many key in the key file - found: {}", keys.len());
+        anyhow::bail!(
+            "TLS configuration error: Found too many keys in the key file - found: {}",
+            keys.len()
+        );
     }
 
     let key = keys.pop();
@@ -82,7 +85,7 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
             .set_single_cert(cert_chain, key)
             .context("Failed to set TLS certificate")?;
     } else {
-        anyhow::bail!("No key found in the key file")
+        anyhow::bail!("TLS configuration error: No key found in the key file")
     }
 
     Ok(tls_config)
