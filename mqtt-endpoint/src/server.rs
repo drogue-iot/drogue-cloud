@@ -1,27 +1,26 @@
-use std::fs::File;
-use std::io::BufReader;
-
-use futures::future::ok;
-use ntex::server::rustls::Acceptor;
-use ntex::server::ServerBuilder;
-use ntex::{fn_factory_with_config, fn_service};
-use ntex_mqtt::{v3, v5, MqttError, MqttServer};
-use ntex_service::pipeline_factory;
-use rust_tls::{
-    internal::pemfile::certs, internal::pemfile::pkcs8_private_keys, NoClientAuth, ServerConfig,
-};
-
-use drogue_cloud_endpoint_common::downstream::DownstreamSender;
-
 use crate::{
     error::ServerError,
     mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
     App, Config,
 };
-
 use anyhow::Context;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use futures::future::ok;
+use ntex::{
+    fn_factory_with_config, fn_service,
+    server::{rustls::Acceptor, ServerBuilder},
+};
+use ntex_mqtt::{v3, v5, MqttError, MqttServer};
+use ntex_service::pipeline_factory;
+use rust_tls::{
+    internal::pemfile::certs, internal::pemfile::pkcs8_private_keys, NoClientAuth, ServerConfig,
+};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::BufReader,
+    sync::{Arc, Mutex},
+};
 use tokio::sync::mpsc::Sender;
 
 #[derive(Clone)]
@@ -77,6 +76,8 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
             keys.len()
         );
     }
+
+    tls_config.set_client_certificate_verifier()
 
     if let Some(key) = keys.pop() {
         tls_config

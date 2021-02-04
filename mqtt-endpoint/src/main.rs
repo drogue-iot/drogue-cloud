@@ -1,19 +1,21 @@
 #![type_length_limit = "6000000"]
 
+mod auth;
 mod cloudevents_sdk_ntex;
 mod error;
 mod mqtt;
 mod server;
 
-use crate::server::{build, build_tls};
+use crate::{
+    auth::DeviceAuthenticator,
+    server::{build, build_tls},
+};
 use bytes::Bytes;
 use bytestring::ByteString;
 use cloudevents::event::ExtensionValue;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
-    auth::{AuthConfig, DeviceAuthenticator},
-    downstream::DownstreamSender,
-    error::EndpointError,
+    auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use envconfig::Envconfig;
@@ -21,8 +23,7 @@ use futures::future;
 use ntex::{http, web};
 use std::{
     collections::HashMap,
-    convert::TryFrom,
-    convert::TryInto,
+    convert::{TryFrom, TryInto},
     sync::{Arc, Mutex},
 };
 
@@ -129,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = App {
         downstream: DownstreamSender::new()?,
-        authenticator: AuthConfig::init_from_env()?.try_into()?,
+        authenticator: DeviceAuthenticator(AuthConfig::init_from_env()?.try_into()?),
         devices: Arc::new(Mutex::new(HashMap::new())),
     };
 
