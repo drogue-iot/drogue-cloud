@@ -4,7 +4,6 @@ mod telemetry;
 mod ttn;
 mod x509;
 
-use crate::x509::ClientCertificateChain;
 use actix_web::{
     get, middleware, post,
     web::{self, Data},
@@ -19,7 +18,18 @@ use drogue_cloud_endpoint_common::{
 };
 use envconfig::Envconfig;
 use serde_json::json;
-use std::{any::Any, convert::TryInto};
+use std::convert::TryInto;
+
+drogue_cloud_endpoint_common::retriever!();
+
+#[cfg(feature = "rustls")]
+drogue_cloud_endpoint_common::retriever_rustls!(actix_tls::rustls::TlsStream<T>);
+
+#[cfg(feature = "openssl")]
+drogue_cloud_endpoint_common::retriever_openssl!(actix_tls::openssl::SslStream<T>);
+
+#[cfg(feature = "ntex")]
+retriever_none!(ntex::rt::net::TcpStream);
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
@@ -111,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
             .service(health)
     })
     .on_connect(|con, ext| {
-        if let Some(cert) = extract_client_cert(con) {
+        if let Some(cert) = x509::from_socket(con) {
             if !cert.0.is_empty() {
                 ext.insert(cert);
             }
@@ -161,48 +171,4 @@ async fn main() -> anyhow::Result<()> {
     // future::try_join(app_server, health_server).await?;
 
     Ok(())
-}
-
-fn extract_client_cert(con: &dyn Any) -> Option<ClientCertificateChain> {
-    log::debug!("Try extracting client cert");
-
-    #[cfg(feature = "openssl")]
-    if let Some(con) =
-        con.downcast_ref::<actix_tls::openssl::SslStream<actix_web::rt::net::TcpStream>>()
-    {
-        log::debug!("Try extracting client cert: using OpenSSL");
-        let chain = con.ssl().verified_chain();
-        // **NOTE:** This chain (despite the function name) is **NOT** verified.
-        // These are the client certificates, which will be passed on to the authentication service.
-        let chain = chain
-            .map(|chain| {
-                log::debug!("Peer cert chain len: {}", chain.len());
-                chain
-                    .into_iter()
-                    .map(|cert| cert.to_der())
-                    .collect::<Result<Vec<_>, _>>()
-            })
-            .transpose()
-            .unwrap_or_else(|err| {
-                log::info!("Failed to retrieve client certificate: {}", err);
-                None
-            });
-        log::debug!("Client certificates: {:?}", chain);
-        return chain.map(ClientCertificateChain);
-    }
-    #[cfg(feature = "rustls")]
-    if let Some(con) =
-        con.downcast_ref::<actix_tls::rustls::TlsStream<actix_web::rt::net::TcpStream>>()
-    {
-        log::debug!("Try extracting client cert: using rustls");
-        use actix_tls::rustls::Session;
-        return con
-            .get_ref()
-            .1
-            .get_peer_certificates()
-            .map(|certs| certs.iter().map(|cert| cert.0.clone()).collect())
-            .map(ClientCertificateChain);
-    }
-
-    None
 }

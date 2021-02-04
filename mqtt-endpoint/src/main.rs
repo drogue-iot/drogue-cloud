@@ -5,6 +5,7 @@ mod cloudevents_sdk_ntex;
 mod error;
 mod mqtt;
 mod server;
+mod x509;
 
 use crate::{
     auth::DeviceAuthenticator,
@@ -14,6 +15,7 @@ use bytes::Bytes;
 use bytestring::ByteString;
 use cloudevents::event::ExtensionValue;
 use dotenv::dotenv;
+use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
 };
@@ -55,18 +57,22 @@ impl App {
         username: &Option<ByteString>,
         password: &Option<Bytes>,
         client_id: &ByteString,
+        certs: Option<ClientCertificateChain>,
     ) -> Result<AuthOutcome, EndpointError> {
-        match password.as_ref().map(|p| String::from_utf8(p.to_vec())) {
-            Some(Ok(password)) => Ok(self
-                .authenticator
-                .authenticate_mqtt(username.as_ref(), Some(password), &client_id)
-                .await
-                .map_err(|err| EndpointError::AuthenticationServiceError {
-                    source: Box::new(err),
-                })?
-                .outcome),
-            _ => Ok(AuthOutcome::Fail),
-        }
+        let password = password
+            .as_ref()
+            .map(|p| String::from_utf8(p.to_vec()))
+            .transpose()
+            .map_err(|_| EndpointError::AuthenticationError)?;
+
+        Ok(self
+            .authenticator
+            .authenticate_mqtt(username.as_ref(), password, &client_id, certs)
+            .await
+            .map_err(|err| EndpointError::AuthenticationServiceError {
+                source: Box::new(err),
+            })?
+            .outcome)
     }
 }
 

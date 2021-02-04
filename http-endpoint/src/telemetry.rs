@@ -1,16 +1,14 @@
 use serde::Deserialize;
 
 use crate::command::{command_wait, CommandWait};
-use crate::x509::ClientCertificateChain;
 use actix_web::{http::header, post, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     downstream::{DownstreamSender, Outcome, Publish, PublishResponse},
-    error::EndpointError,
-    error::HttpEndpointError,
+    error::{EndpointError, HttpEndpointError},
+    x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth;
-use drogue_cloud_service_api::auth::ErrorInformation;
+use drogue_cloud_service_api::auth::{self, ErrorInformation};
 
 #[derive(Deserialize)]
 pub struct PublishOptions {

@@ -1,20 +1,19 @@
-use actix_web::{
-    dev::{Payload, PayloadStream},
-    FromRequest, HttpRequest,
-};
-use futures_util::future::{ready, Ready};
+use crate::ClientCertificateRetriever;
+use actix_rt::net::TcpStream;
+use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
+use std::any::Any;
 
-#[derive(Clone, Debug)]
-pub struct ClientCertificateChain(pub Vec<Vec<u8>>);
+pub fn from_socket(con: &dyn Any) -> Option<ClientCertificateChain> {
+    log::debug!("Try extracting client cert");
 
-impl FromRequest for ClientCertificateChain {
-    type Error = ();
-    type Future = Ready<Result<Self, Self::Error>>;
-    type Config = ();
-
-    fn from_request(req: &HttpRequest, _payload: &mut Payload<PayloadStream>) -> Self::Future {
-        let result = req.extensions().get::<ClientCertificateChain>().cloned();
-
-        ready(result.ok_or(()))
+    #[cfg(feature = "openssl")]
+    if let Some(con) = con.downcast_ref::<actix_tls::openssl::SslStream<TcpStream>>() {
+        return con.client_certs();
     }
+    #[cfg(feature = "rustls")]
+    if let Some(con) = con.downcast_ref::<actix_tls::rustls::TlsStream<TcpStream>>() {
+        return con.client_certs();
+    }
+
+    None
 }

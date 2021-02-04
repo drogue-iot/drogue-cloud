@@ -1,3 +1,4 @@
+use crate::x509::ClientCertificateRetriever;
 use crate::{error::ServerError, server::Session, App};
 use bytes::Bytes;
 use bytestring::ByteString;
@@ -15,13 +16,14 @@ use std::fmt::Debug;
 use tokio::sync::mpsc;
 
 macro_rules! connect {
-    ($connect:expr, $app: expr) => {{
+    ($connect:expr, $app:expr, $certs:expr) => {{
         log::info!("new connection: {:?}", $connect);
         match $app
             .authenticate(
                 &$connect.packet().username,
                 &$connect.packet().password,
                 &$connect.packet().client_id,
+                $certs,
             )
             .await?
         {
@@ -73,20 +75,34 @@ macro_rules! connect {
 }
 
 pub async fn connect_v3<Io>(
-    connect: v3::Connect<Io>,
+    mut connect: v3::Connect<Io>,
     app: App,
-) -> Result<v3::ConnectAck<Io, Session>, ServerError> {
-    match connect!(connect, app) {
+) -> Result<v3::ConnectAck<Io, Session>, ServerError>
+where
+    Io: ClientCertificateRetriever + 'static,
+{
+    let certs = connect.io().get_ref().client_certs();
+    log::info!("Certs: {:?}", certs);
+
+    // handle connect
+
+    match connect!(connect, app, certs) {
         Ok(session) => Ok(connect.ack(session, false)),
         Err(_) => Ok(connect.bad_username_or_pwd()),
     }
 }
 
 pub async fn connect_v5<Io>(
-    connect: v5::Connect<Io>,
+    mut connect: v5::Connect<Io>,
     app: App,
-) -> Result<v5::ConnectAck<Io, Session>, ServerError> {
-    match connect!(connect, app) {
+) -> Result<v5::ConnectAck<Io, Session>, ServerError>
+where
+    Io: ClientCertificateRetriever + 'static,
+{
+    let certs = connect.io().get_ref().client_certs();
+    log::info!("Certs: {:?}", certs);
+
+    match connect!(connect, app, certs) {
         Ok(session) => Ok(connect.ack(session).with(|ack| {
             ack.wildcard_subscription_available = Some(false);
         })),
