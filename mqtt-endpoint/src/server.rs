@@ -55,7 +55,10 @@ impl Session {
 const DEFAULT_MAX_SIZE: u32 = 1024;
 
 fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
-    let mut tls_config = ServerConfig::new(NoClientAuth::new());
+    // This seems dangerous, as we simply accept all client certificates. However,
+    // we validate them later during the "connect" packet validation.
+    let client_cert_verifier = Arc::new(AcceptAllClientCertVerifier);
+    let mut tls_config = ServerConfig::new(client_cert_verifier);
 
     let key = config
         .key_file
@@ -78,10 +81,6 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
             keys.len()
         );
     }
-
-    // This seems dangerous, as we simply accept all client certificates. However,
-    // we validate them later during the "connect" packet validation.
-    tls_config.set_client_certificate_verifier(Arc::new(AcceptAllClientCertVerifier));
 
     if let Some(key) = keys.pop() {
         tls_config
