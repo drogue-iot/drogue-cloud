@@ -70,6 +70,8 @@ impl AuthenticationService for PostgresAuthenticationService {
             }
         };
 
+        log::debug!("Found application: {:?}", application);
+
         // validate tenant
 
         if !validate_app(&application) {
@@ -88,6 +90,8 @@ impl AuthenticationService for PostgresAuthenticationService {
                 return Ok(Outcome::Fail);
             }
         };
+
+        log::debug!("Found device: {:?}", device);
 
         // validate credential
 
@@ -145,6 +149,8 @@ fn validate_credential(app: &Application, device: &Device, cred: auth::Credentia
         }
     };
 
+    log::debug!("Checking credentials: {:?}", cred);
+
     match cred {
         auth::Credential::Password(provided_password) => {
             validate_password(device, &credentials, &provided_password)
@@ -193,7 +199,7 @@ fn validate_username_password(
     credentials.iter().any(|c| match c {
         // match passwords if the provided username is equal to the device id
         management::Credential::Password(stored_password)
-            if provided_username == &device.metadata.name =>
+            if provided_username == device.metadata.name =>
         {
             stored_password == provided_password
         }
