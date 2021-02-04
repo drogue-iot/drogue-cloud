@@ -85,7 +85,12 @@ Install:
 
 ### Mac OS
 
-**FIXME:** Contribute here!
+Most of the required tools you can install using [brew](https://brew.sh/) package manager, e.g.
+
+  brew install git make
+
+Using OpenSSL and Cyrus SASL libraries native is still work in progress, so you should use container build for the time being
+ as described below.
 
 ## Building
 
@@ -160,7 +165,7 @@ This will:
 * Run `cargo check`
 * Run `cargo clippy`
 
-The `clippy` checks should be seen as *suggestions*. Take a look at them, I some cases you will learn something new. If
+The `clippy` checks should be seen as *suggestions*. Take a look at them, in some cases you will learn something new. If
 it sounds reasonable, it might be wise to fix it. Maybe it flags files you didn't even touch. In this case just ignore
 them, was we might not have fixed all the clippy suggestions ourselves.
 
