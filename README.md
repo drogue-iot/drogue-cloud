@@ -39,4 +39,4 @@ minikube tunnel # in a separate terminal, as it keeps running
 
 ## Building
 
-See the document [HACKING.md](HACKING.md).
+See the document [CONTRIBUTING.md](CONTRIBUTING.md).
