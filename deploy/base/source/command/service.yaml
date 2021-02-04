@@ -3,12 +3,14 @@ apiVersion: v1
 metadata:
   name: command-endpoint
   labels:
-    app: command-endpoint
+    app.kubernetes.io/name: command-endpoint
+    app.kubernetes.io/part-of: endpoints
 spec:
   selector:
-    app: command-endpoint
+    app.kubernetes.io/name: command-endpoint
+    app.kubernetes.io/part-of: endpoints
   ports:
     - name: endpoint
       protocol: TCP
-      port: 443
+      port: 8080
       targetPort: endpoint
