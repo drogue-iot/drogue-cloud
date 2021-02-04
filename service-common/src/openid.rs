@@ -36,6 +36,7 @@ pub enum AuthenticatorError {
 pub struct Authenticator {
     pub client: Option<openid::Client>,
     pub scopes: String,
+    pub bearer: Option<openid::Bearer>,
 }
 
 impl Debug for Authenticator {
@@ -56,6 +57,20 @@ impl Debug for Authenticator {
 }
 
 impl Authenticator {
+    pub async fn new(client: Option<openid::Client>, scopes: String) -> Authenticator {
+        let cli = client.as_ref().ok_or(AuthenticatorError::Missing);
+        let bearer = match cli {
+            Ok(c) => c.request_token_using_client_credentials().await.ok(),
+            Err(_) => None,
+        };
+
+        Authenticator {
+            client,
+            bearer,
+            scopes,
+        }
+    }
+
     pub async fn validate_token<S: AsRef<str>>(&self, token: S) -> Result<(), AuthenticatorError> {
         let client = self.client.as_ref().ok_or(AuthenticatorError::Missing)?;
 

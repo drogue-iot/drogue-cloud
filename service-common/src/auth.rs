@@ -11,15 +11,21 @@ use url::Url;
 pub struct ReqwestAuthenticatorClient {
     client: Client,
     auth_service_url: Url,
+    service_token: Option<openid::Bearer>,
 }
 
 impl ReqwestAuthenticatorClient {
     /// Create a new client instance.
-    pub fn new(client: Client, url: Url) -> Self {
+    pub fn new(client: Client, url: Url, bearer: Option<openid::Bearer>) -> Self {
         Self {
             client,
             auth_service_url: url,
+            service_token: bearer,
         }
+    }
+
+    pub fn set_service_token(&mut self, bearer: openid::Bearer) {
+        self.service_token = Some(bearer);
     }
 }
 
@@ -31,9 +37,15 @@ impl AuthenticationClient for ReqwestAuthenticatorClient {
         &self,
         request: AuthenticationRequest,
     ) -> Result<AuthenticationResponse, AuthenticationClientError<Self::Error>> {
+        let token = match self.clone().service_token {
+            Some(t) => t.access_token,
+            None => "".to_string(),
+        };
+
         let response: Response = self
             .client
             .post(self.auth_service_url.clone())
+            .bearer_auth(token.clone())
             .json(&request)
             .send()
             .await

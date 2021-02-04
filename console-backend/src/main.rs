@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
         (None, "".into())
     };
 
-    let authenticator = web::Data::new(Authenticator { client, scopes });
+    let authenticator = web::Data::new(Authenticator::new(client, scopes).await);
 
     let bind_addr = config.bind_addr.clone();
 
