@@ -240,9 +240,9 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
                     "anchors": [ {
                         "valid": {
                             "subject": "O=Drogue IoT, OU=Cloud, CN=Application 1",
+                            "notBefore": "2021-02-02T11:11:31Z",
+                            "notAfter": "2031-01-31T11:11:31Z",
                             "certificate": ca,
-                            "notBefore": "2021-02-02T08:39:17Z",
-                            "notAfter": "2031-01-31T08:39:17Z",
                         }
                     }]
                 }
