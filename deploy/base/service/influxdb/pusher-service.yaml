@@ -10,10 +10,10 @@ spec:
   template:
     spec:
       containers:
-        - image: ghcr.io/drogue-iot/influxdb-pusher:0.3.0
+        - image: ghcr.io/drogue-iot/influxdb-pusher:0.4.0
           env:
             - name: RUST_LOG
-              value: info
+              value: debug
             - name: INFLUXDB_URI
               value: http://influxdb:8086
             - name: INFLUXDB_DATABASE
@@ -36,7 +36,7 @@ spec:
             - name: FIELD_TEMPERATURE
               value: $.temp
             - name: TAG_DEVICE_ID
-              value: $.device_id
+              value: $.device
           resources:
             limits:
               memory: 64Mi
