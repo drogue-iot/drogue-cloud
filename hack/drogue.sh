@@ -18,14 +18,14 @@ cat << EOF
 Usage: ./drogue.sh
 Deploys Drogue IoT cloud
 
-  -c, --cluster      The cluster type (default: $CLUSTER)
-                     one of: minikube, kind, openshift
-  -d, --directory    The base directory for the deployment scripts (default: $DEPLOYDIR)
+  -c    The cluster type (default: $CLUSTER)
+        one of: minikube, kind, openshift
+  -d    The base directory for the deployment scripts (default: $DEPLOYDIR)
 
 EOF
 }
 
-opts=$(getopt --name "${BASH_SOURCE[0]}" -l "help,cluster:,directory:" -o "hc:d:" -- "$@")
+opts=$(getopt "hc:d:" "$*")
 eval set --$opts
 
 while [[ $# -gt 0 ]]; do
