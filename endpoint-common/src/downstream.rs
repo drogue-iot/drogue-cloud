@@ -11,7 +11,7 @@ use std::future::Future;
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
-    pub tenant_id: String,
+    pub app_id: String,
     pub device_id: String,
     pub topic: Option<String>,
     pub model_id: Option<String>,
@@ -53,7 +53,7 @@ impl DownstreamSender {
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
             .extension("device", publish.device_id)
-            .extension("tenant", publish.tenant_id)
+            .extension("tenant", publish.app_id)
             .subject(&publish.channel)
             .time(Utc::now())
             .ty("io.drogue.iot.message");

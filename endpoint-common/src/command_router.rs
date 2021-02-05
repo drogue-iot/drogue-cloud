@@ -10,23 +10,38 @@ use cloudevents::Event;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Id {
+    pub app_id: String,
+    pub device_id: String,
+}
+
+impl Id {
+    pub fn new<A: ToString, D: ToString>(app_id: A, device_id: D) -> Self {
+        Self {
+            app_id: app_id.to_string(),
+            device_id: device_id.to_string(),
+        }
+    }
+}
+
 /// Represents command message passed to the actors
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
 pub struct CommandMessage {
-    pub device_id: String,
+    pub device_id: Id,
     pub command: String,
 }
 
 /// Represents a message used to subscribe an actor for receiving the command
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
-pub struct CommandSubscribe(pub String, pub Device);
+pub struct CommandSubscribe(pub Id, pub Device);
 
 /// Represents a message used to unsubscribe an actor from receiving the command
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
-pub struct CommandUnsubscribe(pub String);
+pub struct CommandUnsubscribe(pub Id);
 
 /// Recipient of commands
 type Device = Recipient<CommandMessage>;
@@ -34,17 +49,18 @@ type Device = Recipient<CommandMessage>;
 /// Routes commands to appropriate actors
 #[derive(Default)]
 pub struct CommandRouter {
-    pub devices: HashMap<String, Device>,
+    pub devices: HashMap<Id, Device>,
 }
 
 impl CommandRouter {
     pub async fn send(event: Event) -> Result<(), String> {
-        let device_id_ext = event.extension("deviceid");
+        let app_id_ext = event.extension("application");
+        let device_id_ext = event.extension("device");
 
-        match device_id_ext {
-            Some(ExtensionValue::String(device_id)) => {
+        match (app_id_ext, device_id_ext) {
+            (Some(ExtensionValue::String(app_id)), Some(ExtensionValue::String(device_id))) => {
                 let command_msg = CommandMessage {
-                    device_id: device_id.to_string(),
+                    device_id: Id::new(app_id, device_id),
                     command: String::try_from(event.data().unwrap().clone()).unwrap(),
                 };
 
@@ -63,15 +79,15 @@ impl CommandRouter {
     }
 
     /// Subscribe actor to receive messages for a particular device
-    fn subscribe(&mut self, id: String, device: Device) {
-        log::debug!("Subscribe device for commands '{}'", id);
+    fn subscribe(&mut self, id: Id, device: Device) {
+        log::debug!("Subscribe device for commands '{:?}'", id);
 
         self.devices.insert(id, device);
     }
 
     /// Unsubscribe actor from receiving messages for a particular device
-    fn unsubscribe(&mut self, id: String) {
-        log::info!("Unsubscribe device for commands '{}'", id);
+    fn unsubscribe(&mut self, id: Id) {
+        log::info!("Unsubscribe device for commands '{:?}'", id);
 
         self.devices.remove(&id);
     }
@@ -93,12 +109,12 @@ impl Handler<CommandMessage> for CommandRouter {
     fn handle(&mut self, msg: CommandMessage, _ctx: &mut Self::Context) -> Self::Result {
         match self.devices.get_mut(&msg.device_id) {
             Some(device) => {
-                log::debug!("Sending command to the device '{}", msg.device_id);
+                log::debug!("Sending command to the device '{:?}", msg.device_id);
                 if let Err(e) = device.do_send(msg.to_owned()) {
                     log::error!("Failed to route command: {}", e);
                 }
             }
-            _ => log::debug!("No device '{}' present at this endpoint", &msg.device_id),
+            _ => log::debug!("No device '{:?}' present at this endpoint", &msg.device_id),
         }
     }
 }

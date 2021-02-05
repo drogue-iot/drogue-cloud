@@ -1,15 +1,14 @@
 use actix_web::{
     get, http::header, middleware, post, web, App, HttpResponse, HttpServer, Responder,
 };
-
-use drogue_cloud_endpoint_common::downstream::{DownstreamSender, Publish};
-
-use drogue_cloud_endpoint_common::error::HttpEndpointError;
+use dotenv::dotenv;
+use drogue_cloud_endpoint_common::{
+    downstream::{DownstreamSender, Publish},
+    error::HttpEndpointError,
+};
+use envconfig::Envconfig;
 use serde::Deserialize;
 use serde_json::json;
-
-use dotenv::dotenv;
-use envconfig::Envconfig;
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
@@ -36,21 +35,21 @@ pub struct PublishOptions {
     model_id: Option<String>,
 }
 
-#[post("/command/{device_id}/{channel}")]
-async fn publish(
+#[post("/command/{app_id}/{device_id}/{channel}")]
+async fn command(
     endpoint: web::Data<DownstreamSender>,
-    web::Path((device_id, channel)): web::Path<(String, String)>,
+    web::Path((app_id, device_id, channel)): web::Path<(String, String, String)>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    log::info!("Published to '{}'", channel);
+    log::info!("Publish to '{}' / '{}' / '{}'", app_id, device_id, channel);
 
     endpoint
         .publish_http_default(
             Publish {
                 channel,
-                tenant_id: "default".into(),
+                app_id,
                 device_id,
                 model_id: opts.model_id,
                 topic: None,
@@ -84,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
             .data(sender.clone())
             .service(health)
             .service(index)
-            .service(publish)
+            .service(command)
     })
     .bind(config.bind_addr)?
     .run()

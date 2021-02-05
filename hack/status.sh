@@ -123,7 +123,7 @@ echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@a
 echo
 echo "Send command to that device from another terminal window:"
 echo
-echo "  http POST $COMMAND_ENDPOINT_URL/command/device_id/foo set-temp:=40"
+echo "  http POST $COMMAND_ENDPOINT_URL/command/app_id/device_id/foo set-temp:=40"
 echo
 
 #
