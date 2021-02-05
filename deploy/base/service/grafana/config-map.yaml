@@ -58,7 +58,7 @@ data:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "iteration": 1606484649899,
+      "iteration": 1612530366442,
       "links": [],
       "panels": [
         {
@@ -112,13 +112,19 @@ data:
           "steppedLine": false,
           "targets": [
             {
-              "alias": "temperature",
+              "alias": "",
               "groupBy": [
                 {
                   "params": [
                       "$__interval"
                   ],
                   "type": "time"
+                },
+                {
+                  "params": [
+                      "device_id"
+                  ],
+                  "type": "tag"
                 },
                 {
                   "params": [
@@ -248,6 +254,7 @@ data:
           "fieldConfig": {
             "defaults": {
               "custom": {},
+              "decimals": 1,
               "mappings": [],
               "max": 100,
               "min": -273.15,
@@ -337,6 +344,12 @@ data:
                 },
                 {
                   "params": [
+                      "device_id"
+                  ],
+                  "type": "tag"
+                },
+                {
+                  "params": [
                       "previous"
                   ],
                   "type": "fill"
@@ -361,12 +374,28 @@ data:
                   }
                 ]
               ],
-              "tags": []
+              "tags": [
+                {
+                  "key": "device_id",
+                  "operator": "=~",
+                  "value": "/^$device_id$/"
+                }
+              ]
             }
           ],
           "timeFrom": null,
           "timeShift": null,
           "title": "",
+          "transformations": [
+            {
+              "id": "reduce",
+              "options": {
+                "reducers": [
+                    "mean"
+                ]
+              }
+            }
+          ],
           "type": "stat"
         }
       ],
