@@ -33,6 +33,7 @@ In any case, you will need:
 * Some tools
   * git
   * GNU Make
+  * Python 3.x with PyYAML module
   * npm
   * kubectl
   * HTTPie 2.2+
