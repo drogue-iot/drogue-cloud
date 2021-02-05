@@ -2,6 +2,7 @@
 .idea
 
 target/debug
+target/rls
 target/release/.fingerprint
 target/release/build
 target/release/deps
