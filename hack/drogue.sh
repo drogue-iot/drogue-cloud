@@ -110,11 +110,22 @@ case $CLUSTER in
         ;;
 esac;
 
+
 HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
 
 BACKEND_URL="$(service_url "console-backend")"
 CONSOLE_URL="$(service_url "console")"
+
+
+#
+# Wait for SSO
+#
 SSO_URL="$(ingress_url "keycloak")"
+while [ -z "$SSO_URL" ]; do
+  sleep 5
+  echo "Waiting for Keycloak ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
+  SSO_URL="$(ingress_url "keycloak")"
+done
 
 # Provide a TLS certificate for the MQTT endpoint
 
