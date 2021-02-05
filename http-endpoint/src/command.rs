@@ -3,37 +3,14 @@
 //! Contains actors that handles commands for HTTP endpoint
 
 use actix::prelude::*;
-use actix_web::{http, post, web, web::Bytes, HttpResponse};
+use actix_web::{http, web::Bytes, HttpResponse};
 use actix_web_actors::HttpContext;
-use cloudevents_sdk_actix_web::HttpRequestExt;
 use drogue_cloud_endpoint_common::{
     command_router::{CommandMessage, CommandRouter, CommandSubscribe, CommandUnsubscribe},
     error::HttpEndpointError,
     Id,
 };
 use std::time;
-
-#[post("/command-service")]
-pub async fn command_service(
-    body: web::Bytes,
-    req: web::HttpRequest,
-    payload: web::Payload,
-) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Req: {:?}", req);
-
-    let mut request_event = req.to_event(payload).await?;
-    request_event.set_data(
-        "application/json",
-        String::from_utf8(body.as_ref().to_vec()).unwrap(),
-    );
-
-    if let Err(e) = CommandRouter::send(request_event).await {
-        log::error!("Failed to route command: {}", e);
-        HttpResponse::BadRequest().await
-    } else {
-        HttpResponse::Ok().await
-    }
-}
 
 /// Actor for receiving commands
 pub struct CommandHandler {

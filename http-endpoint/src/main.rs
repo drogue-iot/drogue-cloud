@@ -14,12 +14,14 @@ use actix_web::{
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
+    command_endpoint::{CommandServer, CommandServerConfig},
     downstream::DownstreamSender,
 };
 use envconfig::Envconfig;
 use futures::future;
 use serde_json::json;
 use std::convert::TryInto;
+use std::ops::DerefMut;
 
 drogue_cloud_endpoint_common::retriever!();
 
@@ -52,12 +54,6 @@ struct Config {
     pub key_file: Option<String>,
 }
 
-#[derive(Envconfig, Clone, Debug)]
-pub struct CommandServerConfig {
-    #[envconfig(from = "COMMAND_BIND_ADDR", default = "0.0.0.0:8081")]
-    pub bind_addr: String,
-}
-
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -82,17 +78,6 @@ async fn main() -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
 
     let authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
-
-    let command_config = CommandServerConfig::init_from_env()?;
-    let command_server = HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(web::PayloadConfig::new(max_payload_size))
-            .data(web::JsonConfig::default().limit(max_json_payload_size))
-            .service(command::command_service)
-    })
-    .bind(command_config.bind_addr)?
-    .run();
 
     let http_server = HttpServer::new(move || {
         let app = App::new()
@@ -157,7 +142,9 @@ async fn main() -> anyhow::Result<()> {
 
     let http_server = http_server.run();
 
-    future::try_join(command_server, http_server).await?;
+    let mut command_server: CommandServer = CommandServerConfig::init_from_env()?.try_into()?;
+
+    future::try_join(command_server.deref_mut(), http_server).await?;
 
     // fixme
     //
