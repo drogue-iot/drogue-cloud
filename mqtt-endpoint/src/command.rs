@@ -1,6 +1,5 @@
 use crate::{cloudevents_sdk_ntex::request_to_event, App};
-use cloudevents::event::ExtensionValue;
-use drogue_cloud_endpoint_common::command_router::Id;
+use drogue_cloud_endpoint_common::Id;
 use ntex::{http, web};
 use std::convert::TryFrom;
 
@@ -14,18 +13,9 @@ pub async fn command_service(
 
     let request_event = request_to_event(&req, payload).await.unwrap();
 
-    let app_id_ext = request_event.extension("application");
-    let device_id_ext = request_event.extension("device");
-
-    match (app_id_ext, device_id_ext) {
-        (Some(ExtensionValue::String(app_id)), Some(ExtensionValue::String(device_id))) => {
-            let device = {
-                app.devices
-                    .lock()
-                    .unwrap()
-                    .get(&Id::new(app_id, device_id))
-                    .cloned()
-            };
+    match Id::from_event(&request_event) {
+        Some(device_id) => {
+            let device = { app.devices.lock().unwrap().get(&device_id).cloned() };
             if let Some(sender) = device {
                 if let Some(command) = request_event.data() {
                     match sender
@@ -53,7 +43,7 @@ pub async fn command_service(
                 web::HttpResponse::Ok().finish()
             }
         }
-        _ => {
+        None => {
             log::error!("Failed to route command: No device provided!");
             web::HttpResponse::BadRequest().finish()
         }

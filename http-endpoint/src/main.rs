@@ -7,15 +7,13 @@ mod x509;
 #[cfg(feature = "rustls")]
 use actix_tls::rustls::Session;
 use actix_web::{
-    get, middleware, post,
+    get, middleware,
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
-use cloudevents_sdk_actix_web::HttpRequestExt;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
-    command_router::CommandRouter,
     downstream::DownstreamSender,
 };
 use envconfig::Envconfig;
@@ -63,28 +61,6 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[post("/command-service")]
-async fn command_service(
-    body: web::Bytes,
-    req: web::HttpRequest,
-    payload: web::Payload,
-) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Req: {:?}", req);
-
-    let mut request_event = req.to_event(payload).await?;
-    request_event.set_data(
-        "application/json",
-        String::from_utf8(body.as_ref().to_vec()).unwrap(),
-    );
-
-    if let Err(e) = CommandRouter::send(request_event).await {
-        log::error!("Failed to route command: {}", e);
-        HttpResponse::BadRequest().await
-    } else {
-        HttpResponse::Ok().await
-    }
-}
-
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -118,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
             )
             // The Things Network variant
             .service(web::scope("/ttn").service(ttn::publish))
-            .service(command_service)
+            .service(command::command_service)
             //fixme : bind to a different port
             .service(health)
     })

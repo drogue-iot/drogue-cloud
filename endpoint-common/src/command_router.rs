@@ -3,27 +3,12 @@
 //! Route commands to appropriate actors.
 //! Actors can subscribe/unsubscribe for commands by sending appropriate messages
 
+use crate::Id;
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
-use cloudevents::event::ExtensionValue;
 use cloudevents::Event;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct Id {
-    pub app_id: String,
-    pub device_id: String,
-}
-
-impl Id {
-    pub fn new<A: ToString, D: ToString>(app_id: A, device_id: D) -> Self {
-        Self {
-            app_id: app_id.to_string(),
-            device_id: device_id.to_string(),
-        }
-    }
-}
 
 /// Represents command message passed to the actors
 #[derive(Clone, Message)]
@@ -54,13 +39,10 @@ pub struct CommandRouter {
 
 impl CommandRouter {
     pub async fn send(event: Event) -> Result<(), String> {
-        let app_id_ext = event.extension("application");
-        let device_id_ext = event.extension("device");
-
-        match (app_id_ext, device_id_ext) {
-            (Some(ExtensionValue::String(app_id)), Some(ExtensionValue::String(device_id))) => {
+        match Id::from_event(&event) {
+            Some(device_id) => {
                 let command_msg = CommandMessage {
-                    device_id: Id::new(app_id, device_id),
+                    device_id,
                     command: String::try_from(event.data().unwrap().clone()).unwrap(),
                 };
 

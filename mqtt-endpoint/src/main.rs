@@ -17,8 +17,8 @@ use bytes::Bytes;
 use bytestring::ByteString;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
-    auth::AuthConfig, command_router::Id, downstream::DownstreamSender, error::EndpointError,
-    x509::ClientCertificateChain,
+    auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
+    x509::ClientCertificateChain, Id,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use envconfig::Envconfig;

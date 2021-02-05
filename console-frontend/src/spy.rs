@@ -51,10 +51,10 @@ impl TableRenderer for Entry {
 
 impl Entry {
     fn device(&self) -> String {
-        let tenant_id = self.extension_as_string("application");
+        let app_id = self.extension_as_string("application");
         let device_id = self.extension_as_string("device");
 
-        format!("{} / {}", tenant_id, device_id)
+        format!("{} / {}", app_id, device_id)
     }
 
     fn extension_as_string(&self, name: &str) -> String {
