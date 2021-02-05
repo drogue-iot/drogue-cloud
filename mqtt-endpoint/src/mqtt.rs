@@ -1,8 +1,10 @@
-use crate::x509::ClientCertificateRetriever;
-use crate::{error::ServerError, server::Session, App};
+use crate::{error::ServerError, server::Session, x509::ClientCertificateRetriever, App};
 use bytes::Bytes;
 use bytestring::ByteString;
-use drogue_cloud_endpoint_common::downstream::{Outcome, Publish, PublishResponse};
+use drogue_cloud_endpoint_common::{
+    command_router::Id,
+    downstream::{Outcome, Publish, PublishResponse},
+};
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use ntex_mqtt::{
     types::QoS,
@@ -38,8 +40,7 @@ macro_rules! connect {
 
                 let session = Session::new(
                     $app.downstream,
-                    app_id.clone(),
-                    device_id.clone(),
+                    Id::new(app_id.clone(), device_id.clone()),
                     $app.devices.clone(),
                     tx,
                 );
@@ -120,11 +121,13 @@ macro_rules! publish {
         );
         let channel = $publish.topic().path();
 
+        let id = $session.device_id.clone();
+
         $session.state().sender.publish(
             Publish {
                 channel: channel.into(),
-                app_id: $session.tenant_id.clone(),
-                device_id: $session.device_id.clone(),
+                app_id: id.app_id,
+                device_id: id.device_id,
                 ..Default::default()
             },
             $publish.payload(),

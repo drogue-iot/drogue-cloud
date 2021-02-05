@@ -52,8 +52,8 @@ impl DownstreamSender {
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
+            .extension("application", publish.app_id)
             .extension("device", publish.device_id)
-            .extension("tenant", publish.app_id)
             .subject(&publish.channel)
             .time(Utc::now())
             .ty("io.drogue.iot.message");
