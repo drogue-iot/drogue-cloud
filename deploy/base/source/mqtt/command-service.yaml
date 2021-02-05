@@ -3,12 +3,14 @@ apiVersion: v1
 metadata:
   name: mqtt-command
   labels:
-    app: mqtt-endpoint
+    app.kubernetes.io/name: mqtt-command
+    app.kubernetes.io/part-of: endpoints
 spec:
   selector:
-    app: mqtt-endpoint
+    app.kubernetes.io/name: mqtt-endpoint
+    app.kubernetes.io/part-of: endpoints
   ports:
-    - name: internal
+    - name: command
       protocol: TCP
       port: 80
-      targetPort: http
+      targetPort: command

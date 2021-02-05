@@ -2,6 +2,7 @@
 
 mod auth;
 mod cloudevents_sdk_ntex;
+mod command;
 mod error;
 mod mqtt;
 mod server;
@@ -9,23 +10,23 @@ mod x509;
 
 use crate::{
     auth::DeviceAuthenticator,
+    command::command_service,
     server::{build, build_tls},
 };
 use bytes::Bytes;
 use bytestring::ByteString;
-use cloudevents::event::ExtensionValue;
 use dotenv::dotenv;
-use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
 use drogue_cloud_endpoint_common::{
-    auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
+    auth::AuthConfig, command_router::Id, downstream::DownstreamSender, error::EndpointError,
+    x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use envconfig::Envconfig;
 use futures::future;
-use ntex::{http, web};
+use ntex::web;
 use std::{
     collections::HashMap,
-    convert::{TryFrom, TryInto},
+    convert::TryInto,
     sync::{Arc, Mutex},
 };
 
@@ -47,7 +48,7 @@ pub struct Config {
 pub struct App {
     pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
-    pub devices: Arc<Mutex<HashMap<String, tokio::sync::mpsc::Sender<String>>>>,
+    pub devices: Arc<Mutex<HashMap<Id, tokio::sync::mpsc::Sender<String>>>>,
 }
 
 impl App {
@@ -73,57 +74,6 @@ impl App {
                 source: Box::new(err),
             })?
             .outcome)
-    }
-}
-
-#[web::post("/command-service")]
-async fn command_service(
-    req: web::HttpRequest,
-    payload: web::types::Payload,
-    app: web::types::Data<App>,
-) -> http::Response {
-    log::debug!("Command request: {:?}", req);
-
-    let request_event = cloudevents_sdk_ntex::request_to_event(&req, payload)
-        .await
-        .unwrap();
-
-    let device_id_ext = request_event.extension("device");
-
-    match device_id_ext {
-        Some(ExtensionValue::String(device_id)) => {
-            let device = { app.devices.lock().unwrap().get(device_id).cloned() };
-            if let Some(sender) = device {
-                if let Some(command) = request_event.data() {
-                    match sender
-                        .send(String::try_from(command.clone()).unwrap())
-                        .await
-                    {
-                        Ok(_) => {
-                            log::debug!("Command sent to device {:?}", device_id);
-                            web::HttpResponse::Ok().finish()
-                        }
-                        Err(e) => {
-                            log::error!("Failed to send a command {:?}", e);
-                            web::HttpResponse::BadRequest().finish()
-                        }
-                    }
-                } else {
-                    log::error!("Failed to route command: No command provided!");
-                    web::HttpResponse::BadRequest().finish()
-                }
-            } else {
-                log::debug!(
-                    "Failed to route command: No device {:?} found on this endpoint!",
-                    device_id
-                );
-                web::HttpResponse::Ok().finish()
-            }
-        }
-        _ => {
-            log::error!("Failed to route command: No device provided!");
-            web::HttpResponse::BadRequest().finish()
-        }
     }
 }
 

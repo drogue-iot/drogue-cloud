@@ -5,6 +5,7 @@ use crate::{
     App, Config,
 };
 use anyhow::Context;
+use drogue_cloud_endpoint_common::command_router::Id;
 use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 use futures::future::ok;
 use ntex::{
@@ -28,23 +29,20 @@ use tokio::sync::mpsc::Sender;
 #[derive(Clone)]
 pub struct Session {
     pub sender: DownstreamSender,
-    pub tenant_id: String,
-    pub device_id: String,
-    pub devices: Arc<Mutex<HashMap<String, Sender<String>>>>,
+    pub device_id: Id,
+    pub devices: Arc<Mutex<HashMap<Id, Sender<String>>>>,
     pub tx: Sender<String>,
 }
 
 impl Session {
     pub fn new(
         sender: DownstreamSender,
-        tenant_id: String,
-        device_id: String,
-        devices: Arc<Mutex<HashMap<String, Sender<String>>>>,
+        device_id: Id,
+        devices: Arc<Mutex<HashMap<Id, Sender<String>>>>,
         tx: Sender<String>,
     ) -> Self {
         Session {
             sender,
-            tenant_id,
             device_id,
             devices,
             tx,
