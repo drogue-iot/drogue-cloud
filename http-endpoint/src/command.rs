@@ -6,14 +6,14 @@ use actix::prelude::*;
 use actix_web::{http, web::Bytes, HttpResponse};
 use actix_web_actors::HttpContext;
 use drogue_cloud_endpoint_common::command_router::{
-    CommandMessage, CommandRouter, CommandSubscribe, CommandUnsubscribe,
+    CommandMessage, CommandRouter, CommandSubscribe, CommandUnsubscribe, Id,
 };
 use drogue_cloud_endpoint_common::error::HttpEndpointError;
 use std::time;
 
 /// Actor for receiving commands
 pub struct CommandHandler {
-    pub device_id: String,
+    pub device_id: Id,
     pub ttd: u64,
 }
 
@@ -23,7 +23,7 @@ impl Actor for CommandHandler {
     /// Subscribes the actor with the command handler
     /// and waits for the command for `ttd` seconds
     fn started(&mut self, ctx: &mut HttpContext<Self>) {
-        let sub = CommandSubscribe(self.device_id.to_owned(), ctx.address().recipient());
+        let sub = CommandSubscribe(self.device_id.clone(), ctx.address().recipient());
         CommandRouter::from_registry()
             .send(sub)
             .into_actor(self)
@@ -49,7 +49,7 @@ impl Actor for CommandHandler {
     /// Unsubscribes the actor from receiving the commands
     fn stopped(&mut self, ctx: &mut HttpContext<Self>) {
         CommandRouter::from_registry()
-            .send(CommandUnsubscribe(self.device_id.to_owned()))
+            .send(CommandUnsubscribe(self.device_id.clone()))
             .into_actor(self)
             .then(|result, _actor, _ctx| {
                 match result {
@@ -99,8 +99,8 @@ impl CommandWait {
 }
 
 /// Waits for a command for a `command.duration` seconds by creating a command handler actor
-pub async fn command_wait<T: Into<String>, D: Into<String>>(
-    _tenant_id: T,
+pub async fn command_wait<A: ToString, D: ToString>(
+    app_id: A,
     device_id: D,
     command: CommandWait,
     status: http::StatusCode,
@@ -108,7 +108,7 @@ pub async fn command_wait<T: Into<String>, D: Into<String>>(
     match command.duration.map(|d| d.as_secs()) {
         Some(ttd) if ttd > 0 => {
             let handler = CommandHandler {
-                device_id: device_id.into(),
+                device_id: Id::new(app_id, device_id),
                 ttd,
             };
             let context = HttpContext::create(handler);

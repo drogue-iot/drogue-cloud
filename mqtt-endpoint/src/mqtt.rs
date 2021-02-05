@@ -123,7 +123,7 @@ macro_rules! publish {
         $session.state().sender.publish(
             Publish {
                 channel: channel.into(),
-                tenant_id: $session.tenant_id.clone(),
+                app_id: $session.tenant_id.clone(),
                 device_id: $session.device_id.clone(),
                 ..Default::default()
             },

@@ -30,7 +30,7 @@ impl HttpCommandSender for DownstreamSender {
     {
         self.publish_http(publish.clone(), body, |outcome| async move {
             command_wait(
-                &publish.tenant_id,
+                &publish.app_id,
                 &publish.device_id,
                 command,
                 match outcome {

@@ -91,7 +91,7 @@ pub async fn publish(
         .publish(
             Publish {
                 channel,
-                tenant_id: application.metadata.name.clone(),
+                app_id: application.metadata.name.clone(),
                 device_id: device_id.clone(),
                 model_id: opts.model_id,
                 topic: suffix,
