@@ -143,6 +143,13 @@ By default, the installation scripts will use the official images from `ghcr.io/
 
 When you created and published custom images, you can deploy them using `make` as well. Before you
 do that, you will need to have access to a Kubernetes cluster. You can run a local cluster using `minikube`.
+Make sure that your `minikube` cluster is started with `ingress` addon and that you run `tunnel` in a separate shell
+
+~~~shell
+minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
+minikube tunnel # in a separate terminal, as it keeps running
+~~~
+
 Once the instance is up, and you have ensured that you can access the cluster with `kubectl`, you can run
 the following command to run the deployment:
 
