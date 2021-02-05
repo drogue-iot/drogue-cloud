@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-command
+  labels:
+    app.kubernetes.io/name: http-command
+    app.kubernetes.io/part-of: endpoints
+spec:
+  selector:
+    app.kubernetes.io/name: http-endpoint
+    app.kubernetes.io/part-of: endpoints
+  ports:
+    - name: command
+      protocol: TCP
+      port: 80
+      targetPort: command

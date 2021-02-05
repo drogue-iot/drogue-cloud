@@ -36,6 +36,9 @@ spec:
             - containerPort: 8443
               name: endpoint
               protocol: TCP
+            - containerPort: 8081
+              name: command
+              protocol: TCP
           readinessProbe:
             httpGet:
               scheme: HTTPS
