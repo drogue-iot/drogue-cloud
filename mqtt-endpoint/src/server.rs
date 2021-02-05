@@ -5,8 +5,7 @@ use crate::{
     App, Config,
 };
 use anyhow::Context;
-use drogue_cloud_endpoint_common::command_router::Id;
-use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::{downstream::DownstreamSender, Id};
 use futures::future::ok;
 use ntex::{
     fn_factory_with_config, fn_service,

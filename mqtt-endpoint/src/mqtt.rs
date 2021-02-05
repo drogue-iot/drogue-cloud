@@ -2,8 +2,8 @@ use crate::{error::ServerError, server::Session, x509::ClientCertificateRetrieve
 use bytes::Bytes;
 use bytestring::ByteString;
 use drogue_cloud_endpoint_common::{
-    command_router::Id,
     downstream::{Outcome, Publish, PublishResponse},
+    Id,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use ntex_mqtt::{

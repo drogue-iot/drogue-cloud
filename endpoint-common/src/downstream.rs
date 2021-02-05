@@ -1,4 +1,4 @@
-use crate::error::HttpEndpointError;
+use crate::{error::HttpEndpointError, Id, IdInjector};
 use actix_web::HttpResponse;
 use anyhow::Context;
 use chrono::Utc;
@@ -52,8 +52,7 @@ impl DownstreamSender {
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
-            .extension("application", publish.app_id)
-            .extension("device", publish.device_id)
+            .inject(Id::new(publish.app_id, publish.device_id))
             .subject(&publish.channel)
             .time(Utc::now())
             .ty("io.drogue.iot.message");
