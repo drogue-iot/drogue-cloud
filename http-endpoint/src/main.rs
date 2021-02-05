@@ -17,6 +17,7 @@ use drogue_cloud_endpoint_common::{
     downstream::DownstreamSender,
 };
 use envconfig::Envconfig;
+use futures::future;
 use serde_json::json;
 use std::convert::TryInto;
 
@@ -51,6 +52,12 @@ struct Config {
     pub key_file: Option<String>,
 }
 
+#[derive(Envconfig, Clone, Debug)]
+pub struct CommandServerConfig {
+    #[envconfig(from = "COMMAND_BIND_ADDR", default = "0.0.0.0:8081")]
+    pub bind_addr: String,
+}
+
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -76,7 +83,18 @@ async fn main() -> anyhow::Result<()> {
 
     let authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
 
-    let http = HttpServer::new(move || {
+    let command_config = CommandServerConfig::init_from_env()?;
+    let command_server = HttpServer::new(move || {
+        App::new()
+            .wrap(middleware::Logger::default())
+            .app_data(web::PayloadConfig::new(max_payload_size))
+            .data(web::JsonConfig::default().limit(max_json_payload_size))
+            .service(command::command_service)
+    })
+    .bind(command_config.bind_addr)?
+    .run();
+
+    let http_server = HttpServer::new(move || {
         let app = App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))
@@ -94,7 +112,6 @@ async fn main() -> anyhow::Result<()> {
             )
             // The Things Network variant
             .service(web::scope("/ttn").service(ttn::publish))
-            .service(command::command_service)
             //fixme : bind to a different port
             .service(health)
     })
@@ -106,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let http = match (config.disable_tls, config.key_file, config.cert_file) {
+    let http_server = match (config.disable_tls, config.key_file, config.cert_file) {
         (false, Some(key), Some(cert)) => {
             if cfg!(feature = "openssl") {
                 use open_ssl::ssl;
@@ -125,12 +142,12 @@ async fn main() -> anyhow::Result<()> {
                     true
                 });
 
-                http.bind_openssl(config.bind_addr, builder)?
+                http_server.bind_openssl(config.bind_addr, builder)?
             } else {
                 panic!("TLS is required, but no TLS implementation enabled")
             }
         }
-        (true, None, None) => http.bind(config.bind_addr)?,
+        (true, None, None) => http_server.bind(config.bind_addr)?,
         (false, _, _) => panic!("Wrong TLS configuration: TLS enabled, but key or cert is missing"),
         (true, Some(_), _) | (true, _, Some(_)) => {
             // the TLS configuration must be consistent, to prevent configuration errors.
@@ -138,7 +155,9 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    http.run().await?;
+    let http_server = http_server.run();
+
+    future::try_join(command_server, http_server).await?;
 
     // fixme
     //

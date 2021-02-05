@@ -14,7 +14,7 @@ use drogue_cloud_endpoint_common::{
 use std::time;
 
 #[post("/command-service")]
-async fn command_service(
+pub async fn command_service(
     body: web::Bytes,
     req: web::HttpRequest,
     payload: web::Payload,
