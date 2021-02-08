@@ -1,35 +1,11 @@
 use crate::kube::knative;
 use async_trait::async_trait;
+use drogue_cloud_service_api::endpoints::*;
 use envconfig::Envconfig;
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct HttpEndpoint {
-    pub url: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct MqttEndpoint {
-    pub host: String,
-    pub port: u16,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SsoEndpoint {
-    pub url: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Endpoints {
-    pub http: Option<HttpEndpoint>,
-    pub mqtt: Option<MqttEndpoint>,
-    pub issuer_url: Option<String>,
-    pub redirect_url: Option<String>,
-}
 
 pub type EndpointSourceType = Box<dyn EndpointSource + Send + Sync>;
 

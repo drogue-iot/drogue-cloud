@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod endpoints;
 pub mod management;
 
 use serde::Deserialize;

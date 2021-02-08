@@ -1,5 +1,5 @@
-use crate::endpoints::Endpoints;
 use anyhow::Context;
+use drogue_cloud_service_api::endpoints::Endpoints;
 use envconfig::Envconfig;
 use failure::Fail;
 use failure::_core::fmt::Formatter;

@@ -45,7 +45,7 @@ pretty-hex = "0.2"
 base64 = "0.13"
 itertools = "0.9"
 
-drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-api = { path = "../service-api" }
 
 [dev-dependencies]
 env_logger = "0.7"
