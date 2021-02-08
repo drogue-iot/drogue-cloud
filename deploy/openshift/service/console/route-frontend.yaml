@@ -5,7 +5,7 @@ metadata:
 spec:
   to:
     kind: Service
-    name: console-frontend
+    name: console
   port:
     targetPort: endpoint
   tls:
