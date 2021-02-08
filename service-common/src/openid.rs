@@ -1,3 +1,4 @@
+use crate::endpoints::Endpoints;
 use anyhow::Context;
 use envconfig::Envconfig;
 use failure::Fail;
@@ -19,10 +20,6 @@ pub struct AuthConfig {
     pub client_id: String,
     #[envconfig(from = "CLIENT_SECRET")]
     pub client_secret: String,
-    #[envconfig(from = "ISSUER_URL")]
-    pub issuer_url: String,
-    #[envconfig(from = "REDIRECT_URL")]
-    pub redirect_url: String,
     // Note: "roles" may be required for the "aud" claim when using Keycloak
     #[envconfig(from = "SCOPES", default = "openid profile email")]
     pub scopes: String,
@@ -84,10 +81,6 @@ impl Authenticator {
 }
 
 impl ClientConfig for AuthConfig {
-    fn redirect_url(&self) -> Option<String> {
-        Some(self.redirect_url.clone())
-    }
-
     fn client_id(&self) -> String {
         self.client_id.clone()
     }
@@ -95,31 +88,40 @@ impl ClientConfig for AuthConfig {
     fn client_secret(&self) -> String {
         self.client_secret.clone()
     }
-
-    fn issuer_url(&self) -> String {
-        self.issuer_url.clone()
-    }
 }
 
 pub trait ClientConfig {
-    fn redirect_url(&self) -> Option<String>;
     fn client_id(&self) -> String;
     fn client_secret(&self) -> String;
-    fn issuer_url(&self) -> String;
 }
 
-pub async fn create_client(config: &dyn ClientConfig) -> anyhow::Result<openid::Client> {
+pub async fn create_client(
+    config: &dyn ClientConfig,
+    endpoints: Endpoints,
+) -> anyhow::Result<openid::Client> {
     let mut client = reqwest::ClientBuilder::new();
 
     client = add_service_cert(client)?;
+
+    let Endpoints {
+        redirect_url,
+        issuer_url,
+        ..
+    } = endpoints;
+
+    let issuer_url = issuer_url.ok_or_else(|| {
+        anyhow::anyhow!(
+            "Failed to detect 'issuer URL'. Consider using a env-var based configuration."
+        )
+    })?;
 
     let client = openid::DiscoveredClient::discover_with_client(
         client.build()?,
         config.client_id(),
         config.client_secret(),
-        config.redirect_url(),
-        Url::parse(&config.issuer_url())
-            .with_context(|| format!("Failed to parse issuer URL: {}", config.issuer_url()))?,
+        redirect_url,
+        Url::parse(&issuer_url)
+            .with_context(|| format!("Failed to parse issuer URL: {}", issuer_url))?,
     )
     .await
     .map_err(|err| anyhow::Error::from(err.compat()))?;

@@ -1,12 +1,35 @@
 use crate::kube::knative;
-
 use async_trait::async_trait;
-use drogue_cloud_console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
 use envconfig::Envconfig;
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Debug;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct HttpEndpoint {
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct MqttEndpoint {
+    pub host: String,
+    pub port: u16,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct SsoEndpoint {
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Endpoints {
+    pub http: Option<HttpEndpoint>,
+    pub mqtt: Option<MqttEndpoint>,
+    pub issuer_url: Option<String>,
+    pub redirect_url: Option<String>,
+}
 
 pub type EndpointSourceType = Box<dyn EndpointSource + Send + Sync>;
 
@@ -17,14 +40,29 @@ pub trait EndpointSource: Debug {
 
 #[derive(Debug, Envconfig)]
 pub struct EndpointConfig {
-    #[envconfig(from = "ENDPOINT_SOURCE", default = "env")]
-    pub source: String,
+    #[envconfig(from = "ISSUER_URL")]
+    pub issuer_url: String,
+    #[envconfig(from = "REDIRECT_URL")]
+    pub redirect_url: String,
     #[envconfig(from = "HTTP_ENDPOINT_URL")]
     pub http_url: Option<String>,
     #[envconfig(from = "MQTT_ENDPOINT_HOST")]
     pub mqtt_host: Option<String>,
     #[envconfig(from = "MQTT_ENDPOINT_PORT", default = "8883")]
     pub mqtt_port: u16,
+}
+
+pub fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
+    let source = std::env::var_os("ENDPOINT_SOURCE").unwrap_or_else(|| "env".into());
+    match source.to_str() {
+        Some("openshift") => Ok(Box::new(OpenshiftEndpointSource::new()?)),
+        Some("kubernetes") => Ok(Box::new(KubernetesEndpointSource::new()?)),
+        Some("env") => Ok(Box::new(EnvEndpointSource(Envconfig::init_from_env()?))),
+        other => Err(anyhow::anyhow!(
+            "Unsupported endpoint source: '{:?}'",
+            other
+        )),
+    }
 }
 
 #[derive(Debug)]
@@ -43,7 +81,12 @@ impl EndpointSource for EnvEndpointSource {
             port: self.0.mqtt_port,
         });
 
-        Ok(Endpoints { http, mqtt })
+        Ok(Endpoints {
+            http,
+            mqtt,
+            issuer_url: Some(self.0.issuer_url.clone()),
+            redirect_url: Some(self.0.redirect_url.clone()),
+        })
     }
 }
 
@@ -68,6 +111,8 @@ impl EndpointSource for OpenshiftEndpointSource {
 
         let mqtt = host_from_route(&routes.get("mqtt-endpoint").await?);
         let http = url_from_route(&routes.get("http-endpoint").await?);
+        let sso = url_from_route(&routes.get("keycloak").await?);
+        let frontend = url_from_route(&routes.get("console").await?);
 
         let result = Endpoints {
             http: http.map(|url| HttpEndpoint { url }),
@@ -75,6 +120,8 @@ impl EndpointSource for OpenshiftEndpointSource {
                 host: mqtt,
                 port: 443,
             }),
+            issuer_url: sso.map(|sso| format!("{}/auth/realms/drogue", sso)),
+            redirect_url: frontend,
         };
 
         Ok(result)
@@ -110,6 +157,8 @@ impl EndpointSource for KubernetesEndpointSource {
         let result = Endpoints {
             http: http.map(|url| HttpEndpoint { url }),
             mqtt: None,
+            issuer_url: None,
+            redirect_url: None,
         };
 
         Ok(result)

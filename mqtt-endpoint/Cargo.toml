@@ -37,13 +37,14 @@ dotenv = "0.15"
 log = "0.4"
 envconfig = "0.9"
 
+pem = "0.8"
+webpki = "0.21"
+
 cloudevents-sdk = "0.3"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-
-webpki = "0.21"
 
 [dependencies.open-ssl]
 version = "0.10"

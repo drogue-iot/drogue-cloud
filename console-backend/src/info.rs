@@ -1,6 +1,6 @@
-use crate::endpoints::EndpointSourceType;
 use actix_web::{get, web, HttpResponse, Responder};
 
+use drogue_cloud_service_common::endpoints::EndpointSourceType;
 use serde_json::json;
 
 #[get("/info")]

@@ -8,6 +8,7 @@ use drogue_cloud_device_management_service::{
     service::{self, ManagementServiceConfig, PostgresManagementService},
     Config, WebData,
 };
+use drogue_cloud_service_common::endpoints::create_endpoint_source;
 use drogue_cloud_service_common::openid::{
     create_client, AuthConfig, Authenticator, AuthenticatorError,
 };
@@ -21,12 +22,21 @@ async fn main() -> anyhow::Result<()> {
     // Initialize config from environment variables
     let config = Config::init_from_env().unwrap();
 
+    // the endpoint source we choose
+    let endpoint_source = create_endpoint_source()?;
+
+    // extract required endpoint information
+    let endpoints = endpoint_source.eval_endpoints().await?;
+
     // OpenIdConnect
     let enable_auth = config.enable_auth;
 
     let (client, scopes) = if enable_auth {
         let config: AuthConfig = AuthConfig::init_from_env()?;
-        (Some(create_client(&config).await?), config.scopes)
+        (
+            Some(create_client(&config, endpoints).await?),
+            config.scopes,
+        )
     } else {
         (None, "".into())
     };

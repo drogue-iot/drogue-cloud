@@ -13,10 +13,8 @@ use ntex::{
 };
 use ntex_mqtt::{v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
-use rust_tls::{
-    internal::pemfile::{certs, pkcs8_private_keys},
-    ServerConfig,
-};
+use pem::parse_many;
+use rust_tls::{internal::pemfile::certs, PrivateKey, ServerConfig};
 use std::{
     collections::HashMap,
     fs::File,
@@ -67,10 +65,16 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
         .ok_or_else(|| anyhow::anyhow!("TLS configuration error: Missing cert file"))?;
 
     let cert_file = &mut BufReader::new(File::open(cert).unwrap());
-    let key_file = &mut BufReader::new(File::open(key).unwrap());
-
     let cert_chain = certs(cert_file).unwrap();
-    let mut keys = pkcs8_private_keys(key_file).unwrap();
+
+    let mut keys = Vec::new();
+
+    let pems = std::fs::read(key)?;
+    for pem in parse_many(pems) {
+        if pem.tag.contains("PRIVATE KEY") {
+            keys.push(PrivateKey(pem.contents));
+        }
+    }
 
     if keys.len() > 1 {
         anyhow::bail!(

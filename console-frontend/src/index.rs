@@ -1,6 +1,6 @@
 use crate::backend::Backend;
 use anyhow::Error;
-use drogue_cloud_console_common::{Endpoints, HttpEndpoint, MqttEndpoint};
+use drogue_cloud_service_common::endpoints::{Endpoints, HttpEndpoint, MqttEndpoint};
 use patternfly_yew::*;
 use yew::format::{Json, Nothing};
 use yew::prelude::*;

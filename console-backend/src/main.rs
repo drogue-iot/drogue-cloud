@@ -1,16 +1,6 @@
 mod auth;
-mod endpoints;
 mod info;
-mod kube;
 mod spy;
-
-use crate::endpoints::{
-    EndpointSourceType, EnvEndpointSource, KubernetesEndpointSource, OpenshiftEndpointSource,
-};
-use drogue_cloud_service_common::error::ServiceError;
-use drogue_cloud_service_common::openid::{
-    create_client, AuthConfig, Authenticator, AuthenticatorError,
-};
 
 use actix_cors::Cors;
 use actix_web::{
@@ -20,6 +10,11 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use actix_web_httpauth::middleware::HttpAuthentication;
+use drogue_cloud_service_common::{
+    endpoints::{create_endpoint_source, EndpointSourceType},
+    error::ServiceError,
+    openid::{create_client, AuthConfig, Authenticator, AuthenticatorError},
+};
 use envconfig::Envconfig;
 use serde_json::json;
 
@@ -51,6 +46,10 @@ async fn main() -> anyhow::Result<()> {
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;
+
+    // extract required endpoint information
+    let endpoints = endpoint_source.eval_endpoints().await?;
+
     log::info!("Using endpoint source: {:?}", endpoint_source);
     let endpoint_source: Data<EndpointSourceType> = Data::new(endpoint_source);
 
@@ -60,7 +59,10 @@ async fn main() -> anyhow::Result<()> {
 
     let (client, scopes) = if enable_auth {
         let config: AuthConfig = AuthConfig::init_from_env()?;
-        (Some(create_client(&config).await?), config.scopes)
+        (
+            Some(create_client(&config, endpoints).await?),
+            config.scopes,
+        )
     } else {
         (None, "".into())
     };
@@ -120,14 +122,4 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     Ok(())
-}
-
-fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
-    let endpoints: endpoints::EndpointConfig = Envconfig::init_from_env()?;
-    match endpoints.source.as_str() {
-        "openshift" => Ok(Box::new(OpenshiftEndpointSource::new()?)),
-        "kubernetes" => Ok(Box::new(KubernetesEndpointSource::new()?)),
-        "env" => Ok(Box::new(EnvEndpointSource(endpoints))),
-        other => Err(anyhow::anyhow!("Unsupported endpoint source: '{}'", other)),
-    }
 }
