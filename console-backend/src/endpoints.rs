@@ -65,10 +65,9 @@ impl EndpointSource for OpenshiftEndpointSource {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints> {
         let client = Client::try_default().await?;
         let routes: Api<Route> = Api::namespaced(client.clone(), &self.namespace);
-        let ksvc: Api<knative::Service> = Api::namespaced(client.clone(), &self.namespace);
 
         let mqtt = host_from_route(&routes.get("mqtt-endpoint").await?);
-        let http = url_from_kservice(&ksvc.get("http-endpoint").await?, true);
+        let http = url_from_route(&routes.get("http-endpoint").await?);
 
         let result = Endpoints {
             http: http.map(|url| HttpEndpoint { url }),
@@ -123,6 +122,10 @@ fn host_from_route(route: &Route) -> Option<String> {
         .ingress
         .iter()
         .find_map(|ingress| ingress.host.clone())
+}
+
+fn url_from_route(route: &Route) -> Option<String> {
+    host_from_route(route).map(|host| format!("https://{}", host))
 }
 
 fn url_from_kservice(ksvc: &knative::Service, force_tls: bool) -> Option<String> {
