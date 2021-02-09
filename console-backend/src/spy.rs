@@ -48,7 +48,7 @@ impl MessageSpy {
     pub fn new(consumer: StreamConsumer<DefaultConsumerContext>) -> Self {
         MessageSpy {
             upstream: OwningHandle::new_with_fn(Box::new(consumer), |c| {
-                Box::new(unsafe { &*c }.start())
+                Box::new(unsafe { &*c }.stream())
             }),
         }
     }

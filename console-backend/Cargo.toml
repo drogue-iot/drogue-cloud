@@ -10,13 +10,13 @@ drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 
 actix = "0.10"
-actix-cors = "0.5"
-actix-web = "3"
-actix-web-httpauth = "0.5"
+actix-web = "4.0.0-beta.1" # we need v4 as we need tokio 1
+actix-cors = "0.6.0-beta.1"
+actix-web-httpauth = "0.6.0-beta.1"
 
-openid = "0.7"
+openid = "0.8"
 url = "2"
-reqwest = "0.10"
+reqwest = "0.11"
 ring = "0.16.18" # required due to an issue in the public API
 
 pem = "0.8"
@@ -47,5 +47,5 @@ uuid = { version = "0.8", features = ["v4"] }
 owning_ref = "0.4"
 
 [dependencies.rdkafka]
-version = "0.24"
+version = "0.25"
 features = ["ssl", "sasl"]

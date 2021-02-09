@@ -26,3 +26,6 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 actix-cors = { git = "https://github.com/ctron/actix-extras", rev = "8718685f0237ac8cf39c8f73a272bd1d7205ba8e" }
 actix-web-httpauth = { git = "https://github.com/ctron/actix-extras", rev = "8718685f0237ac8cf39c8f73a272bd1d7205ba8e" }
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
+cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
+cloudevents-sdk-reqwest = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
+cloudevents-sdk-rdkafka = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }

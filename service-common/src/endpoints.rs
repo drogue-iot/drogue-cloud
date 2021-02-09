@@ -21,7 +21,7 @@ pub struct EndpointConfig {
     #[envconfig(from = "SSO_URL")]
     pub sso_url: String,
     #[envconfig(from = "REDIRECT_URL")]
-    pub redirect_url: String,
+    pub redirect_url: Option<String>,
     #[envconfig(from = "HTTP_ENDPOINT_URL")]
     pub http_url: Option<String>,
     #[envconfig(from = "MQTT_ENDPOINT_HOST")]
@@ -104,7 +104,7 @@ impl EndpointSource for EnvEndpointSource {
             mqtt,
             sso: Some(sso),
             issuer_url: Some(issuer_url),
-            redirect_url: Some(self.0.redirect_url.clone()),
+            redirect_url: self.0.redirect_url.as_ref().cloned(),
             registry,
             command_url: self.0.command_url.as_ref().cloned(),
             demos: get_demos(),
