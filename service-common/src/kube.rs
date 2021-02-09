@@ -13,22 +13,3 @@ fn namespace_from_cluster() -> Option<String> {
         .ok()
         .map(|cfg| cfg.default_ns)
 }
-
-pub mod knative {
-    use kube_derive::CustomResource;
-
-    use serde::{Deserialize, Serialize};
-
-    #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, Default)]
-    #[kube(
-        group = "serving.knative.dev",
-        version = "v1",
-        kind = "Service",
-        status = "ServiceStatus",
-        namespaced
-    )]
-    pub struct ServiceSpec(pub serde_json::Value);
-
-    #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-    pub struct ServiceStatus(pub serde_json::Value);
-}

@@ -1,9 +1,10 @@
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 #![allow(clippy::needless_return)]
 mod app;
 mod backend;
 mod components;
 mod error;
+mod examples;
 mod index;
 mod placeholder;
 mod spy;

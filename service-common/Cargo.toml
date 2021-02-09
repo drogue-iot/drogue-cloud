@@ -27,6 +27,7 @@ snafu = "0.6"
 thiserror = "1"
 
 async-trait = "0.1"
+futures = "0.3"
 
 kube = "0.43"
 kube-derive = "0.43"

@@ -185,3 +185,19 @@ to PRs that show up "green". So maybe check back and ensure that the CI comes up
 doesn't, and you don't understand why, please reach out to us.
 
 There are bonus points for adding your own tests ;-)
+
+## How to …
+
+### … work on the frontend
+
+You will need to have `npm` installed, as it will drive parts of the build.
+
+* Start the console backend locally
+  * Set `CLIENT_ID` to `drogue`
+  * Set `CLIENT_SECRET` to the value of `kubectl get secret keycloak-client-secret-drogue -o jsonpath='{.data[\'CLIENT_SECRET\']}' | base64 -d`
+* Add `http://localhost:8010` to the list of valid redirect targets in the `keycloakclients/drogue` resource
+* Run the console:
+  ~~~
+  cd console-frontend
+  npm run start:dev
+  ~~~

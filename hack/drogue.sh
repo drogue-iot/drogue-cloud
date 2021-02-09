@@ -156,7 +156,7 @@ fi
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ISSUER_URL=$SSO_URL/auth/realms/drogue"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "SSO_URL=$SSO_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "REDIRECT_URL=$CONSOLE_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"

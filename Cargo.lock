@@ -1497,6 +1497,7 @@ dependencies = [
  "log",
  "once_cell",
  "patternfly-yew",
+ "percent-encoding",
  "pretty-hex",
  "serde 1.0.120",
  "serde_json",
@@ -1696,6 +1697,7 @@ dependencies = [
  "drogue-cloud-service-api",
  "envconfig",
  "failure",
+ "futures",
  "k8s-openapi",
  "kube",
  "kube-derive",
@@ -3258,9 +3260,9 @@ dependencies = [
 
 [[package]]
 name = "patternfly-yew"
-version = "0.0.10"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c030ca3204c828e44c6592c595fc699bb644e0fce83cf413ed6b4cadad0b3d66"
+checksum = "f6d98ab2de02649eb848fc0a2fad1091851e4f05a1be95bfb5e9e4e0b18e9f5d"
 dependencies = [
  "chrono",
  "js-sys",

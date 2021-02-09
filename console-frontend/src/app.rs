@@ -1,8 +1,6 @@
 use crate::backend::{Backend, BackendInformation, Token};
 use crate::error::error;
-use crate::index::Index;
-use crate::placeholder::Placeholder;
-use crate::spy::Spy;
+use crate::{examples::Examples, index::Index, placeholder::Placeholder, spy::Spy};
 use anyhow::Error;
 use chrono::{DateTime, Utc};
 use patternfly_yew::*;
@@ -24,6 +22,8 @@ use yew_router::prelude::*;
 pub enum AppRoute {
     #[to = "/spy"]
     Spy,
+    #[to = "/examples"]
+    Examples,
     #[to = "/"]
     Index,
 }
@@ -244,6 +244,7 @@ impl Component for Main {
                     <Nav>
                         <NavList>
                             <NavRouterItem<AppRoute> to=AppRoute::Index>{"Home"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to=AppRoute::Examples>{"Getting started"}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
                         </NavList>
                     </Nav>
@@ -273,6 +274,7 @@ impl Component for Main {
                                             match switch {
                                                 AppRoute::Spy => html!{<Spy/>},
                                                 AppRoute::Index => html!{<Index/>},
+                                                AppRoute::Examples => html!{<Examples/>},
                                             }
                                         })
                                     />

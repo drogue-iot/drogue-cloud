@@ -1,10 +1,12 @@
 use crate::backend::Backend;
 use anyhow::Error;
-use drogue_cloud_service_api::endpoints::{Endpoints, HttpEndpoint, MqttEndpoint};
+use drogue_cloud_service_api::endpoints::{Endpoints, MqttEndpoint};
 use patternfly_yew::*;
-use yew::format::{Json, Nothing};
 use yew::prelude::*;
-use yew::services::fetch::*;
+use yew::{
+    format::{Json, Nothing},
+    services::fetch::*,
+};
 
 pub struct Index {
     link: ComponentLink<Self>,
@@ -95,45 +97,80 @@ impl Index {
     }
 
     fn render_endpoints(&self, endpoints: &Endpoints) -> Html {
-        let mut cards = Vec::new();
+        let mut service_cards = Vec::new();
+        let mut endpoint_cards = Vec::new();
+        let mut demo_cards = Vec::new();
 
         if let Some(backend) = Backend::get() {
-            cards.push(self.render_api_endpoint(&backend));
+            service_cards.push(self.render_card("API", backend.current_url(), false));
+        }
+        if let Some(sso) = &endpoints.sso {
+            service_cards.push(self.render_card("Single-sign on", sso, true));
+        }
+        if let Some(registry) = &endpoints.registry {
+            service_cards.push(self.render_card("Device registry", &registry.url, false));
         }
 
         if let Some(http) = &endpoints.http {
-            cards.push(self.render_http_endpoint(&http));
+            endpoint_cards.push(self.render_card("HTTP endpoint", &http.url, false));
         }
-
         if let Some(mqtt) = &endpoints.mqtt {
-            cards.push(self.render_mqtt_endpoint(&mqtt));
+            endpoint_cards.push(self.render_mqtt_endpoint(&mqtt));
+        }
+        if let Some(url) = &endpoints.command_url {
+            endpoint_cards.push(self.render_card("Command endpoint", url, false));
         }
 
-        let cards: Vec<FlexChildVariant> = cards
-            .iter()
-            .map(|card| {
-                return html_nested! {
-                    <FlexItem>
-                        {card.clone()}
-                    </FlexItem>
-                }
-                .into();
-            })
-            .collect();
+        for (label, url) in &endpoints.demos {
+            demo_cards.push(self.render_card(label, url, true));
+        }
 
         return html! {
-            <Flex>
-                { cards }
+            <Flex
+                >
+                <Flex>
+                    <Flex modifiers=vec![FlexModifier::Column.all()]>
+                        <FlexItem>
+                            <Title size=Size::XLarge>{"Services"}</Title>
+                        </FlexItem>
+                        { service_cards.into_flex_items() }
+                    </Flex>
+                </Flex>
+                <Flex>
+                    <Flex modifiers=vec![FlexModifier::Column.all()]>
+                        <FlexItem>
+                            <Title size=Size::XLarge>{"Endpoints"}</Title>
+                        </FlexItem>
+                        { endpoint_cards.into_flex_items() }
+                    </Flex>
+                </Flex>
+                <Flex>
+                    <Flex modifiers=vec![FlexModifier::Column.all()]>
+                        <FlexItem>
+                            <Title size=Size::XLarge>{"Demos"}</Title>
+                        </FlexItem>
+                        { demo_cards.into_flex_items() }
+                    </Flex>
+                </Flex>
             </Flex>
         };
     }
 
-    fn render_http_endpoint(&self, http: &HttpEndpoint) -> Html {
+    fn render_card<S: AsRef<str>>(&self, label: &str, url: S, link: bool) -> Html {
+        let footer = {
+            if link {
+                html! { <a class="pf-c-button pf-m-link pf-m-inline" href=url.as_ref() target="_blank"> { label }</a> }
+            } else {
+                html! {}
+            }
+        };
+
         html! {
             <Card
-                title={html_nested!{<>{"HTTP Endpoint"}</>}}
+                title={html_nested!{<>{label}</>}}
+                footer=footer
                 >
-                <Clipboard value=&http.url/>
+                <Clipboard readonly=true value=url.as_ref()/>
             </Card>
         }
     }
@@ -141,20 +178,10 @@ impl Index {
     fn render_mqtt_endpoint(&self, mqtt: &MqttEndpoint) -> Html {
         html! {
             <Card
-                title={html_nested!{<>{"MQTT Endpoint"}</>}}
+                title={html_nested!{<>{"MQTT endpoint"}</>}}
                 >
-                <Clipboard value=&mqtt.host/>
-                <Clipboard value={format!("{}", mqtt.port)}/>
-            </Card>
-        }
-    }
-
-    fn render_api_endpoint(&self, backend: &Backend) -> Html {
-        html! {
-            <Card
-                title={html_nested!{<>{"API Endpoint"}</>}}
-                >
-                <Clipboard value=backend.current_url()/>
+                <Clipboard readonly=true value=&mqtt.host/>
+                <Clipboard readonly=true value={format!("{}", mqtt.port)}/>
             </Card>
         }
     }
