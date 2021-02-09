@@ -104,6 +104,20 @@ dependencies = [
 
 [[package]]
 name = "actix-cors"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36b133d8026a9f209a9aeeeacd028e7451bcca975f592881b305d37983f303d7"
+dependencies = [
+ "actix-web 3.3.2",
+ "derive_more",
+ "futures-util",
+ "log",
+ "once_cell",
+ "tinyvec",
+]
+
+[[package]]
+name = "actix-cors"
 version = "0.6.0-beta.1"
 source = "git+https://github.com/ctron/actix-extras?rev=8718685f0237ac8cf39c8f73a272bd1d7205ba8e#8718685f0237ac8cf39c8f73a272bd1d7205ba8e"
 dependencies = [
@@ -985,7 +999,8 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk"
 version = "0.3.1"
-source = "git+https://github.com/cloudevents/sdk-rust?rev=da40d3d563e6a317122119597fc5742772262d6a#da40d3d563e6a317122119597fc5742772262d6a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7c9f6054fbd2d641a2d275e44f922a3816a6cf51751fb0f72fcf26e27209dfd"
 dependencies = [
  "base64 0.12.3",
  "bitflags",
@@ -1017,9 +1032,10 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk-rdkafka"
 version = "0.3.1"
-source = "git+https://github.com/cloudevents/sdk-rust?rev=da40d3d563e6a317122119597fc5742772262d6a#da40d3d563e6a317122119597fc5742772262d6a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "846ea70b6109f924a03ee4ec3cfb430fc6f83205c8056f48d850b749840fefb8"
 dependencies = [
- "bytes 1.0.1",
+ "bytes 0.5.6",
  "cloudevents-sdk",
  "lazy_static",
  "rdkafka",
@@ -1028,13 +1044,14 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk-reqwest"
 version = "0.3.1"
-source = "git+https://github.com/cloudevents/sdk-rust?rev=da40d3d563e6a317122119597fc5742772262d6a#da40d3d563e6a317122119597fc5742772262d6a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3402a811b777f123279f268eb146272f3bab907a265634ef3f4d3ad98c3556b"
 dependencies = [
  "async-trait",
- "bytes 1.0.1",
+ "bytes 0.5.6",
  "cloudevents-sdk",
  "lazy_static",
- "reqwest 0.11.0",
+ "reqwest 0.10.10",
 ]
 
 [[package]]
@@ -1402,9 +1419,9 @@ name = "drogue-cloud-console-backend"
 version = "0.2.0"
 dependencies = [
  "actix",
- "actix-cors",
- "actix-web 4.0.0-beta.1",
- "actix-web-httpauth 0.6.0-beta.1",
+ "actix-cors 0.5.4",
+ "actix-web 3.3.2",
+ "actix-web-httpauth 0.5.0",
  "anyhow",
  "async-trait",
  "chrono",
@@ -1422,7 +1439,7 @@ dependencies = [
  "owning_ref",
  "pem 0.8.2",
  "rdkafka",
- "reqwest 0.11.0",
+ "reqwest 0.10.10",
  "ring",
  "serde 1.0.120",
  "serde_json",
@@ -1492,7 +1509,7 @@ dependencies = [
 name = "drogue-cloud-device-management-service"
 version = "0.2.0"
 dependencies = [
- "actix-cors",
+ "actix-cors 0.6.0-beta.1",
  "actix-rt 2.0.0-beta.2",
  "actix-web 4.0.0-beta.1",
  "actix-web-httpauth 0.6.0-beta.1",
@@ -1550,7 +1567,7 @@ dependencies = [
  "http",
  "log",
  "percent-encoding",
- "reqwest 0.11.0",
+ "reqwest 0.10.10",
  "serde 1.0.120",
  "serde_json",
  "snafu",
@@ -1652,7 +1669,7 @@ dependencies = [
 name = "drogue-cloud-service-common"
 version = "0.1.0"
 dependencies = [
- "actix-web 4.0.0-beta.1",
+ "actix-web 3.3.2",
  "anyhow",
  "async-trait",
  "drogue-cloud-service-api",
@@ -1666,7 +1683,7 @@ dependencies = [
  "openid",
  "openshift-openapi",
  "pem 0.8.2",
- "reqwest 0.11.0",
+ "reqwest 0.10.10",
  "serde 1.0.120",
  "serde_json",
  "snafu",
@@ -2313,16 +2330,17 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.22.1"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f9f7a97316d44c0af9b0301e65010573a853a9fc97046d7331d7f6bc0fd5a64"
+checksum = "37743cc83e8ee85eacfce90f2f4102030d9ff0a95244098d781e9bee4a90abb6"
 dependencies = [
+ "bytes 0.5.6",
  "futures-util",
- "hyper 0.14.4",
+ "hyper 0.13.9",
  "log",
- "rustls 0.19.0",
- "tokio 1.0.2",
- "tokio-rustls 0.22.0",
+ "rustls 0.18.1",
+ "tokio 0.2.24",
+ "tokio-rustls 0.14.1",
  "webpki",
 ]
 
@@ -3136,18 +3154,18 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openid"
-version = "0.8.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1a8eda7e7dfeb77f45ece7a680b1744d32a38974d6d7e31000fd3717d0a4a1d"
+checksum = "d7f64769ff700d3e5c10d44e51f0d540b621aff88e4c2e400f006978fd8433ef"
 dependencies = [
  "base64 0.13.0",
  "biscuit",
  "chrono",
+ "failure",
  "lazy_static",
- "reqwest 0.11.0",
+ "reqwest 0.10.10",
  "serde 1.0.120",
  "serde_json",
- "thiserror",
  "url",
  "validator",
 ]
@@ -3634,9 +3652,9 @@ dependencies = [
 
 [[package]]
 name = "rdkafka"
-version = "0.25.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8acd8f5c5482fdf89e8878227bafa442d8c4409f6287391c85549ca83626c27"
+checksum = "db594dc221933be6f2ad804b997b48a57a63436c26ab924222c28e9a36ad210a"
 dependencies = [
  "futures",
  "libc",
@@ -3645,15 +3663,14 @@ dependencies = [
  "serde 1.0.120",
  "serde_derive",
  "serde_json",
- "slab",
- "tokio 1.0.2",
+ "tokio 0.2.24",
 ]
 
 [[package]]
 name = "rdkafka-sys"
-version = "3.0.0+1.6.0"
+version = "2.1.0+1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca35e95c88e08cdc643b25744e38ccee7c93c7e90d1ac6850fe74cbaa40803c3"
+checksum = "6d3f17044cba41c7309facedc72ca9bf25f177bf1e06756318e010f043713017"
 dependencies = [
  "cmake",
  "libc",
@@ -3739,6 +3756,7 @@ dependencies = [
  "http",
  "http-body 0.3.1",
  "hyper 0.13.9",
+ "hyper-rustls",
  "hyper-tls 0.4.3",
  "ipnet",
  "js-sys",
@@ -3749,15 +3767,18 @@ dependencies = [
  "native-tls",
  "percent-encoding",
  "pin-project-lite 0.2.4",
+ "rustls 0.18.1",
  "serde 1.0.120",
  "serde_json",
  "serde_urlencoded",
  "tokio 0.2.24",
+ "tokio-rustls 0.14.1",
  "tokio-tls",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webpki-roots 0.20.0",
  "winreg 0.7.0",
 ]
 
@@ -3776,7 +3797,6 @@ dependencies = [
  "http",
  "http-body 0.4.0",
  "hyper 0.14.4",
- "hyper-rustls",
  "hyper-tls 0.5.0",
  "ipnet",
  "js-sys",
@@ -3786,19 +3806,16 @@ dependencies = [
  "native-tls",
  "percent-encoding",
  "pin-project-lite 0.2.4",
- "rustls 0.19.0",
  "serde 1.0.120",
  "serde_json",
  "serde_urlencoded",
  "tokio 1.0.2",
  "tokio-native-tls",
- "tokio-rustls 0.22.0",
  "tokio-util 0.6.2",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots 0.21.0",
  "winreg 0.7.0",
 ]
 
@@ -4637,17 +4654,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-rustls"
-version = "0.22.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc6844de72e57df1980054b38be3a9f4702aba4858be64dd700181a8a6d0e1b6"
-dependencies = [
- "rustls 0.19.0",
- "tokio 1.0.2",
- "webpki",
-]
-
-[[package]]
 name = "tokio-stream"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4924,9 +4930,9 @@ dependencies = [
 
 [[package]]
 name = "validator"
-version = "0.12.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "841d6937c33ec6039d8071bcf72933146b5bbe378d645d8fa59bdadabfc2a249"
+checksum = "4effc922f18d14f3daf201b1d13c61e5ef62f5975e7d18df381f67badd76cfcd"
 dependencies = [
  "idna",
  "lazy_static",
@@ -4941,9 +4947,9 @@ dependencies = [
 
 [[package]]
 name = "validator_derive"
-version = "0.12.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4286b4497f270f59276a89ae0ad109d5f8f18c69b613e3fb22b61201aadb0c4d"
+checksum = "15529099583e8ce2b070ab6a637454a1b42c7146e6daee4a6817a82bee33bd41"
 dependencies = [
  "if_chain",
  "lazy_static",
@@ -4957,9 +4963,9 @@ dependencies = [
 
 [[package]]
 name = "validator_types"
-version = "0.12.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9680608df133af2c1ddd5eaf1ddce91d60d61b6bc51494ef326458365a470a"
+checksum = "add324da7950ac1f76b1c16ce8b5406147953d5d6a2ac1c5da93785f2cfc738b"
 
 [[package]]
 name = "vcpkg"
