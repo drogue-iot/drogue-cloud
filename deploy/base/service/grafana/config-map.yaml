@@ -59,7 +59,7 @@ data:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "iteration": 1612963298157,
+      "iteration": 1612967841300,
       "links": [],
       "panels": [
         {
@@ -96,8 +96,11 @@ data:
           "lines": true,
           "linewidth": 1,
           "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
           "percentage": false,
-          "pluginVersion": "7.1.5",
+          "pluginVersion": "7.4.0",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -193,6 +196,12 @@ data:
                   {
                     "params": [],
                     "type": "count"
+                  },
+                  {
+                    "params": [
+                        10
+                    ],
+                    "type": "moving_average"
                   }
                 ]
               ],
@@ -254,6 +263,9 @@ data:
           "datasource": "IoT",
           "fieldConfig": {
             "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
               "custom": {},
               "decimals": 1,
               "mappings": [],
@@ -331,9 +343,10 @@ data:
               "fields": "",
               "values": false
             },
+            "text": {},
             "textMode": "value"
           },
-          "pluginVersion": "7.1.5",
+          "pluginVersion": "7.4.0",
           "targets": [
             {
               "groupBy": [
@@ -401,7 +414,7 @@ data:
         }
       ],
       "refresh": "5s",
-      "schemaVersion": 26,
+      "schemaVersion": 27,
       "style": "dark",
       "tags": [],
       "templating": {
@@ -419,6 +432,8 @@ data:
             },
             "datasource": "IoT",
             "definition": "SHOW TAG VALUES WITH KEY = \"device_id\"",
+            "description": null,
+            "error": null,
             "hide": 0,
             "includeAll": true,
             "label": "Device ID",
@@ -459,5 +474,5 @@ data:
       "timezone": "",
       "title": "Example Dashboard",
       "uid": "YYGTNzdMk",
-      "version": 1
+      "version": 2
     }
