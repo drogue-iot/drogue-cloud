@@ -53,6 +53,7 @@ echo
 echo "Admin user (via SSO):"
 echo "  user:     admin"
 echo "  password: admin123456"
+echo
 
 if [ $CONSOLE = "true" ] ; then
   echo "Console:"

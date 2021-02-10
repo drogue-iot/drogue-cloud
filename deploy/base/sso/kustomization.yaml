@@ -6,5 +6,5 @@ resources:
   - instance.yaml
   - realm.yaml
   - client.yaml
-  - user.yaml
   - client-grafana.yaml
+  - user.yaml

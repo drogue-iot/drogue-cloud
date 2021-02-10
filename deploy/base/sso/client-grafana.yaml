@@ -33,3 +33,4 @@ spec:
           userinfo.token.claim: "true"
           claim.name: "roles"
           jsonType.label: "String"
+          usermodel.clientRoleMapping.clientId: "grafana"
