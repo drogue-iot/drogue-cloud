@@ -1,3 +1,4 @@
+use crate::x509::ClientCertificateChain;
 use actix_web::dev::{Payload, PayloadStream};
 use actix_web::{FromRequest, HttpRequest};
 use anyhow::Context;
@@ -15,6 +16,8 @@ use http::HeaderValue;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
+use std::fmt::Debug;
+use x509_parser::prelude::X509Certificate;
 
 #[derive(Clone, Debug, Envconfig)]
 pub struct AuthConfig {
@@ -26,6 +29,8 @@ pub struct AuthConfig {
 pub struct DeviceAuthenticator {
     pub client: ReqwestAuthenticatorClient,
 }
+
+pub type AuthResult<T> = Result<T, AuthenticationClientError<reqwest::Error>>;
 
 impl TryFrom<AuthConfig> for DeviceAuthenticator {
     type Error = anyhow::Error;
@@ -49,7 +54,7 @@ impl DeviceAuthenticator {
         &self,
         device: &str,
         password: &str,
-    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>> {
+    ) -> AuthResult<AuthenticationResponse> {
         let tok: Vec<_> = device
             .split('@')
             .map(|s| percent_encoding::percent_decode_str(s).decode_utf8())
@@ -67,22 +72,34 @@ impl DeviceAuthenticator {
         }
     }
 
-    pub async fn authenticate<T, D>(
+    pub async fn authenticate<A, D>(
         &self,
-        tenant: T,
+        application: A,
         device: D,
         credential: Credential,
-    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>>
+    ) -> AuthResult<AuthenticationResponse>
     where
-        T: ToString,
+        A: ToString,
         D: ToString,
     {
         self.client
             .authenticate(AuthenticationRequest {
-                tenant: tenant.to_string(),
+                application: application.to_string(),
                 device: device.to_string(),
                 credential,
             })
+            .await
+    }
+
+    /// Authenticate a device from a client cert only.
+    ///
+    /// This will take the issuerDn as application id, and the subjectDn as device id.
+    pub async fn authenticate_cert(
+        &self,
+        certs: Vec<Vec<u8>>,
+    ) -> AuthResult<AuthenticationResponse> {
+        let (app_id, device_id) = Self::ids_from_cert(&certs)?;
+        self.authenticate(app_id, device_id, Credential::Certificate(certs))
             .await
     }
 
@@ -92,19 +109,29 @@ impl DeviceAuthenticator {
         username: Option<U>,
         password: Option<P>,
         client_id: C,
-    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>>
+        certs: Option<ClientCertificateChain>,
+    ) -> AuthResult<AuthenticationResponse>
     where
-        U: AsRef<str>,
-        P: Into<String>,
-        C: AsRef<str>,
+        U: AsRef<str> + Debug,
+        P: Into<String> + Debug,
+        C: AsRef<str> + Debug,
     {
+        log::debug!(
+            "Authenticate MQTT - username: {:?}, password: {:?}, client_id: {:?}, certs: {:?}",
+            username,
+            password,
+            client_id,
+            certs
+        );
+
         match (
             username.map(Username::from),
             password,
             Username::from(client_id),
+            certs,
         ) {
             // Username/password <device>@<tenant> / <password>, Client ID: ???
-            (Some(Username::Scoped { scope, device }), Some(password), _) => {
+            (Some(Username::Scoped { scope, device }), Some(password), _, None) => {
                 self.authenticate(&scope, &device, Credential::Password(password.into()))
                     .await
             }
@@ -113,6 +140,7 @@ impl DeviceAuthenticator {
                 Some(Username::NonScoped(username)),
                 Some(password),
                 Username::Scoped { scope, device },
+                None,
             ) => {
                 self.authenticate(
                     &scope,
@@ -124,9 +152,18 @@ impl DeviceAuthenticator {
                 )
                 .await
             }
+            // Client cert only
+            (None, None, _, Some(certs)) => self.authenticate_cert(certs.0).await,
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
         }
+    }
+
+    pub fn ids_from_cert(certs: &[Vec<u8>]) -> AuthResult<(String, String)> {
+        let cert = Self::device_cert(&certs)?;
+        let app_id = cert.tbs_certificate.issuer.to_string();
+        let device_id = cert.tbs_certificate.subject.to_string();
+        Ok((app_id, device_id))
     }
 
     /// authenticate for a typical HTTP request
@@ -135,12 +172,13 @@ impl DeviceAuthenticator {
         tenant: Option<T>,
         device: Option<D>,
         auth: Option<&HeaderValue>,
-    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>>
+        certs: Option<Vec<Vec<u8>>>,
+    ) -> AuthResult<AuthenticationResponse>
     where
         T: AsRef<str>,
         D: AsRef<str>,
     {
-        match (tenant, device, auth.map(AuthValue::from)) {
+        match (tenant, device, auth.map(AuthValue::from), certs) {
             // POST /<channel> -> basic auth `<device>@<tenant>` / `<password>` -> Password(<password>)
             (
                 None,
@@ -149,12 +187,13 @@ impl DeviceAuthenticator {
                     username: Username::Scoped { scope, device },
                     password,
                 }),
+                None,
             ) => {
                 self.authenticate(&scope, &device, Credential::Password(password))
                     .await
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
-            (Some(scope), None, Some(AuthValue::Basic { username, password })) => {
+            (Some(scope), None, Some(AuthValue::Basic { username, password }), None) => {
                 self.authenticate(
                     scope.as_ref(),
                     username.into_string(),
@@ -163,7 +202,7 @@ impl DeviceAuthenticator {
                 .await
             }
             // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
-            (Some(scope), Some(device), Some(AuthValue::Basic { username, password })) => {
+            (Some(scope), Some(device), Some(AuthValue::Basic { username, password }), None) => {
                 self.authenticate(
                     scope.as_ref(),
                     device.as_ref(),
@@ -186,6 +225,7 @@ impl DeviceAuthenticator {
                         },
                     password,
                 }),
+                None,
             ) => {
                 self.authenticate(
                     &scope,
@@ -195,8 +235,28 @@ impl DeviceAuthenticator {
                 .await
             }
 
+            // X.509 client certificate -> all information from the cert
+            (None, None, None, Some(certs)) => self.authenticate_cert(certs).await,
+
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
+        }
+    }
+
+    /// Retrieve the end-entity (aka device) certificate, must be the first one.
+    fn device_cert(certs: &[Vec<u8>]) -> AuthResult<X509Certificate> {
+        match certs.get(0) {
+            Some(cert) => Ok(x509_parser::parse_x509_certificate(&cert)
+                .map_err(|err| {
+                    AuthenticationClientError::Request(format!(
+                        "Failed to parse client certificate: {}",
+                        err
+                    ))
+                })?
+                .1),
+            None => Err(AuthenticationClientError::Request(
+                "Empty client certificate chain".into(),
+            )),
         }
     }
 }
