@@ -50,7 +50,7 @@ impl TryFrom<AuthConfig> for DeviceAuthenticator {
 
 impl DeviceAuthenticator {
     /// authenticate with a combination of `<device>@<tenant>` / `<password>`.
-    pub async fn authenticate_simple(
+    pub async fn x_authenticate_simple(
         &self,
         device: &str,
         password: &str,
@@ -290,10 +290,13 @@ impl<S: AsRef<str>> From<S> for Username {
     fn from(s: S) -> Self {
         let s = s.as_ref();
         match s.splitn(2, '@').collect::<Vec<_>>().as_slice() {
-            [device, scope] => Username::Scoped {
-                scope: scope.to_string(),
-                device: device.to_string(),
-            },
+            [device, scope] => {
+                let device = percent_encoding::percent_decode_str(device).decode_utf8_lossy();
+                Username::Scoped {
+                    scope: scope.to_string(),
+                    device: device.to_string(),
+                }
+            }
             _ => Username::NonScoped(s.to_string()),
         }
     }
