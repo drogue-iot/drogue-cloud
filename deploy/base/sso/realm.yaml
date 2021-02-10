@@ -11,6 +11,7 @@ spec:
     displayName: "Drogue IoT cloud"
     registrationAllowed: true
     resetPasswordAllowed: true
+    loginWithEmailAllowed: false
   instanceSelector:
     matchLabels:
       app.kubernetes.io/part-of: sso
