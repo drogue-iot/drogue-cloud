@@ -8,7 +8,9 @@ spec:
   realm:
     realm: "drogue"
     enabled: true
-    displayName: "Drogue"
+    displayName: "Drogue IoT cloud"
+    registrationAllowed: true
+    resetPasswordAllowed: true
   instanceSelector:
     matchLabels:
       app.kubernetes.io/part-of: sso
