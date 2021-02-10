@@ -12,14 +12,32 @@ spec:
   selector:
     matchLabels:
       app: grafana
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         app: grafana
     spec:
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
       containers:
         - name: grafana
-          image: docker.io/grafana/grafana:7.1.5
+          image: docker.io/grafana/grafana:7.4.0
           imagePullPolicy: IfNotPresent
           env:
             - name: GF_SECURITY_ADMIN_PASSWORD
@@ -27,6 +45,47 @@ spec:
                 secretKeyRef:
                   name: grafana
                   key: admin.password
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
+
+            - name: GF_LOG_LEVEL
+              value: "debug"
+
+            - name: GF_AUTH_GENERIC_OAUTH_ENABLED
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_NAME
+              value: "Drogue IoT cloud"
+            - name: GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP
+              value: "true"
+            - name: GF_AUTH_GENERIC_OAUTH_TEAM_IDS
+              value: ""
+            - name: GF_AUTH_GENERIC_OAUTH_ALLOWED_ORGANIZATIONS
+              value: ""
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-grafana
+                  key: CLIENT_ID
+            - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-grafana
+                  key: CLIENT_SECRET
+            - name: GF_AUTH_GENERIC_OAUTH_SCOPES
+              value: "openid profile email"
+
+            - name: SSO_URL
+              value: http://localhost
+
+            - name: GF_AUTH_GENERIC_OAUTH_AUTH_URL
+              value: $(SSO_URL)/auth/realms/drogue/protocol/openid-connect/auth
+            - name: GF_AUTH_GENERIC_OAUTH_TOKEN_URL
+              value: $(SSO_URL)/auth/realms/drogue/protocol/openid-connect/token
+            - name: GF_AUTH_GENERIC_OAUTH_API_URL
+              value: $(SSO_URL)/auth/realms/drogue/protocol/openid-connect/userinfo
+            - name: GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH
+              value: "contains(roles[*], 'grafana-admin') && 'Admin' || contains(roles[*], 'grafana-editor') && 'Editor' || 'Viewer'"
+
             - name: DS_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -83,3 +142,6 @@ spec:
         - name: grafana-dashboards
           configMap:
             name: grafana-dashboards
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-drogue

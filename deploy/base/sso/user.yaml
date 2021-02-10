@@ -20,6 +20,9 @@ spec:
       drogue:
         - "drogue-admin"
         - "drogue-user"
+      grafana:
+        - "grafana-admin"
+        - "grafana-editor"
       account:
         - "manage-account"
       realm-management:

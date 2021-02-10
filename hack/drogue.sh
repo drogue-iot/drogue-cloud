@@ -115,7 +115,7 @@ HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
 
 BACKEND_URL="$(service_url "console-backend")"
 CONSOLE_URL="$(service_url "console")"
-
+GRAFANA_URL=$(service_url "grafana")
 
 #
 # Wait for SSO
@@ -161,9 +161,13 @@ kubectl -n "$DROGUE_NS" set env deployment/console-backend "REDIRECT_URL=$CONSOL
 
 kubectl -n "$DROGUE_NS" set env deployment/device-management-service "SSO_URL=$SSO_URL"
 
+kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL"
+kubectl -n "$DROGUE_NS" set env deployment/grafana "GF_SERVER_ROOT_URL=$GRAFANA_URL"
+
 kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"
 
 kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$CONSOLE_URL\"}]"
+kubectl -n "$DROGUE_NS" patch keycloakclient/client-grafana --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$GRAFANA_URL/login/generic_oauth\"}]"
 
 # wait for other Knative services
 wait_for_ksvc influxdb-pusher

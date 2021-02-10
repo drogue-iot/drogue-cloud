@@ -1,0 +1,35 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: client-grafana
+  labels:
+    app.kubernetes.io/part-of: console
+spec:
+  realmSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: console
+  client:
+    clientId: grafana
+    clientAuthenticatorType: client-secret
+    enabled: true
+    rootUrl: ""
+    publicClient: false
+    implicitFlowEnabled: false
+    standardFlowEnabled: true
+    serviceAccountsEnabled: false
+    fullScopeAllowed: true
+    redirectUris:
+      - "http://not-yet-set"
+    defaultRoles:
+      - "grafana-admin"
+      - "grafana-editor"
+    protocolMappers:
+      - name: add-grafana-roles
+        protocol: "openid-connect"
+        protocolMapper: "oidc-usermodel-client-role-mapper"
+        consentRequired: false
+        config:
+          multivalued: "true"
+          userinfo.token.claim: "true"
+          claim.name: "roles"
+          jsonType.label: "String"

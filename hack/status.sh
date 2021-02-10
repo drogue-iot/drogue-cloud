@@ -50,12 +50,14 @@ echo "  url:      $SSO_URL"
 echo "  user:     admin"
 echo "  password: admin123456"
 echo
+echo "Admin user (via SSO):"
+echo "  user:     admin"
+echo "  password: admin123456"
 
 if [ $CONSOLE = "true" ] ; then
   echo "Console:"
   echo "  url:      $CONSOLE_URL"
-  echo "  user:     admin"
-  echo "  password: admin123456"
+  echo "  user:     <via sso>"
   echo
 fi
 
@@ -68,10 +70,12 @@ echo "---------------------"
 echo
 echo "* Login to Grafana:"
 echo "    url:      $DASHBOARD_URL"
-echo "    username: admin"
-echo "    password: admin123456"
+echo "    user:     <via sso>"
 echo "* Try this link: $DASHBOARD_URL/d/YYGTNzdMk/"
 echo "* Or search for the 'Knative test' dashboard"
+echo "* Additional admin user:"
+echo "    username: admin"
+echo "    password: admin123456"
 echo
 echo "Manage tenants/devices:"
 echo "-------------------------"
