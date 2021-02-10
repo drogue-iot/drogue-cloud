@@ -55,10 +55,11 @@ data:
           }
         ]
       },
+      "description": "This dashboard shows a \"temperature\" sent by devices using the example command.",
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "iteration": 1612530366442,
+      "iteration": 1612963298157,
       "links": [],
       "panels": [
         {
@@ -456,7 +457,7 @@ data:
         ]
       },
       "timezone": "",
-      "title": "Knative test",
+      "title": "Example Dashboard",
       "uid": "YYGTNzdMk",
       "version": 1
     }
