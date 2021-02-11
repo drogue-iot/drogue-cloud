@@ -10,11 +10,8 @@ use drogue_cloud_endpoint_common::{
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::{self, ErrorInformation};
-<<<<<<< HEAD
-use drogue_cloud_service_common::Id;
-=======
 use drogue_cloud_service_common::openid::Authenticator;
->>>>>>> fa18cc4 (using a token for auth between services)
+use drogue_cloud_service_common::Id;
 
 #[derive(Deserialize)]
 pub struct PublishCommonOptions {
@@ -63,14 +60,9 @@ pub async fn publish_plain(
 #[post("/{channel}/{suffix:.*}")]
 pub async fn publish_tail(
     sender: web::Data<DownstreamSender>,
-<<<<<<< HEAD
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     path: web::Path<(String, String)>,
-=======
-    device_auth: web::Data<DeviceAuthenticator>,
-    web::Path((channel, suffix)): web::Path<(String, String)>,
->>>>>>> fa18cc4 (using a token for auth between services)
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
@@ -104,7 +96,7 @@ pub async fn publish(
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
-    let (application, device) = match device_auth
+    let (application, device) = match auth
         .authenticate_http(
             opts.common.application,
             opts.common.device,

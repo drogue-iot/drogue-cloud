@@ -23,7 +23,7 @@ pub struct Config {
 
 #[macro_export]
 macro_rules! app {
-    ($data:expr, $max_json_payload_size:expr, $authenticator: expr) => {
+    ($data:expr, $max_json_payload_size:expr, $authenticator:expr) => {
         let auth = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 

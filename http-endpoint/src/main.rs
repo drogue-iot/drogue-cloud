@@ -18,7 +18,7 @@ use drogue_cloud_endpoint_common::{
     command_endpoint::{CommandServer, CommandServerConfig},
     downstream::DownstreamSender,
 };
-use drogue_cloud_service_common::openid;
+use drogue_cloud_service_common::{endpoints::create_endpoint_source, openid};
 use envconfig::Envconfig;
 use futures::future;
 use serde_json::json;
@@ -81,16 +81,25 @@ async fn main() -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
     let http_server_commands = commands.clone();
 
+    // the endpoint source we choose
+    let endpoint_source = create_endpoint_source()?;
+
+    // extract required endpoint information
+    let endpoints = endpoint_source.eval_endpoints().await?;
+
     // OpenIdConnect
 
-    let config: AuthConfig = AuthConfig::init_from_env()?;
-    let (client, scopes) = (Some(openid::create_client(&config).await?), config.scopes);
-    let service_authenticator = openid::Authenticator::new(client, scopes);
+    let auth_config: openid::AuthConfig = openid::AuthConfig::init_from_env()?;
+    let (client, scopes) = (
+        Some(openid::create_client(&auth_config, endpoints).await?),
+        auth_config.scopes,
+    );
+    let service_authenticator = openid::Authenticator::new(client, scopes).await;
 
     let mut device_authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
     device_authenticator
         .client
-        .set_service_token(service_authenticator.bearer);
+        .set_service_token(service_authenticator.bearer.clone());
 
     let http_server = HttpServer::new(move || {
         let app = App::new()
@@ -102,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
 
         let app = app
             .app_data(Data::new(device_authenticator.clone()))
-            .app_data(Data::new(service_authenticator.clone()));
+            .app_data(Data::new(service_authenticator));
 
         app.service(index)
             // the standard endpoint
