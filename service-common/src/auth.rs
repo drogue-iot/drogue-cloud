@@ -24,8 +24,8 @@ impl ReqwestAuthenticatorClient {
         }
     }
 
-    pub fn set_service_token(&mut self, bearer: openid::Bearer) {
-        self.service_token = Some(bearer);
+    pub fn set_service_token(&mut self, bearer: Option<openid::Bearer>) {
+        self.service_token = bearer;
     }
 }
 
