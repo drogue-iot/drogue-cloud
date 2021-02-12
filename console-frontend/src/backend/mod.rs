@@ -1,5 +1,6 @@
 use anyhow::Context;
 use chrono::{DateTime, Utc};
+use drogue_cloud_console_common::UserInfo;
 use http::{Response, Uri};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -23,8 +24,10 @@ pub struct Backend {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Token {
     pub access_token: String,
+    pub id_token: String,
     pub refresh_token: Option<String>,
     pub expires: Option<DateTime<Utc>>,
+    pub userinfo: Option<UserInfo>,
 }
 
 impl Token {
@@ -201,8 +204,10 @@ mod test {
 
         let token = Token {
             access_token: String::new(),
+            id_token: String::new(),
             refresh_token: None,
             expires: Some(date),
+            userinfo: None,
         };
 
         assert!(!token.is_expired());

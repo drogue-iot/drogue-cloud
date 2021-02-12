@@ -8,4 +8,4 @@ edition = "2018"
 
 anyhow = "1"
 
-serde = "1"
+serde = { version = "1", features = ["derive"] }

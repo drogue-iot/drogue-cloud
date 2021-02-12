@@ -3,10 +3,10 @@
 //! Route commands to appropriate actors.
 //! Actors can subscribe/unsubscribe for commands by sending appropriate messages
 
-use crate::Id;
 use actix::prelude::*;
 use actix_broker::BrokerSubscribe;
 use cloudevents::Event;
+use drogue_cloud_service_common::Id;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 

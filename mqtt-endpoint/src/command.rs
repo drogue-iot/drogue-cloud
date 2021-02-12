@@ -1,5 +1,5 @@
 use crate::{cloudevents_sdk_ntex::request_to_event, App};
-use drogue_cloud_endpoint_common::Id;
+use drogue_cloud_service_common::Id;
 use ntex::{http, web};
 use std::convert::TryFrom;
 

@@ -56,10 +56,10 @@ impl Debug for Authenticator {
 }
 
 impl Authenticator {
-    pub async fn validate_token(&self, token: String) -> Result<(), AuthenticatorError> {
+    pub async fn validate_token<S: AsRef<str>>(&self, token: S) -> Result<(), AuthenticatorError> {
         let client = self.client.as_ref().ok_or(AuthenticatorError::Missing)?;
 
-        let mut token = Jws::new_encoded(&token);
+        let mut token = Jws::new_encoded(token.as_ref());
         match client.decode_token(&mut token) {
             Ok(_) => Ok(()),
             Err(err) => {

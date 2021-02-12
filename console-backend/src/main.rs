@@ -28,14 +28,24 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[derive(Debug, Envconfig)]
-struct Config {
+#[derive(Clone, Debug, Envconfig)]
+pub struct Config {
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
     pub health_bind_addr: String,
     #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
+    #[envconfig(
+        from = "KAFKA_BOOTSTRAP_SERVERS",
+        default = "kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092"
+    )]
+    pub kafka_boostrap_servers: String,
+    #[envconfig(
+        from = "KAFKA_TOPIC",
+        default = "knative-messaging-kafka.drogue-iot.iot-channel"
+    )]
+    pub kafka_topic: String,
 }
 
 #[actix_web::main]
@@ -68,6 +78,8 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let authenticator = web::Data::new(Authenticator { client, scopes });
+
+    let bind_addr = config.bind_addr.clone();
 
     // http server
 
@@ -102,6 +114,7 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(Cors::permissive().supports_credentials())
             .data(web::JsonConfig::default().limit(4096))
+            .data(config.clone())
             .app_data(authenticator.clone())
             .app_data(endpoint_source.clone())
             .service(
@@ -117,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
             //fixme : use a different port
             .service(health)
     })
-    .bind(config.bind_addr)?
+    .bind(bind_addr)?
     .run()
     .await?;
 

@@ -239,7 +239,6 @@ impl Examples {
                 url = registry.url,
                 meta = json!({ "name": self.app_id })
             );
-            log::info!("Create: {}", create_app_cmd);
             let create_device_cmd = format!(
                 r#"http POST {url}/api/v1/apps/app_id/devices metadata:='{meta}' spec:='{spec}'"#,
                 url = registry.url,

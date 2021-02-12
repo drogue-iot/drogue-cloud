@@ -20,6 +20,7 @@ members = [
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "fe51e06fb2c44b1d3e3fd627cedea3fd582487ef"}
 #ntex-mqtt = { path = "../ntex-mqtt" }
 #patternfly-yew = { path = "../patternfly-yew" }
+#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", branch = "main" }
 #drogue-ttn = { path = "../drogue-ttn" }
 #diesel = { git = 'https://github.com/diesel-rs/diesel', rev = "06494e8bdfe774bac9be5cab488b3d0cbec97f4e" }
 #openid = { git = "https://github.com/ctron/openid.git", branch = "feature/custom_ca_1" }

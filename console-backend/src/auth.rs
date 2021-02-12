@@ -2,7 +2,8 @@ use drogue_cloud_service_common::error::ErrorResponse;
 use drogue_cloud_service_common::openid::Authenticator;
 
 use actix_web::{get, http, web, HttpResponse, Responder};
-use openid::Bearer;
+use drogue_cloud_console_common::UserInfo;
+use openid::{biscuit::jws::Compact, Bearer};
 use serde::Deserialize;
 use serde_json::json;
 use std::fmt::Debug;
@@ -43,8 +44,18 @@ pub async fn code(
         );
 
         match response {
-            Ok(token) => HttpResponse::Ok()
-                .json(json!({ "bearer": token.bearer, "expires": token.bearer.expires, })),
+            Ok(token) => {
+                let userinfo = token.id_token.and_then(|t| match t {
+                    Compact::Decoded { payload, .. } => Some(UserInfo {
+                        email_verified: payload.userinfo.email_verified,
+                        email: payload.userinfo.email,
+                    }),
+                    Compact::Encoded(_) => None,
+                });
+
+                HttpResponse::Ok()
+                    .json(json!({ "bearer": token.bearer, "expires": token.bearer.expires, "userinfo": userinfo}))
+            }
             Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
                 error: "Unauthorized".to_string(),
                 message: format!("Code invalid: {:?}", err),

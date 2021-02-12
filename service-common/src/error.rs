@@ -1,17 +1,17 @@
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
-use snafu::Snafu;
+use thiserror::Error;
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, Error)]
 pub enum ServiceError {
-    //    #[snafu(display("Invalid data format: {}", source))]
-    //    InvalidFormat { source: Box<dyn std::error::Error> },
-    #[snafu(display("Error processing token"))]
+    #[error("Error processing token")]
     TokenError,
-    #[snafu(display("Internal error: {}", message))]
+    #[error("Internal error: {message}")]
     InternalError { message: String },
-    #[snafu(display("Failed to authenticate"))]
+    #[error("Failed to authenticate")]
     AuthenticationError,
+    #[error("Service unavailable: {0}")]
+    ServiceUnavailable(String),
 }
 
 impl ResponseError for ServiceError {
@@ -31,6 +31,12 @@ impl ResponseError for ServiceError {
                 error: "AuthenticationError".into(),
                 message: "Not authorized".into(),
             }),
+            ServiceError::ServiceUnavailable(message) => {
+                HttpResponse::ServiceUnavailable().json(ErrorResponse {
+                    error: "ServiceUnavailable".into(),
+                    message: message.clone(),
+                })
+            }
         }
     }
 }

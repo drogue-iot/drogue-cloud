@@ -18,9 +18,10 @@ use bytestring::ByteString;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
-    x509::ClientCertificateChain, Id,
+    x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
+use drogue_cloud_service_common::Id;
 use envconfig::Envconfig;
 use futures::future;
 use ntex::web;

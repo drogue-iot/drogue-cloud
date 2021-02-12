@@ -19,6 +19,9 @@ module.exports = (env, argv) => {
             historyApiFallback: {
                 rewrites: [
                     { from: /endpoints\/backend\.json/, to: '/endpoints/backend.json'},
+                    { from: /^(.*)\.(svg)$/, to: function(context) {
+                            return context.match[0];
+                    }},
                     // translate everything that is in a sub-directory (e.g. components/form) and contains a dot
                     // (e.g. components/form/main.js) to the root (e.g. main.js).
                     { from: /\/.*?\/(.*\..*)$/, to: function(context) {
@@ -53,7 +56,7 @@ module.exports = (env, argv) => {
                     include: [
                         path.resolve(__dirname, 'node_modules/patternfly/dist/fonts'),
                         path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/fonts'),
-                        path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/pficon')
+                        path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/pficon'),
                     ],
                     use: {
                         loader: 'file-loader',
@@ -134,7 +137,9 @@ module.exports = (env, argv) => {
         },
         plugins: [
             new CopyWebpackPlugin([
-                { from: './static', to: distPath }
+                { from: './static', to: distPath },
+                // copy over images
+                { from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'), to: path.resolve(distPath, "images") }
             ]),
             new WasmPackPlugin({
                 crateDirectory: ".",

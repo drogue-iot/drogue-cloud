@@ -28,7 +28,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "pin-project 0.4.27",
- "smallvec",
+ "smallvec 1.6.1",
  "tokio 0.2.24",
  "tokio-util 0.3.1",
  "trust-dns-proto 0.19.6",
@@ -269,7 +269,7 @@ dependencies = [
  "copyless",
  "futures-channel",
  "futures-util",
- "smallvec",
+ "smallvec 1.6.1",
  "tokio 0.2.24",
 ]
 
@@ -513,7 +513,7 @@ dependencies = [
  "serde 1.0.120",
  "serde_json",
  "serde_urlencoded",
- "smallvec",
+ "smallvec 1.6.1",
  "socket2",
  "time 0.2.24",
  "url",
@@ -1429,6 +1429,7 @@ dependencies = [
  "cloudevents-sdk",
  "cloudevents-sdk-rdkafka",
  "drogue-cloud-console-common",
+ "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger",
  "envconfig",
@@ -1473,6 +1474,7 @@ dependencies = [
  "itertools",
  "js-sys",
  "log",
+ "md5",
  "once_cell",
  "patternfly-yew",
  "percent-encoding",
@@ -1595,6 +1597,7 @@ dependencies = [
  "dotenv",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
  "drogue-ttn",
  "env_logger",
  "envconfig",
@@ -1672,6 +1675,7 @@ dependencies = [
  "actix-web 3.3.2",
  "anyhow",
  "async-trait",
+ "cloudevents-sdk",
  "drogue-cloud-service-api",
  "envconfig",
  "failure",
@@ -1686,7 +1690,6 @@ dependencies = [
  "reqwest",
  "serde 1.0.120",
  "serde_json",
- "snafu",
  "thiserror",
  "url",
 ]
@@ -3223,7 +3226,7 @@ dependencies = [
  "instant",
  "libc",
  "redox_syscall 0.1.57",
- "smallvec",
+ "smallvec 1.6.1",
  "winapi 0.3.9",
 ]
 
@@ -3238,9 +3241,9 @@ dependencies = [
 
 [[package]]
 name = "patternfly-yew"
-version = "0.0.13"
+version = "0.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6d98ab2de02649eb848fc0a2fad1091851e4f05a1be95bfb5e9e4e0b18e9f5d"
+checksum = "2a52260f73599dbaea596fa6fdcd29867736bba734ad13662cf07bd9570f0591"
 dependencies = [
  "chrono",
  "js-sys",
@@ -4137,6 +4140,15 @@ checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
 
 [[package]]
 name = "smallvec"
+version = "0.6.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b97fcaeba89edba30f044a10c6a3cc39df9c3f17d7cd829dd1446cab35f890e0"
+dependencies = [
+ "maybe-uninit",
+]
+
+[[package]]
+name = "smallvec"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
@@ -4686,7 +4698,7 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.6.1",
  "thiserror",
  "tokio 0.2.24",
  "url",
@@ -4710,7 +4722,7 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.8.2",
- "smallvec",
+ "smallvec 1.6.1",
  "thiserror",
  "tokio 1.0.2",
  "url",
@@ -4730,7 +4742,7 @@ dependencies = [
  "log",
  "lru-cache",
  "resolv-conf",
- "smallvec",
+ "smallvec 1.6.1",
  "thiserror",
  "tokio 0.2.24",
  "trust-dns-proto 0.19.6",
@@ -4750,7 +4762,7 @@ dependencies = [
  "lru-cache",
  "parking_lot",
  "resolv-conf",
- "smallvec",
+ "smallvec 1.6.1",
  "thiserror",
  "tokio 1.0.2",
  "trust-dns-proto 0.20.0",
@@ -4788,11 +4800,11 @@ dependencies = [
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.16"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13e63ab62dbe32aeee58d1c5408d35c36c392bba5d9d3142287219721afe606"
+checksum = "09c8070a9942f5e7cfccd93f490fdebd230ee3c3c9f107cb25bad5351ef671cf"
 dependencies = [
- "tinyvec",
+ "smallvec 0.6.14",
 ]
 
 [[package]]

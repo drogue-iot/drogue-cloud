@@ -3,6 +3,7 @@ use crate::error::error;
 use crate::{examples::Examples, index::Index, placeholder::Placeholder, spy::Spy};
 use anyhow::Error;
 use chrono::{DateTime, Utc};
+use drogue_cloud_console_common::UserInfo;
 use patternfly_yew::*;
 use std::time::Duration;
 use url::Url;
@@ -256,6 +257,28 @@ impl Component for Main {
             },
         };
 
+        let tools: Children = Children::new(vec![match Backend::token() {
+            Some(token) => {
+                let src = token
+                    .userinfo
+                    .and_then(|user| {
+                        if user.email_verified {
+                            user.email
+                        } else {
+                            None
+                        }
+                    })
+                    .map(|email| md5::compute(email.as_bytes()))
+                    .map(|hash| format!("https://www.gravatar.com/avatar/{:x}?D=mp", hash))
+                    .unwrap_or_else(|| "/images/img_avatar.svg".into());
+
+                html! {
+                    <Avatar src=src/>
+                }
+            }
+            None => html! {},
+        }]);
+
         html! {
             <>
                 <ToastViewer/>
@@ -264,6 +287,7 @@ impl Component for Main {
                         <Logo src="/images/logo.png" alt="Drogue IoT" />
                     }}
                     sidebar=sidebar
+                    tools=tools
                     >
                     {
                         if self.is_ready() {
@@ -388,18 +412,30 @@ impl Main {
                 let refresh_token = value["bearer"]["refresh_token"]
                     .as_str()
                     .map(|s| s.to_string());
+                let id_token = value["bearer"]["id_token"].as_str().map(|s| s.to_string());
+
+                let userinfo: Option<UserInfo> =
+                    serde_json::from_value(value["userinfo"].clone()).unwrap_or_default();
 
                 let expires = match value["expires"].as_str() {
                     Some(expires) => DateTime::parse_from_rfc3339(expires).ok(),
                     None => None,
                 }
                 .map(|expires| expires.with_timezone(&Utc));
-                let token = access_token.map(|access_token| Token {
-                    access_token,
-                    refresh_token,
-                    expires,
-                });
+
+                let token = match (access_token, id_token) {
+                    (Some(access_token), Some(id_token)) => Some(Token {
+                        access_token,
+                        refresh_token,
+                        id_token,
+                        expires,
+                        userinfo,
+                    }),
+                    _ => None,
+                };
+
                 log::info!("Token: {:?}", token);
+
                 match token {
                     Some(token) => Msg::SetAccessToken(token),
                     None => Msg::LoginFailed,

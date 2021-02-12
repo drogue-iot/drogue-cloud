@@ -1,5 +1,5 @@
-use cloudevents::event::ExtensionValue;
-use cloudevents::{Event, EventBuilderV10};
+use cloudevents::{event::ExtensionValue, Event, EventBuilderV10};
+use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE};
 
 /// A scoped device ID.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -19,8 +19,8 @@ impl Id {
 
     /// Create a new ID from a cloud event.
     pub fn from_event(event: &Event) -> Option<Id> {
-        let app_id_ext = event.extension("application");
-        let device_id_ext = event.extension("device");
+        let app_id_ext = event.extension(EXT_APPLICATION);
+        let device_id_ext = event.extension(EXT_DEVICE);
         match (app_id_ext, device_id_ext) {
             (Some(ExtensionValue::String(app_id)), Some(ExtensionValue::String(device_id))) => {
                 Some(Id::new(app_id, device_id))
@@ -36,7 +36,7 @@ pub trait IdInjector {
 
 impl IdInjector for EventBuilderV10 {
     fn inject(self, id: Id) -> Self {
-        self.extension("application", id.app_id)
-            .extension("device", id.device_id)
+        self.extension(EXT_APPLICATION, id.app_id)
+            .extension(EXT_DEVICE, id.device_id)
     }
 }

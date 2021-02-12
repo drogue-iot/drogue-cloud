@@ -8,8 +8,8 @@ use actix_web_actors::HttpContext;
 use drogue_cloud_endpoint_common::{
     command_router::{CommandMessage, CommandRouter, CommandSubscribe, CommandUnsubscribe},
     error::HttpEndpointError,
-    Id,
 };
+use drogue_cloud_service_common::Id;
 use std::time;
 
 /// Actor for receiving commands

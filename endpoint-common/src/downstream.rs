@@ -1,9 +1,10 @@
-use crate::{error::HttpEndpointError, Id, IdInjector};
+use crate::error::HttpEndpointError;
 use actix_web::HttpResponse;
 use anyhow::Context;
 use chrono::Utc;
 use cloudevents::event::Data;
 use cloudevents::{EventBuilder, EventBuilderV10};
+use drogue_cloud_service_common::{Id, IdInjector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::future::Future;

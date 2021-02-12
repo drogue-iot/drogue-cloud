@@ -1,24 +1,31 @@
-use crate::error::error;
+use crate::{backend::Backend, error::error};
 use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
 };
+use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE};
 use itertools::Itertools;
 use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::{closure::Closure, JsValue};
-use web_sys::{EventSource, EventSourceInit};
+use web_sys::{EventSource, EventSourceInit, HtmlInputElement};
 use yew::prelude::*;
 
-use crate::backend::Backend;
-
 pub struct Spy {
-    source: EventSource,
+    link: ComponentLink<Self>,
+    source: Option<EventSource>,
     events: SharedTableModel<Entry>,
+
+    app_id_ref: NodeRef,
+
+    running: bool,
+    total_received: usize,
 }
 
 pub enum Msg {
-    Event(Event),
+    Start(Option<String>),
+    StartPressed,
+    Event(Box<Event>),
     /// Failed when processing an event
     Error(String),
     /// Source failed
@@ -51,8 +58,8 @@ impl TableRenderer for Entry {
 
 impl Entry {
     fn device(&self) -> String {
-        let app_id = self.extension_as_string("application");
-        let device_id = self.extension_as_string("device");
+        let app_id = self.extension_as_string(EXT_APPLICATION);
+        let device_id = self.extension_as_string(EXT_DEVICE);
 
         format!("{} / {}", app_id, device_id)
     }
@@ -75,39 +82,29 @@ impl Component for Spy {
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let mut url = Backend::url("/spy").unwrap();
-
-        // EventSource doesn't support passing headers, so we cannot send
-        // the bearer token the normal way
-
-        url.query_pairs_mut()
-            .append_pair("token", &Backend::access_token().unwrap_or_default());
-        let source =
-            EventSource::new_with_event_source_init_dict(&url.to_string(), &EventSourceInit::new())
-                .unwrap();
-
-        let l2 = link.clone();
-        let on_message = Closure::wrap(Box::new(move |msg: &JsValue| {
-            let msg = extract_event(msg);
-            l2.send_message(msg);
-        }) as Box<dyn FnMut(&JsValue)>);
-        source.set_onmessage(Some(&on_message.into_js_value().into()));
-        let on_error = Closure::wrap(Box::new(move || {
-            link.send_message(Msg::Failed);
-        }) as Box<dyn FnMut()>);
-        source.set_onerror(Some(&on_error.into_js_value().into()));
-
         Self {
             events: Default::default(),
-            source,
+            link,
+            source: None,
+            running: false,
+            app_id_ref: NodeRef::default(),
+            total_received: 0,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
+            Msg::Start(app_id) => {
+                log::info!("Starting: {:?}", app_id);
+                self.start(app_id);
+            }
+            Msg::StartPressed => {
+                self.link.send_message(Msg::Start(self.app_id_filter()));
+            }
             Msg::Event(event) => {
-                log::debug!("Pushing event: {:?}", event);
-                self.events.insert(0, Entry(event));
+                // log::debug!("Pushing event: {:?}", event);
+                self.total_received += 1;
+                self.events.insert(0, Entry(*event));
                 while self.events.len() > DEFAULT_MAX_SIZE {
                     self.events.pop();
                 }
@@ -116,7 +113,8 @@ impl Component for Spy {
                 error("Failed to process event", err);
             }
             Msg::Failed => {
-                error("Source error", "Failed to connect to event source");
+                error("Source error", "Failed to connect to the event source");
+                self.running = false;
             }
         }
         true
@@ -131,36 +129,49 @@ impl Component for Spy {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
-                        <h1>{"Device Message Spy"}</h1>
+                        <Title>{"Device Message Spy"}</Title>
                     </Content>
                 </PageSection>
                 <PageSection>
-                    { if self.events.len() > 0 {
-                        html!{
-                            <Table<SharedTableModel<Entry>>
-                                entries=self.events.clone()
-                                mode=TableMode::CompactExpandable
-                                header={html_nested!{
-                                    <TableHeader>
-                                        <TableColumn label="Timestamp (UTC)"/>
-                                        <TableColumn label="Device ID"/>
-                                        <TableColumn label="Payload"/>
-                                    </TableHeader>
-                                }}
-                                >
-                            </Table<SharedTableModel<Entry>>>
-                        }
+
+                    <Toolbar>
+                        <ToolbarGroup>
+                            <ToolbarItem>
+                                <TextInput
+                                    ref=self.app_id_ref.clone()
+                                    disabled=self.running
+                                    placeholder="Application ID to spy on"/>
+                            </ToolbarItem>
+                            <ToolbarItem>
+                                <Button
+                                    disabled=self.running
+                                    label="Start" icon=Icon::Play variant=Variant::Primary
+                                    onclick=self.link.callback(|_|Msg::StartPressed)
+                                    />
+                            </ToolbarItem>
+                        </ToolbarGroup>
+                        <ToolbarItem modifiers=vec![ToolbarElementModifier::Right.all()]>
+                            <strong>{"events received: "}{self.total_received}</strong>
+                        </ToolbarItem>
+                    </Toolbar>
+
+                    <Table<SharedTableModel<Entry>>
+                        entries=self.events.clone()
+                        mode=TableMode::CompactExpandable
+                        header={html_nested!{
+                            <TableHeader>
+                                <TableColumn label="Timestamp (UTC)"/>
+                                <TableColumn label="Device ID"/>
+                                <TableColumn label="Payload"/>
+                            </TableHeader>
+                        }}
+                        >
+                    </Table<SharedTableModel<Entry>>>
+
+                    { if self.events.is_empty() {
+                        self.render_empty()
                     } else {
-                        html!{
-                            <EmptyState
-                                title="No new messages"
-                                icon=Icon::Pending
-                                size=Size::XLarge
-                                >
-                                { "The " } <q> {"message spy"} </q> { " will only show "} <strong> {"new"} </strong> {" messages received by the system.
-                                When the next message arrives, you will see it right here." }
-                            </EmptyState>
-                        }
+                        html!{}
                     }}
                 </PageSection>
             </>
@@ -168,7 +179,87 @@ impl Component for Spy {
     }
 
     fn destroy(&mut self) {
-        self.source.close();
+        if let Some(source) = &self.source {
+            source.close();
+        }
+    }
+}
+
+impl Spy {
+    fn app_id_filter(&self) -> Option<String> {
+        let input = self.app_id_ref.cast::<HtmlInputElement>();
+        log::info!("Input: {:?}", input);
+        if let Some(input) = input {
+            let value = input.value();
+            log::info!("Input value: '{}'", value);
+            match value.is_empty() {
+                true => None,
+                false => Some(value),
+            }
+        } else {
+            None
+        }
+    }
+
+    fn start(&mut self, app_id: Option<String>) {
+        let mut url = Backend::url("/spy").unwrap();
+
+        // add optional filter
+
+        if let Some(app_id) = &app_id {
+            url.query_pairs_mut().append_pair("app", app_id);
+        }
+
+        // EventSource doesn't support passing headers, so we cannot send
+        // the bearer token the normal way
+
+        url.query_pairs_mut()
+            .append_pair("token", &Backend::access_token().unwrap_or_default());
+
+        // create source
+
+        let source =
+            EventSource::new_with_event_source_init_dict(&url.to_string(), &EventSourceInit::new())
+                .unwrap();
+
+        // setup onmessage
+
+        let link = self.link.clone();
+        let on_message = Closure::wrap(Box::new(move |msg: &JsValue| {
+            let msg = extract_event(msg);
+            link.send_message(msg);
+        }) as Box<dyn FnMut(&JsValue)>);
+        source.set_onmessage(Some(&on_message.into_js_value().into()));
+
+        // setup onerror
+
+        let link = self.link.clone();
+        let on_error = Closure::wrap(Box::new(move || {
+            link.send_message(Msg::Failed);
+        }) as Box<dyn FnMut()>);
+        source.set_onerror(Some(&on_error.into_js_value().into()));
+
+        // store result
+
+        self.running = true; // FIXME: need a way to stop
+        self.source = Some(source);
+    }
+
+    fn render_empty(&self) -> Html {
+        return html! {
+            <div style="padding-bottom: 10rem; height: 100%;">
+            <Bullseye>
+            <EmptyState
+                title="No new messages"
+                icon=Icon::Pending
+                size=Size::XLarge
+                >
+                { "The " } <q> {"message spy"} </q> { " will only show "} <strong> {"new"} </strong> {" messages received by the system.
+                When the next message arrives, you will see it right here." }
+            </EmptyState>
+            </Bullseye>
+            </div>
+        };
     }
 }
 
