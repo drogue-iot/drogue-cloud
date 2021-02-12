@@ -1,13 +1,17 @@
 use actix_web::{web, App, HttpServer};
+use actix_web_httpauth::middleware::HttpAuthentication;
+
 use dotenv::dotenv;
 use drogue_cloud_authentication_service::{
+    endpoints,
     service::{self, AuthenticationServiceConfig},
     Config, WebData,
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     endpoints::create_endpoint_source,
-    openid::{create_client, AuthConfig, Authenticator},
+    error::ServiceError,
+    openid::{create_client, AuthConfig, Authenticator, AuthenticatorError},
 };
 use envconfig::Envconfig;
 
@@ -33,13 +37,19 @@ async fn main() -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
 
     let auth_config: AuthConfig = AuthConfig::init_from_env()?;
-    let scopes = auth_config.scopes;
+    let scopes = auth_config.scopes.clone();
     let client = Some(create_client(&auth_config, endpoints).await?);
 
     let authenticator = web::Data::new(Authenticator::new(client, scopes).await);
 
     HttpServer::new(move || {
-        drogue_cloud_authentication_service::app!(data, max_json_payload_size, authenticator)
+        drogue_cloud_authentication_service::openid_middleware!(auth_name);
+        drogue_cloud_authentication_service::app!(
+            data,
+            max_json_payload_size,
+            authenticator,
+            auth_name
+        )
     })
     .bind(config.bind_addr)?
     .run()

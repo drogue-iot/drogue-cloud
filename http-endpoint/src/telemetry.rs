@@ -10,7 +10,6 @@ use drogue_cloud_endpoint_common::{
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::{self, ErrorInformation};
-use drogue_cloud_service_common::openid::Authenticator;
 use drogue_cloud_service_common::Id;
 
 #[derive(Deserialize)]
