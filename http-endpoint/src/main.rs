@@ -101,6 +101,8 @@ async fn main() -> anyhow::Result<()> {
         .client
         .set_service_token(service_authenticator.bearer.clone());
 
+    let service_authenticator = web::Data::new(service_authenticator);
+
     let http_server = HttpServer::new(move || {
         let app = App::new()
             .wrap(middleware::Logger::default())
@@ -111,7 +113,7 @@ async fn main() -> anyhow::Result<()> {
 
         let app = app
             .app_data(Data::new(device_authenticator.clone()))
-            .app_data(Data::new(service_authenticator));
+            .app_data(Data::new(service_authenticator.clone()));
 
         app.service(index)
             // the standard endpoint
