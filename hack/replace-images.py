@@ -90,4 +90,5 @@ for root, dirs, files in os.walk(yamldir, followlinks=True):
             process_yaml(in_file, out_file)
         else:
             print(f"Copying: {in_file} -> {out_file}")
-            copy2(in_file, out_file)
+            if in_file != out_file:
+                copy2(in_file, out_file)
