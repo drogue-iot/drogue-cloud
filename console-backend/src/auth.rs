@@ -3,7 +3,7 @@ use drogue_cloud_service_common::openid::Authenticator;
 
 use actix_web::{get, http, web, HttpResponse, Responder};
 use drogue_cloud_console_common::UserInfo;
-use openid::{biscuit::jws::Compact, Bearer};
+use openid::{biscuit::jws::Compact, Bearer, Configurable};
 use serde::Deserialize;
 use serde_json::json;
 use std::fmt::Debug;
@@ -20,6 +20,29 @@ pub async fn login(login_handler: web::Data<Authenticator>) -> impl Responder {
         // if we are missing the authenticator, we hide ourselves
         HttpResponse::NotFound().finish()
     }
+}
+
+/// An endpoint that will redirect to the SSO "end session" endpoint
+#[get("/ui/logout")]
+pub async fn logout(login_handler: web::Data<Authenticator>) -> impl Responder {
+    if let Some(client) = login_handler.client.as_ref() {
+        if let Some(url) = &client.provider.config().end_session_endpoint {
+            let mut url = url.clone();
+
+            if let Some(redirect) = &client.redirect_uri {
+                url.query_pairs_mut().append_pair("redirect_uri", redirect);
+            }
+
+            return HttpResponse::Found()
+                .header(http::header::LOCATION, url.to_string())
+                .finish();
+        } else {
+            log::info!("Missing logout URL");
+        }
+    }
+
+    // if we are missing the authenticator, we hide ourselves
+    HttpResponse::NotFound().finish()
 }
 
 #[derive(Deserialize, Debug)]

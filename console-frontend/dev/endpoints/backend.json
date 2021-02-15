@@ -1,4 +1,5 @@
 {
   "url": "http://localhost:8011",
+  "x_login_note": "Foo bar <strong>Foo bar</strong>",
   "xurl": "https://console-backend-drogue-iot.apps.wonderful.iot-playground.org"
 }

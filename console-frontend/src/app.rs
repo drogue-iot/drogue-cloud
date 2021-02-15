@@ -56,6 +56,8 @@ pub enum Msg {
     RetryLogin,
     /// Send to trigger refreshing the access token
     RefreshToken,
+    /// Trigger logout
+    Logout,
 }
 
 impl Component for Main {
@@ -227,6 +229,10 @@ impl Component for Main {
 
                 true
             }
+            Msg::Logout => {
+                Backend::logout().ok();
+                false
+            }
         }
     }
 
@@ -269,7 +275,12 @@ impl Component for Main {
                     .unwrap_or_else(|| "/images/img_avatar.svg".into());
 
                 html! {
-                    <Avatar src=src/>
+                    <AppLauncher
+                        toggle=html!{<Avatar src=src/>}
+                        >
+                        <AppLauncherItem onclick=self.link.callback(|_|Msg::Logout)>{"Logout"}</AppLauncherItem>
+                    </AppLauncher>
+
                 }
             }
             None => html! {},
@@ -302,8 +313,10 @@ impl Component for Main {
                                         />
                             </Page>
                         }
-                    } else {
+                    } else if Backend::get().is_some() {
                         html!{ <Placeholder/> }
+                    } else {
+                        html!{}
                     }
                 }
 

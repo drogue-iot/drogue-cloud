@@ -35,8 +35,15 @@ spec:
               name: run
             - mountPath: /endpoints
               name: endpoints
+            - mountPath: /etc/config/login
+              name: login-config
+              readOnly: true
       volumes:
         - name: run
           emptyDir: {}
         - name: endpoints
           emptyDir: {}
+        - name: login-config
+          configMap:
+            optional: true
+            name: login-config

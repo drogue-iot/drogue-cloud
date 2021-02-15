@@ -16,7 +16,7 @@ drogue-cloud-service-api = { path = "../service-api" }
 
 yew = "0.17"
 yew-router = "0.14"
-patternfly-yew = "0.0.15"
+patternfly-yew = "0.0.16"
 
 wasm-bindgen = "0.2"
 

@@ -13,11 +13,13 @@ use yew::{format::Text, prelude::*, services::fetch::*, utils::window};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BackendInformation {
     pub url: Url,
+    #[serde(default)]
+    pub login_note: Option<String>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Backend {
-    info: BackendInformation,
+    pub info: BackendInformation,
     token: Option<Token>,
 }
 
@@ -164,12 +166,17 @@ impl Backend {
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {
-        let target = Backend::url_str("/ui/login").context("Backend information missing");
-        log::info!("Triggering re-authentication flow: {:?}", target);
-        // need to authenticate
-        let location = window().location();
-        location.set_href(&target?).unwrap();
-        log::info!("Location set");
+        Self::navigate_to("/ui/login", "Trigger re-authenticate flow")
+    }
+
+    pub fn logout() -> Result<(), anyhow::Error> {
+        Self::navigate_to("/ui/logout", "Trigger logout flow")
+    }
+
+    fn navigate_to<S: AsRef<str>>(path: S, op: &str) -> Result<(), anyhow::Error> {
+        let target = Backend::url_str(path).context("Backend information missing");
+        log::debug!("{}: {:?}", op, target);
+        window().location().set_href(&target?).unwrap();
         Ok(())
     }
 }

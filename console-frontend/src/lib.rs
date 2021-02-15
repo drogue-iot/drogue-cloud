@@ -7,6 +7,7 @@ mod error;
 mod examples;
 mod index;
 mod spy;
+mod utils;
 
 use crate::app::Main;
 use wasm_bindgen::prelude::*;

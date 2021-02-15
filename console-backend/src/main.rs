@@ -125,6 +125,7 @@ async fn main() -> anyhow::Result<()> {
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
             .service(index)
             .service(auth::login)
+            .service(auth::logout)
             .service(auth::code)
             .service(auth::refresh)
             //fixme : use a different port

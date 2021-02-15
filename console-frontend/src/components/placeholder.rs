@@ -1,4 +1,4 @@
-use crate::backend::Backend;
+use crate::{backend::Backend, utils::ToHtml};
 use patternfly_yew::*;
 use yew::prelude::*;
 
@@ -33,12 +33,17 @@ impl Component for Placeholder {
 
     fn view(&self) -> Html {
         let header = html! {<> <img src="/images/logo.svg" /> </>};
-        let footer = html! {<>
-            <p>{"This is the login to the Drogue IoT console."}</p>
-            <List r#type=ListType::Inline>
-                <a href="https://blog.drogue.io" target="_blank">{"Learn more"}</a>
-            </List>
-        </>};
+
+        let footer = if let Some(note) = Backend::get().and_then(|info| info.info.login_note) {
+            note.to_html()
+        } else {
+            html! {<>
+                <p>{"This is the login to the Drogue IoT console."}</p>
+                <List r#type=ListType::Inline>
+                    <a href="https://blog.drogue.io" target="_blank">{"Learn more"}</a>
+                </List>
+            </>}
+        };
 
         let header = Children::new(vec![header]);
         let footer = Children::new(vec![footer]);

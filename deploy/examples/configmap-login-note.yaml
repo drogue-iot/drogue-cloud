@@ -1,0 +1,15 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: login-config
+  namespace: drogue-iot
+data:
+  note.html: |
+    <p>
+    This is some alternate text, shown as the login note.
+    </p>
+
+    <ul class="pf-c-list pf-m-inline">
+      <li><a href="https://blog.drogue.io" target="_blank">Learn more</a></li>
+      <li><a href="https://github.com/drogue-iot" target="_blank">Contribue</a></li>
+    </ul>
