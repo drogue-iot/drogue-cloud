@@ -3,6 +3,7 @@
 import os
 import sys
 import yaml
+from shutil import copy2
 
 # <version> <policy> <dir> [<org> [<outdir>]]
 
@@ -56,29 +57,37 @@ def replace_images(node):
             replace_images(item)
 
 
-def process_yaml(p_root, p_name):
-    in_file = os.path.join(p_root, p_name)
+# Get the in_file and out_file for a directory entry
+def to_files(p_root, p_name):
+    file_in = os.path.join(p_root, p_name)
     if outdir:
-        out_file = os.path.join(outdir, os.path.relpath(in_file, yamldir))
-        os.makedirs(os.path.dirname(out_file), exist_ok=True)
-        print(f"Processing: {in_file} -> {out_file}")
+        file_out = os.path.join(outdir, os.path.relpath(in_file, yamldir))
+        os.makedirs(os.path.dirname(file_out), exist_ok=True)
     else:
-        out_file = in_file
-        print(f"Processing: {in_file}")
+        file_out = file_in
+    return file_in, file_out
+
+
+def process_yaml(file_in, file_out):
 
     newdocs = []
-    with open(in_file) as f:
+    with open(file_in) as f:
         docs = yaml.load_all(f, Loader=yaml.FullLoader)
 
         for doc in docs:
             replace_images(doc)
             newdocs.append(doc)
 
-    with open(out_file, "w") as f:
+    with open(file_out, "w") as f:
         yaml.dump_all(newdocs, f)
 
 
 for root, dirs, files in os.walk(yamldir, followlinks=True):
     for name in files:
+        in_file, out_file = to_files(root, name)
         if name.endswith(".yaml"):
-            process_yaml(root, name)
+            print(f"Processing: {in_file} -> {out_file}")
+            process_yaml(in_file, out_file)
+        else:
+            print(f"Copying: {in_file} -> {out_file}")
+            copy2(in_file, out_file)
