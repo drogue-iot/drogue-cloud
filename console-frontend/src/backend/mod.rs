@@ -164,12 +164,12 @@ impl Backend {
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {
-        log::info!("Triggering re-authentication flow");
+        let target = Backend::url_str("/ui/login").context("Backend information missing");
+        log::info!("Triggering re-authentication flow: {:?}", target);
         // need to authenticate
         let location = window().location();
-        location
-            .set_href(&Backend::url_str("/ui/login").context("Backend information missing")?)
-            .unwrap();
+        location.set_href(&target?).unwrap();
+        log::info!("Location set");
         Ok(())
     }
 }

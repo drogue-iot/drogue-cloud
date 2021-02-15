@@ -1,6 +1,6 @@
 use crate::backend::{Backend, BackendInformation, Token};
 use crate::error::error;
-use crate::{examples::Examples, index::Index, placeholder::Placeholder, spy::Spy};
+use crate::{components::placeholder::Placeholder, examples::Examples, index::Index, spy::Spy};
 use anyhow::Error;
 use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::UserInfo;
@@ -39,16 +39,22 @@ pub struct Main {
 
 #[derive(Debug, Clone)]
 pub enum Msg {
+    /// Trigger fetching the endpoint information
     FetchEndpoint,
+    /// Failed to fetch endpoint information
     FetchBackendFailed,
+    /// Trigger an overall application failure
     AppFailure(Toast),
+    /// Set the backend information
     Endpoint(BackendInformation),
-    SetCode(String),
+    /// Exchange the authentication code for an access token
     GetToken,
+    /// Set the access token
     SetAccessToken(Token),
+    /// Callback when the authentication/login failed
     LoginFailed,
     RetryLogin,
-    // send to trigger refreshing the access token
+    /// Send to trigger refreshing the access token
     RefreshToken,
 }
 
@@ -90,8 +96,6 @@ impl Component for Main {
                 actions: vec![link.callback(|_| Msg::RetryLogin).into_action("Retry")],
                 ..Default::default()
             }));
-        } else if let Some(code) = code {
-            link.send_message(Msg::SetCode(code));
         }
 
         // remove code, state and others from the URL bar
@@ -108,7 +112,7 @@ impl Component for Main {
 
         Self {
             link,
-            access_code: None,
+            access_code: code,
             task: None,
             refresh_task: None,
             app_failure: false,
@@ -128,12 +132,10 @@ impl Component for Main {
                 log::info!("Got backend: {:?}", backend);
                 Backend::set(Some(backend));
                 self.task = None;
-                if !self.app_failure {
+                if !self.app_failure && self.access_code.is_some() {
+                    // exchange code for token if we have a code and no app failure
+                    log::info!("Exchange access code for token");
                     self.link.send_message(Msg::GetToken);
-                    if self.access_code.is_none() {
-                        // we have no code yet, re-auth
-                        Backend::reauthenticate().ok();
-                    }
                 }
 
                 true
@@ -143,12 +145,12 @@ impl Component for Main {
                     "Failed to fetch backend information",
                     "Could not retrieve information for connecting to the backend.",
                 );
-                false
+                true
             }
             Msg::AppFailure(toast) => {
                 ToastDispatcher::default().toast(toast);
                 self.app_failure = true;
-                false
+                true
             }
             Msg::LoginFailed => {
                 error("Failed to log in", "Cloud not retrieve access token.");
@@ -164,12 +166,6 @@ impl Component for Main {
                     );
                 }
                 false
-            }
-            Msg::SetCode(code) => {
-                // got code, convert to access token
-                self.access_code = Some(code);
-                self.link.send_message(Msg::GetToken);
-                true
             }
             Msg::GetToken => {
                 // get the access token from the code
@@ -279,39 +275,40 @@ impl Component for Main {
             None => html! {},
         }]);
 
-        html! {
+        return html! {
             <>
                 <ToastViewer/>
-                <Page
-                    logo={html_nested!{
-                        <Logo src="/images/logo.png" alt="Drogue IoT" />
-                    }}
-                    sidebar=sidebar
-                    tools=tools
-                    >
-                    {
-                        if self.is_ready() {
-                            html!{
-                                <Router<AppRoute, ()>
-                                        redirect = Router::redirect(|_|AppRoute::Index)
-                                        render = Router::render(|switch: AppRoute| {
-                                            match switch {
-                                                AppRoute::Spy => html!{<Spy/>},
-                                                AppRoute::Index => html!{<Index/>},
-                                                AppRoute::Examples => html!{<Examples/>},
-                                            }
-                                        })
-                                    />
-                            }
-                        } else {
-                            html!{
-                                <Placeholder/>
-                            }
+
+                {
+                    if self.is_ready() {
+
+                        html!{
+                            <Page
+                                logo={html_nested!{
+                                    <Logo src="/images/logo.png" alt="Drogue IoT" />
+                                }}
+                                sidebar=sidebar
+                                tools=tools
+                                >
+                                    <Router<AppRoute, ()>
+                                            redirect = Router::redirect(|_|AppRoute::Index)
+                                            render = Router::render(|switch: AppRoute| {
+                                                match switch {
+                                                    AppRoute::Spy => html!{<Spy/>},
+                                                    AppRoute::Index => html!{<Index/>},
+                                                    AppRoute::Examples => html!{<Examples/>},
+                                                }
+                                            })
+                                        />
+                            </Page>
                         }
+                    } else {
+                        html!{ <Placeholder/> }
                     }
-                </Page>
+                }
+
             </>
-        }
+        };
     }
 }
 

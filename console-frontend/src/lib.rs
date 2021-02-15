@@ -6,7 +6,6 @@ mod components;
 mod error;
 mod examples;
 mod index;
-mod placeholder;
 mod spy;
 
 use crate::app::Main;
