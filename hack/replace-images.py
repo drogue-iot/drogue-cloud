@@ -61,7 +61,7 @@ def replace_images(node):
 def to_files(p_root, p_name):
     file_in = os.path.join(p_root, p_name)
     if outdir:
-        file_out = os.path.join(outdir, os.path.relpath(in_file, yamldir))
+        file_out = os.path.join(outdir, os.path.relpath(file_in, yamldir))
         os.makedirs(os.path.dirname(file_out), exist_ok=True)
     else:
         file_out = file_in
