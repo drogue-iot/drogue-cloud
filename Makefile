@@ -23,10 +23,11 @@ ifeq ($(CONTAINER),podman)
 TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
 endif
 
+
 #
-# all container images that we build and push (so it does not include the "builder")
+# all possible container images that we build and push (so it does not include the "builder")
 #
-IMAGES?=\
+ALL_IMAGES=\
 	http-endpoint \
 	mqtt-endpoint \
 	console-backend \
@@ -39,11 +40,23 @@ IMAGES?=\
 
 
 #
+# Active images to build
+#
+IMAGES ?= $(ALL_IMAGES)
+
+
+#
 # Restore a clean environment.
 #
 clean:
 	cargo clean
 	rm -Rf .cargo-container-home
+
+
+#
+# Pre-check the code, just check checks
+#
+pre-check: host-pre-check
 
 
 #
@@ -62,6 +75,12 @@ build: host-build build-images
 # Run all tests.
 #
 test: host-test
+
+
+#
+# Run pre-checks on the source code
+#
+container-pre-check: cargo-pre-check
 
 
 #
@@ -87,6 +106,13 @@ endif
 # If you have the same environment as the build container, you can also run this on the host, instead of `host-test`.
 #
 container-test: cargo-test
+
+
+#
+# Run pre-checks on the host, forking off into the build container.
+#
+host-pre-check:
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
 
 
 #
@@ -127,10 +153,16 @@ build-shell:
 
 
 #
+# Pre-check code
+#
+cargo-pre-check:
+	cargo fmt --all -- --check
+
+
+#
 # Check the code
 #
-cargo-check:
-	cargo fmt --all -- --check
+cargo-check: cargo-pre-check
 	cargo check --release
 	cargo clippy --release --all-features
 
@@ -188,6 +220,23 @@ push-image($(IMAGES)): require-container-registry
 
 
 #
+# Save all images.
+#
+save-images: require-container-registry
+	mkdir -p "$(TOP_DIR)/build/images"
+	rm -Rf "$(TOP_DIR)/build/images/all.tar"
+	$(CONTAINER) save -o "$(TOP_DIR)/build/images/all.tar" $(addprefix $(CONTAINER_REGISTRY)/, $(addsuffix :$(IMAGE_TAG), $(IMAGES)))
+
+
+#
+# Load image into kind
+#
+kind-load: require-container-registry
+	for i in $(ALL_IMAGES); do \
+		kind load docker-image $(CONTAINER_REGISTRY)/$${i}:$(IMAGE_TAG); \
+	done
+
+#
 # Tag and push images.
 #
 push: tag-images push-images
@@ -226,13 +275,16 @@ ifndef CONTAINER_REGISTRY
 endif
 
 
-.PHONY: all clean check build test push images
+.PHONY: all clean pre-check check build test push images
 .PHONY: require-container-registry
 .PHONY: deploy gen-deploy
 
 .PHONY: build-images tag-images push-images
 .PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
 
-.PHONY: container-check container-build container-test
-.PHONY: host-check host-build host-test
-.PHONY: cargo-check cargo-build cargo-test
+.PHONY: save-images
+.PHONY: fix-permissions
+
+.PHONY: container-pre-check container-check container-build container-test
+.PHONY: host-pre-check host-check host-build host-test
+.PHONY: cargo-pre-check cargo-check cargo-build cargo-test

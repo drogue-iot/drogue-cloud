@@ -1,10 +1,10 @@
-ARG builder="ghcr.io/drogue-iot/builder:0.1.5"
-
-FROM ${builder}
+FROM registry.access.redhat.com/ubi8-minimal
 
 LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-cloud"
 
 VOLUME /etc/drogue-certs
+
+RUN microdnf install -y make openssl
 
 RUN mkdir -p /usr/src
 

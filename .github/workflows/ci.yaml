@@ -1,95 +1,20 @@
 name: CI
 
 on:
+  # Run on the main branch for testing
   push:
-    # Must only run on branches that we want to publish
     branches:
       - main
-  # Can run on PRs, as we don't publish when building a PR
+  # Also on PRs, as we don't publish any images here
   pull_request:
 
 jobs:
   check:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.49 # must be aligned with the builder image
-          components: rustfmt, clippy
-          profile: minimal
-          override: true
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get -y install libsasl2-dev
-
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
-      - name: Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --release
-
-      - name: Clippy check
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --release --all-features
-
-
-  test:
-    name: run tests
-    runs-on: ubuntu-20.04
-    needs: [check]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.49 # must be aligned with the builder image
-          profile: minimal
-          override: true
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get -y install libsasl2-dev
-
-      - name: Run tests
-        run: |
-          # single thread because of the database
-          # nocapture to see the logs
-          make container-test CARGO_TEST_OPTS="--nocapture"
-
-  build:
-    name: build
-    runs-on: ubuntu-20.04
-    needs: [check]
-    steps:
 
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -97,7 +22,7 @@ jobs:
             ~/.cargo/git
             .cargo-container-home
             target
-          key: ${{ runner.os }}-cargo-container-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: actions/cache@v2
         with:
@@ -106,50 +31,76 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
-      - name: Extract branch name
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
+      - name: Check
+        run: make pre-check
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: Compile
+        run: make host-build
+
+      - name: Fix permissions
+        run: make fix-permissions
+
+  test:
+    name: test
+    runs-on: ubuntu-20.04
+    needs: [check]
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
         with:
-          toolchain: 1.49 # must be aligned with the builder image
-          profile: minimal
-          override: true
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .cargo-container-home
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install dependencies
+      - name: Run tests
         run: |
-          sudo apt-get -y install libsasl2-dev
+          make test
+
+  build:
+    name: build
+    runs-on: ubuntu-20.04
+    needs: [check]
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .cargo-container-home
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: actions/cache@v2
+        with:
+          path: console-frontend/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
 
       - name: Run build
         run: |
           make build
 
+      - name: Save images
+        run: |
+          make tag-images save-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
+
       - name: Fix permissions
         run: make fix-permissions
 
-      - uses: docker/setup-buildx-action@v1
-
-      - uses: actions/cache@v2
+      - name: Upload images
+        uses: actions/upload-artifact@v2
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ steps.extract_branch.outputs.branch }}
-
-      - id: cache-docker
-        uses: actions/cache@v1
-        with:
-          path: /tmp/docker-registry
-          key: docker-registry-${{ steps.extract_branch.outputs.branch }}
-
-      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
-
-      - name: Build images
-        run: make -C .github/scripts build-images-ci
-
-      # Push images in local registry
-      - run: make push CONTAINER_REGISTRY=localhost:5000
+          name: container-images
+          path: build/images/all.tar
 
   deploy:
     name: deploy on kind
@@ -160,32 +111,29 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
-      - id: cache-docker
-        uses: actions/cache@v1
+
+      - name: Fetch container images
+        uses: actions/download-artifact@v2
         with:
-          path: /tmp/docker-registry
-          key: docker-registry-${{ steps.extract_branch.outputs.branch }}
+          name: container-images
 
-      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
-
-      # Give the repository some time to start
-      - run: sleep 10
-
-      # Pull and tag previous images
-      - run: make -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000
-
-      # "dev.local" prefixed images won't be resolved by the knative operator
-      - name: Tag images
-        run: make tag-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
-
-      - name: Create k8s Kind Cluster
+      - name: Create k8s kind Cluster
         uses: helm/kind-action@v1.1.0
         with:
           wait: 300s
           cluster_name: kind
 
-      - name: load images in Kind
-        run: make -C .github/scripts kind-load-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
+      - name: Load images in docker
+        run: docker load -i all.tar
+
+      - name: Load images in kind
+        run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
+
+      - name: Delete loaded images
+        run: rm all.tar
+
+      - name: List all images in kind
+        run: docker exec -t kind-control-plane crictl images
 
       - name: Update image names
         run: |
@@ -196,7 +144,9 @@ jobs:
           ./hack/replace-images.py ${{ github.sha }} Never deploy dev.local tmp/deploy
 
       - name: Deploy drogue
-        run: env TEST_CERTS_IMAGE=dev.local/test-cert-generator:${{ github.sha }} ./hack/drogue.sh -d tmp/deploy
+        env:
+          TEST_CERTS_IMAGE: "dev.local/test-cert-generator:${{ github.sha }}"
+        run: ./hack/drogue.sh -d tmp/deploy
         timeout-minutes: 20
 
       - name: Collect logs
@@ -205,7 +155,7 @@ jobs:
 
       - name: Upload artifacts
         if: failure()
-        uses: actions/upload-artifact@v1.0.0
+        uses: actions/upload-artifact@v2
         with:
           name: drogue-iot-logs
           path: /tmp/logs
