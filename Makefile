@@ -222,10 +222,10 @@ push-image($(IMAGES)): require-container-registry
 #
 # Save all images.
 #
-save-images: require-container-registry
+save-images:
 	mkdir -p "$(TOP_DIR)/build/images"
 	rm -Rf "$(TOP_DIR)/build/images/all.tar"
-	$(CONTAINER) save -o "$(TOP_DIR)/build/images/all.tar" $(addprefix $(CONTAINER_REGISTRY)/, $(addsuffix :$(IMAGE_TAG), $(IMAGES)))
+	$(CONTAINER) save -o "$(TOP_DIR)/build/images/all.tar" $(addsuffix :latest, $(IMAGES))
 
 
 #

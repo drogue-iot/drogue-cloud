@@ -1,19 +1,56 @@
 name: CI
 
 on:
-  # Run on the main branch for testing
   push:
+    # Run on the main branch
     branches:
       - main
-  # Also on PRs, as we don't publish any images here
+    # Releases are tags named 'v<version>', and must have the "major.minor.micro", for example: "0.1.0".
+    # Release candidates are tagged as `v<version>-rc<num>`, for example: "0.1.0-rc1".
+    tags:
+      - "v*"
+  # Also on PRs, just be careful not to publish anything
   pull_request:
+
 
 jobs:
   check:
     runs-on: ubuntu-20.04
+
+    outputs:
+      do-publish: ${{steps.state.outputs.do-publish}}
+      release: ${{steps.state.outputs.release}}
+      version: ${{steps.version.outputs.version}}
+      prerelease: ${{steps.state.outputs.prerelease}}
+
     steps:
 
       - uses: actions/checkout@v2
+
+      # Gather information for build
+
+      - name: Evaluate state
+        id: state
+        run: |
+          test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
+          if [[ "${{ github.event.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo ::set-output name=release::true
+              echo ::set-output name=release::true
+          elif [[ "${{ github.event.ref }}" =~ ^refs/tags/v.*$ ]]; then
+              echo ::set-output name=release::true
+              echo ::set-output name=prerelease::true
+          fi
+
+      - name: Set version
+        if: ${{github.head_ref == ''}}
+        id: version
+        run: |
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          [ "$VERSION" == "main" ] && VERSION=latest
+          echo VERSION=$VERSION
+          echo "::set-output name=version::$VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - uses: actions/cache@v2
         with:
@@ -91,7 +128,7 @@ jobs:
 
       - name: Save images
         run: |
-          make tag-images save-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
+          make save-images
 
       - name: Fix permissions
         run: make fix-permissions
@@ -101,6 +138,7 @@ jobs:
         with:
           name: container-images
           path: build/images/all.tar
+          if-no-files-found: error
 
   deploy:
     name: deploy on kind
@@ -125,6 +163,10 @@ jobs:
 
       - name: Load images in docker
         run: docker load -i all.tar
+
+      - name: Tag images
+        run: |
+          make tag-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
 
       - name: Load images in kind
         run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
@@ -159,3 +201,75 @@ jobs:
         with:
           name: drogue-iot-logs
           path: /tmp/logs
+
+  publish:
+    if: ${{needs.check.do-publish}}
+
+    runs-on: ubuntu-20.04
+
+    env:
+      CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
+      VERSION: ${{needs.check.version}}
+
+    needs: [check, deploy, test]
+
+    steps:
+
+      - name: Dump state
+        run: |
+          echo "Tag/version: ${VERSION} / ${{needs.check.version}}"
+          echo "Should we publish artifacts? - do-publish = ${{needs.check.do-publish}}"
+          echo "Release? - release = ${{needs.check.release}}"
+          echo "Pre-release? - prerelease = ${{needs.check.prerelease}}"
+
+      # Start the actual build
+
+      - uses: actions/checkout@v2
+
+      - name: Create installer archives
+        run: |
+          make -C installer VERSION=$VERSION
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: installers
+          path: installer/build/install-*.zip
+          if-no-files-found: error
+
+      - name: Fetch container images
+        uses: actions/download-artifact@v2
+        with:
+          name: container-images
+
+      - name: Load images in docker
+        run: docker load -i all.tar
+
+      - name: Login to github container repository
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Tag and push images
+        run: |
+          make push "IMAGE_TAG=$VERSION"
+
+      - name: Create Release
+        id: create-release
+        if: ${{ needs.check.release }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.check.version }}
+          release_name: ${{ needs.check.version }}
+          draft: true
+          prerelease: ${{ needs.check.prerelease }}
+
+      - name: Upload Release Assets
+        if: ${{ needs.check.release }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ needs.check.version }}
+        run: |
+          # add install ZIPs
+          hub release edit -m "" $(find installer/build -type f -name "install-*.zip" -printf "-a %p ") $TAG
+          # finally, remove the draft status
+          hub release edit -m "" --draft=false $TAG
