@@ -24,9 +24,9 @@ TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman
 endif
 
 #
-# all container images that we build and push (so it does not include the "builder")
+# all possible container images that we build and push (so it does not include the "builder")
 #
-IMAGES?=\
+ALL_IMAGES=\
 	http-endpoint \
 	mqtt-endpoint \
 	console-backend \
@@ -37,6 +37,10 @@ IMAGES?=\
 	command-endpoint \
 	test-cert-generator \
 
+#
+# Active images to build
+#
+IMAGES ?= $(ALL_IMAGES)
 
 #
 # Restore a clean environment.
@@ -188,6 +192,15 @@ push-image($(IMAGES)): require-container-registry
 
 
 #
+# Save all images.
+#
+save-images: require-container-registry
+	mkdir -p "$(TOP_DIR)/build/images"
+	rm -Rf "$(TOP_DIR)/build/images/all.tar"
+	$(CONTAINER) save -o "$(TOP_DIR)/build/images/all.tar" $(addprefix $(CONTAINER_REGISTRY)/, $(addsuffix :$(IMAGE_TAG), $(IMAGES)))
+
+
+#
 # Tag and push images.
 #
 push: tag-images push-images
@@ -232,6 +245,8 @@ endif
 
 .PHONY: build-images tag-images push-images
 .PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
+
+.PHONY: save-images
 
 .PHONY: container-check container-build container-test
 .PHONY: host-check host-build host-test

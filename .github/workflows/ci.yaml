@@ -18,6 +18,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
+            .cargo-container-home
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
@@ -33,17 +34,8 @@ jobs:
         run: |
           sudo apt-get -y install libsasl2-dev
 
-      - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
       - name: Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --release
+        run: make check
 
       - name: Clippy check
         uses: actions-rs/clippy-check@v1
@@ -63,6 +55,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
+            .cargo-container-home
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
@@ -79,9 +72,7 @@ jobs:
 
       - name: Run tests
         run: |
-          # single thread because of the database
-          # nocapture to see the logs
-          make container-test CARGO_TEST_OPTS="--nocapture"
+          make test
 
   build:
     name: build
@@ -106,10 +97,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
-      - name: Extract branch name
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -125,31 +112,18 @@ jobs:
         run: |
           make build
 
+      - name: Save images
+        run: |
+          make tag-images save-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
+
       - name: Fix permissions
         run: make fix-permissions
 
-      - uses: docker/setup-buildx-action@v1
-
-      - uses: actions/cache@v2
+      - name: Upload images
+        uses: actions/upload-artifact@v2
         with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ steps.extract_branch.outputs.branch }}
-
-      - id: cache-docker
-        uses: actions/cache@v1
-        with:
-          path: /tmp/docker-registry
-          key: docker-registry-${{ steps.extract_branch.outputs.branch }}
-
-      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
-
-      - name: Build images
-        run: make -C .github/scripts build-images-ci
-
-      # Push images in local registry
-      - run: make push CONTAINER_REGISTRY=localhost:5000
+          name: container-images
+          path: build/images/all.tar
 
   deploy:
     name: deploy on kind
@@ -160,23 +134,6 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
-      - id: cache-docker
-        uses: actions/cache@v1
-        with:
-          path: /tmp/docker-registry
-          key: docker-registry-${{ steps.extract_branch.outputs.branch }}
-
-      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
-
-      # Give the repository some time to start
-      - run: sleep 10
-
-      # Pull and tag previous images
-      - run: make -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000
-
-      # "dev.local" prefixed images won't be resolved by the knative operator
-      - name: Tag images
-        run: make tag-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
 
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@v1.1.0
@@ -184,8 +141,13 @@ jobs:
           wait: 300s
           cluster_name: kind
 
+      - name: Download a single artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: container-images
+
       - name: load images in Kind
-        run: make -C .github/scripts kind-load-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
+        run: kind load image-archive all.tar
 
       - name: Update image names
         run: |
@@ -205,7 +167,7 @@ jobs:
 
       - name: Upload artifacts
         if: failure()
-        uses: actions/upload-artifact@v1.0.0
+        uses: actions/upload-artifact@v2
         with:
           name: drogue-iot-logs
           path: /tmp/logs
