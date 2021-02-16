@@ -32,7 +32,10 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Check
-        run: make check
+        run: make pre-check
+
+      - name: Compile
+        run: make host-build
 
       - name: Fix permissions
         run: make fix-permissions
