@@ -1,11 +1,11 @@
 name: CI
 
 on:
+  # Run on main branch for testing
   push:
-    # Must only run on branches that we want to publish
     branches:
       - main
-  # Can run on PRs, as we don't publish when building a PR
+  # And only PRs, as we don't publish any images here
   pull_request:
 
 jobs:
