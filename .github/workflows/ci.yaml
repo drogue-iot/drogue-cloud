@@ -143,19 +143,25 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      - name: Create k8s Kind Cluster
+      - name: Fetch container images
+        uses: actions/download-artifact@v2
+        with:
+          name: container-images
+
+      - name: Create k8s kind Cluster
         uses: helm/kind-action@v1.1.0
         with:
           wait: 300s
           cluster_name: kind
 
-      - name: Download a single artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: container-images
-
-      - name: load images in Kind
+      - name: Load images in kind
         run: kind load image-archive all.tar
+
+      - name: Delete loaded images
+        run: rm all.tar
+
+      - name: List all images in kind
+        run: docker exec -t kind-control-plane crictl images
 
       - name: Update image names
         run: |
