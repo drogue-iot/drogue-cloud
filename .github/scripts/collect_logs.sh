@@ -17,6 +17,10 @@ function runcmd {
     ${cmd} > ${logfile}
 }
 
+#extract overall status
+mkdir -p "${LOGDIR}/logs/"
+runcmd "${CMD} get all" "${LOGDIR}/logs/all.log"
+
 #extract the pods logs
 mkdir -p ${LOGDIR}/logs/pods/
 
