@@ -35,7 +35,10 @@ jobs:
           sudo apt-get -y install libsasl2-dev
 
       - name: Check
-        run: make check
+        run: make pre-check
+
+      - name: Compile
+        run: make host-build
 
       - name: Fix permissions
         run: make fix-permissions

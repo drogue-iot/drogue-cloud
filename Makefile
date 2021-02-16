@@ -51,6 +51,12 @@ clean:
 
 
 #
+# Pre-check the code, just check checks
+#
+pre-check: host-pre-check
+
+
+#
 # Check the code
 #
 check: host-check
@@ -66,6 +72,12 @@ build: host-build build-images
 # Run all tests.
 #
 test: host-test
+
+
+#
+# Run pre-checks on the source code
+#
+container-pre-check: cargo-pre-check
 
 
 #
@@ -91,6 +103,13 @@ endif
 # If you have the same environment as the build container, you can also run this on the host, instead of `host-test`.
 #
 container-test: cargo-test
+
+
+#
+# Run pre-checks on the host, forking off into the build container.
+#
+host-pre-check:
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
 
 
 #
@@ -131,12 +150,18 @@ build-shell:
 
 
 #
+# Pre-check code
+#
+cargo-pre-check:
+	cargo fmt --all -- --check
+	cargo clippy --release --all-features
+
+
+#
 # Check the code
 #
-cargo-check:
-	cargo fmt --all -- --check
+cargo-check: cargo-pre-check
 	cargo check --release
-	cargo clippy --release --all-features
 
 
 #
@@ -239,7 +264,7 @@ ifndef CONTAINER_REGISTRY
 endif
 
 
-.PHONY: all clean check build test push images
+.PHONY: all clean pre-check check build test push images
 .PHONY: require-container-registry
 .PHONY: deploy gen-deploy
 
@@ -248,6 +273,6 @@ endif
 
 .PHONY: save-images
 
-.PHONY: container-check container-build container-test
-.PHONY: host-check host-build host-test
-.PHONY: cargo-check cargo-build cargo-test
+.PHONY: container-pre-check container-check container-build container-test
+.PHONY: host-pre-check host-check host-build host-test
+.PHONY: cargo-pre-check cargo-check cargo-build cargo-test
