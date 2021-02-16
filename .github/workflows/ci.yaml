@@ -124,7 +124,7 @@ jobs:
           cluster_name: kind
 
       - name: Load images in docker
-        run: docker load -i image-archive all.tar
+        run: docker load -i all.tar
 
       - name: Load images in kind
         run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
