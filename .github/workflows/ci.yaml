@@ -1,11 +1,11 @@
 name: CI
 
 on:
-  # Run on main branch for testing
+  # Run on the main branch for testing
   push:
     branches:
       - main
-  # And only PRs, as we don't publish any images here
+  # Also on PRs, as we don't publish any images here
   pull_request:
 
 jobs:
@@ -31,18 +31,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.49 # must be aligned with the builder image
-          components: rustfmt, clippy
-          profile: minimal
-          override: true
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get -y install libsasl2-dev
-
       - name: Check
         run: make pre-check
 
@@ -57,7 +45,9 @@ jobs:
     runs-on: ubuntu-20.04
     needs: [check]
     steps:
+
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -66,17 +56,6 @@ jobs:
             .cargo-container-home
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.49 # must be aligned with the builder image
-          profile: minimal
-          override: true
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get -y install libsasl2-dev
 
       - name: Run tests
         run: |
@@ -89,6 +68,7 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
+
       - uses: actions/cache@v2
         with:
           path: |
@@ -104,17 +84,6 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.49 # must be aligned with the builder image
-          profile: minimal
-          override: true
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get -y install libsasl2-dev
 
       - name: Run build
         run: |
