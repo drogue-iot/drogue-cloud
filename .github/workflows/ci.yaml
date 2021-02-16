@@ -154,8 +154,11 @@ jobs:
           wait: 300s
           cluster_name: kind
 
+      - name: Load images in docker
+        run: docker load -i image-archive all.tar
+
       - name: Load images in kind
-        run: kind load image-archive all.tar
+        run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
 
       - name: Delete loaded images
         run: rm all.tar
@@ -172,7 +175,9 @@ jobs:
           ./hack/replace-images.py ${{ github.sha }} Never deploy dev.local tmp/deploy
 
       - name: Deploy drogue
-        run: env TEST_CERTS_IMAGE=dev.local/test-cert-generator:${{ github.sha }} ./hack/drogue.sh -d tmp/deploy
+        env:
+          TEST_CERTS_IMAGE: "dev.local/test-cert-generator:${{ github.sha }}"
+        run: ./hack/drogue.sh -d tmp/deploy
         timeout-minutes: 20
 
       - name: Collect logs

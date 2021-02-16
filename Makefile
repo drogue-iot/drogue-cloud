@@ -226,6 +226,14 @@ save-images: require-container-registry
 
 
 #
+# Load image into kind
+#
+kind-load: require-container-registry
+	for i in $(ALL_IMAGES); do \
+		kind load docker-image $(CONTAINER_REGISTRY)/$${i}:$(IMAGE_TAG); \
+	done
+
+#
 # Tag and push images.
 #
 push: tag-images push-images
