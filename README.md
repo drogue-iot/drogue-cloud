@@ -37,6 +37,6 @@ minikube tunnel # in a separate terminal, as it keeps running
 ./hack/drogue.sh
 ~~~
 
-## Building
+## Contributing
 
 See the document [CONTRIBUTING.md](CONTRIBUTING.md).
