@@ -145,7 +145,7 @@ fix-permissions:
 # Undo fix-permissions as otherwise the rust will recompile everything
 #
 unfix-permissions:
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" bash -c 'chown $$(id) -R $${CARGO_HOME} /usr/src/target'
+	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" bash -c 'chown $$(id -u) -R $${CARGO_HOME} /usr/src/target'
 
 
 #
