@@ -23,6 +23,7 @@ ifeq ($(CONTAINER),podman)
 TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
 endif
 
+
 #
 # all possible container images that we build and push (so it does not include the "builder")
 #
@@ -37,10 +38,12 @@ ALL_IMAGES=\
 	command-endpoint \
 	test-cert-generator \
 
+
 #
 # Active images to build
 #
 IMAGES ?= $(ALL_IMAGES)
+
 
 #
 # Restore a clean environment.
@@ -140,6 +143,7 @@ host-test:
 #
 fix-permissions:
 	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
+
 
 #
 # Undo fix-permissions as otherwise the rust will recompile everything
