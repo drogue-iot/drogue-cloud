@@ -12,7 +12,9 @@ edition = "2018"
 
 anyhow = "1"
 
-actix-web = "4.0.0-beta.1" # we need v4 as we need tokio 1
+actix-web = "=4.0.0-beta.1" # we need v4 as we need tokio 1
+actix-web-httpauth = "0.5.0"
+
 tokio = { version = "1", features = ["full"] }
 
 async-trait = "0.1"
@@ -33,7 +35,6 @@ sha2 = "0.9"
 rustls = { version = "0.19" }
 
 dotenv = "0.15.0"
-actix-web-httpauth = "0.5.0"
 envconfig = "0.9.1"
 
 thiserror = "1"
@@ -46,7 +47,6 @@ drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-
 
 [dev-dependencies]
 actix-rt = "2.0.0-beta.2"
