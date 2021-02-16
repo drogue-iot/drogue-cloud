@@ -157,7 +157,6 @@ build-shell:
 #
 cargo-pre-check:
 	cargo fmt --all -- --check
-	cargo clippy --release --all-features
 
 
 #
@@ -165,6 +164,7 @@ cargo-pre-check:
 #
 cargo-check: cargo-pre-check
 	cargo check --release
+	cargo clippy --release --all-features
 
 
 #
