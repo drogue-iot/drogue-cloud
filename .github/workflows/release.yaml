@@ -99,7 +99,7 @@ jobs:
 
       - name: Run build
         run: |
-          make build
+          make build "IMAGE_TAG=$VERSION"
 
       - name: Fix permissions
         run: |
@@ -109,10 +109,10 @@ jobs:
         if: ${{steps.state.outputs.do-publish}}
         run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build, tag, and push images
+      - name: Tag and push images
         if: ${{steps.state.outputs.do-publish}}
         run: |
-          make images "IMAGE_TAG=$VERSION"
+          make push "IMAGE_TAG=$VERSION"
 
       - name: Create Release
         id: create-release
