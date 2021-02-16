@@ -144,10 +144,7 @@ jobs:
           path: /tmp/docker-registry
           key: docker-registry-${{ steps.extract_branch.outputs.branch }}
 
-      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry registry:2
-
-      # Pull previous images
-      - run: make  -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000 || true
+      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
 
       - name: Build images
         run: make -C .github/scripts build-images-ci
@@ -156,7 +153,7 @@ jobs:
       - run: make push CONTAINER_REGISTRY=localhost:5000
 
   deploy:
-    name: deploy drogue on Kind
+    name: deploy on kind
     runs-on: ubuntu-20.04
     needs: [check, build]
     env:
@@ -170,12 +167,11 @@ jobs:
           path: /tmp/docker-registry
           key: docker-registry-${{ steps.extract_branch.outputs.branch }}
 
-      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry registry:2
+      - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
 
       # Pull and tag previous images
-      - run: make -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000 || true
+      - run: make -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000
 
-      # todo put dev.local into a variable.
       # "dev.local" prefixed images won't be resolved by the knative operator
       - name: Tag images
         run: make tag-images IMAGE_TAG=${{ github.sha }} CONTAINER_REGISTRY=dev.local
