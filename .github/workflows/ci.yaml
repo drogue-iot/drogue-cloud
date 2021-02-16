@@ -40,13 +40,6 @@ jobs:
       - name: Fix permissions
         run: make fix-permissions
 
-      - name: Clippy check
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --release --all-features
-
-
   test:
     name: run tests
     runs-on: ubuntu-20.04
