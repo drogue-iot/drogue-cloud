@@ -38,7 +38,7 @@ jobs:
         run: make fix-permissions
 
   test:
-    name: run tests
+    name: test
     runs-on: ubuntu-20.04
     needs: [check]
     steps:
