@@ -43,6 +43,9 @@ jobs:
         run: |
           sudo apt-get -y install libsasl2-dev
 
+      - name: Un-fix permissions
+        run: make unfix-permissions
+
       - name: Check
         run: make pre-check
 
