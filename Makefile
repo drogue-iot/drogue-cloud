@@ -146,13 +146,6 @@ fix-permissions:
 
 
 #
-# Undo fix-permissions as otherwise the rust will recompile everything
-#
-unfix-permissions:
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" bash -c 'chown $$(id) -R $${CARGO_HOME} /usr/src/target'
-
-
-#
 # Run an interactive shell inside the build container.
 #
 build-shell:
@@ -289,8 +282,8 @@ endif
 .PHONY: build-images tag-images push-images
 .PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
 
-.PHONY: save-images kind-load
-.PHONY: fix-permissions unfix-permissions
+.PHONY: save-images
+.PHONY: fix-permissions
 
 .PHONY: container-pre-check container-check container-build container-test
 .PHONY: host-pre-check host-check host-build host-test
