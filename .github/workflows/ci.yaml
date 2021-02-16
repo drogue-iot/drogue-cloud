@@ -110,7 +110,6 @@ jobs:
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
         id: extract_branch
 
-
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -168,6 +167,9 @@ jobs:
           key: docker-registry-${{ steps.extract_branch.outputs.branch }}
 
       - run: docker run -d -p 5000:5000 --restart=always --name registry -v /tmp/docker-registry:/var/lib/registry docker.io/library/registry:2
+
+      # Give the repository some time to start
+      - run: sleep 10
 
       # Pull and tag previous images
       - run: make -C .github/scripts pull-images CONTAINER_REGISTRY=localhost:5000
