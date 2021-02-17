@@ -211,6 +211,7 @@ mod test {
             is_retry: false,
             confirmed: false,
             payload_raw: vec![],
+            payload_fields: Value::Null,
             metadata: Metadata {
                 time: Utc::now(),
                 frequency: 0.0,
