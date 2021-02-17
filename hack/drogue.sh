@@ -55,6 +55,10 @@ done
 
 set -ex
 
+command -v 'kubectl' &>/dev/null || die "Missing the command 'kubectl'"
+command -v 'curl' &>/dev/null || die "Missing the command 'curl'"
+command -v 'docker' &>/dev/null || command -v 'podman' &>/dev/null || die "Missing the command 'docker' or 'podman'"
+
 # Create the namespace first
 if ! kubectl get ns "$DROGUE_NS" >/dev/null 2>&1; then
   kubectl create namespace "$DROGUE_NS"

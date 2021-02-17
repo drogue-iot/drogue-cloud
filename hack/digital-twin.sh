@@ -13,6 +13,8 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 source "$SCRIPTDIR/common.sh"
 
+command -v 'helm' &>/dev/null || die "Missing the command 'helm'"
+
 HELMARGS_DITTO=""
 HELMARGS_MONGODB="--set auth.rootPassword=admin123456 --set auth.enabled=false"
 
