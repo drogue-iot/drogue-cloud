@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 : "${DROGUE_NS:=drogue-iot}"
-
+: "${CLUSTER:=minikube}"
 : "${CONTAINER:=docker}"
 : "${TEST_CERTS_IMAGE:=ghcr.io/drogue-iot/test-cert-generator:latest}"
 
@@ -16,7 +16,7 @@ case $CLUSTER in
    kind)
        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-       URL=https://$name.$DOMAIN:$PORT
+       URL=${scheme:-http}://$name.$DOMAIN:$PORT
        ;;
    minikube)
         test -n "$scheme" && scheme="--$scheme"
@@ -40,7 +40,7 @@ function ingress_url() {
 case $CLUSTER in
    openshift)
         URL="$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"
-        if ! [ -z $URL ]; then
+        if [ -n "$URL" ]; then
           URL="https://$URL"
         fi
         ;;
@@ -51,13 +51,13 @@ case $CLUSTER in
         fi
         DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-        if ! [ -z $DOMAIN ]; then
+        if [ -n "$DOMAIN" ]; then
           URL="http://$name.$DOMAIN:$PORT"
         fi
         ;;
    *)
         URL=$(kubectl get ingress -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')
-        if ! [ -z $URL ]; then
+        if [ -n "$URL" ]; then
           URL="http://$URL"
         fi
         ;;
