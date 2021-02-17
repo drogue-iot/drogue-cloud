@@ -59,6 +59,9 @@ package = "rustls"
 version = "0.10"
 package = "openssl"
 
+[dev-dependencies]
+chrono = "0.4"
+
 [features]
 default = ["openssl"]
 openssl = ["actix-web/openssl"]
