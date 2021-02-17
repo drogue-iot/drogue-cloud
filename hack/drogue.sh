@@ -116,6 +116,7 @@ HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
 BACKEND_URL="$(service_url "console-backend")"
 CONSOLE_URL="$(service_url "console")"
 GRAFANA_URL=$(service_url "grafana")
+MGMT_URL=$(service_url "registry")
 
 #
 # Wait for SSO
@@ -154,16 +155,14 @@ fi
 # Update the console endpoints
 
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "SSO_URL=$SSO_URL"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "REDIRECT_URL=$CONSOLE_URL"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST" "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEVICE_REGISTRY_URL=$MGMT_URL"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "SSO_URL=$SSO_URL" "REDIRECT_URL=$CONSOLE_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$GRAFANA_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/device-management-service "SSO_URL=$SSO_URL"
 
-kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL"
-kubectl -n "$DROGUE_NS" set env deployment/grafana "GF_SERVER_ROOT_URL=$GRAFANA_URL"
+kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL" "GF_SERVER_ROOT_URL=$GRAFANA_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"
 
