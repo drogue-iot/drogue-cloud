@@ -44,10 +44,11 @@ cloudevents-sdk-actix-web = "0.3"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-ttn = "0.1.1"
+drogue-ttn = "0.2"
 
 dotenv = "0.15.0"
 jsonwebtokens = "1.0.0-alpha.13"
+mime = "0.3"
 
 awc = "2.0.0"
 

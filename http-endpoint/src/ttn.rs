@@ -1,16 +1,16 @@
-use crate::command::CommandWait;
-use crate::downstream::HttpCommandSender;
+use crate::{command::CommandWait, downstream::HttpCommandSender};
 use actix_web::{post, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{DownstreamSender, Publish},
+    downstream::{self, DownstreamSender},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth;
-use drogue_cloud_service_api::management::Device;
+use drogue_cloud_service_api::{auth, management::Device};
 use drogue_ttn::http as ttn;
 use serde::Deserialize;
+use serde_json::Value;
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct PublishOptions {
@@ -64,19 +64,48 @@ pub async fn publish(
     // eval model_id from query and function port mapping
     let model_id = eval_model_id(opts.model_id.as_ref().cloned(), &device, &uplink);
 
+    let mut extensions = HashMap::new();
+    extensions.insert("lorawanport".into(), uplink.port.to_string());
+    extensions.insert("loraretry".into(), uplink.is_retry.to_string());
+    extensions.insert("hwaddr".into(), uplink.hardware_serial);
+
     let device_id = uplink.dev_id;
 
     log::info!("Device ID: {}, Model ID: {:?}", device_id, model_id);
+
+    let (body, content_type) = match get_spec(&device, "ttn")["payload"]
+        .as_str()
+        .unwrap_or_default()
+    {
+        "raw" => (
+            uplink.payload_raw.into(),
+            Some(mime::APPLICATION_OCTET_STREAM.to_string()),
+        ),
+        "fields" => (
+            uplink.payload_fields.to_string().into(),
+            Some(mime::APPLICATION_JSON.to_string()),
+        ),
+        _ => {
+            // Full payload
+            (body, None)
+        }
+    };
 
     // FIXME: need to authorize device
 
     sender
         .publish_and_await(
-            Publish {
+            downstream::Publish {
                 channel: uplink.port.to_string(),
+                app_id: application.metadata.name.clone(),
                 device_id,
-                model_id,
-                ..Default::default()
+                options: downstream::PublishOptions {
+                    time: Some(uplink.metadata.time),
+                    content_type,
+                    model_id,
+                    extensions,
+                    ..Default::default()
+                },
             },
             CommandWait::from_secs(opts.ttd),
             body,
@@ -91,12 +120,14 @@ fn eval_model_id(
 ) -> Option<String> {
     model_id.or_else(|| {
         let fport = uplink.port.to_string();
-        device.spec.get("lorawan").and_then(|spec| {
-            spec["ports"][fport]["model_id"]
-                .as_str()
-                .map(|str| str.to_string())
-        })
+        get_spec(device, "lorawan")["ports"][fport]["model_id"]
+            .as_str()
+            .map(|str| str.to_string())
     })
+}
+
+fn get_spec<'d>(device: &'d Device, key: &str) -> &'d Value {
+    device.spec.get(key).unwrap_or(&Value::Null)
 }
 
 #[cfg(test)]

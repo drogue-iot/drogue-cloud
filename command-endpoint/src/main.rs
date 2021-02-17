@@ -3,7 +3,7 @@ use actix_web::{
 };
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
-    downstream::{DownstreamSender, Publish},
+    downstream::{self, DownstreamSender},
     error::HttpEndpointError,
 };
 use envconfig::Envconfig;
@@ -47,17 +47,20 @@ async fn command(
 
     endpoint
         .publish_http_default(
-            Publish {
+            downstream::Publish {
                 channel,
                 app_id,
                 device_id,
-                model_id: opts.model_id,
-                topic: None,
-                content_type: req
-                    .headers()
-                    .get(header::CONTENT_TYPE)
-                    .and_then(|v| v.to_str().ok())
-                    .map(|s| s.to_string()),
+                options: downstream::PublishOptions {
+                    model_id: opts.model_id,
+                    topic: None,
+                    content_type: req
+                        .headers()
+                        .get(header::CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok())
+                        .map(|s| s.to_string()),
+                    ..Default::default()
+                },
             },
             body,
         )

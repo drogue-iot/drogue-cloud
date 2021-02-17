@@ -126,7 +126,7 @@ macro_rules! publish {
                 channel: channel.into(),
                 app_id: id.app_id,
                 device_id: id.device_id,
-                ..Default::default()
+                options: Default::default(),
             },
             $publish.payload(),
         )

@@ -1,22 +1,29 @@
 use crate::error::HttpEndpointError;
 use actix_web::HttpResponse;
 use anyhow::Context;
-use chrono::Utc;
-use cloudevents::event::Data;
-use cloudevents::{EventBuilder, EventBuilderV10};
+use chrono::{DateTime, Utc};
+use cloudevents::{event::Data, EventBuilder, EventBuilderV10};
 use drogue_cloud_service_common::{Id, IdInjector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::future::Future;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Publish {
     pub channel: String,
     pub app_id: String,
     pub device_id: String,
+    pub options: PublishOptions,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct PublishOptions {
+    pub time: Option<DateTime<Utc>>,
     pub topic: Option<String>,
     pub model_id: Option<String>,
     pub content_type: Option<String>,
+    pub extensions: HashMap<String, String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -50,6 +57,8 @@ impl DownstreamSender {
     where
         B: AsRef<[u8]>,
     {
+        let partitionkey = format!("{}/{}", publish.app_id, publish.device_id);
+
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .source("https://drogue.io/endpoint")
@@ -58,14 +67,20 @@ impl DownstreamSender {
             .time(Utc::now())
             .ty("io.drogue.iot.message");
 
-        if let Some(model_id) = publish.model_id {
+        event = event.extension("partitionkey", partitionkey);
+
+        if let Some(model_id) = publish.options.model_id {
             event = event.extension("modelid", model_id);
         }
 
-        log::debug!("Content-Type: {:?}", publish.content_type);
+        for (k, v) in publish.options.extensions {
+            event = event.extension(&k, v);
+        }
+
+        log::debug!("Content-Type: {:?}", publish.options.content_type);
         log::debug!("Payload size: {} bytes", body.as_ref().len());
 
-        let event = match publish.content_type {
+        let event = match publish.options.content_type {
             Some(t) => event.data(t, Vec::from(body.as_ref())),
             None => {
                 // try decoding as JSON

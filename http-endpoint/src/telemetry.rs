@@ -4,7 +4,7 @@ use crate::command::{command_wait, CommandWait};
 use actix_web::{http::header, post, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{DownstreamSender, Outcome, Publish, PublishResponse},
+    downstream::{self, DownstreamSender, Outcome, PublishResponse},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
@@ -89,17 +89,20 @@ pub async fn publish(
 
     match sender
         .publish(
-            Publish {
+            downstream::Publish {
                 channel,
                 app_id: application.metadata.name.clone(),
                 device_id: device_id.clone(),
-                model_id: opts.model_id,
-                topic: suffix,
-                content_type: req
-                    .headers()
-                    .get(header::CONTENT_TYPE)
-                    .and_then(|v| v.to_str().ok())
-                    .map(|s| s.to_string()),
+                options: downstream::PublishOptions {
+                    model_id: opts.model_id,
+                    topic: suffix,
+                    content_type: req
+                        .headers()
+                        .get(header::CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok())
+                        .map(|s| s.to_string()),
+                    ..Default::default()
+                },
             },
             body,
         )

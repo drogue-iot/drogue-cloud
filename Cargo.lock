@@ -1609,6 +1609,7 @@ dependencies = [
  "http",
  "jsonwebtokens",
  "log",
+ "mime",
  "openssl",
  "percent-encoding",
  "reqwest",
@@ -1710,14 +1711,15 @@ dependencies = [
 
 [[package]]
 name = "drogue-ttn"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79da2069f165cbbd3e950565a8044be0d67b9a0bb45ecee162c22e7a76a5739e"
+checksum = "e5479c10b6bc558153f8214a983b2a647f6d35e8a15e2858f937be8e43e7445d"
 dependencies = [
  "base64 0.13.0",
  "base64-serde",
  "chrono",
  "serde 1.0.120",
+ "serde_json",
  "url",
 ]
 
