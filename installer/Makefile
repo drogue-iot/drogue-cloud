@@ -28,6 +28,8 @@ install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
 	cp -pr $(BASEDIR)/hack/* $(OUTDIR)/stage/$(INSTALLER)/scripts
+	# inject release version to cert script
+	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/common.sh
 	# FIXME: remove release related script for now, reconsider mixing scripts
 	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/replace-images.py
 	cp -pr $(BASEDIR)/deploy/base/* $(OUTDIR)/stage/$(INSTALLER)/deploy/base
