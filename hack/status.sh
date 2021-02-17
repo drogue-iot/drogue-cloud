@@ -78,13 +78,13 @@ echo "* Additional admin user:"
 echo "    username: admin"
 echo "    password: admin123456"
 echo
-echo "Manage tenants/devices:"
+echo "Manage applications/devices:"
 echo "-------------------------"
 echo
 echo "URL:"
 echo "    ${MGMT_URL}"
 echo
-echo "Tenants:"
+echo "Applications:"
 echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps metadata:='{\"name\":\"app_id\"}'"
 echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id"
 echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id metadata:='{\"name\":\"app_id\"}' spec:='{\"core\": {\"disabled\": true}}'"
