@@ -22,9 +22,9 @@ case $CLUSTER in
         HTTP_ENDPOINT_PORT=$(eval minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $5}')
         ;;
    openshift)
-        MQTT_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
+        MQTT_ENDPOINT_HOST=$(eval kubectl get route -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        HTTP_ENDPOINT_HOST=$(eval kubectl get route -n drogue-iot http-endpoint -o jsonpath='{.status.ingress[0].host}')
+        HTTP_ENDPOINT_HOST=$(eval kubectl get route -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.ingress[0].host}')
         HTTP_ENDPOINT_PORT=443
         ;;
    *)
