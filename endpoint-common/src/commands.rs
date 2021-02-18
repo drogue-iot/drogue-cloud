@@ -3,7 +3,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use cloudevents::Event;
 use drogue_cloud_service_common::Id;
+use std::convert::TryFrom;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 /// Represents command
@@ -19,6 +21,20 @@ impl Command {
         Self {
             device_id,
             command: command.to_string(),
+        }
+    }
+}
+
+impl TryFrom<Event> for Command {
+    type Error = ();
+
+    fn try_from(event: Event) -> Result<Self, Self::Error> {
+        match Id::from_event(&event) {
+            Some(device_id) => Ok(Command {
+                device_id,
+                command: String::try_from(event.data().unwrap().clone()).unwrap(),
+            }),
+            _ => Err(()),
         }
     }
 }
@@ -63,7 +79,7 @@ impl Commands {
                 "Failed to route command: No device {:?} found on this endpoint!",
                 msg.device_id
             );
-            Err("Device not found".to_string())
+            Ok(())
         }
     }
 

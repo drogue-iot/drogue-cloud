@@ -52,6 +52,8 @@ mime = "0.3"
 
 awc = "2.0.0"
 
+tokio = { version = "1", features = ["full"] }
+
 [dependencies.rust-tls]
 version = "0.19"
 package = "rustls"

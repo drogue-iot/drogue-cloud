@@ -12,6 +12,7 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use dotenv::dotenv;
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
     command_endpoint::{CommandServer, CommandServerConfig},
@@ -72,10 +73,12 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new()?;
+    let commands = Commands::new();
 
     let config = Config::init_from_env()?;
     let max_payload_size = config.max_payload_size;
     let max_json_payload_size = config.max_json_payload_size;
+    let http_server_commands = commands.clone();
 
     let authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
 
@@ -84,7 +87,8 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))
             .data(web::JsonConfig::default().limit(max_json_payload_size))
-            .data(sender.clone());
+            .data(sender.clone())
+            .data(http_server_commands.clone());
 
         let app = app.app_data(Data::new(authenticator.clone()));
 
@@ -142,7 +146,8 @@ async fn main() -> anyhow::Result<()> {
 
     let http_server = http_server.run();
 
-    let mut command_server: CommandServer = CommandServerConfig::init_from_env()?.try_into()?;
+    let mut command_server =
+        CommandServer::new(CommandServerConfig::init_from_env()?, commands.clone())?;
 
     future::try_join(command_server.deref_mut(), http_server).await?;
 

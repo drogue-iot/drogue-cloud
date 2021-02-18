@@ -1,7 +1,8 @@
 use serde::Deserialize;
 
-use crate::command::{command_wait, CommandWait};
+use crate::command::{command_wait, wait_for_command, CommandWait};
 use actix_web::{http::header, post, web, HttpResponse};
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     downstream::{self, DownstreamSender, Outcome, PublishResponse},
@@ -9,6 +10,7 @@ use drogue_cloud_endpoint_common::{
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::{self, ErrorInformation};
+use drogue_cloud_service_common::Id;
 
 #[derive(Deserialize)]
 pub struct PublishOptions {
@@ -24,31 +26,48 @@ pub struct PublishOptions {
 pub async fn publish_plain(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
+    commands: web::Data<Commands>,
     web::Path(channel): web::Path<String>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    publish(sender, auth, channel, None, opts, req, body, certs).await
+    publish(
+        sender, auth, commands, channel, None, opts, req, body, certs,
+    )
+    .await
 }
 
 #[post("/{channel}/{suffix:.*}")]
 pub async fn publish_tail(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
+    commands: web::Data<Commands>,
     web::Path((channel, suffix)): web::Path<(String, String)>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    publish(sender, auth, channel, Some(suffix), opts, req, body, certs).await
+    publish(
+        sender,
+        auth,
+        commands,
+        channel,
+        Some(suffix),
+        opts,
+        req,
+        body,
+        certs,
+    )
+    .await
 }
 
 pub async fn publish(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
+    commands: web::Data<Commands>,
     channel: String,
     suffix: Option<String>,
     opts: PublishOptions,
@@ -112,11 +131,10 @@ pub async fn publish(
         Ok(PublishResponse {
             outcome: Outcome::Accepted,
         }) => {
-            command_wait(
-                application.metadata.name,
-                device_id,
-                CommandWait::from_secs(opts.ttd),
-                http::StatusCode::ACCEPTED,
+            wait_for_command(
+                commands,
+                Id::new(application.metadata.name, device_id),
+                opts.ttd,
             )
             .await
         }

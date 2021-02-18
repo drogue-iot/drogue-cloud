@@ -3,14 +3,19 @@
 //! Contains actors that handles commands for HTTP endpoint
 
 use actix::prelude::*;
+use actix_web::web;
 use actix_web::{http, web::Bytes, HttpResponse};
 use actix_web_actors::HttpContext;
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     command_router::{CommandMessage, CommandRouter, CommandSubscribe, CommandUnsubscribe},
     error::HttpEndpointError,
 };
 use drogue_cloud_service_common::Id;
 use std::time;
+
+use actix_rt::time::timeout;
+use std::time::Duration;
 
 /// Actor for receiving commands
 pub struct CommandHandler {
@@ -116,5 +121,28 @@ pub async fn command_wait<A: ToString, D: ToString>(
             Ok(HttpResponse::build(status).streaming(context))
         }
         _ => Ok(HttpResponse::build(status).finish()),
+    }
+}
+
+pub async fn wait_for_command(
+    commands: web::Data<Commands>,
+    id: Id,
+    ttd: Option<u64>,
+) -> Result<HttpResponse, HttpEndpointError> {
+    match ttd {
+        Some(ttd) if ttd > 0 => {
+            let mut receiver = commands.subscribe(id.clone());
+            match timeout(Duration::from_secs(ttd), receiver.recv()).await {
+                Ok(command) => {
+                    commands.unsubscribe(id.clone());
+                    Ok(HttpResponse::Ok().body(command.unwrap()))
+                }
+                _ => {
+                    commands.unsubscribe(id.clone());
+                    Ok(HttpResponse::build(http::StatusCode::ACCEPTED).finish())
+                }
+            }
+        }
+        _ => Ok(HttpResponse::build(http::StatusCode::ACCEPTED).finish()),
     }
 }
