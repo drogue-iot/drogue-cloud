@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::command::{command_wait, wait_for_command, CommandWait};
+use crate::command::wait_for_command;
 use actix_web::{http::header, post, web, HttpResponse};
 use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
@@ -142,15 +142,7 @@ pub async fn publish(
         // ok, but rejected
         Ok(PublishResponse {
             outcome: Outcome::Rejected,
-        }) => {
-            command_wait(
-                application.metadata.name,
-                device_id,
-                CommandWait::from_secs(opts.ttd),
-                http::StatusCode::NOT_ACCEPTABLE,
-            )
-            .await
-        }
+        }) => Ok(HttpResponse::build(http::StatusCode::NOT_ACCEPTABLE).finish()),
 
         // internal error
         Err(err) => Ok(HttpResponse::InternalServerError().json(ErrorInformation {

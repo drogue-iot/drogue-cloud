@@ -1,5 +1,6 @@
-use crate::{command::CommandWait, downstream::HttpCommandSender};
+use crate::downstream::HttpCommandSender;
 use actix_web::{post, web, HttpResponse};
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     downstream::{self, DownstreamSender},
@@ -25,6 +26,7 @@ pub struct PublishOptions {
 pub async fn publish(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
+    commands: web::Data<Commands>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
@@ -107,7 +109,8 @@ pub async fn publish(
                     ..Default::default()
                 },
             },
-            CommandWait::from_secs(opts.ttd),
+            commands,
+            opts.ttd,
             body,
         )
         .await

@@ -1,18 +1,21 @@
-use crate::command::{command_wait, CommandWait};
-use actix_web::HttpResponse;
+use crate::command::wait_for_command;
+use actix_web::{web, HttpResponse};
 use async_trait::async_trait;
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
-    downstream::{DownstreamSender, Outcome, Publish},
+    downstream::{DownstreamSender, Publish},
     error::HttpEndpointError,
 };
-use http::StatusCode;
+use drogue_cloud_service_common::Id;
 
 #[async_trait]
 pub trait HttpCommandSender {
     async fn publish_and_await<B>(
         &self,
         publish: Publish,
-        command: CommandWait,
+        commands: web::Data<Commands>,
+        ttd: Option<u64>,
+        //command: CommandWait,
         body: B,
     ) -> Result<HttpResponse, HttpEndpointError>
     where
@@ -24,24 +27,15 @@ impl HttpCommandSender for DownstreamSender {
     async fn publish_and_await<B>(
         &self,
         publish: Publish,
-        command: CommandWait,
+        commands: web::Data<Commands>,
+        ttd: Option<u64>,
         body: B,
     ) -> Result<HttpResponse, HttpEndpointError>
     where
         B: AsRef<[u8]> + Send,
     {
-        self.publish_http(publish.clone(), body, |outcome| async move {
-            command_wait(
-                &publish.app_id,
-                &publish.device_id,
-                command,
-                match outcome {
-                    // FIXME: we need to distinguish between: with or without command
-                    Outcome::Accepted => StatusCode::ACCEPTED,
-                    Outcome::Rejected => StatusCode::NOT_ACCEPTABLE,
-                },
-            )
-            .await
+        self.publish_http(publish.clone(), body, |_| async move {
+            wait_for_command(commands, Id::new(&publish.app_id, &publish.device_id), ttd).await
         })
         .await
     }
