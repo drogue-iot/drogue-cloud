@@ -122,7 +122,7 @@ impl<'a> BinaryDeserializer for HttpRequestDeserializer<'a> {
             )?
         }
 
-        if self.body.len() != 0 {
+        if !self.body.is_empty() {
             visitor.end_with_data(self.body.to_vec())
         } else {
             visitor.end()

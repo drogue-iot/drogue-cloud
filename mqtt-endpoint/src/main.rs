@@ -16,20 +16,16 @@ use crate::{
 use bytes::Bytes;
 use bytestring::ByteString;
 use dotenv::dotenv;
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
-use drogue_cloud_service_common::Id;
 use envconfig::Envconfig;
 use futures::future;
 use ntex::web;
-use std::{
-    collections::HashMap,
-    convert::TryInto,
-    sync::{Arc, Mutex},
-};
+use std::convert::TryInto;
 
 #[derive(Clone, Debug, Envconfig)]
 pub struct Config {
@@ -49,7 +45,7 @@ pub struct Config {
 pub struct App {
     pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
-    pub devices: Arc<Mutex<HashMap<Id, tokio::sync::mpsc::Sender<String>>>>,
+    pub commands: Commands,
 }
 
 impl App {
@@ -84,11 +80,12 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     let config = Config::init_from_env()?;
+    let commands = Commands::new();
 
     let app = App {
         downstream: DownstreamSender::new()?,
         authenticator: DeviceAuthenticator(AuthConfig::init_from_env()?.try_into()?),
-        devices: Arc::new(Mutex::new(HashMap::new())),
+        commands: commands.clone(),
     };
 
     let web_app = app.clone();

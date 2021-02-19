@@ -13,7 +13,6 @@ use ntex_mqtt::{
     },
 };
 use std::fmt::Debug;
-use tokio::sync::mpsc;
 
 macro_rules! connect {
     ($connect:expr, $app:expr, $certs:expr) => {{
@@ -31,40 +30,14 @@ macro_rules! connect {
                 application,
                 device,
             } => {
-                let (tx, mut rx) = mpsc::channel(32);
-
                 let app_id = application.metadata.name.clone();
                 let device_id = device.metadata.name.clone();
 
                 let session = Session::new(
                     $app.downstream,
                     Id::new(app_id.clone(), device_id.clone()),
-                    $app.devices.clone(),
-                    tx,
+                    $app.commands.clone(),
                 );
-
-                let sink = $connect.sink().clone();
-                ntex::rt::spawn(async move {
-                    while let Some(cmd) = rx.recv().await {
-                        match sink
-                            .publish(ByteString::from_static("cmd"), Bytes::from(cmd))
-                            .send_at_least_once()
-                            .await
-                        {
-                            Ok(_) => {
-                                log::debug!(
-                                    "Command sent to device subscription {} / {}",
-                                    app_id,
-                                    device_id
-                                )
-                            }
-                            Err(e) => log::error!(
-                                "Failed to send a command to device subscription {:?}",
-                                e
-                            ),
-                        }
-                    }
-                });
 
                 Ok(session)
             }
@@ -174,11 +147,29 @@ macro_rules! subscribe {
     ($s: expr, $session: expr, $fail: expr) => {{
         $s.iter_mut().for_each(|mut sub| {
             if sub.topic() == "command" {
-                let mut devices = $session.state().devices.lock().unwrap();
-                devices.insert(
-                    $session.state().device_id.clone(),
-                    $session.state().tx.clone(),
-                );
+                let device_id = $session.state().device_id.clone();
+                let mut rx = $session.state().commands.subscribe(device_id.clone());
+                let sink = $session.sink().clone();
+                ntex::rt::spawn(async move {
+                    while let Some(cmd) = rx.recv().await {
+                        match sink
+                            .publish(ByteString::from_static("cmd"), Bytes::from(cmd))
+                            .send_at_least_once()
+                            .await
+                        {
+                            Ok(_) => {
+                                log::debug!(
+                                    "Command sent to device subscription {:?}",
+                                    device_id.clone()
+                                )
+                            }
+                            Err(e) => log::error!(
+                                "Failed to send a command to device subscription {:?}",
+                                e
+                            ),
+                        }
+                    }
+                });
 
                 sub.subscribe(QoS::AtLeastOnce);
 
@@ -198,8 +189,10 @@ macro_rules! subscribe {
 
 macro_rules! unsubscribe {
     ($ack: expr, $session: expr, $log: expr) => {{
-        let mut devices = $session.state().devices.lock().unwrap();
-        devices.remove(&$session.state().device_id.clone());
+        $session
+            .state()
+            .commands
+            .unsubscribe($session.state().device_id.clone());
         log::debug!($log, $session.state().device_id.clone());
         Ok($ack.ack())
     }};

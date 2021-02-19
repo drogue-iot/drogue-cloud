@@ -5,6 +5,7 @@ use crate::{
     App, Config,
 };
 use anyhow::Context;
+use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 use drogue_cloud_service_common::Id;
 use futures::future::ok;
@@ -16,34 +17,21 @@ use ntex_mqtt::{v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
 use pem::parse_many;
 use rust_tls::{internal::pemfile::certs, PrivateKey, ServerConfig};
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::BufReader,
-    sync::{Arc, Mutex},
-};
-use tokio::sync::mpsc::Sender;
+use std::{fs::File, io::BufReader, sync::Arc};
 
 #[derive(Clone)]
 pub struct Session {
     pub sender: DownstreamSender,
     pub device_id: Id,
-    pub devices: Arc<Mutex<HashMap<Id, Sender<String>>>>,
-    pub tx: Sender<String>,
+    pub commands: Commands,
 }
 
 impl Session {
-    pub fn new(
-        sender: DownstreamSender,
-        device_id: Id,
-        devices: Arc<Mutex<HashMap<Id, Sender<String>>>>,
-        tx: Sender<String>,
-    ) -> Self {
+    pub fn new(sender: DownstreamSender, device_id: Id, commands: Commands) -> Self {
         Session {
             sender,
             device_id,
-            devices,
-            tx,
+            commands,
         }
     }
 }

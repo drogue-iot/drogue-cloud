@@ -39,7 +39,7 @@ impl TryFrom<Event> for Command {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Commands {
     pub devices: Arc<Mutex<HashMap<Id, Sender<String>>>>,
 }
