@@ -11,3 +11,9 @@ bases:
   - service/grafana
   - service/console
   - service/registry
+
+configMapGenerator:
+  - name: configuration
+    behavior: create
+    literals:
+      - instance=drogue

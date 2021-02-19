@@ -3,6 +3,7 @@ use actix_web::HttpResponse;
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, EventBuilder, EventBuilderV10};
+use drogue_cloud_service_api::EXT_INSTANCE;
 use drogue_cloud_service_common::{Id, IdInjector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -11,9 +12,9 @@ use std::future::Future;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Publish {
-    pub channel: String,
     pub app_id: String,
     pub device_id: String,
+    pub channel: String,
     pub options: PublishOptions,
 }
 
@@ -41,15 +42,18 @@ pub struct PublishResponse {
 pub struct DownstreamSender {
     client: reqwest::Client,
     sink: String,
+    instance: String,
 }
 
 impl DownstreamSender {
     pub fn new() -> anyhow::Result<Self> {
         let sink = std::env::var("K_SINK").context("Missing variable 'K_SINK'")?;
+        let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
 
         Ok(DownstreamSender {
             client: reqwest::ClientBuilder::new().build()?,
             sink,
+            instance,
         })
     }
 
@@ -68,6 +72,7 @@ impl DownstreamSender {
             .ty("io.drogue.iot.message");
 
         event = event.extension("partitionkey", partitionkey);
+        event = event.extension(EXT_INSTANCE, self.instance.clone());
 
         if let Some(model_id) = publish.options.model_id {
             event = event.extension("modelid", model_id);
@@ -85,8 +90,11 @@ impl DownstreamSender {
             None => {
                 // try decoding as JSON
                 match serde_json::from_slice::<Value>(body.as_ref()) {
-                    Ok(v) => event.data("application/json", Data::Json(v)),
-                    Err(_) => event.data("application/octet-stream", Vec::from(body.as_ref())),
+                    Ok(v) => event.data(mime::APPLICATION_JSON.to_string(), Data::Json(v)),
+                    Err(_) => event.data(
+                        mime::APPLICATION_OCTET_STREAM.to_string(),
+                        Vec::from(body.as_ref()),
+                    ),
                 }
             }
         };
