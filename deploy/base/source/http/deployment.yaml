@@ -32,6 +32,11 @@ spec:
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
               value: /etc/endpoint/tls.key
+            - name: INSTANCE
+              valueFrom:
+                configMapKeyRef:
+                  name: configuration
+                  key: instance
           ports:
             - containerPort: 8443
               name: endpoint

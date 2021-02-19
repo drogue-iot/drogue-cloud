@@ -34,6 +34,11 @@ spec:
               value: /etc/endpoint/tls.key
             - name: AUTH_SERVICE_URL
               value: http://authentication-service:8080
+            - name: INSTANCE
+              valueFrom:
+                configMapKeyRef:
+                  name: configuration
+                  key: instance
           ports:
             - containerPort: 8883
               name: endpoint

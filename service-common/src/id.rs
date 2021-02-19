@@ -1,8 +1,9 @@
 use cloudevents::{event::ExtensionValue, Event, EventBuilderV10};
 use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE};
+use serde::{Deserialize, Serialize};
 
 /// A scoped device ID.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Id {
     pub app_id: String,
     pub device_id: String,
