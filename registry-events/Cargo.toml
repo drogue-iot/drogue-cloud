@@ -1,0 +1,34 @@
+[package]
+name = "drogue-cloud-registry-events"
+version = "0.1.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2018"
+
+[dependencies]
+
+log = "0.4"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+thiserror = "1"
+async-trait = "0.1"
+
+chrono = "0.4"
+
+reqwest = { version = "0.10", optional = true }
+
+cloudevents-sdk = "0.3"
+cloudevents-sdk-reqwest = { version = "0.3.1", optional = true }
+
+uuid = { version = "0.8", features = ["v4"] }
+
+drogue-cloud-service-api = { path = "../service-api" }
+
+[dev-dependencies]
+tokio = { version = "0.3", features = ["full"] }
+anyhow = "1"
+
+[features]
+default = ["with_reqwest"]
+with_reqwest = ["reqwest", "cloudevents-sdk-reqwest"]

@@ -14,11 +14,13 @@ actix-cors = "0.6.0-beta.1"
 actix-web-httpauth = "0.6.0-beta.1"
 
 http = "0.2"
+url = "2"
 
 dotenv = "0.15"
 envconfig = "0.9"
 env_logger = "0.7"
 log = "0.4"
+thiserror = "1"
 
 serde = "1"
 serde_json = "1"
@@ -30,10 +32,12 @@ rand = "0.7"
 chrono = { version = "0.4", features = ["serde"] }
 pem = "0.8"
 x509-parser = "0.9"
+reqwest = "0.10"
 
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-registry-events = { path = "../registry-events" }
 
 config = "0.10"
 

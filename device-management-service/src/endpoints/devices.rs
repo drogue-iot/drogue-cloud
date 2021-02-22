@@ -3,23 +3,18 @@ use crate::{
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
+use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::management::Device;
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CreateDevice {
-    pub device_id: String,
-    pub password: String,
-    #[serde(default)]
-    pub properties: serde_json::Value,
-}
-
-pub async fn create(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn create<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path(app_id): web::Path<String>,
     device: Json<Device>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Creating device: '{}' / '{:?}'", app_id, device);
 
     if device.metadata.name.is_empty() || device.metadata.application.is_empty() {
@@ -37,18 +32,14 @@ pub async fn create(
     Ok(response)
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct UpdateDevice {
-    pub password: String,
-    #[serde(default)]
-    pub properties: serde_json::Value,
-}
-
-pub async fn update(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn update<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path((app_id, device_id)): web::Path<(String, String)>,
     device: Json<Device>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!(
         "Updating device: '{}' / '{}' / '{:?}'",
         app_id,
@@ -70,10 +61,13 @@ pub async fn update(
     Ok(response)
 }
 
-pub async fn delete(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn delete<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path((app_id, device_id)): web::Path<(String, String)>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Deleting device: '{}' / '{}'", app_id, device_id);
 
     if app_id.is_empty() || device_id.is_empty() {
@@ -90,10 +84,13 @@ pub async fn delete(
     Ok(result)
 }
 
-pub async fn read(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn read<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path((app_id, device_id)): web::Path<(String, String)>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Reading device: '{}' / '{}'", app_id, device_id);
 
     if app_id.is_empty() || device_id.is_empty() {

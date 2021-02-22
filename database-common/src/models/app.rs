@@ -1,14 +1,21 @@
 use crate::{error::ServiceError, models::TypedAlias, Client};
 use async_trait::async_trait;
-use drogue_cloud_service_api::management::{self, ApplicationMetadata};
+use chrono::{DateTime, Utc};
+use drogue_cloud_service_api::management::{self, NonScopedMetadata};
 use serde_json::{Map, Value};
 use std::collections::{HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
+use uuid::Uuid;
 
 /// An application entity record.
 pub struct Application {
     pub id: String,
     pub labels: HashMap<String, String>,
+    pub annotations: HashMap<String, String>,
+    pub creation_timestamp: DateTime<Utc>,
+    pub resource_version: String,
+    pub generation: u64,
+
     pub data: Value,
 }
 
@@ -32,10 +39,13 @@ impl From<Application> for management::Application {
         let (app, status) = extract_sect(app, "status");
 
         management::Application {
-            metadata: ApplicationMetadata {
+            metadata: NonScopedMetadata {
                 name: app.id,
                 labels: app.labels,
-                ..Default::default()
+                annotations: app.annotations,
+                creation_timestamp: app.creation_timestamp,
+                generation: app.generation,
+                resource_version: app.resource_version,
             },
             spec: spec.unwrap_or_default(),
             status: status.unwrap_or_default(),
@@ -79,10 +89,17 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
     }
 
     pub fn from_row(row: Row) -> Result<Application, tokio_postgres::Error> {
+        log::debug!("Row: {:?}", row);
         Ok(Application {
             id: row.try_get::<_, String>("ID")?,
+
+            creation_timestamp: row.try_get::<_, DateTime<Utc>>("CREATION_TIMESTAMP")?,
+            generation: row.try_get::<_, i64>("GENERATION")? as u64,
+            resource_version: row.try_get::<_, Uuid>("RESOURCE_VERSION")?.to_string(),
+            labels: super::row_to_map(&row, "LABELS")?,
+            annotations: super::row_to_map(&row, "ANNOTATIONS")?,
+
             data: row.try_get::<_, Json<_>>("DATA")?.0,
-            labels: super::labels_to_map(&row)?,
         })
     }
 
@@ -113,11 +130,18 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
 #[async_trait]
 impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
     async fn lookup(&self, alias: &str) -> Result<Option<Application>, ServiceError> {
-        let row = self.client.query_opt(
-            "SELECT A2.ID, A2.LABELS, A2.DATA FROM APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2 ON A1.ID=A2.ID WHERE A1.ALIAS = $1",
-            &[&alias]
-        )
-        .await?;
+        let row = self
+            .client
+            .query_opt(
+                r#"
+SELECT
+    A2.ID, A2.LABELS, A2.DATA
+FROM APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
+    ON A1.ID=A2.ID WHERE A1.ALIAS = $1
+"#,
+                &[&alias],
+            )
+            .await?;
 
         Ok(row.map(Self::from_row).transpose()?)
     }
@@ -135,7 +159,17 @@ impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
         let result = self
             .client
             .query_opt(
-                "SELECT ID, LABELS, DATA FROM APPLICATIONS WHERE ID = $1",
+                r#"
+SELECT
+    ID,
+    LABELS,
+    ANNOTATIONS,
+    CREATION_TIMESTAMP,
+    GENERATION,
+    RESOURCE_VERSION,
+    DATA
+FROM APPLICATIONS
+    WHERE ID = $1"#,
                 &[&id],
             )
             .await?
@@ -153,11 +187,36 @@ impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
         let id = application.id;
         let data = application.data;
         let labels = application.labels;
+        let annotations = application.annotations;
 
         self.client
             .execute(
-                "INSERT INTO APPLICATIONS (ID, LABELS, DATA) VALUES ($1, $2, $3)",
-                &[&id, &Json(labels), &Json(data)],
+                r#"
+INSERT INTO APPLICATIONS (
+    ID,
+    LABELS,
+    ANNOTATIONS,
+    CREATION_TIMESTAMP,
+    GENERATION,
+    RESOURCE_VERSION,
+    DATA
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    0,
+    $5,
+    $6
+)"#,
+                &[
+                    &id,
+                    &Json(labels),
+                    &Json(annotations),
+                    &Utc::now(),
+                    &Uuid::new_v4(),
+                    &Json(data),
+                ],
             )
             .await?;
 
@@ -174,13 +233,29 @@ impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
         let id = application.id;
         let labels = application.labels;
         let data = application.data;
+        let annotations = application.annotations;
 
         // update device
         let count = self
             .client
             .execute(
-                "UPDATE APPLICATIONS SET LABELS = $2, DATA = $3 WHERE ID = $1",
-                &[&id, &Json(labels), &Json(data)],
+                r#"
+UPDATE APPLICATIONS SET
+    LABELS = $2,
+    ANNOTATIONS = $3,
+    GENERATION = GENERATION + 1,
+    RESOURCE_VERSION = $4,
+    DATA = $5
+WHERE
+    ID = $1
+"#,
+                &[
+                    &id,
+                    &Json(labels),
+                    &Json(annotations),
+                    &Uuid::new_v4(),
+                    &Json(data),
+                ],
             )
             .await?;
 

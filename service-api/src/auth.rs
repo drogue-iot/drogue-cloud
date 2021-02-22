@@ -132,14 +132,14 @@ mod test {
         let str = serde_json::to_string(&AuthenticationResponse {
             outcome: Outcome::Pass {
                 application: management::Application {
-                    metadata: management::ApplicationMetadata {
+                    metadata: management::NonScopedMetadata {
                         name: "a1".to_string(),
                         ..Default::default()
                     },
                     ..Default::default()
                 },
                 device: management::Device {
-                    metadata: management::DeviceMetadata {
+                    metadata: management::ScopedMetadata {
                         application: "a1".to_string(),
                         name: "d1".to_string(),
                         ..Default::default()

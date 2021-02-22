@@ -10,6 +10,7 @@ use drogue_cloud_device_management_service::{
     service::{self, PostgresManagementService},
     WebData,
 };
+use drogue_cloud_registry_events::{mock::MockEventSender, Event};
 use drogue_cloud_service_common::openid::AuthenticatorError;
 use drogue_cloud_test_common::{client, db};
 use http::{header, HeaderValue};
@@ -19,7 +20,7 @@ use serial_test::serial;
 #[actix_rt::test]
 #[serial]
 async fn test_create_app() -> anyhow::Result<()> {
-    test!(app => {
+    test!((app, sender) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -28,6 +29,14 @@ async fn test_create_app() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
+
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
     })
 }
 
@@ -35,13 +44,13 @@ async fn test_create_app() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_crud_app() -> anyhow::Result<()> {
-    test!(app => {
+    test!((app, sender) => {
 
         // try read, must not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
-        // create, must succeed
+        // create, must succeed, event sent
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -49,13 +58,27 @@ async fn test_crud_app() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
         // read, must exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
+
         let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
         assert_eq!(result, json!({
             "metadata": {
-                "name": "app1"
+                "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 0,
+                "resourceVersion": resource_version,
             }
         }));
 
@@ -72,13 +95,30 @@ async fn test_crud_app() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
+        // event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".spec.core".into()
+        }]);
+
         // read, must exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
+
         let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let new_resource_version = result["metadata"]["resourceVersion"].clone();
+
+        assert_ne!(resource_version, new_resource_version);
+
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 1,
+                "resourceVersion": new_resource_version,
             },
             "spec": {
                 "core": {
@@ -91,6 +131,13 @@ async fn test_crud_app() -> anyhow::Result<()> {
         let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
         // try read, must not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
@@ -98,6 +145,9 @@ async fn test_crud_app() -> anyhow::Result<()> {
         // second delete, must report "not found"
         let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // no additional event must be fired
+        assert_eq!(sender.retrieve().unwrap(), vec![]);
     })
 }
 
@@ -105,7 +155,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_app_labels() -> anyhow::Result<()> {
-    test!(app => {
+    test!((app, sender) => {
 
         // try read, must not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
@@ -123,13 +173,27 @@ async fn test_app_labels() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
         // read, must exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 0,
+                "resourceVersion": resource_version,
                 "labels": {
                     "foo": "bar",
                     "foo/bar": "baz",
@@ -154,13 +218,30 @@ async fn test_app_labels() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".spec.core".into()
+        }]);
+
         // read, must exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
+
         let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let new_resource_version = result["metadata"]["resourceVersion"].clone();
+
+        assert_ne!(resource_version, new_resource_version);
+
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 1,
+                "resourceVersion": new_resource_version,
                 "labels": {
                     "foo": "bar",
                     "baz/bar": "foo",
@@ -179,7 +260,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_create_duplicate_app() -> anyhow::Result<()> {
-    test!(app => {
+    test!((app, sender) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -188,6 +269,14 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
+
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -195,6 +284,9 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+        // no event for the failed attempt
+        assert_eq!(sender.retrieve().unwrap(), vec![]);
     })
 }
 
@@ -204,7 +296,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
     let ca = include_bytes!("certs/ca-cert.pem").to_vec();
     let ca = base64::encode(ca);
 
-    test!(app => {
+    test!((app, sender) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -220,13 +312,28 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
         // read, must exist, with cert
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
+
         let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 0,
+                "resourceVersion": resource_version,
             },
             "spec": {
                 "trustAnchors": {
@@ -259,13 +366,32 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
+        // two events must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".spec.trustAnchors".into()
+        }, Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".status.trustAnchors".into()
+        }]);
+
         // read, must exist, but no cert
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::OK);
+
         let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 1,
+                "resourceVersion": resource_version,
             }
         }));
     })

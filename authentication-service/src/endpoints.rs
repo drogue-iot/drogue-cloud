@@ -1,8 +1,12 @@
-use crate::service;
-use crate::service::AuthenticationService;
-use crate::WebData;
+use crate::{
+    service::{self, AuthenticationService},
+    WebData,
+};
 use actix_web::{get, post, web, HttpResponse};
-use drogue_cloud_service_api::auth::{AuthenticationRequest, AuthenticationResponse};
+use drogue_cloud_service_api::{
+    auth::{AuthenticationRequest, AuthenticationResponse},
+    health::HealthCheckedService,
+};
 use serde_json::json;
 
 #[get("/health")]

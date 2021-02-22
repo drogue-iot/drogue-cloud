@@ -5,26 +5,28 @@ use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{app::*, device::*},
+    DatabaseService,
 };
-use drogue_cloud_service_api::management::{
-    ApplicationStatusTrustAnchorEntry, ApplicationStatusTrustAnchors,
-};
+use drogue_cloud_service_api::health::HealthCheckedService;
 use drogue_cloud_service_api::{
     auth::{self, AuthenticationRequest, Outcome},
-    management::{self, Application, Device, DeviceSpecCore, DeviceSpecCredentials},
+    management::{
+        self, Application, ApplicationStatusTrustAnchorEntry, ApplicationStatusTrustAnchors,
+        Device, DeviceSpecCore, DeviceSpecCredentials,
+    },
     Dialect, Translator,
 };
+use drogue_cloud_service_common::config::ConfigFromEnv;
 use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use serde::Deserialize;
 use std::io::Cursor;
 use tokio_postgres::NoTls;
 
 #[async_trait]
-pub trait AuthenticationService: Clone {
+pub trait AuthenticationService: HealthCheckedService + Clone {
     type Error: ResponseError;
 
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error>;
-    async fn is_ready(&self) -> Result<(), Self::Error>;
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -32,11 +34,20 @@ pub struct AuthenticationServiceConfig {
     pub pg: deadpool_postgres::Config,
 }
 
-impl AuthenticationServiceConfig {
-    pub fn from_env() -> Result<Self, config::ConfigError> {
-        let mut cfg = config::Config::new();
-        cfg.merge(config::Environment::new().separator("__"))?;
-        cfg.try_into()
+impl<'de> ConfigFromEnv<'de> for AuthenticationServiceConfig {}
+
+impl DatabaseService for PostgresAuthenticationService {
+    fn pool(&self) -> &Pool {
+        &self.pool
+    }
+}
+
+#[async_trait]
+impl HealthCheckedService for PostgresAuthenticationService {
+    type HealthCheckError = ServiceError;
+
+    async fn is_ready(&self) -> Result<(), Self::HealthCheckError> {
+        (self as &dyn DatabaseService).is_ready().await
     }
 }
 
@@ -104,11 +115,6 @@ impl AuthenticationService for PostgresAuthenticationService {
                 false => Outcome::Fail,
             },
         )
-    }
-
-    async fn is_ready(&self) -> Result<(), Self::Error> {
-        self.pool.get().await?.simple_query("SELECT 1").await?;
-        Ok(())
     }
 }
 
