@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 : "${APP:=app_id}"
 : "${DEVICE:=device_id}"
 : "${PASS:=foobar}"
