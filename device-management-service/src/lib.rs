@@ -1,5 +1,6 @@
 pub mod endpoints;
 pub mod service;
+mod utils;
 
 use crate::service::ManagementService;
 use drogue_cloud_service_common::openid::Authenticator;
@@ -19,18 +20,20 @@ pub struct Config {
     pub health_bind_addr: String,
     #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
+    #[envconfig(from = "EVENT_URL")]
+    pub event_url: String,
 }
 
 #[macro_export]
 macro_rules! crud {
-    ($scope:ident, $base:literal, $module:path, $name:ident) => {{
+    ($sender:ty, $scope:ident, $base:literal, $module:path, $name:ident) => {{
         $scope
             .service({
                 let resource = concat!($base, stringify!($name), "s");
                 log::debug!("{}", resource);
                 web::resource(resource).route(web::post().to({
                     use $module as m;
-                    m::create
+                    m::create::<$sender>
                 }))
             })
             .service({
@@ -42,15 +45,15 @@ macro_rules! crud {
                     // "use" is required due to: https://github.com/rust-lang/rust/issues/48067
                     .route(web::get().to({
                         use $module as m;
-                        m::read
+                        m::read::<$sender>
                     }))
                     .route(web::put().to({
                         use $module as m;
-                        m::update
+                        m::update::<$sender>
                     }))
                     .route(web::delete().to({
                         use $module as m;
-                        m::delete
+                        m::delete::<$sender>
                     }))
             })
     }};
@@ -58,12 +61,13 @@ macro_rules! crud {
 
 #[macro_export]
 macro_rules! app {
-    ($data:expr, $enable_auth:expr, $max_json_payload_size:expr) => {{
+    ($sender:ty, $data:expr, $enable_auth:expr, $max_json_payload_size:expr) => {{
         let auth_middleware = HttpAuthentication::bearer(|req, auth| {
             let token = auth.token().to_string();
 
             async {
-                let app_data = req.app_data::<web::Data<WebData<PostgresManagementService>>>();
+                let app_data =
+                    req.app_data::<web::Data<WebData<PostgresManagementService<$sender>>>>();
                 let app_data = app_data
                     .ok_or_else(|| ServiceError::Internal("Missing app_data instance".into()))?;
 
@@ -80,7 +84,9 @@ macro_rules! app {
         let app = App::new()
             .data(web::JsonConfig::default().limit($max_json_payload_size))
             // FIXME: bind to a different port
-            .service(endpoints::health::health)
+            .service(
+                web::resource("/health").route(web::get().to(endpoints::health::health::<$sender>)),
+            )
             .app_data($data.clone());
 
         let app = {
@@ -88,10 +94,16 @@ macro_rules! app {
                 .wrap(Cors::permissive())
                 .wrap(Condition::new($enable_auth, auth_middleware));
 
-            let scope =
-                drogue_cloud_device_management_service::crud!(scope, "/", endpoints::apps, app);
+            let scope = drogue_cloud_device_management_service::crud!(
+                $sender,
+                scope,
+                "/",
+                endpoints::apps,
+                app
+            );
 
             let scope = drogue_cloud_device_management_service::crud!(
+                $sender,
                 scope,
                 "/apps/{app_id}/",
                 endpoints::devices,

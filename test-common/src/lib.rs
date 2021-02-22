@@ -1,4 +1,5 @@
 use deadpool::managed::{PoolConfig, Timeouts};
+use serde_json::Value;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -27,9 +28,9 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         let image = GenericImage::new("docker.io/library/postgres:12")
             .with_env_var("POSTGRES_PASSWORD", "mysecretpassword");
 
-        let image = match is_podman() {
+        let image = match needs_podman_fix() {
             false => image.with_wait_for(WaitFor::message_on_stderr(MSG)),
-            // "podman logs" merges all logs into stdout
+            // "podman logs" (v2) merges all logs into stdout
             // see: https://github.com/containers/podman/issues/9159
             true => image.with_wait_for(WaitFor::message_on_stdout(MSG)),
         };
@@ -50,12 +51,13 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
 
     /// Init database by executing all found SQL statement
     fn init_db(config: deadpool_postgres::Config) -> anyhow::Result<()> {
-        // FIXME: this logic currently doesn't sort files, which might result in a problem
         Self::find_all_sql(
             |_| Ok(()),
             |s, _| {
                 let mut cmd = Command::new("psql");
-                cmd.arg("-h")
+                cmd.arg("-v")
+                    .arg("ON_ERROR_STOP=1")
+                    .arg("-h")
                     .arg(&config.host.as_ref().unwrap_or(&"localhost".into()))
                     .arg("-p")
                     .arg(config.port.as_ref().unwrap_or(&5432).to_string())
@@ -73,6 +75,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
                 let out = cmd.output()?;
                 log::info!("Out: {:?}", String::from_utf8(out.stdout));
                 log::info!("Err: {:?}", String::from_utf8(out.stderr));
+                log::info!("Status: {:?}", out.status);
                 if out.status.success() {
                     Ok(())
                 } else {
@@ -110,24 +113,37 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         let target = manifest_dir.join("target/sql");
         i(&target)?;
 
-        Self::find_sql(
+        let mut files = Vec::new();
+
+        // gather
+
+        files.extend(Self::find_sql(
             &manifest_dir.join("../database-common/migrations"),
             &target,
-            &f,
-        )?;
-        Self::find_sql(&manifest_dir.join("tests/sql"), &target, &f)?;
+        )?);
+        files.extend(Self::find_sql(&manifest_dir.join("tests/sql"), &target)?);
+
+        // sort
+
+        files.sort_unstable();
+
+        // execute
+
+        for file in files {
+            log::info!("Execute file: {:?}", file.0);
+            f(&file.0, &file.1)?;
+        }
 
         // done
 
         Ok(target)
     }
 
-    fn find_sql<F>(source: &PathBuf, target: &PathBuf, f: &F) -> anyhow::Result<()>
-    where
-        F: Fn(&Path, &Path) -> anyhow::Result<()>,
-    {
+    fn find_sql(source: &PathBuf, target: &PathBuf) -> anyhow::Result<Vec<(PathBuf, PathBuf)>> {
+        let mut result = Vec::new();
+
         if !source.exists() {
-            return Ok(());
+            return Ok(result);
         }
 
         for up in walkdir::WalkDir::new(&source) {
@@ -142,13 +158,13 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
                     .and_then(|s| s.to_str())
                     .ok_or_else(|| anyhow::anyhow!(""))?;
                 let target = target.join(format!("{}-up.sql", name));
-                log::debug!("Add SQL file: {:?} -> {:?}", up, target);
+                log::debug!("Found SQL file: {:?} -> {:?}", up, target);
 
-                f(up.path(), &target)?;
+                result.push((up.path().to_owned(), target.to_owned()));
             }
         }
 
-        Ok(())
+        Ok(result)
     }
 }
 
@@ -166,9 +182,38 @@ pub fn client() -> Cli {
     }
 }
 
+/// Check if we are using podman
 fn is_podman() -> bool {
-    let out = Command::new("podman").args(&["version"]).output();
-    matches!(out, Ok(_))
+    podman_version().is_some()
+}
+
+/// Check if we need a fix for podman 2
+///
+/// See: https://github.com/containers/podman/issues/9159
+fn needs_podman_fix() -> bool {
+    podman_version().map(|major| major < 3).unwrap_or(false)
+}
+
+/// Get the podman version, or `None` if podman was not found.
+fn podman_version() -> Option<u16> {
+    let out = Command::new("podman")
+        .args(&["version", "-f", "json"])
+        .output();
+
+    match out {
+        Ok(out) if out.status.success() => {
+            if let Ok(version) = serde_json::from_slice::<Value>(out.stdout.as_slice()) {
+                let v = version["Client"]["Version"].as_str();
+                v.and_then(|v| {
+                    let v: Vec<_> = v.split('.').collect();
+                    v.first().and_then(|major| major.parse().ok())
+                })
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
 
 pub fn db<C, SC, F>(cli: &C, f: F) -> anyhow::Result<PostgresRunner<C, SC>>

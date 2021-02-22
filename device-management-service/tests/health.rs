@@ -10,6 +10,7 @@ use drogue_cloud_device_management_service::{
     service::{self, PostgresManagementService},
     WebData,
 };
+use drogue_cloud_registry_events::mock::MockEventSender;
 use drogue_cloud_service_common::openid::AuthenticatorError;
 use drogue_cloud_test_common::{client, db};
 use serde_json::json;
@@ -18,7 +19,7 @@ use serial_test::serial;
 #[actix_rt::test]
 #[serial]
 async fn test_health() -> anyhow::Result<()> {
-    test!(app => {
+    test!((app, _sender) => {
         let req = actix_web::test::TestRequest::get().uri("/health").to_request();
         let resp: serde_json::Value = actix_web::test::read_response_json(&mut app, req).await;
 

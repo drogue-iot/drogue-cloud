@@ -924,6 +924,12 @@ checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
 
 [[package]]
 name = "bytes"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0dcbc35f504eb6fc275a6d20e4ebcda18cf50d40ba6fabff8c711fa16cb3b16"
+
+[[package]]
+name = "bytes"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
@@ -1363,6 +1369,7 @@ dependencies = [
  "dotenv",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
+ "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
@@ -1497,6 +1504,7 @@ dependencies = [
  "actix-web 4.0.0-beta.1",
  "anyhow",
  "async-trait",
+ "chrono",
  "deadpool",
  "deadpool-postgres",
  "drogue-cloud-service-api",
@@ -1505,6 +1513,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio-postgres",
+ "uuid",
 ]
 
 [[package]]
@@ -1524,6 +1533,7 @@ dependencies = [
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-database-common",
+ "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
@@ -1535,12 +1545,15 @@ dependencies = [
  "log",
  "pem 0.8.2",
  "rand 0.7.3",
+ "reqwest",
  "rust-crypto",
  "serde 1.0.120",
  "serde_json",
  "serial_test",
  "testcontainers",
+ "thiserror",
  "tokio-postgres",
+ "url",
  "x509-parser",
 ]
 
@@ -1568,6 +1581,7 @@ dependencies = [
  "headers",
  "http",
  "log",
+ "mime",
  "percent-encoding",
  "reqwest",
  "serde 1.0.120",
@@ -1658,6 +1672,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-registry-events"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "cloudevents-sdk",
+ "cloudevents-sdk-reqwest",
+ "drogue-cloud-service-api",
+ "log",
+ "reqwest",
+ "serde 1.0.120",
+ "serde_json",
+ "thiserror",
+ "tokio 0.3.7",
+ "uuid",
+]
+
+[[package]]
 name = "drogue-cloud-service-api"
 version = "0.1.0"
 dependencies = [
@@ -1680,6 +1713,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cloudevents-sdk",
+ "config",
  "drogue-cloud-service-api",
  "envconfig",
  "failure",
@@ -1706,6 +1740,8 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "log",
+ "serde 1.0.120",
+ "serde_json",
  "testcontainers",
  "walkdir",
 ]
@@ -3399,10 +3435,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5493d9d4613b88b12433aa12890e74e74cd93fdc1e08b7c2aed4768aaae8414c"
 dependencies = [
  "bytes 1.0.1",
+ "chrono",
  "fallible-iterator",
  "postgres-protocol",
  "serde 1.0.120",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -4491,6 +4529,28 @@ dependencies = [
 
 [[package]]
 name = "tokio"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46409491c9375a693ce7032101970a54f8a2010efb77e13f70788f0d84489e39"
+dependencies = [
+ "autocfg",
+ "bytes 0.6.0",
+ "futures-core",
+ "libc",
+ "memchr",
+ "mio 0.7.7",
+ "num_cpus",
+ "once_cell",
+ "parking_lot",
+ "pin-project-lite 0.2.4",
+ "signal-hook-registry",
+ "slab",
+ "tokio-macros 0.3.2",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "tokio"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca04cec6ff2474c638057b65798f60ac183e5e79d3448bb7163d36a39cff6ec"
@@ -4505,8 +4565,19 @@ dependencies = [
  "parking_lot",
  "pin-project-lite 0.2.4",
  "signal-hook-registry",
- "tokio-macros",
+ "tokio-macros 1.0.0",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46dfffa59fc3c8aad216ed61bdc2c263d2b9d87a9c8ac9de0c11a813e51b6db7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

@@ -5,6 +5,7 @@ use drogue_cloud_authentication_service::{
     service::{self, AuthenticationServiceConfig},
     Config, WebData,
 };
+use drogue_cloud_service_common::config::ConfigFromEnv;
 use envconfig::Envconfig;
 
 #[actix_web::main]

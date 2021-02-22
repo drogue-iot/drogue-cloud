@@ -3,13 +3,17 @@ use crate::{
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
+use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::management::Application;
 
-pub async fn create(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn create<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     app: Json<Application>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Creating application: '{:?}'", app);
 
     if app.metadata.name.is_empty() {
@@ -27,11 +31,14 @@ pub async fn create(
     Ok(response)
 }
 
-pub async fn update(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn update<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path(app_id): web::Path<String>,
     app: Json<Application>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Updating app: '{:?}'", app);
 
     if app_id.is_empty() {
@@ -49,10 +56,13 @@ pub async fn update(
     Ok(response)
 }
 
-pub async fn delete(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn delete<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path(app_id): web::Path<String>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Deleting app: '{}'", app_id);
 
     if app_id.is_empty() {
@@ -69,10 +79,13 @@ pub async fn delete(
     Ok(result)
 }
 
-pub async fn read(
-    data: web::Data<WebData<PostgresManagementService>>,
+pub async fn read<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path(app_id): web::Path<String>,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     log::debug!("Reading app: '{}'", app_id);
 
     if app_id.is_empty() {

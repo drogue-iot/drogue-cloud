@@ -1,9 +1,10 @@
 pub mod error;
 pub mod models;
 
+use crate::error::ServiceError;
 use async_trait::async_trait;
 use deadpool::managed::Object;
-use deadpool_postgres::ClientWrapper;
+use deadpool_postgres::{ClientWrapper, Pool};
 use std::ops::Deref;
 use tokio_postgres::{types::ToSql, Error, Row, Statement, ToStatement, Transaction};
 
@@ -121,5 +122,16 @@ impl<'a> Client for deadpool_postgres::Transaction<'a> {
         T: ?Sized + ToStatement + Sync,
     {
         self.deref().query_opt(statement, params).await
+    }
+}
+
+/// A database based service.
+#[async_trait]
+pub trait DatabaseService: Sync {
+    fn pool(&self) -> &Pool;
+
+    async fn is_ready(&self) -> Result<(), ServiceError> {
+        self.pool().get().await?.simple_query("SELECT 1").await?;
+        Ok(())
     }
 }

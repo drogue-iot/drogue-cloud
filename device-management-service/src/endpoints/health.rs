@@ -1,14 +1,18 @@
 use crate::{
-    service::{self, ManagementService},
+    service::{self},
     WebData,
 };
-use actix_web::{get, web, HttpResponse};
+use actix_web::{web, HttpResponse};
+use drogue_cloud_database_common::DatabaseService;
+use drogue_cloud_registry_events::EventSender;
 use serde_json::json;
 
-#[get("/health")]
-pub async fn health(
-    data: web::Data<WebData<service::PostgresManagementService>>,
-) -> Result<HttpResponse, actix_web::Error> {
+pub async fn health<S>(
+    data: web::Data<WebData<service::PostgresManagementService<S>>>,
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender,
+{
     data.service.is_ready().await?;
 
     Ok(HttpResponse::Ok().json(json!({"success": true})))

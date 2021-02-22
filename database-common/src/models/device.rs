@@ -1,26 +1,36 @@
 use crate::{error::ServiceError, models::TypedAlias, Client};
 use async_trait::async_trait;
-use drogue_cloud_service_api::management::{self, DeviceMetadata};
+use chrono::{DateTime, Utc};
+use drogue_cloud_service_api::management::{self, ScopedMetadata};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
+use uuid::Uuid;
 
 /// A device entity record.
 pub struct Device {
     pub application_id: String,
     pub id: String,
     pub labels: HashMap<String, String>,
+    pub annotations: HashMap<String, String>,
+    pub creation_timestamp: DateTime<Utc>,
+    pub resource_version: String,
+    pub generation: u64,
+
     pub data: Value,
 }
 
 impl From<Device> for management::Device {
     fn from(device: Device) -> Self {
         management::Device {
-            metadata: DeviceMetadata {
+            metadata: ScopedMetadata {
                 name: device.id,
                 application: device.application_id,
                 labels: device.labels,
-                ..Default::default()
+                annotations: device.annotations,
+                creation_timestamp: device.creation_timestamp,
+                generation: device.generation,
+                resource_version: device.resource_version,
             },
             spec: device.data["spec"].as_object().cloned().unwrap_or_default(),
             status: device.data["status"]
@@ -70,8 +80,14 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
         Ok(Device {
             application_id: row.try_get::<_, String>("APP_ID")?,
             id: row.try_get::<_, String>("ID")?,
+
+            creation_timestamp: row.try_get::<_, DateTime<Utc>>("CREATION_TIMESTAMP")?,
+            generation: row.try_get::<_, i64>("GENERATION")? as u64,
+            resource_version: row.try_get::<_, Uuid>("RESOURCE_VERSION")?.to_string(),
+            labels: super::row_to_map(&row, "LABELS")?,
+            annotations: super::row_to_map(&row, "ANNOTATIONS")?,
+
             data: row.try_get::<_, Json<_>>("DATA")?.0,
-            labels: super::labels_to_map(&row)?,
         })
     }
 
@@ -126,7 +142,20 @@ impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
         let result = self
             .client
             .query_opt(
-                "SELECT ID, APP_ID, LABELS, DATA FROM DEVICES WHERE APP_ID = $1 AND ID = $2",
+                r#"
+SELECT
+    ID,
+    APP_ID,
+    LABELS,
+    ANNOTATIONS,
+    CREATION_TIMESTAMP,
+    GENERATION,
+    RESOURCE_VERSION,
+    DATA
+FROM DEVICES
+WHERE
+    APP_ID = $1 AND ID = $2
+"#,
                 &[&app_id, &device_id],
             )
             .await?
@@ -143,11 +172,33 @@ impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
     ) -> Result<(), ServiceError> {
         self.client
             .execute(
-                "INSERT INTO DEVICES (APP_ID, ID, LABELS, DATA) VALUES ($1, $2, $3, $4)",
+                r#"
+INSERT INTO DEVICES (
+    APP_ID,
+    ID,
+    LABELS,
+    ANNOTATIONS,
+    CREATION_TIMESTAMP,
+    GENERATION,
+    RESOURCE_VERSION,
+    DATA
+) VALUES (
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    0,
+    $6,
+    $7
+)"#,
                 &[
                     &device.application_id,
                     &device.id,
                     &Json(&device.labels),
+                    &Json(&device.annotations),
+                    &Utc::now(),
+                    &Uuid::new_v4(),
                     &Json(&device.data),
                 ],
             )
@@ -168,11 +219,22 @@ impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
         let count = self
             .client
             .execute(
-                "UPDATE DEVICES SET LABELS = $3, DATA = $4 WHERE APP_ID = $1 AND ID = $2",
+                r#"
+UPDATE DEVICES SET
+    LABELS = $3,
+    ANNOTATIONS = $4,
+    GENERATION = GENERATION + 1,
+    RESOURCE_VERSION = $5,
+    DATA = $6
+WHERE
+    APP_ID = $1 AND ID = $2
+"#,
                 &[
                     &device.application_id,
                     &device.id,
                     &Json(device.labels),
+                    &Json(device.annotations),
+                    &Uuid::new_v4(),
                     &Json(device.data),
                 ],
             )
