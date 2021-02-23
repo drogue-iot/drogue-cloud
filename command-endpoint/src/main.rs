@@ -20,6 +20,15 @@ struct Config {
     pub enable_auth: bool,
 }
 
+#[derive(Deserialize)]
+pub struct CommandOptions {
+    pub application: String,
+    pub device: String,
+
+    pub command: String,
+    pub timeout: Option<u64>,
+}
+
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
@@ -30,29 +39,22 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[derive(Deserialize)]
-pub struct PublishOptions {
-    model_id: Option<String>,
-}
-
-#[post("/command/{app_id}/{device_id}/{channel}")]
+#[post("/command")]
 async fn command(
     endpoint: web::Data<DownstreamSender>,
-    web::Path((app_id, device_id, channel)): web::Path<(String, String, String)>,
-    web::Query(opts): web::Query<PublishOptions>,
+    web::Query(opts): web::Query<CommandOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    log::info!("Publish to '{}' / '{}' / '{}'", app_id, device_id, channel);
+    log::info!("Send command '{}' to '{}' / '{}'",opts.command, opts.application, opts.device);
 
     endpoint
         .publish_http_default(
             downstream::Publish {
-                channel,
-                app_id,
-                device_id,
+                channel: opts.command,
+                app_id: opts.application,
+                device_id: opts.device,
                 options: downstream::PublishOptions {
-                    model_id: opts.model_id,
                     topic: None,
                     content_type: req
                         .headers()
