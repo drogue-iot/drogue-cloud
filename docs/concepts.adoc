@@ -1,0 +1,14 @@
+= Concepts
+
+These sections explain some concepts of Drogue IoT cloud.
+
+== Applications
+
+Applications in Drogue IoT cloud scope all elements that belong together. Like devices, data, and integrations.
+
+Applications are isolated from each other.
+
+== Devices
+
+Each device is owned by exactly one application and has at least one ID to identify it. Device IDs are unique in the
+scope of an application.
