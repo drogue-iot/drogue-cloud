@@ -1,9 +1,14 @@
-use crate::{error::ServiceError, models::TypedAlias, Client};
+use crate::{
+    diffable,
+    error::ServiceError,
+    models::{Lock, TypedAlias},
+    update_aliases, Client,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use drogue_cloud_service_api::management::{self, NonScopedMetadata};
 use serde_json::{Map, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
 use uuid::Uuid;
 
@@ -15,9 +20,13 @@ pub struct Application {
     pub creation_timestamp: DateTime<Utc>,
     pub resource_version: String,
     pub generation: u64,
+    pub deletion_timestamp: Option<DateTime<Utc>>,
+    pub finalizers: Vec<String>,
 
     pub data: Value,
 }
+
+diffable!(Application);
 
 /// Extract a section from the application data. Prevents cloning the whole struct.
 fn extract_sect(mut app: Application, key: &str) -> (Application, Option<Map<String, Value>>) {
@@ -46,6 +55,8 @@ impl From<Application> for management::Application {
                 creation_timestamp: app.creation_timestamp,
                 generation: app.generation,
                 resource_version: app.resource_version,
+                deletion_timestamp: app.deletion_timestamp,
+                finalizers: app.finalizers,
             },
             spec: spec.unwrap_or_default(),
             status: status.unwrap_or_default(),
@@ -59,10 +70,10 @@ pub trait ApplicationAccessor {
     async fn lookup(&self, alias: &str) -> Result<Option<Application>, ServiceError>;
 
     /// Delete an application
-    async fn delete(&self, id: &str) -> Result<bool, ServiceError>;
+    async fn delete(&self, id: &str) -> Result<(), ServiceError>;
 
     /// Get an application
-    async fn get(&self, id: &str) -> Result<Option<Application>, ServiceError>;
+    async fn get(&self, id: &str, lock: Lock) -> Result<Option<Application>, ServiceError>;
 
     /// Create a new application
     async fn create(
@@ -75,7 +86,7 @@ pub trait ApplicationAccessor {
     async fn update(
         &self,
         application: Application,
-        aliases: HashSet<TypedAlias>,
+        aliases: Option<HashSet<TypedAlias>>,
     ) -> Result<(), ServiceError>;
 }
 
@@ -91,13 +102,15 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
     pub fn from_row(row: Row) -> Result<Application, tokio_postgres::Error> {
         log::debug!("Row: {:?}", row);
         Ok(Application {
-            id: row.try_get::<_, String>("ID")?,
+            id: row.try_get("ID")?,
 
-            creation_timestamp: row.try_get::<_, DateTime<Utc>>("CREATION_TIMESTAMP")?,
+            creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
             resource_version: row.try_get::<_, Uuid>("RESOURCE_VERSION")?.to_string(),
             labels: super::row_to_map(&row, "LABELS")?,
             annotations: super::row_to_map(&row, "ANNOTATIONS")?,
+            deletion_timestamp: row.try_get("DELETION_TIMESTAMP")?,
+            finalizers: super::row_to_vec(&row, "FINALIZERS")?,
 
             data: row.try_get::<_, Json<_>>("DATA")?.0,
         })
@@ -146,20 +159,25 @@ FROM APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
         Ok(row.map(Self::from_row).transpose()?)
     }
 
-    async fn delete(&self, id: &str) -> Result<bool, ServiceError> {
+    async fn delete(&self, id: &str) -> Result<(), ServiceError> {
         let count = self
             .client
             .execute("DELETE FROM APPLICATIONS WHERE ID = $1", &[&id])
             .await?;
 
-        Ok(count > 0)
+        if count > 0 {
+            Ok(())
+        } else {
+            Err(ServiceError::NotFound)
+        }
     }
 
-    async fn get(&self, id: &str) -> Result<Option<Application>, ServiceError> {
+    async fn get(&self, id: &str, lock: Lock) -> Result<Option<Application>, ServiceError> {
         let result = self
             .client
             .query_opt(
-                r#"
+                format!(
+                    r#"
 SELECT
     ID,
     LABELS,
@@ -167,12 +185,23 @@ SELECT
     CREATION_TIMESTAMP,
     GENERATION,
     RESOURCE_VERSION,
+    DELETION_TIMESTAMP,
+    FINALIZERS,
     DATA
 FROM APPLICATIONS
-    WHERE ID = $1"#,
+    WHERE ID = $1
+{for_update}
+"#,
+                    for_update = lock.to_string()
+                )
+                .as_str(),
                 &[&id],
             )
-            .await?
+            .await
+            .map_err(|err| {
+                log::debug!("Failed to get: {}", err);
+                err
+            })?
             .map(Self::from_row)
             .transpose()?;
 
@@ -199,6 +228,8 @@ INSERT INTO APPLICATIONS (
     CREATION_TIMESTAMP,
     GENERATION,
     RESOURCE_VERSION,
+    DELETION_TIMESTAMP,
+    FINALIZERS,
     DATA
 ) VALUES (
     $1,
@@ -207,7 +238,9 @@ INSERT INTO APPLICATIONS (
     $4,
     0,
     $5,
-    $6
+    NULL,
+    $6,
+    $7
 )"#,
                 &[
                     &id,
@@ -215,6 +248,7 @@ INSERT INTO APPLICATIONS (
                     &Json(annotations),
                     &Utc::now(),
                     &Uuid::new_v4(),
+                    &application.finalizers,
                     &Json(data),
                 ],
             )
@@ -228,7 +262,7 @@ INSERT INTO APPLICATIONS (
     async fn update(
         &self,
         application: Application,
-        aliases: HashSet<TypedAlias>,
+        aliases: Option<HashSet<TypedAlias>>,
     ) -> Result<(), ServiceError> {
         let id = application.id;
         let labels = application.labels;
@@ -245,7 +279,9 @@ UPDATE APPLICATIONS SET
     ANNOTATIONS = $3,
     GENERATION = GENERATION + 1,
     RESOURCE_VERSION = $4,
-    DATA = $5
+    DELETION_TIMESTAMP = $5,
+    FINALIZERS = $6,
+    DATA = $7
 WHERE
     ID = $1
 "#,
@@ -254,13 +290,14 @@ WHERE
                     &Json(labels),
                     &Json(annotations),
                     &Uuid::new_v4(),
+                    &application.deletion_timestamp,
+                    &application.finalizers,
                     &Json(data),
                 ],
             )
             .await?;
 
-        // did we update something?
-        if count > 0 {
+        update_aliases!(count, aliases, |aliases| {
             // clear existing aliases
             self.client
                 .execute("DELETE FROM APPLICATION_ALIASES WHERE ID=$1", &[&id])
@@ -270,8 +307,6 @@ WHERE
             self.insert_aliases(&id, &aliases).await?;
 
             Ok(())
-        } else {
-            Err(ServiceError::NotFound)
-        }
+        })
     }
 }

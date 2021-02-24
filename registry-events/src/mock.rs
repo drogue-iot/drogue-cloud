@@ -66,7 +66,10 @@ impl MockEventSender {
 impl EventSender for MockEventSender {
     type Error = MockSenderError;
 
-    async fn notify(&self, events: Vec<Event>) -> SenderResult<(), Self::Error> {
+    async fn notify<I>(&self, events: I) -> SenderResult<(), Self::Error>
+    where
+        I: IntoIterator<Item = Event> + Sync + Send,
+    {
         self.events
             .write()
             .map_err(|_| MockSenderError::Lock)?
@@ -78,7 +81,7 @@ impl EventSender for MockEventSender {
 #[cfg(test)]
 mod test {
     use crate::mock::MockEventSender;
-    use crate::{Event, EventSender};
+    use crate::{Event, EventSender, SendEvent};
 
     #[tokio::test]
     async fn test_1() {
@@ -91,14 +94,14 @@ mod test {
         assert!(events.is_ok());
         assert_eq!(events.unwrap(), vec![]);
 
-        assert!(sender
-            .notify_one(Event::Application {
-                instance: "instance1".into(),
-                id: "app1".into(),
-                path: "spec/core".into()
-            })
-            .await
-            .is_ok());
+        assert!(Event::Application {
+            instance: "instance1".into(),
+            id: "app1".into(),
+            path: "spec/core".into()
+        }
+        .send_with(&sender)
+        .await
+        .is_ok());
 
         let events = sender.events();
         assert!(events.is_ok());

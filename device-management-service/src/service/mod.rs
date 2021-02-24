@@ -4,18 +4,20 @@ mod x509;
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use actix_web::ResponseError;
 use async_trait::async_trait;
-use deadpool_postgres::Pool;
+use chrono::Utc;
+use deadpool_postgres::{Pool, Transaction};
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{
         self,
         app::{ApplicationAccessor, PostgresApplicationAccessor},
         device::{DeviceAccessor, PostgresDeviceAccessor},
-        TypedAlias,
+        diff::diff_paths,
+        Lock, TypedAlias,
     },
     DatabaseService,
 };
-use drogue_cloud_registry_events::EventSender;
+use drogue_cloud_registry_events::{Event, EventSender, SendEvent};
 use drogue_cloud_service_api::{
     health::HealthCheckedService,
     management::{
@@ -36,7 +38,7 @@ pub trait ManagementService: HealthCheckedService + Clone {
     async fn create_app(&self, data: Application) -> Result<(), Self::Error>;
     async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error>;
     async fn update_app(&self, data: Application) -> Result<(), Self::Error>;
-    async fn delete_app(&self, id: &str) -> Result<bool, Self::Error>;
+    async fn delete_app(&self, id: &str) -> Result<(), Self::Error>;
 
     async fn create_device(&self, device: Device) -> Result<(), Self::Error>;
     async fn get_device(
@@ -45,7 +47,7 @@ pub trait ManagementService: HealthCheckedService + Clone {
         device_id: &str,
     ) -> Result<Option<Device>, Self::Error>;
     async fn update_device(&self, device: Device) -> Result<(), Self::Error>;
-    async fn delete_device(&self, app_id: &str, device_id: &str) -> Result<bool, Self::Error>;
+    async fn delete_device(&self, app_id: &str, device_id: &str) -> Result<(), Self::Error>;
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -139,6 +141,8 @@ where
             generation: 0,                   // will be set internally
             creation_timestamp: epoch(),     // will be set internally
             resource_version: String::new(), // will be set internally
+            deletion_timestamp: None,        // will be set internally
+            finalizers: app.metadata.finalizers,
             data: json!({
                 "spec": app.spec,
                 "status": app.status,
@@ -185,6 +189,8 @@ where
             creation_timestamp: epoch(),     // will be set internally
             generation: 0,                   // will be set internally
             resource_version: String::new(), // will be set internally
+            deletion_timestamp: None,        // will be set internally
+            finalizers: device.metadata.finalizers,
             data: json!({
                 "spec": device.spec,
                 "status": device.status,
@@ -194,6 +200,95 @@ where
         // return result
 
         Ok((device, aliases))
+    }
+
+    /// Perform the operation of updating an application
+    async fn perform_update_app(
+        &self,
+        t: &Transaction<'_>,
+        mut app: models::app::Application,
+        aliases: Option<HashSet<TypedAlias>>,
+    ) -> Result<Vec<Event>, PostgresManagementServiceError<S::Error>> {
+        let id = app.id.clone();
+
+        let accessor = PostgresApplicationAccessor::new(t);
+
+        // get current state for diffing
+        let current = match accessor.get(&app.id, Lock::ForUpdate).await? {
+            Some(app) => Ok(app),
+            None => Err(ServiceError::NotFound),
+        }?;
+
+        // we simply copy over the deletion timestamp
+        app.deletion_timestamp = current.deletion_timestamp;
+
+        if app.deletion_timestamp.is_some() && app.finalizers.is_empty() {
+            // delete, but don't send any event
+            accessor.delete(&id).await?;
+
+            Ok(vec![])
+        } else {
+            // check which paths changed
+
+            let paths = diff_paths(&current, &app);
+            if paths.is_empty() {
+                // there was no change
+                return Ok(vec![]);
+            }
+
+            // update
+
+            accessor
+                .update(app, aliases)
+                .await
+                .map_err(|err| match err.sql_state() {
+                    Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
+                    _ => err,
+                })?;
+
+            // send change event
+
+            Ok(Event::new_app(self.instance.clone(), id, paths))
+        }
+    }
+
+    /// Called when a device was deleted, so check if the application can be garbage collected.
+    async fn check_clean_app(
+        &self,
+        t: &Transaction<'_>,
+        app_id: &str,
+    ) -> Result<(), PostgresManagementServiceError<S::Error>> {
+        let app = PostgresApplicationAccessor::new(t)
+            .get(app_id, Lock::ForUpdate)
+            .await?;
+
+        let mut app = if let Some(app) = app {
+            app
+        } else {
+            // device without an app, shouldn't happen, but don't need to do anything anyways.
+            return Ok(());
+        };
+
+        if app.deletion_timestamp.is_none() {
+            // device got deleted, but the app is not
+            return Ok(());
+        }
+
+        // check how many devices remain
+
+        let count = PostgresDeviceAccessor::new(t).count_devices(app_id).await?;
+        if count > 0 {
+            // there are still devices left.
+            return Ok(());
+        }
+
+        // we removed the last of the devices blocking the deletion
+        app.finalizers.retain(|f| f != "has-devices");
+        self.perform_update_app(t, app, None).await?;
+
+        // done
+
+        Ok(())
     }
 }
 
@@ -226,8 +321,8 @@ where
 
         // send change events
 
-        self.sender
-            .notify_app(self.instance.clone(), id, &[])
+        Event::new_app(self.instance.clone(), id, vec![])
+            .send_with(&self.sender)
             .await?;
 
         // done
@@ -238,7 +333,9 @@ where
     async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error> {
         let c = self.pool.get().await?;
 
-        let app = PostgresApplicationAccessor::new(&c).get(id).await?;
+        let app = PostgresApplicationAccessor::new(&c)
+            .get(id, Lock::None)
+            .await?;
 
         Ok(app.map(Into::into))
     }
@@ -249,24 +346,60 @@ where
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        PostgresApplicationAccessor::new(&t)
-            .update(app, aliases)
-            .await
-            .map_err(|err| match err.sql_state() {
-                Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
-                _ => err,
-            })?;
+        let events = self.perform_update_app(&t, app, Some(aliases)).await?;
 
         t.commit().await?;
+
+        // send events
+
+        events.send_with(&self.sender).await?;
 
         Ok(())
     }
 
-    async fn delete_app(&self, id: &str) -> Result<bool, Self::Error> {
+    async fn delete_app(&self, id: &str) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        let result = PostgresApplicationAccessor::new(&t).delete(id).await?;
+        let accessor = PostgresApplicationAccessor::new(&t);
+
+        // get current state for diffing
+        let mut current = match accessor.get(&id, Lock::ForUpdate).await? {
+            Some(device) => Ok(device),
+            None => Err(ServiceError::NotFound),
+        }?;
+
+        if current.deletion_timestamp.is_some() {
+            return Err(ServiceError::NotFound.into());
+        }
+
+        // next, we need to delete the application
+
+        // first, delete all devices and count the once we can only soft-delete
+
+        let remaining_devices = PostgresDeviceAccessor::new(&t).delete_app(&id).await?;
+
+        if remaining_devices > 0 {
+            // we have pending device deletions, so add the finalizer
+            current.finalizers.push("has-devices".into());
+        }
+
+        // then delete the application
+
+        let path = if current.finalizers.is_empty() {
+            accessor.delete(id).await?;
+
+            "."
+        } else {
+            // update deleted timestamp
+            current.deletion_timestamp = Some(Utc::now());
+
+            // update the record
+            accessor.update(current, None).await?;
+
+            ".metadata"
+        }
+        .into();
 
         // commit
 
@@ -274,20 +407,36 @@ where
 
         // send change event
 
-        self.sender
-            .notify_app(self.instance.clone(), id, &[])
+        Event::new_app(self.instance.clone(), id, vec![path])
+            .send_with(&self.sender)
             .await?;
 
         // done
 
-        Ok(result)
+        Ok(())
     }
 
     async fn create_device(&self, device: Device) -> Result<(), Self::Error> {
         let (device, aliases) = Self::device_to_entity(device)?;
 
+        let app_id = device.application_id.clone();
+        let id = device.id.clone();
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
+
+        let app = PostgresApplicationAccessor::new(&t)
+            .get(&app_id, Lock::ForShare)
+            .await?;
+
+        // if there is no entry, or it is marked for deletion, we don't allow adding a new device
+
+        match app {
+            Some(app) if app.deletion_timestamp.is_none() => {}
+            _ => return Err(ServiceError::ReferenceNotFound.into()),
+        }
+
+        // create the device
 
         PostgresDeviceAccessor::new(&t)
             .create(device, aliases)
@@ -304,9 +453,11 @@ where
 
         // send change events
 
-        self.sender
-            .notify_device(self.instance.clone(), app, id, &[])
+        Event::new_device(self.instance.clone(), app_id, id, vec![])
+            .send_with(&self.sender)
             .await?;
+
+        // done
 
         Ok(())
     }
@@ -319,41 +470,112 @@ where
         let c = self.pool.get().await?;
 
         let device = PostgresDeviceAccessor::new(&c)
-            .get(app_id, device_id)
+            .get(app_id, device_id, Lock::None)
             .await?;
 
         Ok(device.map(Into::into))
     }
 
     async fn update_device(&self, device: Device) -> Result<(), Self::Error> {
-        let (device, aliases) = Self::device_to_entity(device)?;
+        let (mut device, aliases) = Self::device_to_entity(device)?;
+
+        let app_id = device.application_id.clone();
+        let id = device.id.clone();
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        PostgresDeviceAccessor::new(&t)
-            .update(device, aliases)
-            .await
-            .map_err(|err| match err.sql_state() {
-                Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
-                _ => err,
-            })?;
+        let accessor = PostgresDeviceAccessor::new(&t);
 
-        t.commit().await?;
+        // get current state for diffing
+        let current = match accessor.get(&app_id, &id, Lock::ForUpdate).await? {
+            Some(device) => Ok(device),
+            None => Err(ServiceError::NotFound),
+        }?;
+
+        // we simply copy over the deletion timestamp
+        device.deletion_timestamp = current.deletion_timestamp;
+
+        if device.deletion_timestamp.is_some() && device.finalizers.is_empty() {
+            // delete, but don't send any event
+            accessor.delete(&app_id, &id).await?;
+
+            // check with the application
+            self.check_clean_app(&t, &app_id).await?;
+
+            t.commit().await?;
+        } else {
+            // check which paths changed
+            let paths = diff_paths(&current, &device);
+            if paths.is_empty() {
+                // there was no change
+                return Ok(());
+            }
+
+            accessor
+                .update(device, Some(aliases))
+                .await
+                .map_err(|err| match err.sql_state() {
+                    Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
+                    _ => err,
+                })?;
+
+            t.commit().await?;
+
+            // send change event
+
+            Event::new_device(self.instance.clone(), app_id, id, paths)
+                .send_with(&self.sender)
+                .await?;
+        }
+
+        // done
 
         Ok(())
     }
 
-    async fn delete_device(&self, tenant_id: &str, device_id: &str) -> Result<bool, Self::Error> {
+    async fn delete_device(&self, app_id: &str, device_id: &str) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        let result = PostgresDeviceAccessor::new(&t)
-            .delete(tenant_id, device_id)
-            .await?;
+        let accessor = PostgresDeviceAccessor::new(&t);
+
+        // get current state for diffing
+        let mut current = match accessor.get(&app_id, &device_id, Lock::ForUpdate).await? {
+            Some(device) => Ok(device),
+            None => Err(ServiceError::NotFound),
+        }?;
+
+        if current.deletion_timestamp.is_some() {
+            return Err(ServiceError::NotFound.into());
+        }
+
+        let path = if current.finalizers.is_empty() {
+            // no finalizers, we can directly delete
+            accessor.delete(app_id, device_id).await?;
+
+            "."
+        } else {
+            // update deleted timestamp
+            current.deletion_timestamp = Some(Utc::now());
+
+            // update the record
+            accessor.update(current, None).await?;
+
+            ".metadata"
+        }
+        .into();
 
         t.commit().await?;
 
-        Ok(result)
+        // send change event
+
+        Event::new_device(self.instance.clone(), app_id, device_id, vec![path])
+            .send_with(&self.sender)
+            .await?;
+
+        // done
+
+        Ok(())
     }
 }

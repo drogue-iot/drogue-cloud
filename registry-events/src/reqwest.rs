@@ -21,7 +21,11 @@ impl ReqwestEventSender {
 impl EventSender for ReqwestEventSender {
     type Error = reqwest::Error;
 
-    async fn notify(&self, events: Vec<Event>) -> SenderResult<(), Self::Error> {
+    async fn notify<I>(&self, events: I) -> SenderResult<(), Self::Error>
+    where
+        I: IntoIterator<Item = Event> + Sync + Send,
+    {
+        let events = events.into_iter().collect::<Vec<_>>();
         for event in events {
             let event: cloudevents::Event = event.try_into().map_err(EventSenderError::Event)?;
             event_to_request(event, self.client.post(self.url.clone()))

@@ -219,11 +219,18 @@ async fn test_app_labels() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
-            instance: "drogue-instance".into(),
-            id: "app1".into(),
-            path: ".spec.core".into()
-        }]);
+        assert_eq!(sender.retrieve().unwrap(), vec![
+            Event::Application {
+                instance: "drogue-instance".into(),
+                id: "app1".into(),
+                path: ".metadata".into()
+            },
+            Event::Application {
+                instance: "drogue-instance".into(),
+                id: "app1".into(),
+                path: ".spec.core".into()
+            }
+        ]);
 
         // read, must exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
@@ -394,5 +401,104 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
                 "resourceVersion": resource_version,
             }
         }));
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_delete_finalizer() -> anyhow::Result<()> {
+    test!((app, sender) => {
+        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": "app1",
+                "finalizers": ["foo", "bar"],
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".metadata".into()
+        }]);
+
+        // read, must exist
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let mut result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+        let deletion_timestamp = result["metadata"]["deletionTimestamp"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 1,
+                "resourceVersion": resource_version,
+                "deletionTimestamp": deletion_timestamp,
+                "finalizers": ["foo", "bar"],
+            }
+        }));
+
+        // delete one finalizer
+        result["metadata"]["finalizers"] = json!(["bar"]);
+
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&result).send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // get another metadata event
+        assert_eq!(sender.retrieve().unwrap(), vec![
+            Event::Application {
+                instance: "drogue-instance".into(),
+                id: "app1".into(),
+                path: ".metadata".into()
+            },
+        ]);
+
+        // read, must exist (one less finalizer, some deletion timestamp)
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let mut result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 2,
+                "resourceVersion": resource_version,
+                "deletionTimestamp": deletion_timestamp,
+                "finalizers": ["bar"],
+            }
+        }));
+
+        // delete last finalizer
+        result["metadata"]["finalizers"] = json!([]);
+
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&result).send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // no more events when cleaning up after finalizers
+        assert_eq!(sender.retrieve().unwrap(), vec![]);
+
     })
 }

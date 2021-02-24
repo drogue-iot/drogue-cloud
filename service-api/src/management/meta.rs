@@ -25,6 +25,7 @@ fn epoch() -> DateTime<Utc> {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct NonScopedMetadata {
     pub name: String,
 
@@ -34,6 +35,12 @@ pub struct NonScopedMetadata {
     pub generation: u64,
     #[serde(default)]
     pub resource_version: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deletion_timestamp: Option<DateTime<Utc>>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub finalizers: Vec<String>,
 
     #[serde(default)]
     #[serde(skip_serializing_if = "HashMap::is_empty")]
@@ -45,6 +52,7 @@ pub struct NonScopedMetadata {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 pub struct ScopedMetadata {
     pub application: String,
     pub name: String,
@@ -55,6 +63,12 @@ pub struct ScopedMetadata {
     pub generation: u64,
     #[serde(default)]
     pub resource_version: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deletion_timestamp: Option<DateTime<Utc>>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub finalizers: Vec<String>,
 
     #[serde(default)]
     #[serde(skip_serializing_if = "HashMap::is_empty")]
@@ -74,6 +88,8 @@ impl Default for ScopedMetadata {
             creation_timestamp: chrono::Utc::now(),
             resource_version: Default::default(),
             generation: Default::default(),
+            deletion_timestamp: Default::default(),
+            finalizers: Default::default(),
         }
     }
 }
@@ -87,6 +103,8 @@ impl Default for NonScopedMetadata {
             creation_timestamp: chrono::Utc::now(),
             resource_version: Default::default(),
             generation: Default::default(),
+            deletion_timestamp: Default::default(),
+            finalizers: Default::default(),
         }
     }
 }
