@@ -19,7 +19,8 @@ pub struct PublishOptions {
     pub r#as: Option<String>,
 
     pub model_id: Option<String>,
-    pub ttd: Option<u64>,
+    #[serde(alias = "commandTimeout")]
+    pub ct: Option<u64>,
 }
 
 #[post("/{channel}")]
@@ -134,7 +135,7 @@ pub async fn publish(
             wait_for_command(
                 commands,
                 Id::new(application.metadata.name, device_id),
-                opts.ttd,
+                opts.ct,
             )
             .await
         }

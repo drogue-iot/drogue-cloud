@@ -11,6 +11,8 @@ use drogue_cloud_service_common::Id;
 use actix_rt::time::timeout;
 use std::time::Duration;
 
+const HEADER_COMMAND: &str = "command";
+
 pub async fn wait_for_command(
     commands: web::Data<Commands>,
     id: Id,
@@ -22,7 +24,10 @@ pub async fn wait_for_command(
             match timeout(Duration::from_secs(ttd), receiver.recv()).await {
                 Ok(command) => {
                     commands.unsubscribe(id.clone());
-                    Ok(HttpResponse::Ok().body(command.unwrap().command))
+                    let cmd = command.unwrap();
+                    Ok(HttpResponse::Ok()
+                        .header(HEADER_COMMAND, cmd.command)
+                        .body(cmd.payload.unwrap()))
                 }
                 _ => {
                     commands.unsubscribe(id.clone());
