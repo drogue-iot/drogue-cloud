@@ -1,6 +1,6 @@
 name: drogue-cloud
 title: Drogue Cloud
-version: 0.3.0
+version: dev
 start_page: ROOT:concepts.adoc
 nav:
-  - nav.adoc
+  - modules/ROOT/nav.adoc
