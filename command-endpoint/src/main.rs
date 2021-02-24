@@ -46,7 +46,12 @@ async fn command(
     req: web::HttpRequest,
     body: web::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    log::info!("Send command '{}' to '{}' / '{}'",opts.command, opts.application, opts.device);
+    log::info!(
+        "Send command '{}' to '{}' / '{}'",
+        opts.command,
+        opts.application,
+        opts.device
+    );
 
     endpoint
         .publish_http_default(

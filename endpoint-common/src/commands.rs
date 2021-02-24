@@ -3,24 +3,26 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use cloudevents::Event;
+use cloudevents::{AttributesReader, Event};
 use drogue_cloud_service_common::Id;
 use std::convert::TryFrom;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 /// Represents command
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Command {
     pub device_id: Id,
     pub command: String,
+    pub payload: Option<String>,
 }
 
 impl Command {
     /// Create a new scoped Command
-    pub fn new<C: ToString>(device_id: Id, command: C) -> Self {
+    pub fn new<C: ToString>(device_id: Id, command: C, payload: Option<String>) -> Self {
         Self {
             device_id,
             command: command.to_string(),
+            payload,
         }
     }
 }
@@ -30,10 +32,11 @@ impl TryFrom<Event> for Command {
 
     fn try_from(event: Event) -> Result<Self, Self::Error> {
         match Id::from_event(&event) {
-            Some(device_id) => Ok(Command {
+            Some(device_id) => Ok(Command::new(
                 device_id,
-                command: String::try_from(event.data().unwrap().clone()).unwrap(),
-            }),
+                event.subject().unwrap().to_string(),
+                String::try_from(event.data().unwrap().clone()).ok(),
+            )),
             _ => Err(()),
         }
     }
@@ -41,7 +44,7 @@ impl TryFrom<Event> for Command {
 
 #[derive(Clone, Debug)]
 pub struct Commands {
-    pub devices: Arc<Mutex<HashMap<Id, Sender<String>>>>,
+    pub devices: Arc<Mutex<HashMap<Id, Sender<Command>>>>,
 }
 
 impl Default for Commands {
@@ -60,7 +63,7 @@ impl Commands {
     pub async fn send(&self, msg: Command) -> Result<(), String> {
         let device = { self.devices.lock().unwrap().get(&msg.device_id).cloned() };
         if let Some(sender) = device {
-            match sender.send(msg.command.clone()).await {
+            match sender.send(msg.clone()).await {
                 Ok(_) => {
                     log::debug!(
                         "Command {:?} sent to device {:?}",
@@ -83,7 +86,7 @@ impl Commands {
         }
     }
 
-    pub fn subscribe(&self, device_id: Id) -> Receiver<String> {
+    pub fn subscribe(&self, device_id: Id) -> Receiver<Command> {
         let (tx, rx) = channel(32);
         let mut devices = self.devices.lock().unwrap();
         devices.insert(device_id.clone(), tx);
@@ -118,14 +121,14 @@ mod test {
         let handle = tokio::spawn(async move {
             let cmd = timeout(Duration::from_secs(1), receiver.recv()).await;
             log::info!("Received {:?}", cmd);
-            assert_eq!(cmd, Ok(Some("test".to_string())));
+            assert_eq!(cmd.unwrap().unwrap().command, "test".to_string());
             let cmd2 = timeout(Duration::from_secs(1), receiver.recv()).await;
             log::info!("Received {:?}", cmd2);
             assert_eq!(cmd2.is_err(), true);
         });
 
         commands
-            .send(Command::new(id.clone(), "test".to_string()))
+            .send(Command::new(id.clone(), "test".to_string(), None))
             .await
             .ok();
 
@@ -145,37 +148,37 @@ mod test {
             for i in 0..5 {
                 let cmd = receiver.recv().await;
                 log::info!("Received {:?}", cmd);
-                assert_eq!(cmd, Some(format!("test{}", i).to_string()));
+                assert_eq!(cmd.unwrap().command, format!("test{}", i).to_string());
             }
             let cmd2 = receiver.recv().await;
             log::info!("Received {:?}", cmd2);
-            assert_eq!(cmd2, None);
+            assert_eq!(cmd2.is_none(), true);
         });
 
         commands
-            .send(Command::new(id.clone(), "test0".to_string()))
+            .send(Command::new(id.clone(), "test0".to_string(), None))
             .await
             .ok();
         commands
-            .send(Command::new(id.clone(), "test1".to_string()))
+            .send(Command::new(id.clone(), "test1".to_string(), None))
             .await
             .ok();
         commands
-            .send(Command::new(id.clone(), "test2".to_string()))
+            .send(Command::new(id.clone(), "test2".to_string(), None))
             .await
             .ok();
         commands
-            .send(Command::new(id.clone(), "test3".to_string()))
+            .send(Command::new(id.clone(), "test3".to_string(), None))
             .await
             .ok();
         commands
-            .send(Command::new(id.clone(), "test4".to_string()))
+            .send(Command::new(id.clone(), "test4".to_string(), None))
             .await
             .ok();
 
         commands.unsubscribe(id.clone());
         commands
-            .send(Command::new(id.clone(), "test5".to_string()))
+            .send(Command::new(id.clone(), "test5".to_string(), None))
             .await
             .ok();
 

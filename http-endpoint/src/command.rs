@@ -22,7 +22,7 @@ pub async fn wait_for_command(
             match timeout(Duration::from_secs(ttd), receiver.recv()).await {
                 Ok(command) => {
                     commands.unsubscribe(id.clone());
-                    Ok(HttpResponse::Ok().body(command.unwrap()))
+                    Ok(HttpResponse::Ok().body(command.unwrap().command))
                 }
                 _ => {
                     commands.unsubscribe(id.clone());
