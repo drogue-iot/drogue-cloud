@@ -1,6 +1,6 @@
 pub mod endpoints;
 pub mod service;
-mod utils;
+pub mod utils;
 
 use crate::service::ManagementService;
 use drogue_cloud_service_common::openid::Authenticator;

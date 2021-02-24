@@ -343,7 +343,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
 
 #[actix_rt::test]
 #[serial]
-async fn test_delete_tenant_deletes_device() -> anyhow::Result<()> {
+async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
     test!((app, sender) => {
 
         // create tenant
@@ -384,15 +384,11 @@ async fn test_delete_tenant_deletes_device() -> anyhow::Result<()> {
         let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-        // two events must have been fired
+        // one event must have been fired, the device event is omitted as it doesn't have a
+        // finalizer set
         assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
-            path: ".".into()
-        }, Event::Device {
-            instance: "drogue-instance".into(),
-            application: "app1".into(),
-            id: "device1".into(),
             path: ".".into()
         }]);
 
@@ -400,5 +396,162 @@ async fn test_delete_tenant_deletes_device() -> anyhow::Result<()> {
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
+    test!((app, sender) => {
+
+        // create tenant
+        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": "app1",
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".".into()
+        }]);
+
+        // create device
+        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+            "metadata": {
+                "application": "app1",
+                "name": "device1",
+                "finalizers": ["foo"], // create a device with finalizer
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // an event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+            instance: "drogue-instance".into(),
+            application: "app1".into(),
+            id: "device1".into(),
+            path: ".".into()
+        }]);
+
+        // delete application, must succeed
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // one event must have been fired, but notify about a metadata change
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+            instance: "drogue-instance".into(),
+            id: "app1".into(),
+            path: ".metadata".into()
+        }]);
+
+        // the application must still exist
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let deletion_timestamp = result["metadata"]["deletionTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "name": "app1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 1,
+                "resourceVersion": resource_version,
+                "deletionTimestamp": deletion_timestamp,
+                "finalizers": ["has-devices"],
+            },
+        }));
+
+        // read device, must still exist
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "application": "app1",
+                "name": "device1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 0,
+                "resourceVersion": resource_version,
+                "finalizers": ["foo"]
+            },
+        }));
+
+        // now delete the device, must succeed, but soft deleted
+
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // an event must have been fired
+
+        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+            instance: "drogue-instance".into(),
+            application: "app1".into(),
+            id: "device1".into(),
+            path: ".metadata".into()
+        }]);
+
+        // read device, must still exist
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let deletion_timestamp = result["metadata"]["deletionTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "application": "app1",
+                "name": "device1",
+                "creationTimestamp": creation_timestamp,
+                "generation": 1,
+                "resourceVersion": resource_version,
+                "deletionTimestamp": deletion_timestamp,
+                "finalizers": ["foo"]
+            },
+        }));
+
+        // update device, remove finalizer
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&json!({
+            "metadata": {
+                "application": "app1",
+                "name": "device1",
+                "finalizers": [],
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // no event must have been fired
+        assert_eq!(sender.retrieve().unwrap(), vec![]);
+
+        // read device, must no longer not exist
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // read app, must no longer not exist
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
     })
 }

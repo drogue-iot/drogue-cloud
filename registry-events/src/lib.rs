@@ -34,6 +34,25 @@ pub enum Event {
     },
 }
 
+#[async_trait]
+pub trait SendEvent<S: EventSender> {
+    async fn send_with(self, sender: &S) -> SenderResult<(), S::Error>;
+}
+
+#[async_trait]
+impl<S: EventSender> SendEvent<S> for Event {
+    async fn send_with(self, sender: &S) -> SenderResult<(), S::Error> {
+        sender.notify(vec![self; 1]).await
+    }
+}
+
+#[async_trait]
+impl<S: EventSender> SendEvent<S> for Vec<Event> {
+    async fn send_with(self, sender: &S) -> SenderResult<(), S::Error> {
+        sender.notify(self).await
+    }
+}
+
 impl Event {
     fn from_app(event: cloudevents::Event) -> Result<Event, EventError> {
         Ok(Event::Application {
@@ -72,6 +91,51 @@ impl Event {
                 .to_string(),
         })
     }
+
+    /// Help creating new events.
+    fn new_change<C>(paths: Vec<String>, c: C) -> Vec<Event>
+    where
+        C: Fn(String) -> Event,
+    {
+        if paths.is_empty() {
+            vec![c(".".to_string())]
+        } else {
+            paths.into_iter().map(|path| c(path)).collect()
+        }
+    }
+
+    /// create new events for an app
+    pub fn new_app<I, A>(instance_id: I, app_id: A, paths: Vec<String>) -> Vec<Event>
+    where
+        I: ToString,
+        A: ToString,
+    {
+        Self::new_change(paths, |path| Event::Application {
+            instance: instance_id.to_string(),
+            id: app_id.to_string(),
+            path,
+        })
+    }
+
+    /// create new events for a device
+    pub fn new_device<I, A, D>(
+        instance_id: I,
+        app_id: A,
+        device_id: D,
+        paths: Vec<String>,
+    ) -> Vec<Event>
+    where
+        I: ToString,
+        A: ToString,
+        D: ToString,
+    {
+        Self::new_change(paths, |path| Event::Device {
+            instance: instance_id.to_string(),
+            application: app_id.to_string(),
+            id: device_id.to_string(),
+            path,
+        })
+    }
 }
 
 #[derive(Debug, Error)]
@@ -103,78 +167,9 @@ type SenderResult<T, E> = Result<T, EventSenderError<E>>;
 pub trait EventSender: Clone + Send + Sync {
     type Error: std::error::Error + std::fmt::Debug + 'static;
 
-    async fn notify(&self, events: Vec<Event>) -> SenderResult<(), Self::Error>;
-
-    /// Send out a single event.
-    async fn notify_one(&self, event: Event) -> SenderResult<(), Self::Error> {
-        self.notify(vec![event]).await
-    }
-
-    async fn notify_change<C>(&self, paths: &[&str], c: C) -> SenderResult<(), Self::Error>
+    async fn notify<I>(&self, events: I) -> SenderResult<(), Self::Error>
     where
-        C: Fn(String) -> Event + Sync + Send,
-    {
-        let paths = match paths {
-            [] => &["."],
-            paths => paths,
-        };
-
-        for path in paths {
-            self.notify_one(c(path.to_string())).await?
-        }
-
-        Ok(())
-    }
-
-    async fn notify_app<I, A>(
-        &self,
-        instance_id: I,
-        app_id: A,
-        paths: &[&str],
-    ) -> SenderResult<(), Self::Error>
-    where
-        I: ToString + Send + Sync,
-        A: ToString + Send + Sync,
-    {
-        self.notify_change(paths, |path| Event::Application {
-            instance: instance_id.to_string(),
-            id: app_id.to_string(),
-            path,
-        })
-        .await?;
-
-        Ok(())
-    }
-
-    async fn notify_device<I, A, D>(
-        &self,
-        instance_id: I,
-        app_id: A,
-        device_id: D,
-        paths: &[&str],
-    ) -> SenderResult<(), Self::Error>
-    where
-        I: ToString + Send + Sync,
-        A: ToString + Send + Sync,
-        D: ToString + Send + Sync,
-    {
-        let paths = match paths {
-            [] => &["."],
-            paths => paths,
-        };
-
-        for path in paths {
-            self.notify_one(Event::Device {
-                instance: instance_id.to_string(),
-                application: app_id.to_string(),
-                id: device_id.to_string(),
-                path: path.to_string(),
-            })
-            .await?
-        }
-
-        Ok(())
-    }
+        I: IntoIterator<Item = Event> + Sync + Send;
 }
 
 impl TryInto<cloudevents::Event> for Event {

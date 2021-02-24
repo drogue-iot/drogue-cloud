@@ -27,3 +27,9 @@ drogue-cloud-service-api = { path = "../service-api" }
 
 [dev-dependencies]
 anyhow = "1"
+
+criterion = { version = "0.3" } # , features = ["real_blackbox"]
+
+[[bench]]
+name = "diff"
+harness = false

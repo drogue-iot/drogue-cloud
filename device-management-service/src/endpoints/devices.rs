@@ -56,9 +56,7 @@ where
 
     data.service.update_device(device.0).await?;
 
-    let response = HttpResponse::NoContent().finish();
-
-    Ok(response)
+    Ok(HttpResponse::NoContent().finish())
 }
 
 pub async fn delete<S>(
@@ -74,14 +72,9 @@ where
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    let found = data.service.delete_device(&app_id, &device_id).await?;
+    data.service.delete_device(&app_id, &device_id).await?;
 
-    let result = match found {
-        false => HttpResponse::NotFound().finish(),
-        true => HttpResponse::NoContent().finish(),
-    };
-
-    Ok(result)
+    Ok(HttpResponse::NoContent().finish())
 }
 
 pub async fn read<S>(

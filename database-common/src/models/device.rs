@@ -1,9 +1,10 @@
-use crate::{error::ServiceError, models::TypedAlias, Client};
+use crate::models::Lock;
+use crate::{diffable, error::ServiceError, models::TypedAlias, update_aliases, Client};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use drogue_cloud_service_api::management::{self, ScopedMetadata};
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
 use uuid::Uuid;
 
@@ -16,9 +17,13 @@ pub struct Device {
     pub creation_timestamp: DateTime<Utc>,
     pub resource_version: String,
     pub generation: u64,
+    pub deletion_timestamp: Option<DateTime<Utc>>,
+    pub finalizers: Vec<String>,
 
     pub data: Value,
 }
+
+diffable!(Device);
 
 impl From<Device> for management::Device {
     fn from(device: Device) -> Self {
@@ -31,6 +36,8 @@ impl From<Device> for management::Device {
                 creation_timestamp: device.creation_timestamp,
                 generation: device.generation,
                 resource_version: device.resource_version,
+                deletion_timestamp: device.deletion_timestamp,
+                finalizers: device.finalizers,
             },
             spec: device.data["spec"].as_object().cloned().unwrap_or_default(),
             status: device.data["status"]
@@ -43,28 +50,39 @@ impl From<Device> for management::Device {
 
 #[async_trait]
 pub trait DeviceAccessor {
-    /// Lookup a device by alias
+    /// Lookup a device by alias.
     async fn lookup(&self, app_id: &str, alias: &str) -> Result<Option<Device>, ServiceError>;
 
-    /// Delete a device
-    async fn delete(&self, app_id: &str, device_id: &str) -> Result<bool, ServiceError>;
+    /// Delete a device.
+    async fn delete(&self, app_id: &str, device_id: &str) -> Result<(), ServiceError>;
 
-    /// Get a device
-    async fn get(&self, app_id: &str, device_id: &str) -> Result<Option<Device>, ServiceError>;
+    /// Get a device.
+    async fn get(
+        &self,
+        app_id: &str,
+        device_id: &str,
+        lock: Lock,
+    ) -> Result<Option<Device>, ServiceError>;
 
-    /// Create a new device
+    /// Create a new device.
     async fn create(
         &self,
         device: Device,
         aliases: HashSet<TypedAlias>,
     ) -> Result<(), ServiceError>;
 
-    /// Update an existing device
+    /// Update an existing device.
     async fn update(
         &self,
         device: Device,
-        aliases: HashSet<TypedAlias>,
+        aliases: Option<HashSet<TypedAlias>>,
     ) -> Result<(), ServiceError>;
+
+    /// Delete all devices that belong to an application.
+    async fn delete_app(&self, app_id: &str) -> Result<u64, ServiceError>;
+
+    /// Count devices remaining for an application.
+    async fn count_devices(&self, app_id: &str) -> Result<u64, ServiceError>;
 }
 
 pub struct PostgresDeviceAccessor<'c, C: Client> {
@@ -78,14 +96,16 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
     pub fn from_row(row: Row) -> Result<Device, tokio_postgres::Error> {
         Ok(Device {
-            application_id: row.try_get::<_, String>("APP_ID")?,
-            id: row.try_get::<_, String>("ID")?,
+            application_id: row.try_get("APP_ID")?,
+            id: row.try_get("ID")?,
 
-            creation_timestamp: row.try_get::<_, DateTime<Utc>>("CREATION_TIMESTAMP")?,
+            creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
             resource_version: row.try_get::<_, Uuid>("RESOURCE_VERSION")?.to_string(),
             labels: super::row_to_map(&row, "LABELS")?,
             annotations: super::row_to_map(&row, "ANNOTATIONS")?,
+            deletion_timestamp: row.try_get("DELETION_TIMESTAMP")?,
+            finalizers: super::row_to_vec(&row, "FINALIZERS")?,
 
             data: row.try_get::<_, Json<_>>("DATA")?.0,
         })
@@ -126,7 +146,7 @@ impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
         Ok(result)
     }
 
-    async fn delete(&self, app_id: &str, device_id: &str) -> Result<bool, ServiceError> {
+    async fn delete(&self, app_id: &str, device_id: &str) -> Result<(), ServiceError> {
         let count = self
             .client
             .execute(
@@ -135,14 +155,24 @@ impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
             )
             .await?;
 
-        Ok(count > 0)
+        if count > 0 {
+            Ok(())
+        } else {
+            Err(ServiceError::NotFound)
+        }
     }
 
-    async fn get(&self, app_id: &str, device_id: &str) -> Result<Option<Device>, ServiceError> {
+    async fn get(
+        &self,
+        app_id: &str,
+        device_id: &str,
+        lock: Lock,
+    ) -> Result<Option<Device>, ServiceError> {
         let result = self
             .client
             .query_opt(
-                r#"
+                format!(
+                    r#"
 SELECT
     ID,
     APP_ID,
@@ -151,11 +181,17 @@ SELECT
     CREATION_TIMESTAMP,
     GENERATION,
     RESOURCE_VERSION,
+    DELETION_TIMESTAMP,
+    FINALIZERS,
     DATA
 FROM DEVICES
 WHERE
     APP_ID = $1 AND ID = $2
+{for_update}
 "#,
+                    for_update = lock.to_string()
+                )
+                .as_str(),
                 &[&app_id, &device_id],
             )
             .await?
@@ -181,6 +217,8 @@ INSERT INTO DEVICES (
     CREATION_TIMESTAMP,
     GENERATION,
     RESOURCE_VERSION,
+    DELETION_TIMESTAMP,
+    FINALIZERS,
     DATA
 ) VALUES (
     $1,
@@ -190,7 +228,9 @@ INSERT INTO DEVICES (
     $5,
     0,
     $6,
-    $7
+    NULL,
+    $7,
+    $8
 )"#,
                 &[
                     &device.application_id,
@@ -199,6 +239,7 @@ INSERT INTO DEVICES (
                     &Json(&device.annotations),
                     &Utc::now(),
                     &Uuid::new_v4(),
+                    &device.finalizers,
                     &Json(&device.data),
                 ],
             )
@@ -213,7 +254,7 @@ INSERT INTO DEVICES (
     async fn update(
         &self,
         device: Device,
-        aliases: HashSet<TypedAlias>,
+        aliases: Option<HashSet<TypedAlias>>,
     ) -> Result<(), ServiceError> {
         // update device
         let count = self
@@ -225,7 +266,9 @@ UPDATE DEVICES SET
     ANNOTATIONS = $4,
     GENERATION = GENERATION + 1,
     RESOURCE_VERSION = $5,
-    DATA = $6
+    DELETION_TIMESTAMP = $6,
+    FINALIZERS = $7,
+    DATA = $8
 WHERE
     APP_ID = $1 AND ID = $2
 "#,
@@ -235,13 +278,14 @@ WHERE
                     &Json(device.labels),
                     &Json(device.annotations),
                     &Uuid::new_v4(),
+                    &device.deletion_timestamp,
+                    &device.finalizers,
                     &Json(device.data),
                 ],
             )
             .await?;
 
-        // did we update something?
-        if count > 0 {
+        update_aliases!(count, aliases, |aliases| {
             // clear existing aliases
             self.client
                 .execute(
@@ -255,8 +299,52 @@ WHERE
                 .await?;
 
             Ok(())
-        } else {
-            Err(ServiceError::NotFound)
-        }
+        })
+    }
+
+    async fn delete_app(&self, app_id: &str) -> Result<u64, ServiceError> {
+        // delete all devices without finalizers directly
+
+        let count = self
+            .client
+            .execute(
+                r#"
+DELETE
+    FROM DEVICES
+WHERE
+    APP_ID = $1
+AND
+    array_length ( FINALIZERS, 1 ) = 0
+"#,
+                &[&app_id],
+            )
+            .await?;
+
+        log::debug!("Deleted {} devices without a finalizer", count);
+
+        // count all remaining devices
+
+        let count = self.count_devices(&app_id).await?;
+
+        log::debug!("{} devices remain for deletion", count);
+
+        // done
+
+        Ok(count)
+    }
+
+    async fn count_devices(&self, app_id: &str) -> Result<u64, ServiceError> {
+        let count = self
+            .client
+            .query_opt(
+                r#"SELECT COUNT(ID) AS COUNT FROM DEVICES WHERE APP_ID = $1"#,
+                &[&app_id],
+            )
+            .await?
+            .ok_or_else(|| {
+                ServiceError::Internal("Unable to retrieve number of devices with finalizer".into())
+            })?;
+
+        Ok(count.try_get::<_, i64>("COUNT")? as u64)
     }
 }
