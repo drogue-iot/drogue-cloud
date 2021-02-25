@@ -4,9 +4,15 @@
 
 INSERT INTO APPLICATIONS (
     ID,
+    CREATION_TIMESTAMP,
+    RESOURCE_VERSION,
+    GENERATION,
     DATA
 ) VALUES (
     'app2',
+    now(),
+    gen_random_uuid(),
+    0,
     '{
       "spec": {
         "trustAnchors": {
@@ -57,10 +63,16 @@ INSERT INTO APPLICATION_ALIASES (
 INSERT INTO DEVICES (
     APP_ID,
     ID,
+    CREATION_TIMESTAMP,
+    RESOURCE_VERSION,
+    GENERATION,
     DATA
 ) VALUES (
     'app2',
     'device1',
+    now(),
+    gen_random_uuid(),
+    0,
     '{
       "spec": {
         "credentials": {}

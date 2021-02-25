@@ -139,9 +139,23 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 #[async_trait]
 impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
     async fn lookup(&self, app_id: &str, alias: &str) -> Result<Option<Device>, ServiceError> {
-        let result = self.client
-            .query_opt("SELECT D.ID, D.APP_ID, D.LABELS, D.DATA FROM DEVICE_ALIASES A INNER JOIN DEVICES D ON (A.ID=D.ID AND A.APP_ID=D.APP_ID) WHERE A.APP_ID = $1 AND A.ALIAS = $2", &[&app_id, &alias]).await?
-            .map(Self::from_row).transpose()?;
+        let result = self
+            .client
+            .query_opt(
+                r#"
+SELECT
+    D.ID, D.APP_ID, D.LABELS, D.CREATION_TIMESTAMP, D.GENERATION, D.RESOURCE_VERSION, D.ANNOTATIONS, D.DELETION_TIMESTAMP, D.FINALIZERS, D.DATA
+FROM
+    DEVICE_ALIASES A INNER JOIN DEVICES D ON (A.ID=D.ID AND A.APP_ID=D.APP_ID)
+WHERE
+    A.APP_ID = $1
+    AND
+    A.ALIAS = $2"#,
+                &[&app_id, &alias],
+            )
+            .await?
+            .map(Self::from_row)
+            .transpose()?;
 
         Ok(result)
     }
