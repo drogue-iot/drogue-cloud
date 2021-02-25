@@ -12,12 +12,18 @@ fn device1_json() -> Value {
         "application": {
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": "2020-01-01T00:00:00Z",
+                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "generation": 0,
             },
         },
         "device": {
             "metadata": {
                 "application": "app1",
                 "name": "device1",
+                "creationTimestamp": "2020-01-01T00:00:00Z",
+                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "generation": 0,
             },
         }
     }})
@@ -28,12 +34,18 @@ fn device3_json() -> Value {
         "application": {
             "metadata": {
                 "name": "app1",
+                "creationTimestamp": "2020-01-01T00:00:00Z",
+                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "generation": 0,
             },
         },
         "device": {
             "metadata": {
                 "application": "app1",
                 "name": "device3",
+                "creationTimestamp": "2020-01-01T00:00:00Z",
+                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "generation": 0,
             },
         }
     }})

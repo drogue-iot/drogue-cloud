@@ -10,8 +10,8 @@ INSERT INTO APPLICATIONS (
     DATA
 ) VALUES (
     'app2',
-    now(),
-    gen_random_uuid(),
+    '2020-01-01 00:00:00',
+    'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
     0,
     '{
       "spec": {
@@ -70,8 +70,8 @@ INSERT INTO DEVICES (
 ) VALUES (
     'app2',
     'device1',
-    now(),
-    gen_random_uuid(),
+    '2020-01-01 00:00:00',
+    'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
     0,
     '{
       "spec": {
