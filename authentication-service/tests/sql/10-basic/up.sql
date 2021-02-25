@@ -4,9 +4,15 @@
 
 INSERT INTO APPLICATIONS (
     ID,
+    CREATION_TIMESTAMP,
+    RESOURCE_VERSION,
+    GENERATION,
     DATA
 ) VALUES (
     'app1',
+    now(),
+    gen_random_uuid(),
+    0,
     '{}'::JSONB
 );
 
@@ -27,10 +33,16 @@ INSERT INTO APPLICATION_ALIASES (
 INSERT INTO DEVICES (
     APP_ID,
     ID,
+    CREATION_TIMESTAMP,
+    RESOURCE_VERSION,
+    GENERATION,
     DATA
 ) VALUES (
     'app1',
     'device1',
+    now(),
+    gen_random_uuid(),
+    0,
     '{
       "spec": {
         "credentials": {
@@ -65,10 +77,16 @@ INSERT INTO DEVICE_ALIASES(
 INSERT INTO DEVICES (
     APP_ID,
     ID,
+    CREATION_TIMESTAMP,
+    RESOURCE_VERSION,
+    GENERATION,
     DATA
 ) VALUES (
     'app1',
     'device3',
+    now(),
+    gen_random_uuid(),
+    0,
     '{
        "spec": {
          "credentials": {
