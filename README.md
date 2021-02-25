@@ -8,7 +8,7 @@
 
 The Drogue IoT Cloud takes care of the data on the cloud side.
 
-![Overview diagram](images/architecture.svg)
+![Overview diagram](docs/modules/ROOT/images/architecture.svg)
 
 It offers:
 
@@ -21,7 +21,7 @@ It is built on top of:
 
 * *Kubernetes* – For running workloads
 * *Cloud Events* - For normalizing transport protocols
-* *Knative (serving & eventing)* – For offering endpoints and streaming data
+* *Knative (eventing)* – For streaming data
 * *Apache Kafka* – For persisting events
 * *Keycloak* - For single-sign-on
 

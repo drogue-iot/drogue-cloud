@@ -1,0 +1,19 @@
+= Drogue Cloud
+
+The Drogue IoT Cloud project takes care of IoT on the cloud side.
+
+image:architecture.svg[Overview diagram]
+
+It offers:
+
+ * IoT friendly protocol endpoints
+ * Protocol normalization based on Cloud Events and Knative eventing
+ * Managing of device credentials and properties APIs and a graphical console to manage devices and data flows
+
+It is built on top of:
+
+ * _Kubernetes_ – For running workloads
+ * _Cloud Events_ - For normalizing transport protocols
+ * _Knative eventing_ – For streaming data
+ * _Apache Kafka_ – For persisting events
+ * _Keycloak_ - For single-sign-on
