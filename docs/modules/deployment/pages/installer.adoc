@@ -109,6 +109,23 @@ default is `drogue-iot`.
 NOTE: Currently, you can only change the namespace of the Drogue Cloud installation. The namespaces of Knative,
 Strimzi, are currently not configurable.
 
+=== Provide custom TLS certificates
+
+By default, the installer script will create a custom certificate authority. However, if you already have a key and
+certificate, you can instruct the installer to use these. There are two options to achieve this.
+
+==== Manually create the TLS secrets
+
+The installer will check if the secrets `http-endpoint-tls` and `mqtt-endpoint-tls` exist. If they don't it will
+create them either using provided or generated key and certificate material.
+
+If you manually create these TLS secrets, using those names, *before* running the installer, it will not override
+these existing secrets.
+
+==== Using local key and certificate files
+
+You can set the environment variable `TLS_KEY` and `TLS_CRT`, pointing them to PEM encoded key and certificate.
+
 == Re-running the installer
 
 Should something go wrong, it should be possible to just re-run the installer script. That should simply set the
