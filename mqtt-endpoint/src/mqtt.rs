@@ -156,7 +156,13 @@ macro_rules! subscribe {
                 ntex::rt::spawn(async move {
                     while let Some(cmd) = rx.recv().await {
                         match sink
-                            .publish(ByteString::from(format!("{}/{}", TOPIC_COMMAND_OUTBOX, cmd.command)), Bytes::from(cmd.payload.unwrap()))
+                            .publish(
+                                ByteString::from(format!(
+                                    "{}/{}",
+                                    TOPIC_COMMAND_OUTBOX, cmd.command
+                                )),
+                                Bytes::from(cmd.payload.unwrap()),
+                            )
                             .send_at_least_once()
                             .await
                         {
