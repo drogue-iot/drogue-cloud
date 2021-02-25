@@ -1,0 +1,36 @@
+= Prepare the cluster
+
+First we need to prepare the cluster.
+
+== Minikube
+
+[source,shell]
+----
+minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
+----
+
+Once the cluster is up and running, you need the start the load balancer tunnel in a new terminal,
+as this command must be running until you shut down your cluster, or the tunnel.
+
+[source,shell]
+----
+minikube tunnel
+----
+
+== Kind
+
+Creating a new cluster with Kind only requires to execute the following command:
+
+[source,shell]
+----
+kind create cluster
+----
+
+== Other
+
+For any other cluster:
+
+* You need to have a working context for `kubectl` (e.g. `oc login`).
+* You will need to be able to create new namespaces, being _admin_ helps.
+* You need some kind of `LoadBalancer` support. For OpenShift, you can use `Routes`.
+* You must have `PersistentVolumes` available to bind to.

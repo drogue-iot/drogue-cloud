@@ -27,7 +27,7 @@ It is built on top of:
 
 ## Installation
 
-Take a look at the file [deploy/README.md](deploy/README.adoc), it should guide you through the process.
+Take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/). 
 
 In a nutshell you need to:
 

@@ -1,0 +1,120 @@
+= Installer script
+
+Most of the deployment of Drogue Cloud uses `kustomize` as part of `kubectl`. However, we do require a few steps
+before and after the deployment. Installing dependencies on the cluster and setting URLs afterwards.
+
+For this we have a _magic_ installer script, that does everything for you. It is suited for an easy start on a
+local test cluster.
+
+== Download the installer package
+
+The installer package is part of the GitHub release record: https://github.com/drogue-iot/drogue-cloud/releases/tag/v0.3.0
+
+There is one package for each type of Kubernetes cluster:
+
+* `install-minikube` – For using with Minikube
+* `install-kind` – For using with Kind
+* `install-openshift` – For using with OpenShift
+
+Download the package, matching the cluster you plan to use.
+
+== Unpacking
+
+Unzip the package and change into the folder extracted from the archive.
+
+== What to expect
+
+The installer will create a new instance of Drogue Cloud on the cluster you are currently logged in to.
+
+By default, this includes:
+
+* Installing Knative
+* Installing Strimzi
+* Creating a Kafka cluster
+* Installing the Keycloak operator
+* Create a custom CA for the endpoints
+
+If you want to install those dependencies manually, for example using OLM, you can opt-out of the installation
+(see below).
+
+== Running the installer
+
+Run the installer script `./script/drogue.sh`, adding the options appropriate for your setup.
+
+You can use the environment variable `CLUSTER` to define which cluster type you have.
+
+NOTE: Yes, you downloaded a cluster type specific package, and still need to provide the cluster type. We are working
+on this.
+
+=== Running for Minikube
+
+As "Minikube" is the default, simply run:
+
+[source,shell]
+----
+./script/drogue.sh
+----
+
+=== Running for Kind
+
+[source,shell]
+----
+env CLUSTER=kind ./script/drogue.sh
+----
+
+=== Running for OpenShift
+
+[source,shell]
+----
+env CLUSTER=openshift ./script/drogue.sh
+----
+
+== Additional installer options
+
+Most options are controlled by using environment variables. You can set them by prefixing the
+call to the installation script, using `env` and the variable assignment:
+
+[source,shell]
+----
+env CLUSTER=kind INSTALL_DEPS=false ./script/drogue.sh
+----
+
+=== Skip the dependency installation
+
+If you want to install the dependencies (like Strimzi, KNative) yourself, you can opt out of installing the
+dependencies.
+
+|===
+|Variable Name | Default value | Description
+
+| `INSTALL_DEPS`
+| `true`
+| Control the installation of all dependencies.
+
+| `INSTALL_KNATIVE`
+| `$\{INSTALL_DEPS}`
+| Control the installation of the Knative stack.
+
+| `INSTALL_KEYCLOAK_OPERATOR`
+| `$\{INSTALL_DEPS}`
+| Control the installation of the Keycloak operator.
+
+|===
+
+=== Change the target namespace
+
+You can change the namespace where of the Drogue Cloud components get installed using the variable `DROGUE_NS`. The
+default is `drogue-iot`.
+
+NOTE: Currently, you can only change the namespace of the Drogue Cloud installation. The namespaces of Knative,
+Strimzi, are currently not configurable.
+
+== Re-running the installer
+
+Should something go wrong, it should be possible to just re-run the installer script. That should simply set the
+_desired state_ again, and Kubernetes should reconcile accordingly. In most of the cases, this works just fine.
+
+== Status information
+
+After the installer script has run, it will show some information on how you can connect to the system and
+give some example commands to try out.

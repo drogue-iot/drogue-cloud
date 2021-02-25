@@ -1,0 +1,23 @@
+= Pre-requisites
+
+Deploying Drogue Cloud, you will need a few tools on your local machine. In most cases a Linux/Unix environment
+is assumed, which includes Mac OS X.
+
+== Command line tools
+
+* `http` - aka https://httpie.org/[HTTPie]
+* `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
+* `kubectl` - https://kubernetes.io/docs/tasks/tools/install-kubectl/
+* `podman` or `docker` – Both work, also in rootless mode.
++
+NOTE: For `podman` you need to also set an alias for `docker` to `podman`
+
+== Kubernetes Cluster
+
+You will need a Kubernetes cluster in order to deploy Drogue Cloud.
+
+In general, any Kubernetes cluster should work. However, we mostly test with:
+
+* Minikube – https://minikube.sigs.k8s.io/docs/start/
+* Kind – https://kind.sigs.k8s.io/docs/user/quick-start/
+* OpenShift or OKD – https://www.openshift.com/ or https://www.okd.io/

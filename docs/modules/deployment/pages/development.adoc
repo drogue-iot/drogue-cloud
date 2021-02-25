@@ -1,0 +1,46 @@
+= Deploying from the repository
+
+Instead of running the installer, which installs a released version of Drogue Cloud, you can also directly from the
+repository, using `:latest` images instead. The same way, you can also deploy your custom-built images.
+
+[IMPORTANT]
+.`main` and tagged versions
+====
+Deploying from the repository implies that you install `latest` or `main`. Even when you check out a tag or branch from
+the repository, this will always install `latest`. If you want to install a tagged version, use the installer.
+====
+
+== Additional pre-requisites
+
+Additionally, you will need to:
+
+* `git`
+* Clone the `drogue-cloud` repository
+
+== Deploy standard images
+
+Installing Drogue Cloud, using the standard images, can be done by calling the "installation" script (`drogue.sh`)
+directly from the repsitory:
+
+[source,shell]
+----
+./script/drogue.sh
+----
+
+TIP: This is the same script as from the installer packages explained before. Thus is accepts the same variables/options.
+
+== Deploy custom images
+
+If you built custom images, and pushed them to a container repository:
+
+[source,shell]
+----
+make CONTAINER_REGISTRY=quay.io/my-repo build images
+----
+
+You can install them using:
+
+[source,shell]
+----
+make CONTAINER_REGISTRY=quay.io/my-repo deploy
+----
