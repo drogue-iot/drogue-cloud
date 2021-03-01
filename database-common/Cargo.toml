@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 
 async-trait = "0.1"
+futures = "0.3"
 log = "0.4"
 thiserror = "1"
 
@@ -29,6 +30,11 @@ drogue-cloud-service-api = { path = "../service-api" }
 anyhow = "1"
 
 criterion = { version = "0.3" } # , features = ["real_blackbox"]
+tokio = { version = "1", features = ["full"] }
+
+drogue-cloud-test-common = { path = "../test-common" }
+log = "0.4"
+env_logger = "0.8"
 
 [[bench]]
 name = "diff"

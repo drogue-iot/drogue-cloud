@@ -12,7 +12,7 @@ pub async fn create<S>(
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Creating application: '{:?}'", app);
 
@@ -37,7 +37,7 @@ pub async fn update<S>(
     app: Json<Application>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Updating app: '{:?}'", app);
 
@@ -59,7 +59,7 @@ pub async fn delete<S>(
     web::Path(app_id): web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Deleting app: '{}'", app_id);
 
@@ -77,7 +77,7 @@ pub async fn read<S>(
     web::Path(app_id): web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Reading app: '{}'", app_id);
 

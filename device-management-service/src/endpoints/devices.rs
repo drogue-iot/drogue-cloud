@@ -13,7 +13,7 @@ pub async fn create<S>(
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Creating device: '{}' / '{:?}'", app_id, device);
 
@@ -38,7 +38,7 @@ pub async fn update<S>(
     device: Json<Device>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!(
         "Updating device: '{}' / '{}' / '{:?}'",
@@ -64,7 +64,7 @@ pub async fn delete<S>(
     web::Path((app_id, device_id)): web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Deleting device: '{}' / '{}'", app_id, device_id);
 
@@ -82,7 +82,7 @@ pub async fn read<S>(
     web::Path((app_id, device_id)): web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     log::debug!("Reading device: '{}' / '{}'", app_id, device_id);
 

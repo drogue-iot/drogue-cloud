@@ -1,3 +1,4 @@
+use crate::models::GenerationError;
 use actix_web::{HttpResponse, ResponseError};
 use deadpool_postgres::PoolError;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,12 @@ pub enum ServiceError {
     ReferenceNotFound,
     #[error("Bad request: {0}")]
     BadRequest(String),
+}
+
+impl From<GenerationError> for ServiceError {
+    fn from(err: GenerationError) -> Self {
+        ServiceError::Internal(err.to_string())
+    }
 }
 
 impl ServiceError {

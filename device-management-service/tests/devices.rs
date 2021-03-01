@@ -1,6 +1,6 @@
 mod common;
 
-use crate::common::init;
+use crate::common::{assert_events, init};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -31,10 +31,11 @@ async fn test_create_device() -> anyhow::Result<()> {
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
@@ -55,11 +56,12 @@ async fn test_create_device() -> anyhow::Result<()> {
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1/devices/device1")));
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
     })
@@ -139,11 +141,12 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
@@ -205,11 +208,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // read, must exist now
@@ -257,11 +261,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".spec.credentials".into()
+            path: ".spec.credentials".into(),
+            generation: 0,
         }]);
 
         // read, must have changed
@@ -299,11 +304,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // read, must no longer not exist
@@ -356,10 +362,11 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // create device
@@ -373,11 +380,12 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // delete tenant, must succeed
@@ -386,10 +394,11 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
 
         // one event must have been fired, the device event is omitted as it doesn't have a
         // finalizer set
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // read device, must no longer not exist
@@ -414,10 +423,11 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // create device
@@ -432,11 +442,12 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".".into()
+            path: ".".into(),
+            generation: 0,
         }]);
 
         // delete application, must succeed
@@ -444,10 +455,11 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // one event must have been fired, but notify about a metadata change
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
-            path: ".metadata".into()
+            path: ".metadata".into(),
+            generation: 0,
         }]);
 
         // the application must still exist
@@ -501,11 +513,12 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 
         // an event must have been fired
 
-        assert_eq!(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
-            path: ".metadata".into()
+            path: ".metadata".into(),
+            generation: 0,
         }]);
 
         // read device, must still exist

@@ -1,6 +1,7 @@
 use crate::{
     diffable,
     error::ServiceError,
+    generation,
     models::{Lock, TypedAlias},
     update_aliases, Client,
 };
@@ -27,6 +28,7 @@ pub struct Application {
 }
 
 diffable!(Application);
+generation!(Application => generation);
 
 /// Extract a section from the application data. Prevents cloning the whole struct.
 fn extract_sect(mut app: Application, key: &str) -> (Application, Option<Map<String, Value>>) {
@@ -236,17 +238,18 @@ INSERT INTO APPLICATIONS (
     $2,
     $3,
     $4,
-    0,
     $5,
-    NULL,
     $6,
-    $7
+    NULL,
+    $7,
+    $8
 )"#,
                 &[
                     &id,
                     &Json(labels),
                     &Json(annotations),
                     &Utc::now(),
+                    &(application.generation as i64),
                     &Uuid::new_v4(),
                     &application.finalizers,
                     &Json(data),
@@ -277,11 +280,11 @@ INSERT INTO APPLICATIONS (
 UPDATE APPLICATIONS SET
     LABELS = $2,
     ANNOTATIONS = $3,
-    GENERATION = GENERATION + 1,
-    RESOURCE_VERSION = $4,
-    DELETION_TIMESTAMP = $5,
-    FINALIZERS = $6,
-    DATA = $7
+    GENERATION = $4,
+    RESOURCE_VERSION = $5,
+    DELETION_TIMESTAMP = $6,
+    FINALIZERS = $7,
+    DATA = $8
 WHERE
     ID = $1
 "#,
@@ -289,6 +292,7 @@ WHERE
                     &id,
                     &Json(labels),
                     &Json(annotations),
+                    &(application.generation as i64),
                     &Uuid::new_v4(),
                     &application.deletion_timestamp,
                     &application.finalizers,

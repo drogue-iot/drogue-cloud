@@ -97,6 +97,7 @@ mod test {
         assert!(Event::Application {
             instance: "instance1".into(),
             id: "app1".into(),
+            generation: 123,
             path: "spec/core".into()
         }
         .send_with(&sender)
@@ -110,6 +111,7 @@ mod test {
             vec![Event::Application {
                 instance: "instance1".into(),
                 id: "app1".into(),
+                generation: 123,
                 path: "spec/core".into()
             }]
         );
@@ -124,6 +126,7 @@ mod test {
             vec![Event::Application {
                 instance: "instance1".into(),
                 id: "app1".into(),
+                generation: 123,
                 path: "spec/core".into()
             }]
         );

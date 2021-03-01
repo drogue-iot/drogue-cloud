@@ -1,11 +1,14 @@
+#[cfg(feature = "with_database")]
+pub mod db;
 pub mod mock;
-#[cfg(feature = "reqwest")]
+#[cfg(feature = "with_reqwest")]
 pub mod reqwest;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use cloudevents::{AttributesReader, EventBuilder};
+use cloudevents::{AttributesReader, Data, EventBuilder};
 use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE, EXT_INSTANCE};
+use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 use thiserror::Error;
 
@@ -25,13 +28,20 @@ pub enum Event {
         instance: String,
         id: String,
         path: String,
+        generation: u64,
     },
     Device {
         instance: String,
         application: String,
         id: String,
         path: String,
+        generation: u64,
     },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct EventData {
+    pub generation: u64,
 }
 
 #[async_trait]
@@ -54,6 +64,16 @@ impl<S: EventSender> SendEvent<S> for Vec<Event> {
 }
 
 impl Event {
+    fn get_data(event: &cloudevents::Event) -> Result<EventData, EventError> {
+        event
+            .data()
+            .and_then(|data| match data {
+                Data::Json(json) => serde_json::from_value(json.clone()).ok(),
+                _ => None,
+            })
+            .ok_or_else(|| EventError::Parse("Missing or unrecognized event payload".into()))
+    }
+
     fn from_app(event: cloudevents::Event) -> Result<Event, EventError> {
         Ok(Event::Application {
             instance: event
@@ -68,6 +88,7 @@ impl Event {
                 .subject()
                 .ok_or_else(|| missing_field("subject"))?
                 .to_string(),
+            generation: Self::get_data(&event)?.generation,
         })
     }
 
@@ -89,6 +110,7 @@ impl Event {
                 .subject()
                 .ok_or_else(|| missing_field("subject"))?
                 .to_string(),
+            generation: Self::get_data(&event)?.generation,
         })
     }
 
@@ -105,7 +127,12 @@ impl Event {
     }
 
     /// create new events for an app
-    pub fn new_app<I, A>(instance_id: I, app_id: A, paths: Vec<String>) -> Vec<Event>
+    pub fn new_app<I, A>(
+        instance_id: I,
+        app_id: A,
+        generation: u64,
+        paths: Vec<String>,
+    ) -> Vec<Event>
     where
         I: ToString,
         A: ToString,
@@ -114,6 +141,7 @@ impl Event {
             instance: instance_id.to_string(),
             id: app_id.to_string(),
             path,
+            generation,
         })
     }
 
@@ -122,6 +150,7 @@ impl Event {
         instance_id: I,
         app_id: A,
         device_id: D,
+        generation: u64,
         paths: Vec<String>,
     ) -> Vec<Event>
     where
@@ -134,6 +163,7 @@ impl Event {
             application: app_id.to_string(),
             id: device_id.to_string(),
             path,
+            generation,
         })
     }
 }
@@ -151,12 +181,14 @@ where
     CloudEvent(cloudevents::message::Error),
 }
 
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum EventError {
     #[error("Failed to parse event: {0}")]
     Parse(String),
     #[error("Failed to build event: {0}")]
     Builder(cloudevents::event::EventBuilderError),
+    #[error("Failed to encode event payload: {0}")]
+    PayloadEncoder(#[source] serde_json::Error),
     #[error("Unknown event type: {0}")]
     UnknownType(String),
 }
@@ -164,12 +196,13 @@ pub enum EventError {
 type SenderResult<T, E> = Result<T, EventSenderError<E>>;
 
 #[async_trait]
-pub trait EventSender: Clone + Send + Sync {
+pub trait EventSender: Send + Sync {
     type Error: std::error::Error + std::fmt::Debug + 'static;
 
     async fn notify<I>(&self, events: I) -> SenderResult<(), Self::Error>
     where
-        I: IntoIterator<Item = Event> + Sync + Send;
+        I: IntoIterator<Item = Event> + Sync + Send,
+        I::IntoIter: Sync + Send;
 }
 
 impl TryInto<cloudevents::Event> for Event {
@@ -181,17 +214,30 @@ impl TryInto<cloudevents::Event> for Event {
             .time(Utc::now());
 
         let builder = match self {
-            Self::Application { instance, id, path } => builder
+            Self::Application {
+                instance,
+                id,
+                generation,
+                path,
+            } => builder
                 .ty(EVENT_TYPE_APPLICATION)
                 .source(format!("drogue:/{}/{}", instance, id))
                 .subject(path)
                 .extension(EXT_PARTITIONKEY, format!("{}/{}", instance, id))
                 .extension(EXT_INSTANCE, instance)
-                .extension(EXT_APPLICATION, id),
+                .extension(EXT_APPLICATION, id)
+                .data(
+                    mime::APPLICATION_JSON.to_string(),
+                    Data::Json(
+                        serde_json::to_value(&EventData { generation })
+                            .map_err(EventError::PayloadEncoder)?,
+                    ),
+                ),
             Self::Device {
                 instance,
                 application,
                 id,
+                generation,
                 path,
             } => builder
                 .ty(EVENT_TYPE_DEVICE)
@@ -203,7 +249,14 @@ impl TryInto<cloudevents::Event> for Event {
                 )
                 .extension(EXT_INSTANCE, instance)
                 .extension(EXT_APPLICATION, application)
-                .extension(EXT_DEVICE, id),
+                .extension(EXT_DEVICE, id)
+                .data(
+                    mime::APPLICATION_JSON.to_string(),
+                    Data::Json(
+                        serde_json::to_value(&EventData { generation })
+                            .map_err(EventError::PayloadEncoder)?,
+                    ),
+                ),
         };
 
         builder.build().map_err(EventError::Builder)
@@ -227,6 +280,7 @@ mod test {
 
     use super::*;
     use anyhow::Context;
+    use serde_json::json;
     use std::convert::TryInto;
     use uuid::Uuid;
 
@@ -236,6 +290,7 @@ mod test {
             instance: "instance".to_string(),
             id: "application".to_string(),
             path: ".spec.core".to_string(),
+            generation: 123,
         }
         .try_into()?;
 
@@ -250,6 +305,7 @@ mod test {
                 .extension(EXT_PARTITIONKEY, "instance/application")
                 .extension(EXT_INSTANCE, "instance")
                 .extension(EXT_APPLICATION, "application")
+                .data("application/json", Data::Json(json!({"generation": 123})))
                 .build()?
         );
 
@@ -267,6 +323,7 @@ mod test {
             .extension(EXT_INSTANCE, "instance")
             .extension(EXT_APPLICATION, "application")
             .extension(EXT_DEVICE, "device")
+            .data("application/json", Data::Json(json!({"generation": 321})))
             .build()
             .context("Failed to build CloudEvent")?;
 
@@ -276,7 +333,8 @@ mod test {
             Event::Application {
                 instance: "instance".to_string(),
                 id: "application".to_string(),
-                path: ".spec.credentials".to_string()
+                path: ".spec.credentials".to_string(),
+                generation: 321,
             },
             event
         );

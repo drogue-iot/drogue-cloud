@@ -1,5 +1,5 @@
 use actix_web::{HttpResponse, ResponseError};
-use drogue_cloud_database_common::error::ServiceError;
+use drogue_cloud_database_common::{error::ServiceError, models::GenerationError};
 use drogue_cloud_registry_events::EventSenderError;
 use drogue_cloud_service_api::auth::ErrorInformation;
 use thiserror::Error;
@@ -29,6 +29,15 @@ where
     E: std::error::Error + std::fmt::Debug + 'static,
 {
     fn from(err: deadpool_postgres::PoolError) -> Self {
+        PostgresManagementServiceError::Service(err.into())
+    }
+}
+
+impl<E> From<GenerationError> for PostgresManagementServiceError<E>
+where
+    E: std::error::Error + std::fmt::Debug + 'static,
+{
+    fn from(err: GenerationError) -> Self {
         PostgresManagementServiceError::Service(err.into())
     }
 }

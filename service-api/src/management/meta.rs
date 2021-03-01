@@ -29,8 +29,12 @@ fn epoch() -> DateTime<Utc> {
 pub struct NonScopedMetadata {
     pub name: String,
 
+    /// The creation date of the resource.
     #[serde(default = "epoch")]
     pub creation_timestamp: DateTime<Utc>,
+    /// A generation number, incrementing with each change.
+    ///
+    /// This increment between different version may be one, or greater than one.
     #[serde(default)]
     pub generation: u64,
     #[serde(default)]
