@@ -1712,9 +1712,9 @@ dependencies = [
 
 [[package]]
 name = "drogue-ttn"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5479c10b6bc558153f8214a983b2a647f6d35e8a15e2858f937be8e43e7445d"
+checksum = "7fe4541ef17ead68235a7b1cd3e3de6649f1168f919056d983947fa880422c0d"
 dependencies = [
  "base64 0.13.0",
  "base64-serde",
