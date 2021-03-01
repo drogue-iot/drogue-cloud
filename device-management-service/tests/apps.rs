@@ -20,7 +20,7 @@ use serial_test::serial;
 #[actix_rt::test]
 #[serial]
 async fn test_create_app() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -36,8 +36,7 @@ async fn test_create_app() -> anyhow::Result<()> {
             id: "app1".into(),
             path: ".".into(),
             generation: 0,
-        }]);
-
+        }], outbox);
     })
 }
 

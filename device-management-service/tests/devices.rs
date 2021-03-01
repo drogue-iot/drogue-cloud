@@ -1,6 +1,6 @@
 mod common;
 
-use crate::common::{assert_events, init};
+use crate::common::{assert_events, init, outbox_retrieve};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -20,7 +20,7 @@ use serial_test::serial;
 #[actix_rt::test]
 #[serial]
 async fn test_create_device() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -31,7 +31,7 @@ async fn test_create_device() -> anyhow::Result<()> {
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -56,7 +56,7 @@ async fn test_create_device() -> anyhow::Result<()> {
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1/devices/device1")));
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -70,7 +70,7 @@ async fn test_create_device() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_create_device_no_tenant() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "name": "device1",
@@ -84,7 +84,7 @@ async fn test_create_device_no_tenant() -> anyhow::Result<()> {
         assert_eq!(result, json!({"error": "ReferenceNotFound", "message": "Referenced a non-existing entity"}));
 
         // no event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![]);
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![]);
     })
 }
 
@@ -92,7 +92,7 @@ async fn test_create_device_no_tenant() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_create_device_bad_request() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -113,14 +113,14 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
         // no event must have been fired
-        assert_eq!(sender.retrieve().unwrap(), vec![]);
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![]);
     })
 }
 
 #[actix_rt::test]
 #[serial]
 async fn test_create_duplicate_device() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -141,7 +141,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -166,7 +166,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_crud_device() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
 
         // read, must not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
@@ -208,7 +208,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -261,7 +261,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -304,7 +304,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -350,7 +350,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
 
         // create tenant
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
@@ -362,7 +362,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -380,7 +380,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -394,7 +394,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
 
         // one event must have been fired, the device event is omitted as it doesn't have a
         // finalizer set
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -411,7 +411,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
 
         // create tenant
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
@@ -423,7 +423,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -442,7 +442,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
@@ -455,7 +455,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // one event must have been fired, but notify about a metadata change
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".metadata".into(),
@@ -513,7 +513,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 
         // an event must have been fired
 
-        assert_events(sender.retrieve().unwrap(), vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             id: "device1".into(),
