@@ -1,12 +1,14 @@
 pub mod error;
 pub mod models;
+pub mod utils;
 
 use crate::error::ServiceError;
 use async_trait::async_trait;
 use deadpool::managed::Object;
 use deadpool_postgres::{ClientWrapper, Pool};
 use std::ops::Deref;
-use tokio_postgres::{types::ToSql, Error, Row, Statement, ToStatement, Transaction};
+use tokio_postgres::types::BorrowToSql;
+use tokio_postgres::{types::ToSql, Error, Row, RowStream, Statement, ToStatement, Transaction};
 
 #[async_trait]
 pub trait Client: Sync {
@@ -23,6 +25,13 @@ pub trait Client: Sync {
     ) -> Result<Option<Row>, Error>
     where
         T: ?Sized + ToStatement + Sync;
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync,
+        P: BorrowToSql,
+        I: IntoIterator<Item = P> + Sync + Send,
+        I::IntoIter: ExactSizeIterator;
 }
 
 #[async_trait]
@@ -47,6 +56,16 @@ impl Client for Object<ClientWrapper, Error> {
         T: ?Sized + ToStatement + Sync,
     {
         self.deref().query_opt(statement, params).await
+    }
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync,
+        P: BorrowToSql,
+        I: IntoIterator<Item = P> + Sync + Send,
+        I::IntoIter: ExactSizeIterator,
+    {
+        self.deref().query_raw(statement, params).await
     }
 }
 
@@ -73,6 +92,16 @@ impl Client for ClientWrapper {
     {
         self.deref().query_opt(statement, params).await
     }
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync,
+        P: BorrowToSql,
+        I: IntoIterator<Item = P> + Sync + Send,
+        I::IntoIter: ExactSizeIterator,
+    {
+        self.deref().query_raw(statement, params).await
+    }
 }
 
 #[async_trait]
@@ -98,6 +127,16 @@ impl<'a> Client for Transaction<'a> {
     {
         Transaction::query_opt(&self, statement, params).await
     }
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync,
+        P: BorrowToSql,
+        I: IntoIterator<Item = P> + Sync + Send,
+        I::IntoIter: ExactSizeIterator,
+    {
+        Transaction::query_raw(&self, statement, params).await
+    }
 }
 
 #[async_trait]
@@ -122,6 +161,16 @@ impl<'a> Client for deadpool_postgres::Transaction<'a> {
         T: ?Sized + ToStatement + Sync,
     {
         self.deref().query_opt(statement, params).await
+    }
+
+    async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
+    where
+        T: ?Sized + ToStatement + Sync,
+        P: BorrowToSql,
+        I: IntoIterator<Item = P> + Sync + Send,
+        I::IntoIter: ExactSizeIterator,
+    {
+        self.deref().query_raw(statement, params).await
     }
 }
 

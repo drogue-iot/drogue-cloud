@@ -11,7 +11,7 @@ pub async fn health<S>(
     data: web::Data<WebData<service::PostgresManagementService<S>>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     data.service.is_ready().await?;
 

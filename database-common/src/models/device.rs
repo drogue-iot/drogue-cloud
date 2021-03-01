@@ -1,5 +1,10 @@
-use crate::models::Lock;
-use crate::{diffable, error::ServiceError, models::TypedAlias, update_aliases, Client};
+use crate::{
+    diffable,
+    error::ServiceError,
+    generation,
+    models::{Lock, TypedAlias},
+    update_aliases, Client,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use drogue_cloud_service_api::management::{self, ScopedMetadata};
@@ -24,6 +29,7 @@ pub struct Device {
 }
 
 diffable!(Device);
+generation!(Device => generation);
 
 impl From<Device> for management::Device {
     fn from(device: Device) -> Self {
@@ -240,11 +246,11 @@ INSERT INTO DEVICES (
     $3,
     $4,
     $5,
-    0,
     $6,
-    NULL,
     $7,
-    $8
+    NULL,
+    $8,
+    $9
 )"#,
                 &[
                     &device.application_id,
@@ -252,6 +258,7 @@ INSERT INTO DEVICES (
                     &Json(&device.labels),
                     &Json(&device.annotations),
                     &Utc::now(),
+                    &(device.generation as i64),
                     &Uuid::new_v4(),
                     &device.finalizers,
                     &Json(&device.data),
@@ -278,11 +285,11 @@ INSERT INTO DEVICES (
 UPDATE DEVICES SET
     LABELS = $3,
     ANNOTATIONS = $4,
-    GENERATION = GENERATION + 1,
-    RESOURCE_VERSION = $5,
-    DELETION_TIMESTAMP = $6,
-    FINALIZERS = $7,
-    DATA = $8
+    GENERATION = $5,
+    RESOURCE_VERSION = $6,
+    DELETION_TIMESTAMP = $7,
+    FINALIZERS = $8,
+    DATA = $9
 WHERE
     APP_ID = $1 AND ID = $2
 "#,
@@ -291,6 +298,7 @@ WHERE
                     &device.id,
                     &Json(device.labels),
                     &Json(device.annotations),
+                    &(device.generation as i64),
                     &Uuid::new_v4(),
                     &device.deletion_timestamp,
                     &device.finalizers,

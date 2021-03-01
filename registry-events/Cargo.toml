@@ -22,13 +22,16 @@ cloudevents-sdk = "0.3"
 cloudevents-sdk-reqwest = { version = "0.3.1", optional = true }
 
 uuid = { version = "0.8", features = ["v4"] }
+mime = "0.3"
 
 drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-database-common = { path = "../database-common", optional = true }
 
 [dev-dependencies]
-tokio = { version = "0.3", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 
 [features]
-default = ["with_reqwest"]
+default = ["with_reqwest", "with_database"]
 with_reqwest = ["reqwest", "cloudevents-sdk-reqwest"]
+with_database = ["drogue-cloud-database-common"]

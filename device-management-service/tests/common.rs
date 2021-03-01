@@ -1,3 +1,4 @@
+use drogue_cloud_registry_events::Event;
 use log::LevelFilter;
 
 pub fn init() {
@@ -34,4 +35,61 @@ macro_rules! test {
 
         Ok(())
     }};
+}
+
+/// Assert if events are as expected.
+///
+/// This will ignore differences in the "generation", as they are not predictable.
+#[allow(irrefutable_let_patterns)]
+pub fn assert_events(actual: Vec<Event>, mut expected: Vec<Event>) {
+    for i in actual.iter().zip(expected.iter_mut()) {
+        // this if could be reworked when we have: https://github.com/rust-lang/rust/issues/54883
+        if let Event::Application {
+            generation: actual_generation,
+            ..
+        }
+        | Event::Device {
+            generation: actual_generation,
+            ..
+        } = i.0
+        {
+            if let Event::Application {
+                generation: expected_generation,
+                ..
+            }
+            | Event::Device {
+                generation: expected_generation,
+                ..
+            } = i.1
+            {
+                // can be collapsed in the future
+                *expected_generation = *actual_generation;
+            }
+        }
+    }
+
+    assert_eq!(actual, expected);
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn test1() {
+        let expected = vec![Event::Application {
+            instance: "instance".to_string(),
+            id: "app".to_string(),
+            path: ".".to_string(),
+            generation: 0,
+        }];
+        let actual = vec![Event::Application {
+            instance: "instance".to_string(),
+            id: "app".to_string(),
+            path: ".".to_string(),
+            generation: 12345,
+        }];
+        assert_events(actual, expected);
+    }
 }

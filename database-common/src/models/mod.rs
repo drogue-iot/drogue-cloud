@@ -1,6 +1,10 @@
 pub mod app;
 pub mod device;
 pub mod diff;
+mod gen;
+pub mod outbox;
+
+pub use gen::*;
 
 use std::{collections::HashMap, error::Error, fmt};
 use tokio_postgres::{

@@ -6,6 +6,8 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
+use drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor;
+use drogue_cloud_database_common::models::Generation;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{
@@ -17,7 +19,7 @@ use drogue_cloud_database_common::{
     },
     DatabaseService,
 };
-use drogue_cloud_registry_events::{Event, EventSender, SendEvent};
+use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
 use drogue_cloud_service_api::{
     health::HealthCheckedService,
     management::{
@@ -60,7 +62,7 @@ impl<'de> ConfigFromEnv<'de> for PostgresManagementServiceConfig {}
 
 impl<S> DatabaseService for PostgresManagementService<S>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     fn pool(&self) -> &Pool {
         &self.pool
@@ -70,7 +72,7 @@ where
 #[async_trait]
 impl<S> HealthCheckedService for PostgresManagementService<S>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     type HealthCheckError = ServiceError;
 
@@ -82,7 +84,7 @@ where
 #[derive(Clone)]
 pub struct PostgresManagementService<S>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     pool: Pool,
     sender: S,
@@ -91,7 +93,7 @@ where
 
 impl<S> PostgresManagementService<S>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     pub fn new(config: PostgresManagementServiceConfig, sender: S) -> anyhow::Result<Self> {
         Ok(Self {
@@ -236,6 +238,9 @@ where
                 return Ok(vec![]);
             }
 
+            // next generation
+            let generation = app.next_generation()?;
+
             // update
 
             accessor
@@ -248,7 +253,7 @@ where
 
             // send change event
 
-            Ok(Event::new_app(self.instance.clone(), id, paths))
+            Ok(Event::new_app(self.instance.clone(), id, generation, paths))
         }
     }
 
@@ -295,12 +300,14 @@ where
 #[async_trait]
 impl<S> ManagementService for PostgresManagementService<S>
 where
-    S: EventSender,
+    S: EventSender + Clone,
 {
     type Error = PostgresManagementServiceError<S::Error>;
 
     async fn create_app(&self, application: Application) -> Result<(), Self::Error> {
-        let (app, aliases) = Self::app_to_entity(application)?;
+        let (mut app, aliases) = Self::app_to_entity(application)?;
+
+        let generation = app.next_generation()?;
 
         let id = app.id.clone();
 
@@ -315,15 +322,28 @@ where
                 _ => err,
             })?;
 
+        let events = Event::new_app(self.instance.clone(), id, generation, vec![]);
+        events
+            .clone()
+            .send_with(&PostgresOutboxAccessor::new(&t))
+            .await
+            .map_err(|err| match err {
+                EventSenderError::Sender(err) => PostgresManagementServiceError::Service(err),
+                EventSenderError::CloudEvent(err) => {
+                    PostgresManagementServiceError::EventSender(EventSenderError::CloudEvent(err))
+                }
+                EventSenderError::Event(err) => {
+                    PostgresManagementServiceError::EventSender(EventSenderError::Event(err))
+                }
+            })?;
+
         // commit
 
         t.commit().await?;
 
         // send change events
 
-        Event::new_app(self.instance.clone(), id, vec![])
-            .send_with(&self.sender)
-            .await?;
+        events.send_with(&self.sender).await?;
 
         // done
 
@@ -384,6 +404,9 @@ where
             current.finalizers.push("has-devices".into());
         }
 
+        // next generation
+        let generation = current.next_generation()?;
+
         // then delete the application
 
         let path = if current.finalizers.is_empty() {
@@ -407,7 +430,7 @@ where
 
         // send change event
 
-        Event::new_app(self.instance.clone(), id, vec![path])
+        Event::new_app(self.instance.clone(), id, generation, vec![path])
             .send_with(&self.sender)
             .await?;
 
@@ -417,7 +440,9 @@ where
     }
 
     async fn create_device(&self, device: Device) -> Result<(), Self::Error> {
-        let (device, aliases) = Self::device_to_entity(device)?;
+        let (mut device, aliases) = Self::device_to_entity(device)?;
+
+        let generation = device.next_generation()?;
 
         let app_id = device.application_id.clone();
         let id = device.id.clone();
@@ -453,7 +478,7 @@ where
 
         // send change events
 
-        Event::new_device(self.instance.clone(), app_id, id, vec![])
+        Event::new_device(self.instance.clone(), app_id, id, generation, vec![])
             .send_with(&self.sender)
             .await?;
 
@@ -512,6 +537,8 @@ where
                 return Ok(());
             }
 
+            let generation = device.next_generation()?;
+
             accessor
                 .update(device, Some(aliases))
                 .await
@@ -524,7 +551,7 @@ where
 
             // send change event
 
-            Event::new_device(self.instance.clone(), app_id, id, paths)
+            Event::new_device(self.instance.clone(), app_id, id, generation, paths)
                 .send_with(&self.sender)
                 .await?;
         }
@@ -550,6 +577,9 @@ where
             return Err(ServiceError::NotFound.into());
         }
 
+        // next generation
+        let generation = current.next_generation()?;
+
         let path = if current.finalizers.is_empty() {
             // no finalizers, we can directly delete
             accessor.delete(app_id, device_id).await?;
@@ -570,9 +600,15 @@ where
 
         // send change event
 
-        Event::new_device(self.instance.clone(), app_id, device_id, vec![path])
-            .send_with(&self.sender)
-            .await?;
+        Event::new_device(
+            self.instance.clone(),
+            app_id,
+            device_id,
+            generation,
+            vec![path],
+        )
+        .send_with(&self.sender)
+        .await?;
 
         // done
 
