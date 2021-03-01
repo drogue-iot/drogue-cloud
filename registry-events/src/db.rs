@@ -37,6 +37,27 @@ impl From<Event> for OutboxEntry {
     }
 }
 
+impl From<OutboxEntry> for Event {
+    fn from(entry: OutboxEntry) -> Self {
+        if let Some(device_id) = entry.device_id {
+            Event::Device {
+                instance: entry.instance_id,
+                application: entry.app_id,
+                id: device_id,
+                path: entry.path,
+                generation: entry.generation,
+            }
+        } else {
+            Event::Application {
+                instance: entry.instance_id,
+                id: entry.app_id,
+                path: entry.path,
+                generation: entry.generation,
+            }
+        }
+    }
+}
+
 #[async_trait]
 impl<A> EventSender for A
 where

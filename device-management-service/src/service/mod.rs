@@ -295,6 +295,21 @@ where
 
         Ok(())
     }
+
+    fn outbox_err<E>(err: EventSenderError<ServiceError>) -> PostgresManagementServiceError<E>
+    where
+        E: std::error::Error + std::fmt::Debug + 'static,
+    {
+        match err {
+            EventSenderError::Sender(err) => PostgresManagementServiceError::Service(err),
+            EventSenderError::CloudEvent(err) => {
+                PostgresManagementServiceError::EventSender(EventSenderError::CloudEvent(err))
+            }
+            EventSenderError::Event(err) => {
+                PostgresManagementServiceError::EventSender(EventSenderError::Event(err))
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -327,15 +342,7 @@ where
             .clone()
             .send_with(&PostgresOutboxAccessor::new(&t))
             .await
-            .map_err(|err| match err {
-                EventSenderError::Sender(err) => PostgresManagementServiceError::Service(err),
-                EventSenderError::CloudEvent(err) => {
-                    PostgresManagementServiceError::EventSender(EventSenderError::CloudEvent(err))
-                }
-                EventSenderError::Event(err) => {
-                    PostgresManagementServiceError::EventSender(EventSenderError::Event(err))
-                }
-            })?;
+            .map_err(Self::outbox_err)?;
 
         // commit
 
@@ -474,13 +481,20 @@ where
                 _ => err,
             })?;
 
+        // create and persist events
+
+        let events = Event::new_device(self.instance.clone(), app_id, id, generation, vec![]);
+        events
+            .clone()
+            .send_with(&PostgresOutboxAccessor::new(&t))
+            .await
+            .map_err(Self::outbox_err)?;
+
         t.commit().await?;
 
         // send change events
 
-        Event::new_device(self.instance.clone(), app_id, id, generation, vec![])
-            .send_with(&self.sender)
-            .await?;
+        events.send_with(&self.sender).await?;
 
         // done
 

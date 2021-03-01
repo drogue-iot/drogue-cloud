@@ -1,4 +1,11 @@
+use chrono::Duration;
+use drogue_cloud_database_common::error::ServiceError;
+use drogue_cloud_database_common::models::outbox::{
+    OutboxAccessor, OutboxEntry, PostgresOutboxAccessor,
+};
+use drogue_cloud_database_common::Client;
 use drogue_cloud_registry_events::Event;
+use futures::TryStreamExt;
 use log::LevelFilter;
 
 pub fn init() {
@@ -10,7 +17,7 @@ pub fn init() {
 
 #[macro_export]
 macro_rules! test {
-   (($app:ident, $sender:ident) => $($code:block)*) => {{
+   (($app:ident, $sender:ident, $outbox:ident) => $($code:block)*) => {{
         init();
 
         let cli = client();
@@ -21,12 +28,17 @@ macro_rules! test {
 
         let sender = MockEventSender::new();
 
+        let pool = db.config.pg.create_pool(tokio_postgres::NoTls)?;
+        let c = pool.get().await?;
+        let outbox = drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor::new(&c);
+
         let data = web::Data::new(WebData {
             authenticator: drogue_cloud_service_common::openid::Authenticator { client: None, scopes: "".into() },
             service: service::PostgresManagementService::new(db.config.clone(), sender.clone()).unwrap(),
         });
 
         let mut $sender = sender;
+        let $outbox = outbox;
 
         let mut $app =
             actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024)).await;
@@ -41,34 +53,58 @@ macro_rules! test {
 ///
 /// This will ignore differences in the "generation", as they are not predictable.
 #[allow(irrefutable_let_patterns)]
-pub fn assert_events(actual: Vec<Event>, mut expected: Vec<Event>) {
-    for i in actual.iter().zip(expected.iter_mut()) {
-        // this if could be reworked when we have: https://github.com/rust-lang/rust/issues/54883
-        if let Event::Application {
-            generation: actual_generation,
-            ..
-        }
-        | Event::Device {
-            generation: actual_generation,
-            ..
-        } = i.0
-        {
+pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
+    for actual in actual {
+        for i in actual.iter().zip(expected.iter_mut()) {
+            // this if could be reworked when we have: https://github.com/rust-lang/rust/issues/54883
             if let Event::Application {
-                generation: expected_generation,
+                generation: actual_generation,
                 ..
             }
             | Event::Device {
-                generation: expected_generation,
+                generation: actual_generation,
                 ..
-            } = i.1
+            } = i.0
             {
-                // can be collapsed in the future
-                *expected_generation = *actual_generation;
+                if let Event::Application {
+                    generation: expected_generation,
+                    ..
+                }
+                | Event::Device {
+                    generation: expected_generation,
+                    ..
+                } = i.1
+                {
+                    // can be collapsed in the future
+                    *expected_generation = *actual_generation;
+                }
             }
         }
+
+        assert_eq!(actual, expected);
+    }
+}
+
+pub async fn outbox_retrieve<'c, C>(
+    outbox: &'c PostgresOutboxAccessor<'c, C>,
+) -> Result<Vec<Event>, ServiceError>
+where
+    C: Client + 'c,
+{
+    let result: Vec<Event> = outbox
+        .fetch_unread(Duration::zero())
+        .await?
+        .try_collect::<Vec<_>>()
+        .await?
+        .into_iter()
+        .map(|entry| entry.into())
+        .collect();
+
+    for event in &result {
+        outbox.mark_seen(OutboxEntry::from(event.clone())).await?;
     }
 
-    assert_eq!(actual, expected);
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -76,6 +112,7 @@ mod test {
 
     use super::*;
 
+    // FIXME: needs fixing
     #[test]
     fn test1() {
         let expected = vec![Event::Application {
@@ -90,6 +127,6 @@ mod test {
             path: ".".to_string(),
             generation: 12345,
         }];
-        assert_events(actual, expected);
+        assert_events(vec![actual], expected);
     }
 }
