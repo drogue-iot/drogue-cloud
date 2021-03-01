@@ -202,6 +202,9 @@ fn device1_json() -> Value {
         "application": {
             "metadata": {
                 "name": "app2",
+                "creationTimestamp": "2020-01-01T00:00:00Z",
+                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "generation": 0,
             },
             "spec": {
                 "trustAnchors": {
@@ -227,6 +230,9 @@ fn device1_json() -> Value {
             "metadata": {
                 "application": "app2",
                 "name": "device1",
+                "creationTimestamp": "2020-01-01T00:00:00Z",
+                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "generation": 0,
             },
         }
     }})
