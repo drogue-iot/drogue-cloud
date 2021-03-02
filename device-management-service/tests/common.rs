@@ -86,13 +86,7 @@ pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
             }
         }
 
-        assert_eq!(
-            actual, expected,
-            r#"assertion failed: `(left[{}] == right)`
-  left: `{:?}`,
- right: `{:?}`"#,
-            n, actual, expected
-        );
+        assert_eq!(actual, expected, "actual[{}]", n,);
         n += 1;
     }
 }

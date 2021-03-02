@@ -113,14 +113,16 @@ async fn test_crud_app() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let new_resource_version = result["metadata"]["resourceVersion"].clone();
+        let new_generation = result["metadata"]["generation"].clone();
 
         assert_ne!(resource_version, new_resource_version);
+        assert_ne!(generation, new_generation);
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
+                "generation": new_generation,
                 "resourceVersion": new_resource_version,
             },
             "spec": {

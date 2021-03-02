@@ -433,24 +433,24 @@ where
 
         // then delete the application
 
-        let path = if current.finalizers.is_empty() {
+        let paths = if current.finalizers.is_empty() {
             accessor.delete(id).await?;
 
-            "."
+            vec![]
         } else {
+            log::debug!("Pending finalizers: {:?}", current.finalizers);
             // update deleted timestamp
             current.deletion_timestamp = Some(Utc::now());
 
             // update the record
             accessor.update(current, None).await?;
 
-            ".metadata"
-        }
-        .into();
+            vec![".metadata".into()]
+        };
 
         // create events
 
-        let events = Event::new_app(self.instance.clone(), id, generation, vec![path]);
+        let events = Event::new_app(self.instance.clone(), id, generation, paths);
 
         // send events to outbox
 

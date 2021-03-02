@@ -102,6 +102,7 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
         // we don't check application events this time
         sender.reset()?;
+        outbox_retrieve(&outbox).await?;
 
         let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
             "metadata": {
@@ -130,6 +131,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
         // we don't check application events this time
         sender.reset()?;
+        outbox_retrieve(&outbox).await?;
 
         let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
             "metadata": {
@@ -183,6 +185,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
         // we don't test for application events this time
         sender.reset()?;
+        outbox_retrieve(&outbox).await?;
 
         // read, must still not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
@@ -391,12 +394,12 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
             generation: 0,
         }]);
 
-        // delete tenant, must succeed
+        // delete application, must succeed
         let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
-        // one event must have been fired, the device event is omitted as it doesn't have a
-        // finalizer set
+        // one event must have been fired for the application, the device event is omitted as the
+        // devices  doesn't have a finalizer set
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
