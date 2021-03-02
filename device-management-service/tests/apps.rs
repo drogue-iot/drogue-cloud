@@ -1,6 +1,6 @@
 mod common;
 
-use crate::common::{assert_events, init};
+use crate::common::{assert_events, init, outbox_retrieve};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use actix_web_httpauth::middleware::HttpAuthentication;
@@ -31,12 +31,12 @@ async fn test_create_app() -> anyhow::Result<()> {
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
             generation: 0,
-        }], outbox);
+        }]);
     })
 }
 
@@ -44,7 +44,7 @@ async fn test_create_app() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_crud_app() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
 
         // try read, must not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
@@ -58,7 +58,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
         })).send_request(&mut app).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -97,7 +97,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".spec.core".into(),
@@ -134,7 +134,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -158,7 +158,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_app_labels() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
 
         // try read, must not exist
         let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
@@ -177,7 +177,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -223,7 +223,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![
             Event::Application {
                 instance: "drogue-instance".into(),
                 id: "app1".into(),
@@ -273,7 +273,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_create_duplicate_app() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -283,7 +283,7 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -310,7 +310,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
     let ca = include_bytes!("certs/ca-cert.pem").to_vec();
     let ca = base64::encode(ca);
 
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -327,7 +327,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -382,7 +382,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // two events must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".spec.trustAnchors".into(),
@@ -417,7 +417,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
 #[actix_rt::test]
 #[serial]
 async fn test_delete_finalizer() -> anyhow::Result<()> {
-    test!((app, sender) => {
+    test!((app, sender, outbox) => {
         let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
@@ -428,7 +428,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".".into(),
@@ -440,7 +440,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_events(sender.retrieve().unwrap(), vec![Event::Application {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
             id: "app1".into(),
             path: ".metadata".into(),
@@ -475,7 +475,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // get another metadata event
-        assert_events(sender.retrieve().unwrap(), vec![
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![
             Event::Application {
                 instance: "drogue-instance".into(),
                 id: "app1".into(),

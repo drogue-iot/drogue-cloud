@@ -9,13 +9,11 @@ pub fn init() {
 
 #[macro_export]
 macro_rules! test {
-   ($v:ident => $($code:block)*) => {{
+    ($v:ident => $code:tt) => {{
         common::init();
 
         let cli = client();
-        let db = db(&cli, |pg| service::AuthenticationServiceConfig{
-            pg
-        })?;
+        let db = db(&cli, |pg| service::AuthenticationServiceConfig { pg })?;
 
         let data = WebData {
             service: service::PostgresAuthenticationService::new(db.config.clone()).unwrap(),
@@ -24,7 +22,7 @@ macro_rules! test {
         let mut $v =
             test::init_service(drogue_cloud_authentication_service::app!(data, 16 * 1024)).await;
 
-        $($code)*
+        $code;
 
         Ok(())
     }};
