@@ -1,5 +1,8 @@
+use anyhow::Context;
 use deadpool::managed::{PoolConfig, Timeouts};
 use serde_json::Value;
+use std::io::Write;
+use std::process::Stdio;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -51,39 +54,57 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
 
     /// Init database by executing all found SQL statement
     fn init_db(config: deadpool_postgres::Config) -> anyhow::Result<()> {
-        Self::find_all_sql(
-            |_| Ok(()),
-            |s, _| {
-                let mut cmd = Command::new("psql");
-                cmd.arg("-v")
-                    .arg("ON_ERROR_STOP=1")
-                    .arg("-h")
-                    .arg(&config.host.as_ref().unwrap_or(&"localhost".into()))
-                    .arg("-p")
-                    .arg(config.port.as_ref().unwrap_or(&5432).to_string())
-                    .arg("-U")
-                    .arg(&config.user.as_ref().unwrap_or(&"postgres".into()))
-                    .env(
-                        "PGPASSWORD",
-                        &config.password.as_ref().unwrap_or(&"postgres".into()),
-                    )
-                    .arg("-d")
-                    .arg(&config.dbname.as_ref().unwrap_or(&"postgres".into()))
-                    .arg("-f")
-                    .arg(s.as_os_str());
-                log::info!("Running: {:?}", cmd);
-                let out = cmd.output()?;
-                log::info!("Out: {:?}", String::from_utf8(out.stdout));
-                log::info!("Err: {:?}", String::from_utf8(out.stderr));
-                log::info!("Status: {:?}", out.status);
-                if out.status.success() {
+        let mut cmd = Command::new("psql");
+        cmd.arg("-v")
+            .arg("ON_ERROR_STOP=1")
+            .arg("-h")
+            .arg(&config.host.as_ref().unwrap_or(&"localhost".into()))
+            .arg("-p")
+            .arg(config.port.as_ref().unwrap_or(&5432).to_string())
+            .arg("-U")
+            .arg(&config.user.as_ref().unwrap_or(&"postgres".into()))
+            .env(
+                "PGPASSWORD",
+                &config.password.as_ref().unwrap_or(&"postgres".into()),
+            )
+            .arg("-d")
+            .arg(&config.dbname.as_ref().unwrap_or(&"postgres".into()));
+
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        log::info!("Running: {:?}", cmd);
+
+        let mut child = cmd.spawn()?;
+
+        // 'psql' is running, now pipe in commands
+
+        {
+            let mut stdin = child.stdin.take().expect("Failed to open input stream");
+            Self::find_all_sql(
+                |_| Ok(()),
+                move |s, _| {
+                    stdin
+                        .write_all(&fs::read(s).context("Failed to read SQL file")?)
+                        .context("Failed to pipe SQL content")?;
                     Ok(())
-                } else {
-                    anyhow::bail!("Command failed: {}", out.status)
-                }
-            },
-        )?;
-        Ok(())
+                },
+            )?;
+        }
+
+        // now wait to the command to end
+
+        let out = child.wait_with_output()?;
+
+        log::info!("Out: {:?}", String::from_utf8(out.stdout));
+        log::info!("Err: {:?}", String::from_utf8(out.stderr));
+        log::info!("Status: {:?}", out.status);
+        if out.status.success() {
+            Ok(())
+        } else {
+            anyhow::bail!("Command failed: {}", out.status)
+        }
     }
 
     /// Used to gather all required SQL scripts in a directory
@@ -101,10 +122,10 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         )
     }
 
-    fn find_all_sql<I, F>(i: I, f: F) -> anyhow::Result<PathBuf>
+    fn find_all_sql<I, F>(i: I, mut f: F) -> anyhow::Result<PathBuf>
     where
         I: FnOnce(&Path) -> anyhow::Result<()>,
-        F: Fn(&Path, &Path) -> anyhow::Result<()>,
+        F: FnMut(&Path, &Path) -> anyhow::Result<()>,
     {
         let manifest_dir = std::env::var_os("CARGO_MANIFEST_DIR")
             .ok_or_else(|| anyhow::anyhow!("Missing environment variable 'CARGO_MANIFEST_DIR'"))?;
@@ -130,7 +151,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         // execute
 
         for file in files {
-            log::info!("Execute file: {:?}", file.0);
+            log::info!("Process file: {:?}", file.0);
             f(&file.0, &file.1)?;
         }
 
