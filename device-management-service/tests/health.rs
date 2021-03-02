@@ -19,7 +19,7 @@ use serial_test::serial;
 #[actix_rt::test]
 #[serial]
 async fn test_health() -> anyhow::Result<()> {
-    test!((app, _sender) => {
+    test!((app, _sender, _outbox) => {
         let req = actix_web::test::TestRequest::get().uri("/health").to_request();
         let resp: serde_json::Value = actix_web::test::read_response_json(&mut app, req).await;
 

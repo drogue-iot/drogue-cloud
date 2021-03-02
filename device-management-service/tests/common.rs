@@ -17,7 +17,7 @@ pub fn init() {
 
 #[macro_export]
 macro_rules! test {
-   (($app:ident, $sender:ident, $outbox:ident) => $($code:block)*) => {{
+    (($app:ident, $sender:ident, $outbox:ident) => $code:tt) => {{
         init();
 
         let cli = client();
@@ -33,8 +33,12 @@ macro_rules! test {
         let outbox = drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor::new(&c);
 
         let data = web::Data::new(WebData {
-            authenticator: drogue_cloud_service_common::openid::Authenticator { client: None, scopes: "".into() },
-            service: service::PostgresManagementService::new(db.config.clone(), sender.clone()).unwrap(),
+            authenticator: drogue_cloud_service_common::openid::Authenticator {
+                client: None,
+                scopes: "".into(),
+            },
+            service: service::PostgresManagementService::new(db.config.clone(), sender.clone())
+                .unwrap(),
         });
 
         let mut $sender = sender;
@@ -43,7 +47,7 @@ macro_rules! test {
         let mut $app =
             actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024)).await;
 
-        $($code)*
+        $code;
 
         Ok(())
     }};
@@ -85,6 +89,7 @@ pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
     }
 }
 
+#[allow(dead_code)]
 pub async fn outbox_retrieve<'c, C>(
     outbox: &'c PostgresOutboxAccessor<'c, C>,
 ) -> Result<Vec<Event>, ServiceError>
