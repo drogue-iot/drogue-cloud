@@ -61,6 +61,7 @@ package = "rustls"
 [dependencies.open-ssl]
 version = "0.10"
 package = "openssl"
+features = ["v111"]
 
 [dev-dependencies]
 chrono = "0.4"

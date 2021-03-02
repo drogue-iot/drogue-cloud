@@ -50,6 +50,7 @@ drogue-cloud-service-common = { path = "../service-common" }
 version = "0.10"
 optional = true
 package = "openssl"
+features = ["v111"]
 
 [dependencies.rust-tls]
 version = "0.19"
