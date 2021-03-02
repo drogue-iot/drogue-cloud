@@ -1,0 +1,8 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: http-insecure-endpoint
+  labels:
+    app: http-insecure-endpoint
+spec:
+  type: NodePort

@@ -1,0 +1,17 @@
+apiVersion: messaging.knative.dev/v1
+kind: Subscription
+metadata:
+  name: commands-http-insecure
+  labels:
+    app.kubernetes.io/part-of: endpoints
+spec:
+  channel:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: KafkaChannel
+    name: iot-commands
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: http-insecure-command
+    uri: /command-service
