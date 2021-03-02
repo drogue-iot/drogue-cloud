@@ -13,12 +13,20 @@ use drogue_cloud_service_api::auth::{self, ErrorInformation};
 use drogue_cloud_service_common::Id;
 
 #[derive(Deserialize)]
-pub struct PublishOptions {
+pub struct PublishCommonOptions {
     pub application: Option<String>,
     pub device: Option<String>,
-    pub r#as: Option<String>,
 
     pub model_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct PublishOptions {
+    #[serde(flatten)]
+    pub common: PublishCommonOptions,
+
+    pub r#as: Option<String>,
+
     #[serde(alias = "commandTimeout")]
     pub ct: Option<u64>,
 }
@@ -80,8 +88,8 @@ pub async fn publish(
 
     let (application, device) = match auth
         .authenticate_http(
-            opts.application,
-            opts.device,
+            opts.common.application,
+            opts.common.device,
             req.headers().get(http::header::AUTHORIZATION),
             certs.map(|c| c.0),
         )
@@ -114,7 +122,7 @@ pub async fn publish(
                 app_id: application.metadata.name.clone(),
                 device_id: device_id.clone(),
                 options: downstream::PublishOptions {
-                    model_id: opts.model_id,
+                    model_id: opts.common.model_id,
                     topic: suffix,
                     content_type: req
                         .headers()

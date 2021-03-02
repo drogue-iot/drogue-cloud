@@ -1,6 +1,5 @@
-use crate::downstream::HttpCommandSender;
+use crate::telemetry::PublishCommonOptions;
 use actix_web::{post, web, HttpResponse};
-use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     downstream::{self, DownstreamSender},
@@ -9,32 +8,21 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_service_api::{auth, management::Device};
 use drogue_ttn::http as ttn;
-use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
-
-#[derive(Deserialize)]
-pub struct PublishOptions {
-    pub tenant: Option<String>,
-    pub device: Option<String>,
-
-    pub model_id: Option<String>,
-    pub ttd: Option<u64>,
-}
 
 #[post("")]
 pub async fn publish(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
-    commands: web::Data<Commands>,
-    web::Query(opts): web::Query<PublishOptions>,
+    web::Query(opts): web::Query<PublishCommonOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
     cert: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let (application, device) = match auth
         .authenticate_http(
-            opts.tenant,
+            opts.application,
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
             cert.map(|c| c.0),
@@ -96,7 +84,7 @@ pub async fn publish(
     // FIXME: need to authorize device
 
     sender
-        .publish_and_await(
+        .publish_http_default(
             downstream::Publish {
                 channel: uplink.port.to_string(),
                 app_id: application.metadata.name.clone(),
@@ -109,8 +97,6 @@ pub async fn publish(
                     ..Default::default()
                 },
             },
-            commands,
-            opts.ttd,
             body,
         )
         .await
