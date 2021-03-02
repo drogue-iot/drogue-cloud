@@ -58,6 +58,7 @@ macro_rules! test {
 /// This will ignore differences in the "generation", as they are not predictable.
 #[allow(irrefutable_let_patterns)]
 pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
+    let mut n = 0;
     for actual in actual {
         for i in actual.iter().zip(expected.iter_mut()) {
             // this if could be reworked when we have: https://github.com/rust-lang/rust/issues/54883
@@ -85,7 +86,14 @@ pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
             }
         }
 
-        assert_eq!(actual, expected);
+        assert_eq!(
+            actual, expected,
+            r#"assertion failed: `(left[{}] == right)`
+  left: `{:?}`,
+ right: `{:?}`"#,
+            n, actual, expected
+        );
+        n += 1;
     }
 }
 

@@ -73,12 +73,13 @@ async fn test_crud_app() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 0,
+                "generation": generation,
                 "resourceVersion": resource_version,
             }
         }));
@@ -191,12 +192,13 @@ async fn test_app_labels() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 0,
+                "generation": generation,
                 "resourceVersion": resource_version,
                 "labels": {
                     "foo": "bar",
@@ -246,14 +248,18 @@ async fn test_app_labels() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let new_resource_version = result["metadata"]["resourceVersion"].clone();
+        let new_generation = result["metadata"]["generation"].clone();
 
+        // resource version must change
         assert_ne!(resource_version, new_resource_version);
+        // generation must change
+        assert_ne!(generation, new_generation);
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
+                "generation": new_generation,
                 "resourceVersion": new_resource_version,
                 "labels": {
                     "foo": "bar",
@@ -342,12 +348,13 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 0,
+                "generation": generation,
                 "resourceVersion": resource_version,
             },
             "spec": {
@@ -401,14 +408,20 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         let result: serde_json::Value = test::read_body_json(resp).await;
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
-        let resource_version = result["metadata"]["resourceVersion"].clone();
+        let new_resource_version = result["metadata"]["resourceVersion"].clone();
+        let new_generation = result["metadata"]["generation"].clone();
+
+        // resource version must change
+        assert_ne!(resource_version, new_resource_version);
+        // generation must change
+        assert_ne!(generation, new_generation);
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
-                "resourceVersion": resource_version,
+                "generation": new_generation,
+                "resourceVersion": new_resource_version,
             }
         }));
     })
@@ -456,12 +469,13 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
         let deletion_timestamp = result["metadata"]["deletionTimestamp"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
+                "generation": generation,
                 "resourceVersion": resource_version,
                 "deletionTimestamp": deletion_timestamp,
                 "finalizers": ["foo", "bar"],
@@ -492,12 +506,13 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 2,
+                "generation": generation,
                 "resourceVersion": resource_version,
                 "deletionTimestamp": deletion_timestamp,
                 "finalizers": ["bar"],
