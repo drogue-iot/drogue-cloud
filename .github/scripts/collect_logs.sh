@@ -14,7 +14,7 @@ function runcmd {
     local cmd=$1
     local logfile=$2
     echo "$cmd > $logfile"
-    ${cmd} > ${logfile}
+    ${cmd} > "${logfile}"
 }
 
 #extract overall status
@@ -22,46 +22,38 @@ mkdir -p "${LOGDIR}/logs/"
 runcmd "${CMD} get all" "${LOGDIR}/logs/all.log"
 
 #extract the pods logs
-mkdir -p ${LOGDIR}/logs/pods/
+mkdir -p "${LOGDIR}/logs/pods/"
 
-for pod in `${CMD} get pods -o jsonpath='{.items[*].metadata.name}'`
+for pod in $(${CMD} get pods -o jsonpath='{.items[*].metadata.name}')
 do
-    for container in `${CMD} get pod $pod -o jsonpath='{.spec.containers[*].name}'`
+    for container in $(${CMD} get pod "$pod" -o jsonpath='{.spec.containers[*].name}')
     do
-        runcmd "${CMD} logs -c $container $pod" ${LOGDIR}/logs/pods/${pod}_${container}.log
-        runcmd "${CMD} describe pod $pod" ${LOGDIR}/logs/pods/${pod}_describe.log
+        runcmd "${CMD} logs -c $container $pod" "${LOGDIR}/logs/pods/${pod}_${container}.log"
     done
+    runcmd "${CMD} describe pod $pod" "${LOGDIR}/logs/pods/${pod}_describe.log"
 done
 
-#extract the deployment logs
-mkdir -p ${LOGDIR}/logs/deployments/
+function gather() {
+  local resource=$1
+  shift
 
-for deploy in `${CMD} get deployments -o jsonpath='{.items[*].metadata.name}'`
-do
-    runcmd "${CMD} describe deployment $deploy " ${LOGDIR}/logs/deployments/${deploy}.log
-    runcmd "${CMD} get deployment $deploy -o yaml" ${LOGDIR}/logs/deployments/${deploy}.yaml
-done
+  mkdir -p "${LOGDIR}/logs/${resource}/"
 
-#extract the ksvc logs
-mkdir -p ${LOGDIR}/logs/ksvc/
+  for item in $(${CMD} get "${resource}" -o jsonpath='{.items[*].metadata.name}')
+  do
+      runcmd "${CMD} describe ${resource} ${item}" "${LOGDIR}/logs/${resource}/${item}.log"
+      runcmd "${CMD} get ${resource} ${item} -o yaml" "${LOGDIR}/logs/${resource}/${item}.yaml"
+  done
+}
 
-for ksvc in `${CMD} get ksvc -o jsonpath='{.items[*].metadata.name}'`
-do
-    runcmd "${CMD} describe ksvc $ksvc" ${LOGDIR}/logs/ksvc/${ksvc}.log
-done
+gather "ksvcs"
+gather "nodes"
+gather "services"
+gather "deployments"
+gather "secrets"
+gather "configmaps"
 
-#extract the services logs
-mkdir -p ${LOGDIR}/logs/services/
-
-for svc in `${CMD} get services -o jsonpath='{.items[*].metadata.name}'`
-do
-    runcmd "${CMD} describe service $svc" ${LOGDIR}/logs/services/${svc}.log
-done
-
-#extract the node resource usage
-mkdir -p ${LOGDIR}/logs/nodes/
-
-for node in `${CMD} get nodes -o jsonpath='{.items[*].metadata.name}'`
-do
-    runcmd "${CMD} describe node $node" ${LOGDIR}/logs/nodes/${node}.log
-done
+gather "keycloaks"
+gather "keycloakrealms"
+gather "keycloakclients"
+gather "keycloakusers"
