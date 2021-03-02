@@ -17,7 +17,7 @@ use drogue_cloud_database_common::{
         diff::diff_paths,
         Lock, TypedAlias,
     },
-    DatabaseService,
+    Client, DatabaseService,
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
 use drogue_cloud_service_api::{
@@ -310,6 +310,22 @@ where
             }
         }
     }
+
+    async fn send_to_outbox<'c, C: Client, E>(
+        client: &C,
+        events: &[Event],
+    ) -> Result<(), PostgresManagementServiceError<E>>
+    where
+        E: std::error::Error + std::fmt::Debug + 'static,
+    {
+        // send events to outbox
+
+        events
+            .to_vec()
+            .send_with(&PostgresOutboxAccessor::new(client))
+            .await
+            .map_err(Self::outbox_err)
+    }
 }
 
 #[async_trait]
@@ -338,11 +354,10 @@ where
             })?;
 
         let events = Event::new_app(self.instance.clone(), id, generation, vec![]);
-        events
-            .clone()
-            .send_with(&PostgresOutboxAccessor::new(&t))
-            .await
-            .map_err(Self::outbox_err)?;
+
+        // send events to outbox
+
+        Self::send_to_outbox(&t, &events).await?;
 
         // commit
 
@@ -374,6 +389,8 @@ where
         let t = c.build_transaction().start().await?;
 
         let events = self.perform_update_app(&t, app, Some(aliases)).await?;
+
+        Self::send_to_outbox(&t, &events).await?;
 
         t.commit().await?;
 
@@ -431,15 +448,21 @@ where
         }
         .into();
 
+        // create events
+
+        let events = Event::new_app(self.instance.clone(), id, generation, vec![path]);
+
+        // send events to outbox
+
+        Self::send_to_outbox(&t, &events).await?;
+
         // commit
 
         t.commit().await?;
 
         // send change event
 
-        Event::new_app(self.instance.clone(), id, generation, vec![path])
-            .send_with(&self.sender)
-            .await?;
+        events.send_with(&self.sender).await?;
 
         // done
 
@@ -484,11 +507,10 @@ where
         // create and persist events
 
         let events = Event::new_device(self.instance.clone(), app_id, id, generation, vec![]);
-        events
-            .clone()
-            .send_with(&PostgresOutboxAccessor::new(&t))
-            .await
-            .map_err(Self::outbox_err)?;
+
+        // send events to outbox
+
+        Self::send_to_outbox(&t, &events).await?;
 
         t.commit().await?;
 
@@ -561,13 +583,21 @@ where
                     _ => err,
                 })?;
 
+            // create events
+
+            let events = Event::new_device(self.instance.clone(), app_id, id, generation, paths);
+
+            // send events to outbox
+
+            Self::send_to_outbox(&t, &events).await?;
+
+            // commit
+
             t.commit().await?;
 
             // send change event
 
-            Event::new_device(self.instance.clone(), app_id, id, generation, paths)
-                .send_with(&self.sender)
-                .await?;
+            events.send_with(&self.sender).await?;
         }
 
         // done
@@ -610,19 +640,27 @@ where
         }
         .into();
 
-        t.commit().await?;
+        // create events
 
-        // send change event
-
-        Event::new_device(
+        let events = Event::new_device(
             self.instance.clone(),
             app_id,
             device_id,
             generation,
             vec![path],
-        )
-        .send_with(&self.sender)
-        .await?;
+        );
+
+        // send events to outbox
+
+        Self::send_to_outbox(&t, &events).await?;
+
+        // commit
+
+        t.commit().await?;
+
+        // send change events
+
+        events.send_with(&self.sender).await?;
 
         // done
 

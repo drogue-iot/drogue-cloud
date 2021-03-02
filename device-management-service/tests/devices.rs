@@ -224,13 +224,14 @@ async fn test_crud_device() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 0,
+                "generation": generation,
                 "resourceVersion": resource_version,
             },
             "spec": {
@@ -278,15 +279,17 @@ async fn test_crud_device() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let new_resource_version = result["metadata"]["resourceVersion"].clone();
+        let new_generation = result["metadata"]["generation"].clone();
 
         assert_ne!(resource_version, new_resource_version);
+        assert_ne!(generation, new_generation);
 
         assert_eq!(result, json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
+                "generation": new_generation,
                 "resourceVersion": new_resource_version,
             },
             "spec": {
@@ -472,12 +475,13 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let deletion_timestamp = result["metadata"]["deletionTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "name": "app1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
+                "generation": generation,
                 "resourceVersion": resource_version,
                 "deletionTimestamp": deletion_timestamp,
                 "finalizers": ["has-devices"],
@@ -493,13 +497,14 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 0,
+                "generation": generation,
                 "resourceVersion": resource_version,
                 "finalizers": ["foo"]
             },
@@ -531,13 +536,14 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
         let deletion_timestamp = result["metadata"]["deletionTimestamp"].clone();
         let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
 
         assert_eq!(result, json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
                 "creationTimestamp": creation_timestamp,
-                "generation": 1,
+                "generation": generation,
                 "resourceVersion": resource_version,
                 "deletionTimestamp": deletion_timestamp,
                 "finalizers": ["foo"]
