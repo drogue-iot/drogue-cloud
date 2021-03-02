@@ -1,0 +1,18 @@
+apiVersion: sources.knative.dev/v1alpha2
+kind: SinkBinding
+metadata:
+  name: bind-registry-events
+  labels:
+    app.kubernetes.io/part-of: device-registry
+spec:
+
+  subject:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: device-management-service
+
+  sink:
+    ref:
+      apiVersion: messaging.knative.dev/v1alpha1
+      kind: KafkaChannel
+      name: registry

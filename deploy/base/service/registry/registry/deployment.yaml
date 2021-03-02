@@ -63,6 +63,11 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-drogue
                   key: CLIENT_SECRET
+            - name: INSTANCE
+              valueFrom:
+                configMapKeyRef:
+                  name: configuration
+                  key: instance
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

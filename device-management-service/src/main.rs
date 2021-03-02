@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         reqwest::ClientBuilder::new()
             .build()
             .context("Failed to create event sender client")?,
-        Url::parse(&config.event_url).context("Failed to parse 'EVENT_URL'")?,
+        Url::parse(&config.event_url).context("Failed to parse 'K_SINK' as a URL")?,
     );
 
     let data = web::Data::new(WebData {

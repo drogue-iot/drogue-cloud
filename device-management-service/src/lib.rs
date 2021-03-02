@@ -20,7 +20,7 @@ pub struct Config {
     pub health_bind_addr: String,
     #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
-    #[envconfig(from = "EVENT_URL")]
+    #[envconfig(from = "K_SINK")]
     pub event_url: String,
 }
 

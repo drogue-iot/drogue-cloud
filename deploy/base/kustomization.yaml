@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 bases:
+  - configuration
   - knative
   - sso
   - source/http
@@ -11,9 +12,3 @@ bases:
   - service/grafana
   - service/console
   - service/registry
-
-configMapGenerator:
-  - name: configuration
-    behavior: create
-    literals:
-      - instance=drogue

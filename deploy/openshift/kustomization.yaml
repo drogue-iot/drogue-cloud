@@ -6,6 +6,7 @@ kind: Kustomization
 #  newname: quay.io/dejanb/mqtt-endpoint
 
 bases:
+  - ../base/configuration
   - ../base/knative
   - ../base/sso
   - source/mqtt
