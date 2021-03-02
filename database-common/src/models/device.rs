@@ -336,7 +336,7 @@ DELETE
 WHERE
     APP_ID = $1
 AND
-    array_length ( FINALIZERS, 1 ) = 0
+    cardinality ( FINALIZERS ) = 0
 "#,
                 &[&app_id],
             )
