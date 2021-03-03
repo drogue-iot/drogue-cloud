@@ -38,6 +38,7 @@ pub struct NonScopedMetadata {
     #[serde(default)]
     pub generation: u64,
     #[serde(default)]
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub resource_version: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -66,6 +67,7 @@ pub struct ScopedMetadata {
     #[serde(default)]
     pub generation: u64,
     #[serde(default)]
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub resource_version: String,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
