@@ -6,8 +6,6 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
-use drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor;
-use drogue_cloud_database_common::models::Generation;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{
@@ -15,7 +13,8 @@ use drogue_cloud_database_common::{
         app::{ApplicationAccessor, PostgresApplicationAccessor},
         device::{DeviceAccessor, PostgresDeviceAccessor},
         diff::diff_paths,
-        Lock, TypedAlias,
+        outbox::PostgresOutboxAccessor,
+        Generation, Lock, TypedAlias,
     },
     Client, DatabaseService,
 };

@@ -1,0 +1,64 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: outbox-controller
+  labels:
+    app.kubernetes.io/name: outbox-controller
+    app.kubernetes.io/part-of: device-registry
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"postgres"}]'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: outbox-controller
+      app.kubernetes.io/part-of: device-registry
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: outbox-controller
+        app.kubernetes.io/part-of: device-registry
+    spec:
+      containers:
+        - name: service
+          image: ghcr.io/drogue-iot/outbox-controller:latest
+          imagePullPolicy: Always
+          env:
+            - name: RUST_LOG
+              value: debug
+            - name: RUST_BACKTRACE
+              value: "1"
+            - name: BIND_ADDR
+              value: 0.0.0.0:8080
+            - name: PG__HOST
+              value: postgres
+            - name: PG__DBNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: databaseName
+            - name: PG__USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: admin.username
+            - name: PG__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: admin.password
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            failureThreshold: 3 # required by knative webhook
+            timeoutSeconds: 1 # required by knative webhook
+            httpGet:
+              port: 8080
+              path: /health
+          ports:
+            - containerPort: 8080
+              name: api
+              protocol: TCP
+          resources:
+            limits:
+              memory: 128Mi

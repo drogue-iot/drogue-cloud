@@ -5,3 +5,4 @@ bases:
   - postgres
   - auth
   - registry
+  - outbox

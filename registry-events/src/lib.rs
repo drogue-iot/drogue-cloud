@@ -69,7 +69,8 @@ impl Event {
             .data()
             .and_then(|data| match data {
                 Data::Json(json) => serde_json::from_value(json.clone()).ok(),
-                _ => None,
+                Data::Binary(json) => serde_json::from_slice(json).ok(),
+                Data::String(json) => serde_json::from_str(json).ok(),
             })
             .ok_or_else(|| EventError::Parse("Missing or unrecognized event payload".into()))
     }
