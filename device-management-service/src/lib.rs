@@ -5,6 +5,7 @@ pub mod utils;
 use crate::service::ManagementService;
 use drogue_cloud_service_common::openid::Authenticator;
 use envconfig::Envconfig;
+use url::Url;
 
 #[derive(Debug)]
 pub struct WebData<S: ManagementService> {
@@ -21,7 +22,7 @@ pub struct Config {
     #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
     #[envconfig(from = "K_SINK")]
-    pub event_url: String,
+    pub event_url: Url,
 }
 
 #[macro_export]

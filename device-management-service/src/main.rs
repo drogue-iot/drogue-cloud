@@ -16,7 +16,6 @@ use drogue_cloud_service_common::{
     openid::{create_client, AuthConfig, Authenticator, AuthenticatorError},
 };
 use envconfig::Envconfig;
-use url::Url;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
@@ -49,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
         reqwest::ClientBuilder::new()
             .build()
             .context("Failed to create event sender client")?,
-        Url::parse(&config.event_url).context("Failed to parse 'K_SINK' as a URL")?,
+        config.event_url,
     );
 
     let data = web::Data::new(WebData {

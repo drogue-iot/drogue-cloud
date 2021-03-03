@@ -1,12 +1,17 @@
 use async_trait::async_trait;
+use chrono::Duration;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::error::ServiceError;
-use drogue_cloud_database_common::models::outbox::{OutboxAccessor, PostgresOutboxAccessor};
+use drogue_cloud_database_common::models::outbox::{
+    OutboxAccessor, OutboxEntry, PostgresOutboxAccessor,
+};
 use drogue_cloud_database_common::DatabaseService;
 use drogue_cloud_registry_events::Event;
 use drogue_cloud_service_api::health::HealthCheckedService;
 use drogue_cloud_service_common::config::ConfigFromEnv;
+use futures::Stream;
 use serde::Deserialize;
+use std::pin::Pin;
 use tokio_postgres::NoTls;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -52,5 +57,16 @@ impl OutboxService {
         outbox.mark_seen(event.into()).await?;
 
         Ok(())
+    }
+
+    pub async fn retrieve_unseen(
+        &self,
+        before: Duration,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<OutboxEntry, ServiceError>>>>, ServiceError> {
+        let c = self.pool.get().await?;
+
+        let outbox = PostgresOutboxAccessor::new(&c);
+
+        outbox.fetch_unread(before).await
     }
 }
