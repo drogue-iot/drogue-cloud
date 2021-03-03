@@ -155,7 +155,7 @@ mod test {
         assert!(str.is_ok());
         assert_eq!(
             String::from(
-                r#"{"outcome":{"pass":{"application":{"metadata":{"name":"a1","creationTimestamp":"1970-01-01T00:00:01Z","generation":0,"resourceVersion":""}},"device":{"metadata":{"application":"a1","name":"d1","creationTimestamp":"1970-01-01T00:00:01.234Z","generation":0,"resourceVersion":""}}}}}"#
+                r#"{"outcome":{"pass":{"application":{"metadata":{"name":"a1","creationTimestamp":"1970-01-01T00:00:01Z","generation":0}},"device":{"metadata":{"application":"a1","name":"d1","creationTimestamp":"1970-01-01T00:00:01.234Z","generation":0}}}}}"#
             ),
             str.unwrap()
         );
