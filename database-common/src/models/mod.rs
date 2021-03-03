@@ -12,9 +12,17 @@ use tokio_postgres::{
     types::{Json, WasNull},
     Row,
 };
+use uuid::Uuid;
 
 #[derive(Clone, Hash, Eq, PartialEq, Debug)]
 pub struct TypedAlias(pub String, pub String);
+
+#[derive(Clone, Debug)]
+/// Constraints when modifying an object.
+pub struct Constraints {
+    pub uid: Uuid,
+    pub resource_version: Uuid,
+}
 
 /// Convert a JSON map column from a row into a map value, handling "null" values
 /// by using the default value.
@@ -80,16 +88,36 @@ impl ToString for Lock {
     }
 }
 
+pub trait Resource {
+    fn resource_version(&self) -> Uuid;
+    fn uid(&self) -> Uuid;
+}
+
+#[macro_export]
+macro_rules! default_resource {
+    ($name:ty) => {
+        impl $crate::models::Resource for $name {
+            fn resource_version(&self) -> Uuid {
+                self.resource_version
+            }
+            fn uid(&self) -> Uuid {
+                self.uid
+            }
+        }
+    };
+}
+
 #[macro_export]
 macro_rules! update_aliases {
-    ($count:expr, $aliases:expr, |$a:ident| $code:block) => {
-        match ($count > 0, $aliases) {
+    ($count:expr, $aliases:expr, |$a:ident| $code:block) => {{
+        let count = $count;
+        match (count > 0, $aliases) {
             // we found something, and need to update aliases
             (true, Some($a)) => $code,
             // we found something, but don't need to update aliases
-            (true, None) => Ok(()),
+            (true, None) => Ok(count),
             // we found nothing
             (false, _) => Err(ServiceError::NotFound),
         }
-    };
+    }};
 }

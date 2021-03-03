@@ -1,4 +1,5 @@
 mod error;
+mod utils;
 mod x509;
 
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
@@ -31,6 +32,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
 use tokio_postgres::{error::SqlState, NoTls};
+use uuid::Uuid;
 
 #[async_trait]
 pub trait ManagementService: HealthCheckedService + Clone {
@@ -137,13 +139,13 @@ where
 
         let app = models::app::Application {
             name: app.metadata.name,
-            uid: uuid::Uuid::nil(), // will be set internally
+            uid: Uuid::nil(), // will be set internally
             labels: app.metadata.labels,
             annotations: app.metadata.annotations,
-            generation: 0,                   // will be set internally
-            creation_timestamp: epoch(),     // will be set internally
-            resource_version: String::new(), // will be set internally
-            deletion_timestamp: None,        // will be set internally
+            generation: 0,                 // will be set internally
+            creation_timestamp: epoch(),   // will be set internally
+            resource_version: Uuid::nil(), // will be set internally
+            deletion_timestamp: None,      // will be set internally
             finalizers: app.metadata.finalizers,
             data: json!({
                 "spec": app.spec,
@@ -185,14 +187,14 @@ where
 
         let device = models::device::Device {
             name: device.metadata.name,
-            uid: uuid::Uuid::nil(), // will be set internally
+            uid: Uuid::nil(), // will be set internally
             application: device.metadata.application,
             labels: device.metadata.labels,
             annotations: device.metadata.annotations,
-            creation_timestamp: epoch(),     // will be set internally
-            generation: 0,                   // will be set internally
-            resource_version: String::new(), // will be set internally
-            deletion_timestamp: None,        // will be set internally
+            creation_timestamp: epoch(),   // will be set internally
+            generation: 0,                 // will be set internally
+            resource_version: Uuid::nil(), // will be set internally
+            deletion_timestamp: None,      // will be set internally
             finalizers: device.metadata.finalizers,
             data: json!({
                 "spec": device.spec,
@@ -206,12 +208,18 @@ where
     }
 
     /// Perform the operation of updating an application
-    async fn perform_update_app(
+    async fn perform_update_app<S1, S2>(
         &self,
         t: &Transaction<'_>,
         mut app: models::app::Application,
         aliases: Option<HashSet<TypedAlias>>,
-    ) -> Result<Vec<Event>, PostgresManagementServiceError<S::Error>> {
+        expected_uid: S1,
+        expected_resource_version: S2,
+    ) -> Result<Vec<Event>, PostgresManagementServiceError<S::Error>>
+    where
+        S1: AsRef<str>,
+        S2: AsRef<str>,
+    {
         let accessor = PostgresApplicationAccessor::new(t);
 
         // get current state for diffing
@@ -219,6 +227,8 @@ where
             Some(app) => Ok(app),
             None => Err(ServiceError::NotFound),
         }?;
+
+        utils::check_versions(expected_uid, expected_resource_version, &current)?;
 
         // we simply copy over the deletion timestamp
         app.deletion_timestamp = current.deletion_timestamp;
@@ -248,7 +258,9 @@ where
                 .update(app, aliases)
                 .await
                 .map_err(|err| match err.sql_state() {
-                    Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
+                    Some(state) if state == &SqlState::UNIQUE_VIOLATION => {
+                        ServiceError::Conflict("Unique key violation".to_string())
+                    }
                     _ => err,
                 })?;
 
@@ -295,7 +307,7 @@ where
 
         // we removed the last of the devices blocking the deletion
         app.finalizers.retain(|f| f != "has-devices");
-        self.perform_update_app(t, app, None).await?;
+        self.perform_update_app(t, app, None, "", "").await?;
 
         // done
 
@@ -354,7 +366,9 @@ where
             .create(app, aliases)
             .await
             .map_err(|err| match err.sql_state() {
-                Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
+                Some(state) if state == &SqlState::UNIQUE_VIOLATION => {
+                    ServiceError::Conflict("Unique key violation".to_string())
+                }
                 _ => err,
             })?;
 
@@ -388,12 +402,23 @@ where
     }
 
     async fn update_app(&self, application: Application) -> Result<(), Self::Error> {
+        let expected_uid = application.metadata.uid.clone();
+        let expected_resource_version = application.metadata.resource_version.clone();
+
         let (app, aliases) = Self::app_to_entity(application)?;
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
-        let events = self.perform_update_app(&t, app, Some(aliases)).await?;
+        let events = self
+            .perform_update_app(
+                &t,
+                app,
+                Some(aliases),
+                expected_uid,
+                expected_resource_version,
+            )
+            .await?;
 
         Self::send_to_outbox(&t, &events).await?;
 
@@ -407,6 +432,10 @@ where
     }
 
     async fn delete_app(&self, id: &str) -> Result<(), Self::Error> {
+        // FIXME: allow passing in uid and version
+        let expected_uid = "";
+        let expected_resource_verson = "";
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
@@ -421,6 +450,8 @@ where
         if current.deletion_timestamp.is_some() {
             return Err(ServiceError::NotFound.into());
         }
+
+        utils::check_versions(expected_uid, expected_resource_verson, &current)?;
 
         // next, we need to delete the application
 
@@ -502,7 +533,9 @@ where
             .create(device, aliases)
             .await
             .map_err(|err| match err.sql_state() {
-                Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
+                Some(state) if state == &SqlState::UNIQUE_VIOLATION => {
+                    ServiceError::Conflict("Unique key violation".to_string())
+                }
                 Some(state) if state == &SqlState::FOREIGN_KEY_VIOLATION => {
                     ServiceError::ReferenceNotFound
                 }
@@ -544,6 +577,9 @@ where
     }
 
     async fn update_device(&self, device: Device) -> Result<(), Self::Error> {
+        let expected_resource_version = device.metadata.resource_version.clone();
+        let expected_uid = device.metadata.uid.clone();
+
         let (mut device, aliases) = Self::device_to_entity(device)?;
 
         let application = device.application.clone();
@@ -559,6 +595,9 @@ where
             Some(device) => Ok(device),
             None => Err(ServiceError::NotFound),
         }?;
+
+        // pre-check versions
+        utils::check_versions(expected_uid, expected_resource_version, &current)?;
 
         // we simply copy over the deletion timestamp
         device.deletion_timestamp = current.deletion_timestamp;
@@ -585,7 +624,9 @@ where
                 .update(device, Some(aliases))
                 .await
                 .map_err(|err| match err.sql_state() {
-                    Some(state) if state == &SqlState::UNIQUE_VIOLATION => ServiceError::Conflict,
+                    Some(state) if state == &SqlState::UNIQUE_VIOLATION => {
+                        ServiceError::Conflict("Unique key violation".to_string())
+                    }
                     _ => err,
                 })?;
 
@@ -613,6 +654,10 @@ where
     }
 
     async fn delete_device(&self, application: &str, device: &str) -> Result<(), Self::Error> {
+        // FIXME: allow passing in uid and version
+        let expected_uid = "";
+        let expected_resource_verson = "";
+
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
@@ -627,6 +672,8 @@ where
         if current.deletion_timestamp.is_some() {
             return Err(ServiceError::NotFound.into());
         }
+
+        utils::check_versions(expected_uid, expected_resource_verson, &current)?;
 
         // next generation
         let generation = current.next_generation()?;
