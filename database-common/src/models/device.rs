@@ -1,5 +1,5 @@
 use crate::{
-    diffable,
+    default_resource, diffable,
     error::ServiceError,
     generation,
     models::{Lock, TypedAlias},
@@ -21,7 +21,7 @@ pub struct Device {
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub creation_timestamp: DateTime<Utc>,
-    pub resource_version: String,
+    pub resource_version: Uuid,
     pub generation: u64,
     pub deletion_timestamp: Option<DateTime<Utc>>,
     pub finalizers: Vec<String>,
@@ -31,6 +31,7 @@ pub struct Device {
 
 diffable!(Device);
 generation!(Device => generation);
+default_resource!(Device);
 
 impl From<Device> for management::Device {
     fn from(device: Device) -> Self {
@@ -43,7 +44,7 @@ impl From<Device> for management::Device {
                 annotations: device.annotations,
                 creation_timestamp: device.creation_timestamp,
                 generation: device.generation,
-                resource_version: device.resource_version,
+                resource_version: device.resource_version.to_string(),
                 deletion_timestamp: device.deletion_timestamp,
                 finalizers: device.finalizers,
             },
@@ -59,16 +60,16 @@ impl From<Device> for management::Device {
 #[async_trait]
 pub trait DeviceAccessor {
     /// Lookup a device by alias.
-    async fn lookup(&self, app_id: &str, alias: &str) -> Result<Option<Device>, ServiceError>;
+    async fn lookup(&self, app: &str, alias: &str) -> Result<Option<Device>, ServiceError>;
 
     /// Delete a device.
-    async fn delete(&self, app_id: &str, device_id: &str) -> Result<(), ServiceError>;
+    async fn delete(&self, app: &str, device: &str) -> Result<(), ServiceError>;
 
     /// Get a device.
     async fn get(
         &self,
-        app_id: &str,
-        device_id: &str,
+        app: &str,
+        device: &str,
         lock: Lock,
     ) -> Result<Option<Device>, ServiceError>;
 
@@ -84,13 +85,13 @@ pub trait DeviceAccessor {
         &self,
         device: Device,
         aliases: Option<HashSet<TypedAlias>>,
-    ) -> Result<(), ServiceError>;
+    ) -> Result<u64, ServiceError>;
 
     /// Delete all devices that belong to an application.
-    async fn delete_app(&self, app_id: &str) -> Result<u64, ServiceError>;
+    async fn delete_app(&self, app: &str) -> Result<u64, ServiceError>;
 
     /// Count devices remaining for an application.
-    async fn count_devices(&self, app_id: &str) -> Result<u64, ServiceError>;
+    async fn count_devices(&self, app: &str) -> Result<u64, ServiceError>;
 }
 
 pub struct PostgresDeviceAccessor<'c, C: Client> {
@@ -110,7 +111,7 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
             creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
-            resource_version: row.try_get::<_, Uuid>("RESOURCE_VERSION")?.to_string(),
+            resource_version: row.try_get("RESOURCE_VERSION")?,
             labels: super::row_to_map(&row, "LABELS")?,
             annotations: super::row_to_map(&row, "ANNOTATIONS")?,
             deletion_timestamp: row.try_get("DELETION_TIMESTAMP")?,
@@ -122,8 +123,8 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
     async fn insert_aliases(
         &self,
-        app_id: &str,
-        device_id: &str,
+        app: &str,
+        device: &str,
         aliases: &HashSet<TypedAlias>,
     ) -> Result<(), tokio_postgres::Error> {
         if aliases.is_empty() {
@@ -139,7 +140,7 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
         for alias in aliases {
             self.client
-                .execute(&stmt, &[&app_id, &device_id, &alias.0, &alias.1])
+                .execute(&stmt, &[&app, &device, &alias.0, &alias.1])
                 .await?;
         }
 
@@ -149,7 +150,7 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
 #[async_trait]
 impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
-    async fn lookup(&self, app_id: &str, alias: &str) -> Result<Option<Device>, ServiceError> {
+    async fn lookup(&self, app: &str, alias: &str) -> Result<Option<Device>, ServiceError> {
         let result = self
             .client
             .query_opt(
@@ -175,7 +176,7 @@ WHERE
     AND
         A.ALIAS = $2
 "#,
-                &[&app_id, &alias],
+                &[&app, &alias],
             )
             .await?
             .map(Self::from_row)
@@ -184,12 +185,12 @@ WHERE
         Ok(result)
     }
 
-    async fn delete(&self, app_id: &str, device_id: &str) -> Result<(), ServiceError> {
+    async fn delete(&self, app: &str, device: &str) -> Result<(), ServiceError> {
         let count = self
             .client
             .execute(
                 "DELETE FROM DEVICES WHERE APP = $1 AND NAME = $2",
-                &[&app_id, &device_id],
+                &[&app, &device],
             )
             .await?;
 
@@ -202,8 +203,8 @@ WHERE
 
     async fn get(
         &self,
-        app_id: &str,
-        device_id: &str,
+        app: &str,
+        device: &str,
         lock: Lock,
     ) -> Result<Option<Device>, ServiceError> {
         let result = self
@@ -231,7 +232,7 @@ WHERE
                     for_update = lock.to_string()
                 )
                 .as_str(),
-                &[&app_id, &device_id],
+                &[&app, &device],
             )
             .await?
             .map(Self::from_row)
@@ -295,7 +296,7 @@ INSERT INTO DEVICES (
         &self,
         device: Device,
         aliases: Option<HashSet<TypedAlias>>,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<u64, ServiceError> {
         // update device
         let count = self
             .client
@@ -326,7 +327,11 @@ WHERE
                     &Json(device.data),
                 ],
             )
-            .await?;
+            .await
+            .map_err(|err| {
+                log::info!("Failed: {}", err);
+                err
+            })?;
 
         update_aliases!(count, aliases, |aliases| {
             // clear existing aliases
@@ -341,7 +346,7 @@ WHERE
             self.insert_aliases(&device.application, &device.name, &aliases)
                 .await?;
 
-            Ok(())
+            Ok(count)
         })
     }
 

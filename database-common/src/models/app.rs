@@ -1,5 +1,5 @@
 use crate::{
-    diffable,
+    default_resource, diffable,
     error::ServiceError,
     generation,
     models::{Lock, TypedAlias},
@@ -20,7 +20,7 @@ pub struct Application {
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub creation_timestamp: DateTime<Utc>,
-    pub resource_version: String,
+    pub resource_version: Uuid,
     pub generation: u64,
     pub deletion_timestamp: Option<DateTime<Utc>>,
     pub finalizers: Vec<String>,
@@ -30,6 +30,7 @@ pub struct Application {
 
 diffable!(Application);
 generation!(Application => generation);
+default_resource!(Application);
 
 /// Extract a section from the application data. Prevents cloning the whole struct.
 fn extract_sect(mut app: Application, key: &str) -> (Application, Option<Map<String, Value>>) {
@@ -58,7 +59,7 @@ impl From<Application> for management::Application {
                 annotations: app.annotations,
                 creation_timestamp: app.creation_timestamp,
                 generation: app.generation,
-                resource_version: app.resource_version,
+                resource_version: app.resource_version.to_string(),
                 deletion_timestamp: app.deletion_timestamp,
                 finalizers: app.finalizers,
             },
@@ -74,10 +75,10 @@ pub trait ApplicationAccessor {
     async fn lookup(&self, alias: &str) -> Result<Option<Application>, ServiceError>;
 
     /// Delete an application
-    async fn delete(&self, id: &str) -> Result<(), ServiceError>;
+    async fn delete(&self, app: &str) -> Result<(), ServiceError>;
 
     /// Get an application
-    async fn get(&self, id: &str, lock: Lock) -> Result<Option<Application>, ServiceError>;
+    async fn get(&self, app: &str, lock: Lock) -> Result<Option<Application>, ServiceError>;
 
     /// Create a new application
     async fn create(
@@ -91,7 +92,7 @@ pub trait ApplicationAccessor {
         &self,
         application: Application,
         aliases: Option<HashSet<TypedAlias>>,
-    ) -> Result<(), ServiceError>;
+    ) -> Result<u64, ServiceError>;
 }
 
 pub struct PostgresApplicationAccessor<'c, C: Client> {
@@ -111,7 +112,7 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
 
             creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
-            resource_version: row.try_get::<_, Uuid>("RESOURCE_VERSION")?.to_string(),
+            resource_version: row.try_get("RESOURCE_VERSION")?,
             labels: super::row_to_map(&row, "LABELS")?,
             annotations: super::row_to_map(&row, "ANNOTATIONS")?,
             deletion_timestamp: row.try_get("DELETION_TIMESTAMP")?,
@@ -281,7 +282,7 @@ INSERT INTO APPLICATIONS (
         &self,
         application: Application,
         aliases: Option<HashSet<TypedAlias>>,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<u64, ServiceError> {
         let name = application.name;
         let labels = application.labels;
         let data = application.data;
@@ -326,7 +327,7 @@ WHERE
             // insert new alias set
             self.insert_aliases(&name, &aliases).await?;
 
-            Ok(())
+            Ok(count)
         })
     }
 }

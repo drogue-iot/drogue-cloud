@@ -18,7 +18,7 @@ pub enum ServiceError {
     #[error("Not found")]
     NotFound,
     #[error("Conflict")]
-    Conflict,
+    Conflict(String),
     #[error("Referenced a non-existing entity")]
     ReferenceNotFound,
     #[error("Bad request: {0}")]
@@ -57,31 +57,31 @@ impl ResponseError for ServiceError {
             }
             ServiceError::Pool(..) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
                 error: "PoolError".into(),
-                message: format!("{}", self),
+                message: self.to_string(),
             }),
             ServiceError::Database(..) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
                 error: "DatabaseError".into(),
-                message: format!("{}", self),
+                message: self.to_string(),
             }),
             ServiceError::NotAuthorized => HttpResponse::Forbidden().json(ErrorResponse {
                 error: "AuthenticationError".into(),
-                message: format!("{}", self),
+                message: self.to_string(),
             }),
             ServiceError::NotFound => HttpResponse::NotFound().json(ErrorResponse {
                 error: "NotFound".into(),
-                message: format!("{}", self),
+                message: self.to_string(),
             }),
-            ServiceError::Conflict => HttpResponse::Conflict().json(ErrorResponse {
+            ServiceError::Conflict(_) => HttpResponse::Conflict().json(ErrorResponse {
                 error: "Conflict".into(),
-                message: format!("{}", self),
+                message: self.to_string(),
             }),
             ServiceError::ReferenceNotFound => HttpResponse::NotFound().json(ErrorResponse {
                 error: "ReferenceNotFound".into(),
-                message: format!("{}", self),
+                message: self.to_string(),
             }),
-            ServiceError::BadRequest(message) => HttpResponse::BadRequest().json(ErrorResponse {
+            ServiceError::BadRequest(_) => HttpResponse::BadRequest().json(ErrorResponse {
                 error: "BadRequest".into(),
-                message: message.clone(),
+                message: self.to_string(),
             }),
         }
     }

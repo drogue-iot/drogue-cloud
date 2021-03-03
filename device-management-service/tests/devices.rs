@@ -585,3 +585,166 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 
     })
 }
+
+#[actix_rt::test]
+#[serial]
+async fn test_lock_device_resource_version() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": "app1",
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+            "metadata": {
+                "name": "device1",
+                "application": "app1"
+            },
+            "spec": {
+                "credentials": {
+                    "credentials": [
+                        { "pass": "foo" }
+                    ]
+                }
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // get current state
+
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
+        let uid = result["metadata"]["uid"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "application": "app1",
+                "name": "device1",
+                "uid": uid,
+                "creationTimestamp": creation_timestamp,
+                "generation": generation,
+                "resourceVersion": resource_version,
+            },
+            "spec": {
+                "credentials": {
+                    "credentials": [
+                        {"pass": "foo"},
+                    ]
+                }
+            }
+        }));
+
+        // remember result as update for next step
+
+        let mut update1 = result.clone();
+        let update2 = result;
+        update1["spec"]["credentials"] = json!({});
+
+        // update device once (using current version) ... must succeed
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update1).send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // update device twice (using previous version) ... must fail
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update2).send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_lock_device_uid() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": "app1",
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+            "metadata": {
+                "name": "device1",
+                "application": "app1"
+            },
+            "spec": {
+                "credentials": {
+                    "credentials": [
+                        { "pass": "foo" }
+                    ]
+                }
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // get current state
+
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        let result: serde_json::Value = test::read_body_json(resp).await;
+
+        let creation_timestamp = result["metadata"]["creationTimestamp"].clone();
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+        let generation = result["metadata"]["generation"].clone();
+        let uid = result["metadata"]["uid"].clone();
+
+        assert_eq!(result, json!({
+            "metadata": {
+                "application": "app1",
+                "name": "device1",
+                "uid": uid,
+                "creationTimestamp": creation_timestamp,
+                "generation": generation,
+                "resourceVersion": resource_version,
+            },
+            "spec": {
+                "credentials": {
+                    "credentials": [
+                        {"pass": "foo"},
+                    ]
+                }
+            }
+        }));
+
+        // remember result as update for next step
+        let update = result.clone();
+
+        // delete, must succeed
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // recreate
+        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+            "metadata": {
+                "name": "device1",
+                "application": "app1"
+            },
+            "spec": {
+                "credentials": {
+                    "credentials": [
+                        { "pass": "foo" }
+                    ]
+                }
+            },
+        })).send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // update device (using previous version) ... must fail
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update).send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+    })
+}
