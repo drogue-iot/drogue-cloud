@@ -14,22 +14,8 @@ CREATE TABLE outbox (
     PRIMARY KEY (APP_ID, DEVICE_ID, PATH)
 );
 
--- create an index to make it easier to delete entries by and ID and generation
-
-CREATE INDEX OUTBOX_BY_IDS_AND_GEN ON outbox (
-    APP_ID,
-    DEVICE_ID,
-    PATH,
-
-    GENERATION
-);
-
--- create an index to make it easier to find entries by ID and timestamp
+-- create an index to make it easier to find entries by timestamp
 
 CREATE INDEX OUTBOX_BY_IDS_AND_TIMESTAMP ON outbox (
-    APP_ID,
-    DEVICE_ID,
-    PATH,
-
-    TS
+    TS ASC
 );
