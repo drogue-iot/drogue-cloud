@@ -111,7 +111,7 @@ where
         // extract aliases
 
         let mut aliases = HashSet::with_capacity(1);
-        aliases.insert(TypedAlias("id".into(), app.metadata.name.clone()));
+        aliases.insert(TypedAlias("name".into(), app.metadata.name.clone()));
 
         // extract trust anchors
 
@@ -136,7 +136,8 @@ where
         // convert payload
 
         let app = models::app::Application {
-            id: app.metadata.name,
+            name: app.metadata.name,
+            uid: uuid::Uuid::nil(), // will be set internally
             labels: app.metadata.labels,
             annotations: app.metadata.annotations,
             generation: 0,                   // will be set internally
@@ -165,7 +166,7 @@ where
 
         let mut aliases = HashSet::new();
 
-        aliases.insert(TypedAlias("id".into(), device.metadata.name.clone()));
+        aliases.insert(TypedAlias("name".into(), device.metadata.name.clone()));
 
         if let Some(Ok(credentials)) = device.section::<DeviceSpecCredentials>() {
             for credential in credentials.credentials {
@@ -183,8 +184,9 @@ where
         // convert payload
 
         let device = models::device::Device {
-            id: device.metadata.name,
-            application_id: device.metadata.application,
+            name: device.metadata.name,
+            uid: uuid::Uuid::nil(), // will be set internally
+            application: device.metadata.application,
             labels: device.metadata.labels,
             annotations: device.metadata.annotations,
             creation_timestamp: epoch(),     // will be set internally
@@ -210,12 +212,10 @@ where
         mut app: models::app::Application,
         aliases: Option<HashSet<TypedAlias>>,
     ) -> Result<Vec<Event>, PostgresManagementServiceError<S::Error>> {
-        let id = app.id.clone();
-
         let accessor = PostgresApplicationAccessor::new(t);
 
         // get current state for diffing
-        let current = match accessor.get(&app.id, Lock::ForUpdate).await? {
+        let current = match accessor.get(&app.name, Lock::ForUpdate).await? {
             Some(app) => Ok(app),
             None => Err(ServiceError::NotFound),
         }?;
@@ -225,7 +225,7 @@ where
 
         if app.deletion_timestamp.is_some() && app.finalizers.is_empty() {
             // delete, but don't send any event
-            accessor.delete(&id).await?;
+            accessor.delete(&app.name).await?;
 
             Ok(vec![])
         } else {
@@ -240,6 +240,8 @@ where
             // next generation
             let generation = app.next_generation()?;
 
+            let name = app.name.clone();
+
             // update
 
             accessor
@@ -252,7 +254,12 @@ where
 
             // send change event
 
-            Ok(Event::new_app(self.instance.clone(), id, generation, paths))
+            Ok(Event::new_app(
+                self.instance.clone(),
+                name,
+                generation,
+                paths,
+            ))
         }
     }
 
@@ -338,8 +345,7 @@ where
         let (mut app, aliases) = Self::app_to_entity(application)?;
 
         let generation = app.next_generation()?;
-
-        let id = app.id.clone();
+        let name = app.name.clone();
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -352,7 +358,7 @@ where
                 _ => err,
             })?;
 
-        let events = Event::new_app(self.instance.clone(), id, generation, vec![]);
+        let events = Event::new_app(self.instance.clone(), name, generation, vec![]);
 
         // send events to outbox
 
@@ -371,11 +377,11 @@ where
         Ok(())
     }
 
-    async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error> {
+    async fn get_app(&self, name: &str) -> Result<Option<Application>, Self::Error> {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)
-            .get(id, Lock::None)
+            .get(name, Lock::None)
             .await?;
 
         Ok(app.map(Into::into))
@@ -473,14 +479,14 @@ where
 
         let generation = device.next_generation()?;
 
-        let app_id = device.application_id.clone();
-        let id = device.id.clone();
+        let application = device.application.clone();
+        let name = device.name.clone();
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
         let app = PostgresApplicationAccessor::new(&t)
-            .get(&app_id, Lock::ForShare)
+            .get(&application, Lock::ForShare)
             .await?;
 
         // if there is no entry, or it is marked for deletion, we don't allow adding a new device
@@ -505,7 +511,8 @@ where
 
         // create and persist events
 
-        let events = Event::new_device(self.instance.clone(), app_id, id, generation, vec![]);
+        let events =
+            Event::new_device(self.instance.clone(), application, name, generation, vec![]);
 
         // send events to outbox
 
@@ -539,8 +546,8 @@ where
     async fn update_device(&self, device: Device) -> Result<(), Self::Error> {
         let (mut device, aliases) = Self::device_to_entity(device)?;
 
-        let app_id = device.application_id.clone();
-        let id = device.id.clone();
+        let application = device.application.clone();
+        let name = device.name.clone();
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -548,7 +555,7 @@ where
         let accessor = PostgresDeviceAccessor::new(&t);
 
         // get current state for diffing
-        let current = match accessor.get(&app_id, &id, Lock::ForUpdate).await? {
+        let current = match accessor.get(&application, &name, Lock::ForUpdate).await? {
             Some(device) => Ok(device),
             None => Err(ServiceError::NotFound),
         }?;
@@ -558,10 +565,10 @@ where
 
         if device.deletion_timestamp.is_some() && device.finalizers.is_empty() {
             // delete, but don't send any event
-            accessor.delete(&app_id, &id).await?;
+            accessor.delete(&application, &name).await?;
 
             // check with the application
-            self.check_clean_app(&t, &app_id).await?;
+            self.check_clean_app(&t, &application).await?;
 
             t.commit().await?;
         } else {
@@ -584,7 +591,8 @@ where
 
             // create events
 
-            let events = Event::new_device(self.instance.clone(), app_id, id, generation, paths);
+            let events =
+                Event::new_device(self.instance.clone(), application, name, generation, paths);
 
             // send events to outbox
 
@@ -604,14 +612,14 @@ where
         Ok(())
     }
 
-    async fn delete_device(&self, app_id: &str, device_id: &str) -> Result<(), Self::Error> {
+    async fn delete_device(&self, application: &str, device: &str) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
         let accessor = PostgresDeviceAccessor::new(&t);
 
         // get current state for diffing
-        let mut current = match accessor.get(&app_id, &device_id, Lock::ForUpdate).await? {
+        let mut current = match accessor.get(&application, &device, Lock::ForUpdate).await? {
             Some(device) => Ok(device),
             None => Err(ServiceError::NotFound),
         }?;
@@ -625,7 +633,7 @@ where
 
         let path = if current.finalizers.is_empty() {
             // no finalizers, we can directly delete
-            accessor.delete(app_id, device_id).await?;
+            accessor.delete(application, device).await?;
 
             "."
         } else {
@@ -643,8 +651,8 @@ where
 
         let events = Event::new_device(
             self.instance.clone(),
-            app_id,
-            device_id,
+            application,
+            device,
             generation,
             vec![path],
         );

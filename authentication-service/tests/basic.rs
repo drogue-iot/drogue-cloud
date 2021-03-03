@@ -12,6 +12,7 @@ fn device1_json() -> Value {
         "application": {
             "metadata": {
                 "name": "app1",
+                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d210",
                 "creationTimestamp": "2020-01-01T00:00:00Z",
                 "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
                 "generation": 0,
@@ -21,6 +22,7 @@ fn device1_json() -> Value {
             "metadata": {
                 "application": "app1",
                 "name": "device1",
+                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d211",
                 "creationTimestamp": "2020-01-01T00:00:00Z",
                 "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
                 "generation": 0,
@@ -34,6 +36,7 @@ fn device3_json() -> Value {
         "application": {
             "metadata": {
                 "name": "app1",
+                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d210",
                 "creationTimestamp": "2020-01-01T00:00:00Z",
                 "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
                 "generation": 0,
@@ -43,6 +46,7 @@ fn device3_json() -> Value {
             "metadata": {
                 "application": "app1",
                 "name": "device3",
+                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d212",
                 "creationTimestamp": "2020-01-01T00:00:00Z",
                 "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
                 "generation": 0,

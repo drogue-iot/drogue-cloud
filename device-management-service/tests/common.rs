@@ -119,9 +119,8 @@ mod test {
 
     use super::*;
 
-    // FIXME: needs fixing
     #[test]
-    fn test1() {
+    fn test_assert() {
         let expected = vec![Event::Application {
             instance: "instance".to_string(),
             id: "app".to_string(),

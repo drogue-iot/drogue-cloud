@@ -15,7 +15,8 @@ use uuid::Uuid;
 
 /// An application entity record.
 pub struct Application {
-    pub id: String,
+    pub uid: Uuid,
+    pub name: String,
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub creation_timestamp: DateTime<Utc>,
@@ -51,7 +52,8 @@ impl From<Application> for management::Application {
 
         management::Application {
             metadata: NonScopedMetadata {
-                name: app.id,
+                uid: app.uid.to_string(),
+                name: app.name,
                 labels: app.labels,
                 annotations: app.annotations,
                 creation_timestamp: app.creation_timestamp,
@@ -104,7 +106,8 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
     pub fn from_row(row: Row) -> Result<Application, tokio_postgres::Error> {
         log::debug!("Row: {:?}", row);
         Ok(Application {
-            id: row.try_get("ID")?,
+            uid: row.try_get("UID")?,
+            name: row.try_get("NAME")?,
 
             creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
@@ -129,7 +132,7 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
 
         let stmt = self
             .client
-            .prepare("INSERT INTO APPLICATION_ALIASES (ID, TYPE, ALIAS) VALUES ($1, $2, $3)")
+            .prepare("INSERT INTO APPLICATION_ALIASES (APP, TYPE, ALIAS) VALUES ($1, $2, $3)")
             .await?;
 
         for alias in aliases {
@@ -150,9 +153,20 @@ impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
             .query_opt(
                 r#"
 SELECT
-    A2.ID, A2.LABELS, A2.CREATION_TIMESTAMP, A2.GENERATION, A2.RESOURCE_VERSION, A2.ANNOTATIONS, A2.DELETION_TIMESTAMP, A2.FINALIZERS, A2.DATA
-FROM APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
-    ON A1.ID=A2.ID WHERE A1.ALIAS = $1
+    A2.NAME,
+    A2.UID,
+    A2.LABELS,
+    A2.CREATION_TIMESTAMP,
+    A2.GENERATION,
+    A2.RESOURCE_VERSION,
+    A2.ANNOTATIONS,
+    A2.DELETION_TIMESTAMP,
+    A2.FINALIZERS,
+    A2.DATA
+FROM
+        APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
+    ON
+        A1.APP=A2.NAME WHERE A1.ALIAS = $1
 "#,
                 &[&alias],
             )
@@ -164,7 +178,7 @@ FROM APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
     async fn delete(&self, id: &str) -> Result<(), ServiceError> {
         let count = self
             .client
-            .execute("DELETE FROM APPLICATIONS WHERE ID = $1", &[&id])
+            .execute("DELETE FROM APPLICATIONS WHERE NAME = $1", &[&id])
             .await?;
 
         if count > 0 {
@@ -181,7 +195,8 @@ FROM APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
                 format!(
                     r#"
 SELECT
-    ID,
+    NAME,
+    UID,
     LABELS,
     ANNOTATIONS,
     CREATION_TIMESTAMP,
@@ -191,7 +206,7 @@ SELECT
     FINALIZERS,
     DATA
 FROM APPLICATIONS
-    WHERE ID = $1
+    WHERE NAME = $1
 {for_update}
 "#,
                     for_update = lock.to_string()
@@ -215,7 +230,7 @@ FROM APPLICATIONS
         application: Application,
         aliases: HashSet<TypedAlias>,
     ) -> Result<(), ServiceError> {
-        let id = application.id;
+        let name = application.name;
         let data = application.data;
         let labels = application.labels;
         let annotations = application.annotations;
@@ -224,7 +239,7 @@ FROM APPLICATIONS
             .execute(
                 r#"
 INSERT INTO APPLICATIONS (
-    ID,
+    NAME,
     LABELS,
     ANNOTATIONS,
     CREATION_TIMESTAMP,
@@ -245,7 +260,7 @@ INSERT INTO APPLICATIONS (
     $8
 )"#,
                 &[
-                    &id,
+                    &name,
                     &Json(labels),
                     &Json(annotations),
                     &Utc::now(),
@@ -257,7 +272,7 @@ INSERT INTO APPLICATIONS (
             )
             .await?;
 
-        self.insert_aliases(&id, &aliases).await?;
+        self.insert_aliases(&name, &aliases).await?;
 
         Ok(())
     }
@@ -267,7 +282,7 @@ INSERT INTO APPLICATIONS (
         application: Application,
         aliases: Option<HashSet<TypedAlias>>,
     ) -> Result<(), ServiceError> {
-        let id = application.id;
+        let name = application.name;
         let labels = application.labels;
         let data = application.data;
         let annotations = application.annotations;
@@ -277,7 +292,8 @@ INSERT INTO APPLICATIONS (
             .client
             .execute(
                 r#"
-UPDATE APPLICATIONS SET
+UPDATE APPLICATIONS
+SET
     LABELS = $2,
     ANNOTATIONS = $3,
     GENERATION = $4,
@@ -286,10 +302,10 @@ UPDATE APPLICATIONS SET
     FINALIZERS = $7,
     DATA = $8
 WHERE
-    ID = $1
+    NAME = $1
 "#,
                 &[
-                    &id,
+                    &name,
                     &Json(labels),
                     &Json(annotations),
                     &(application.generation as i64),
@@ -304,11 +320,11 @@ WHERE
         update_aliases!(count, aliases, |aliases| {
             // clear existing aliases
             self.client
-                .execute("DELETE FROM APPLICATION_ALIASES WHERE ID=$1", &[&id])
+                .execute("DELETE FROM APPLICATION_ALIASES WHERE APP=$1", &[&name])
                 .await?;
 
             // insert new alias set
-            self.insert_aliases(&id, &aliases).await?;
+            self.insert_aliases(&name, &aliases).await?;
 
             Ok(())
         })

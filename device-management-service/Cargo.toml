@@ -28,6 +28,7 @@ indexmap = { version = "1", features = ["serde"] }
 futures = "0.3"
 rust-crypto = "0.2"
 rand = "0.7"
+uuid = "0.8"
 
 chrono = { version = "0.4", features = ["serde"] }
 pem = "0.8"
