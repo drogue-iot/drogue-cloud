@@ -1,0 +1,14 @@
+apiVersion: messaging.knative.dev/v1
+kind: Subscription
+metadata:
+  name: outbox-controller
+  labels:
+    app.kubernetes.io/name: outbox-controller
+    app.kubernetes.io/part-of: device-registry
+spec:
+  channel:
+    apiVersion: messaging.knative.dev/v1alpha1
+    kind: KafkaChannel
+    name: registry
+  subscriber:
+    uri: http://outbox-controller.drogue-iot.svc.cluster.local:8080/

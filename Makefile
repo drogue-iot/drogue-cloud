@@ -37,6 +37,7 @@ ALL_IMAGES=\
 	database-migration \
 	command-endpoint \
 	test-cert-generator \
+	outbox-controller \
 
 
 #

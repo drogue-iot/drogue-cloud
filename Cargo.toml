@@ -15,6 +15,7 @@ members = [
     "command-endpoint",
     "test-common",
     "registry-events",
+    "outbox-controller",
 ]
 
 [patch.crates-io]
@@ -31,3 +32,7 @@ actix-web-httpauth = { git = "https://github.com/ctron/actix-extras", rev = "871
 #cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
 #cloudevents-sdk-reqwest = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
 #cloudevents-sdk-rdkafka = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
+
+cloudevents-sdk-04 = { package = 'cloudevents-sdk', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
+cloudevents-sdk-actix-web-04 = { package = 'cloudevents-sdk-actix-web', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
+cloudevents-sdk-reqwest-04 = { package = 'cloudevents-sdk-reqwest', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
