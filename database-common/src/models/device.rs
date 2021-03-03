@@ -15,8 +15,9 @@ use uuid::Uuid;
 
 /// A device entity record.
 pub struct Device {
-    pub application_id: String,
-    pub id: String,
+    pub application: String,
+    pub uid: Uuid,
+    pub name: String,
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub creation_timestamp: DateTime<Utc>,
@@ -35,8 +36,9 @@ impl From<Device> for management::Device {
     fn from(device: Device) -> Self {
         management::Device {
             metadata: ScopedMetadata {
-                name: device.id,
-                application: device.application_id,
+                uid: device.uid.to_string(),
+                name: device.name,
+                application: device.application,
                 labels: device.labels,
                 annotations: device.annotations,
                 creation_timestamp: device.creation_timestamp,
@@ -102,8 +104,9 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
     pub fn from_row(row: Row) -> Result<Device, tokio_postgres::Error> {
         Ok(Device {
-            application_id: row.try_get("APP_ID")?,
-            id: row.try_get("ID")?,
+            application: row.try_get("APP")?,
+            uid: row.try_get("UID")?,
+            name: row.try_get("NAME")?,
 
             creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
@@ -129,7 +132,9 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
         let stmt = self
             .client
-            .prepare("INSERT INTO DEVICE_ALIASES (APP_ID, ID, TYPE, ALIAS) VALUES ($1, $2, $3, $4)")
+            .prepare(
+                "INSERT INTO DEVICE_ALIASES (APP, DEVICE, TYPE, ALIAS) VALUES ($1, $2, $3, $4)",
+            )
             .await?;
 
         for alias in aliases {
@@ -150,13 +155,26 @@ impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
             .query_opt(
                 r#"
 SELECT
-    D.ID, D.APP_ID, D.LABELS, D.CREATION_TIMESTAMP, D.GENERATION, D.RESOURCE_VERSION, D.ANNOTATIONS, D.DELETION_TIMESTAMP, D.FINALIZERS, D.DATA
+    D.NAME,
+    D.UID,
+    D.APP,
+    D.LABELS,
+    D.CREATION_TIMESTAMP,
+    D.GENERATION,
+    D.RESOURCE_VERSION,
+    D.ANNOTATIONS,
+    D.DELETION_TIMESTAMP,
+    D.FINALIZERS,
+    D.DATA
 FROM
-    DEVICE_ALIASES A INNER JOIN DEVICES D ON (A.ID=D.ID AND A.APP_ID=D.APP_ID)
+        DEVICE_ALIASES A INNER JOIN DEVICES D
+    ON
+        (A.DEVICE=D.NAME AND A.APP=D.APP)
 WHERE
-    A.APP_ID = $1
+        A.APP = $1
     AND
-    A.ALIAS = $2"#,
+        A.ALIAS = $2
+"#,
                 &[&app_id, &alias],
             )
             .await?
@@ -170,7 +188,7 @@ WHERE
         let count = self
             .client
             .execute(
-                "DELETE FROM DEVICES WHERE APP_ID = $1 AND ID = $2",
+                "DELETE FROM DEVICES WHERE APP = $1 AND NAME = $2",
                 &[&app_id, &device_id],
             )
             .await?;
@@ -194,8 +212,9 @@ WHERE
                 format!(
                     r#"
 SELECT
-    ID,
-    APP_ID,
+    UID,
+    NAME,
+    APP,
     LABELS,
     ANNOTATIONS,
     CREATION_TIMESTAMP,
@@ -206,7 +225,7 @@ SELECT
     DATA
 FROM DEVICES
 WHERE
-    APP_ID = $1 AND ID = $2
+    APP = $1 AND NAME = $2
 {for_update}
 "#,
                     for_update = lock.to_string()
@@ -230,8 +249,8 @@ WHERE
             .execute(
                 r#"
 INSERT INTO DEVICES (
-    APP_ID,
-    ID,
+    APP,
+    NAME,
     LABELS,
     ANNOTATIONS,
     CREATION_TIMESTAMP,
@@ -253,8 +272,8 @@ INSERT INTO DEVICES (
     $9
 )"#,
                 &[
-                    &device.application_id,
-                    &device.id,
+                    &device.application,
+                    &device.name,
                     &Json(&device.labels),
                     &Json(&device.annotations),
                     &Utc::now(),
@@ -266,7 +285,7 @@ INSERT INTO DEVICES (
             )
             .await?;
 
-        self.insert_aliases(&device.application_id, &device.id, &aliases)
+        self.insert_aliases(&device.application, &device.name, &aliases)
             .await?;
 
         Ok(())
@@ -282,7 +301,9 @@ INSERT INTO DEVICES (
             .client
             .execute(
                 r#"
-UPDATE DEVICES SET
+UPDATE
+    DEVICES
+SET
     LABELS = $3,
     ANNOTATIONS = $4,
     GENERATION = $5,
@@ -291,11 +312,11 @@ UPDATE DEVICES SET
     FINALIZERS = $8,
     DATA = $9
 WHERE
-    APP_ID = $1 AND ID = $2
+    APP = $1 AND NAME = $2
 "#,
                 &[
-                    &device.application_id,
-                    &device.id,
+                    &device.application,
+                    &device.name,
                     &Json(device.labels),
                     &Json(device.annotations),
                     &(device.generation as i64),
@@ -311,13 +332,13 @@ WHERE
             // clear existing aliases
             self.client
                 .execute(
-                    "DELETE FROM DEVICE_ALIASES WHERE APP_ID=$1 AND ID=$2",
-                    &[&device.application_id, &device.id],
+                    "DELETE FROM DEVICE_ALIASES WHERE APP=$1 AND DEVICE=$2",
+                    &[&device.application, &device.name],
                 )
                 .await?;
 
             // insert new alias set
-            self.insert_aliases(&device.application_id, &device.id, &aliases)
+            self.insert_aliases(&device.application, &device.name, &aliases)
                 .await?;
 
             Ok(())
@@ -331,10 +352,10 @@ WHERE
             .client
             .execute(
                 r#"
-DELETE
-    FROM DEVICES
+DELETE FROM
+    DEVICES
 WHERE
-    APP_ID = $1
+    APP = $1
 AND
     cardinality ( FINALIZERS ) = 0
 "#,
@@ -359,7 +380,7 @@ AND
         let count = self
             .client
             .query_opt(
-                r#"SELECT COUNT(ID) AS COUNT FROM DEVICES WHERE APP_ID = $1"#,
+                r#"SELECT COUNT(NAME) AS COUNT FROM DEVICES WHERE APP = $1"#,
                 &[&app_id],
             )
             .await?

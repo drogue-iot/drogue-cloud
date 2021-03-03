@@ -29,6 +29,10 @@ fn epoch() -> DateTime<Utc> {
 pub struct NonScopedMetadata {
     pub name: String,
 
+    #[serde(default)]
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub uid: String,
+
     /// The creation date of the resource.
     #[serde(default = "epoch")]
     pub creation_timestamp: DateTime<Utc>,
@@ -62,6 +66,10 @@ pub struct ScopedMetadata {
     pub application: String,
     pub name: String,
 
+    #[serde(default)]
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub uid: String,
+
     #[serde(default = "epoch")]
     pub creation_timestamp: DateTime<Utc>,
     #[serde(default)]
@@ -89,6 +97,7 @@ impl Default for ScopedMetadata {
         Self {
             application: Default::default(),
             name: Default::default(),
+            uid: Default::default(),
             labels: Default::default(),
             annotations: Default::default(),
             creation_timestamp: chrono::Utc::now(),
@@ -104,6 +113,7 @@ impl Default for NonScopedMetadata {
     fn default() -> Self {
         Self {
             name: Default::default(),
+            uid: Default::default(),
             labels: Default::default(),
             annotations: Default::default(),
             creation_timestamp: chrono::Utc::now(),
