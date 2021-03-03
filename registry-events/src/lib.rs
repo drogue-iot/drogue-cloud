@@ -9,7 +9,7 @@ use chrono::Utc;
 use cloudevents::{AttributesReader, Data, EventBuilder};
 use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE, EXT_INSTANCE};
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
+use std::convert::TryFrom;
 use thiserror::Error;
 
 const EXT_PARTITIONKEY: &str = "partitionkey";
@@ -206,16 +206,16 @@ pub trait EventSender: Send + Sync {
         I::IntoIter: Sync + Send;
 }
 
-impl TryInto<cloudevents::Event> for Event {
+impl TryFrom<Event> for cloudevents::Event {
     type Error = EventError;
 
-    fn try_into(self) -> Result<cloudevents::Event, Self::Error> {
+    fn try_from(value: Event) -> Result<cloudevents::Event, Self::Error> {
         let builder = cloudevents::event::EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .time(Utc::now());
 
-        let builder = match self {
-            Self::Application {
+        let builder = match value {
+            Event::Application {
                 instance,
                 id,
                 generation,
@@ -234,7 +234,7 @@ impl TryInto<cloudevents::Event> for Event {
                             .map_err(EventError::PayloadEncoder)?,
                     ),
                 ),
-            Self::Device {
+            Event::Device {
                 instance,
                 application,
                 id,
@@ -264,13 +264,13 @@ impl TryInto<cloudevents::Event> for Event {
     }
 }
 
-impl TryInto<Event> for cloudevents::Event {
+impl TryFrom<cloudevents::Event> for Event {
     type Error = EventError;
 
-    fn try_into(self) -> Result<Event, Self::Error> {
-        match self.ty() {
-            EVENT_TYPE_APPLICATION => Event::from_app(self),
-            EVENT_TYPE_DEVICE => Event::from_device(self),
+    fn try_from(event: cloudevents::Event) -> Result<Event, Self::Error> {
+        match event.ty() {
+            EVENT_TYPE_APPLICATION => Event::from_app(event),
+            EVENT_TYPE_DEVICE => Event::from_device(event),
             ty => Err(EventError::UnknownType(ty.into())),
         }
     }

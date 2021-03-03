@@ -45,9 +45,12 @@ pub trait OutboxAccessor {
     /// Mark the outbox entry as seen.
     async fn mark_seen(&self, entry: OutboxEntry) -> Result<bool, ServiceError>;
     /// Fetch unread.
+    ///
+    /// This will return a stream of entries which got created `before`. The stream is ordered by
+    /// creation timestamp (ascending, oldest entries first).
     async fn fetch_unread(
         &self,
-        duration: Duration,
+        before: Duration,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<OutboxEntry, ServiceError>>>>, ServiceError>;
 }
 
@@ -152,6 +155,8 @@ FROM
     outbox
 WHERE
     TS < $1
+ORDER BY
+    TS ASC
 "#,
                 &[beginning],
             )
