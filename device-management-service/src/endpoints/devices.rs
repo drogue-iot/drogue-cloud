@@ -63,7 +63,7 @@ where
 pub async fn delete<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
     web::Path((app, device)): web::Path<(String, String)>,
-    params: web::Json<DeleteParams>,
+    params: Option<web::Json<DeleteParams>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
@@ -74,7 +74,9 @@ where
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    data.service.delete_device(&app, &device, params.0).await?;
+    data.service
+        .delete_device(&app, &device, params.map(|p| p.0).unwrap_or_default())
+        .await?;
 
     Ok(HttpResponse::NoContent().finish())
 }

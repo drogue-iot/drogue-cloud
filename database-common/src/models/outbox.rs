@@ -8,13 +8,14 @@ use tokio_postgres::Row;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OutboxEntry {
-    pub instance_id: String,
+    pub instance: String,
 
-    pub app_id: String,
-    pub device_id: Option<String>,
+    pub app: String,
+    pub device: Option<String>,
     pub path: String,
 
     pub generation: u64,
+    pub uid: String,
 }
 
 impl TryFrom<Row> for OutboxEntry {
@@ -22,10 +23,10 @@ impl TryFrom<Row> for OutboxEntry {
 
     fn try_from(row: Row) -> Result<Self, Self::Error> {
         Ok(OutboxEntry {
-            instance_id: row.try_get("INSTANCE_ID")?,
-            app_id: row.try_get("APP_ID")?,
-            device_id: {
-                let id: String = row.try_get("DEVICE_ID")?;
+            instance: row.try_get("INSTANCE")?,
+            app: row.try_get("APP")?,
+            device: {
+                let id: String = row.try_get("DEVICE")?;
                 if id.is_empty() {
                     None
                 } else {
@@ -34,6 +35,7 @@ impl TryFrom<Row> for OutboxEntry {
             },
             path: row.try_get("PATH")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
+            uid: row.try_get("UID")?,
         })
     }
 }
@@ -72,9 +74,10 @@ impl<'c, C: Client> OutboxAccessor for PostgresOutboxAccessor<'c, C> {
             .execute(
                 r#"
 INSERT INTO outbox (
-    INSTANCE_ID,
-    APP_ID,
-    DEVICE_ID,
+    INSTANCE,
+    APP,
+    DEVICE,
+    UID,
     PATH,
     GENERATION,
     TS
@@ -84,20 +87,25 @@ INSERT INTO outbox (
     $3,
     $4,
     $5,
+    $6,
     now()
 ) 
-ON CONFLICT (APP_ID, DEVICE_ID, PATH) 
+ON CONFLICT (APP, DEVICE, PATH) 
 DO
     UPDATE SET
         GENERATION = EXCLUDED.GENERATION,
+        UID = EXCLUDED.UID,
         TS = EXCLUDED.TS
     WHERE
-        outbox.GENERATION < EXCLUDED.GENERATION;
+            outbox.GENERATION < EXCLUDED.GENERATION
+        OR
+            outbox.UID != EXCLUDED.UID
 "#,
                 &[
-                    &entry.instance_id,
-                    &entry.app_id,
-                    &entry.device_id.unwrap_or_default(),
+                    &entry.instance,
+                    &entry.app,
+                    &entry.device.unwrap_or_default(),
+                    &entry.uid,
                     &entry.path,
                     &(entry.generation as i64),
                 ],
@@ -110,6 +118,8 @@ DO
     }
 
     async fn mark_seen(&self, entry: OutboxEntry) -> Result<bool, ServiceError> {
+        // We do not filter by instance here, as we expect to own the full table, and
+        // don't add the extra data to the index this way.
         let num = self
             .client
             .execute(
@@ -117,19 +127,22 @@ DO
 DELETE
     FROM outbox
 WHERE
-        APP_ID = $1
+        APP = $1
     AND
-        DEVICE_ID = $2
+        DEVICE = $2
     AND
         PATH = $3
     AND
         GENERATION <= $4
+    AND
+        UID = $5
 "#,
                 &[
-                    &entry.app_id,
-                    &entry.device_id.unwrap_or_default(),
+                    &entry.app,
+                    &entry.device.unwrap_or_default(),
                     &entry.path,
                     &(entry.generation as i64),
+                    &entry.uid,
                 ],
             )
             .await?;
@@ -150,7 +163,7 @@ WHERE
             .query_raw(
                 r#"
 SELECT
-    INSTANCE_ID, APP_ID, DEVICE_ID, PATH, GENERATION
+    INSTANCE, APP, DEVICE, PATH, GENERATION, UID
 FROM
     outbox
 WHERE

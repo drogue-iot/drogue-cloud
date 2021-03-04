@@ -26,14 +26,16 @@ fn missing_field(field: &str) -> EventError {
 pub enum Event {
     Application {
         instance: String,
-        id: String,
+        application: String,
+        uid: String,
         path: String,
         generation: u64,
     },
     Device {
         instance: String,
         application: String,
-        id: String,
+        device: String,
+        uid: String,
         path: String,
         generation: u64,
     },
@@ -42,6 +44,7 @@ pub enum Event {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct EventData {
     pub generation: u64,
+    pub uid: String,
 }
 
 #[async_trait]
@@ -76,12 +79,13 @@ impl Event {
     }
 
     fn from_app(event: cloudevents::Event) -> Result<Event, EventError> {
+        let data = Self::get_data(&event)?;
         Ok(Event::Application {
             instance: event
                 .extension(EXT_INSTANCE)
                 .ok_or_else(|| missing_field(EXT_INSTANCE))?
                 .to_string(),
-            id: event
+            application: event
                 .extension(EXT_APPLICATION)
                 .ok_or_else(|| missing_field(EXT_APPLICATION))?
                 .to_string(),
@@ -89,11 +93,13 @@ impl Event {
                 .subject()
                 .ok_or_else(|| missing_field("subject"))?
                 .to_string(),
-            generation: Self::get_data(&event)?.generation,
+            generation: data.generation,
+            uid: data.uid,
         })
     }
 
     fn from_device(event: cloudevents::Event) -> Result<Event, EventError> {
+        let data = Self::get_data(&event)?;
         Ok(Event::Device {
             instance: event
                 .extension(EXT_INSTANCE)
@@ -103,7 +109,7 @@ impl Event {
                 .extension(EXT_APPLICATION)
                 .ok_or_else(|| missing_field(EXT_APPLICATION))?
                 .to_string(),
-            id: event
+            device: event
                 .extension(EXT_DEVICE)
                 .ok_or_else(|| missing_field(EXT_DEVICE))?
                 .to_string(),
@@ -111,7 +117,8 @@ impl Event {
                 .subject()
                 .ok_or_else(|| missing_field("subject"))?
                 .to_string(),
-            generation: Self::get_data(&event)?.generation,
+            generation: data.generation,
+            uid: data.uid,
         })
     }
 
@@ -128,29 +135,33 @@ impl Event {
     }
 
     /// create new events for an app
-    pub fn new_app<I, A>(
-        instance_id: I,
-        app_id: A,
+    pub fn new_app<I, A, U>(
+        instance: I,
+        app: A,
+        uid: U,
         generation: u64,
         paths: Vec<String>,
     ) -> Vec<Event>
     where
         I: ToString,
         A: ToString,
+        U: ToString,
     {
         Self::new_change(paths, |path| Event::Application {
-            instance: instance_id.to_string(),
-            id: app_id.to_string(),
+            instance: instance.to_string(),
+            application: app.to_string(),
+            uid: uid.to_string(),
             path,
             generation,
         })
     }
 
     /// create new events for a device
-    pub fn new_device<I, A, D>(
+    pub fn new_device<I, A, D, U>(
         instance_id: I,
         app_id: A,
         device_id: D,
+        uid: U,
         generation: u64,
         paths: Vec<String>,
     ) -> Vec<Event>
@@ -158,11 +169,13 @@ impl Event {
         I: ToString,
         A: ToString,
         D: ToString,
+        U: ToString,
     {
         Self::new_change(paths, |path| Event::Device {
             instance: instance_id.to_string(),
             application: app_id.to_string(),
-            id: device_id.to_string(),
+            device: device_id.to_string(),
+            uid: uid.to_string(),
             path,
             generation,
         })
@@ -217,44 +230,46 @@ impl TryFrom<Event> for cloudevents::Event {
         let builder = match value {
             Event::Application {
                 instance,
-                id,
+                application,
+                uid,
                 generation,
                 path,
             } => builder
                 .ty(EVENT_TYPE_APPLICATION)
-                .source(format!("drogue:/{}/{}", instance, id))
+                .source(format!("drogue:/{}/{}", instance, application))
                 .subject(path)
-                .extension(EXT_PARTITIONKEY, format!("{}/{}", instance, id))
+                .extension(EXT_PARTITIONKEY, format!("{}/{}", instance, application))
                 .extension(EXT_INSTANCE, instance)
-                .extension(EXT_APPLICATION, id)
+                .extension(EXT_APPLICATION, application)
                 .data(
                     mime::APPLICATION_JSON.to_string(),
                     Data::Json(
-                        serde_json::to_value(&EventData { generation })
+                        serde_json::to_value(&EventData { generation, uid })
                             .map_err(EventError::PayloadEncoder)?,
                     ),
                 ),
             Event::Device {
                 instance,
                 application,
-                id,
+                device,
+                uid,
                 generation,
                 path,
             } => builder
                 .ty(EVENT_TYPE_DEVICE)
-                .source(format!("drogue:/{}/{}/{}", instance, application, id))
+                .source(format!("drogue:/{}/{}/{}", instance, application, device))
                 .subject(path)
                 .extension(
                     EXT_PARTITIONKEY,
-                    format!("{}/{}/{}", instance, application, id),
+                    format!("{}/{}/{}", instance, application, device),
                 )
                 .extension(EXT_INSTANCE, instance)
                 .extension(EXT_APPLICATION, application)
-                .extension(EXT_DEVICE, id)
+                .extension(EXT_DEVICE, device)
                 .data(
                     mime::APPLICATION_JSON.to_string(),
                     Data::Json(
-                        serde_json::to_value(&EventData { generation })
+                        serde_json::to_value(&EventData { generation, uid })
                             .map_err(EventError::PayloadEncoder)?,
                     ),
                 ),
@@ -289,7 +304,8 @@ mod test {
     fn test_encode() -> anyhow::Result<()> {
         let ce: cloudevents::Event = Event::Application {
             instance: "instance".to_string(),
-            id: "application".to_string(),
+            application: "application".to_string(),
+            uid: "uid".to_string(),
             path: ".spec.core".to_string(),
             generation: 123,
         }
@@ -306,7 +322,10 @@ mod test {
                 .extension(EXT_PARTITIONKEY, "instance/application")
                 .extension(EXT_INSTANCE, "instance")
                 .extension(EXT_APPLICATION, "application")
-                .data("application/json", Data::Json(json!({"generation": 123})))
+                .data(
+                    "application/json",
+                    Data::Json(json!({"generation": 123, "uid": "uid"}))
+                )
                 .build()?
         );
 
@@ -324,7 +343,10 @@ mod test {
             .extension(EXT_INSTANCE, "instance")
             .extension(EXT_APPLICATION, "application")
             .extension(EXT_DEVICE, "device")
-            .data("application/json", Data::Json(json!({"generation": 321})))
+            .data(
+                "application/json",
+                Data::Json(json!({"generation": 321, "uid": "uid"})),
+            )
             .build()
             .context("Failed to build CloudEvent")?;
 
@@ -333,7 +355,8 @@ mod test {
         assert_eq!(
             Event::Application {
                 instance: "instance".to_string(),
-                id: "application".to_string(),
+                application: "application".to_string(),
+                uid: "uid".to_string(),
                 path: ".spec.credentials".to_string(),
                 generation: 321,
             },

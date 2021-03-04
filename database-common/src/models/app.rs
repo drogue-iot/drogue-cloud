@@ -241,12 +241,12 @@ FROM APPLICATIONS
                 r#"
 INSERT INTO APPLICATIONS (
     NAME,
+    UID,
     LABELS,
     ANNOTATIONS,
     CREATION_TIMESTAMP,
     GENERATION,
     RESOURCE_VERSION,
-    DELETION_TIMESTAMP,
     FINALIZERS,
     DATA
 ) VALUES (
@@ -256,12 +256,13 @@ INSERT INTO APPLICATIONS (
     $4,
     $5,
     $6,
-    NULL,
     $7,
-    $8
+    $8,
+    $9
 )"#,
                 &[
                     &name,
+                    &application.uid,
                     &Json(labels),
                     &Json(annotations),
                     &Utc::now(),
