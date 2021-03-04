@@ -2,8 +2,10 @@ mod endpoints;
 mod resend;
 mod service;
 
-use crate::resend::Resender;
-use crate::service::{OutboxService, OutboxServiceConfig};
+use crate::{
+    resend::Resender,
+    service::{OutboxService, OutboxServiceConfig},
+};
 use actix::Actor;
 use actix_web::{
     get, middleware,
@@ -17,7 +19,6 @@ use drogue_cloud_service_common::config::ConfigFromEnv;
 use envconfig::Envconfig;
 use serde_json::json;
 use std::sync::Arc;
-use std::time::Duration;
 use url::Url;
 
 #[derive(Envconfig, Clone, Debug)]
@@ -27,15 +28,15 @@ struct Config {
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
 
-    #[envconfig(from = "RESEND_PERIOD", default = "60")]
+    #[envconfig(from = "RESEND_PERIOD", default = "1m")]
     /// Scan every x seconds for resending events.
-    pub resend_period: u32,
+    pub resend_period: humantime::Duration,
 
-    #[envconfig(from = "BEFORE", default = "300")]
+    #[envconfig(from = "BEFORE", default = "5m")]
     /// Send events older than x seconds.
-    pub resend_before: u32,
+    pub resend_before: humantime::Duration,
 
-    #[envconfig(from = "K_SINK", default = "300")]
+    #[envconfig(from = "K_SINK")]
     pub event_url: Url,
 }
 
@@ -68,8 +69,8 @@ async fn main() -> anyhow::Result<()> {
 
     // start resender
     Resender {
-        interval: Duration::from_secs(config.resend_period as u64),
-        before: chrono::Duration::seconds(config.resend_before as i64),
+        interval: config.resend_period.into(),
+        before: chrono::Duration::from_std(config.resend_before.into())?,
         service: Arc::new(service.clone()),
         sender: Arc::new(sender),
     }
