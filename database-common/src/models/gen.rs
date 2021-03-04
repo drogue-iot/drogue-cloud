@@ -1,4 +1,3 @@
-use crate::utils::millis_since_epoch;
 use thiserror::Error;
 
 #[macro_export]
@@ -37,7 +36,7 @@ pub enum GenerationError {
 
 pub trait Generation {
     fn next_generation(&mut self) -> Result<u64, GenerationError> {
-        self.set_generation(millis_since_epoch())
+        self.set_generation(self.generation() + 1)
     }
 
     fn generation(&self) -> u64;
