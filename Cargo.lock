@@ -1705,6 +1705,7 @@ dependencies = [
  "log",
  "serde 1.0.120",
  "serde_json",
+ "serial_test",
  "thiserror",
  "tokio 1.0.2",
  "tokio-postgres",

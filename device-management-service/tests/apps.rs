@@ -33,7 +33,8 @@ async fn test_create_app() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -60,7 +61,8 @@ async fn test_crud_app() -> anyhow::Result<()> {
 
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -102,7 +104,8 @@ async fn test_crud_app() -> anyhow::Result<()> {
         // event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".spec.core".into(),
             generation: 0,
         }]);
@@ -142,7 +145,8 @@ async fn test_crud_app() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -185,7 +189,8 @@ async fn test_app_labels() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -235,13 +240,15 @@ async fn test_app_labels() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![
             Event::Application {
                 instance: "drogue-instance".into(),
-                id: "app1".into(),
+                application: "app1".into(),
+                uid: "".into(),
                 path: ".metadata".into(),
                 generation: 0,
             },
             Event::Application {
                 instance: "drogue-instance".into(),
-                id: "app1".into(),
+                application: "app1".into(),
+                uid: "".into(),
                 path: ".spec.core".into(),
                 generation: 0,
             }
@@ -299,7 +306,8 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -343,7 +351,8 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -401,12 +410,14 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         // two events must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".spec.trustAnchors".into(),
             generation: 0,
         }, Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".status.trustAnchors".into(),
             generation: 0,
         }]);
@@ -454,7 +465,8 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -466,7 +478,8 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".metadata".into(),
             generation: 0,
         }]);
@@ -505,7 +518,8 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![
             Event::Application {
                 instance: "drogue-instance".into(),
-                id: "app1".into(),
+                application: "app1".into(),
+                uid: "".into(),
                 path: ".metadata".into(),
                 generation: 0,
             },
@@ -541,6 +555,59 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
 
         // no more events when cleaning up after finalizers
         assert_eq!(sender.retrieve().unwrap(), vec![]);
+
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_delete_precondition() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": "app1",
+            },
+        })).send_request(&mut app).await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // read, must exist ... take uid and resource_version
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let result: serde_json::Value = test::read_body_json(resp).await;
+        let resource_version = result["metadata"]["resourceVersion"].clone();
+        let uid = result["metadata"]["uid"].clone();
+
+        // test deleting
+
+        // wrong uid
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").set_json(&json!({
+            "preconditions": {
+                "uid": format!("wrong-{}", uid),
+            }
+        })).send_request(&mut app).await;
+        // wrong uid, must fail with conflict
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+        // wrong resource_version
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").set_json(&json!({
+            "preconditions": {
+                "resourceVersion": format!("wrong-{}", resource_version),
+            }
+        })).send_request(&mut app).await;
+        // wrong resource_version, must fail with conflict
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+
+        // correct uid and resource version
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").set_json(&json!({
+            "preconditions": {
+                "uid": uid,
+                "resourceVersion": resource_version,
+            }
+        })).send_request(&mut app).await;
+        // all good, must succeed
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     })
 }

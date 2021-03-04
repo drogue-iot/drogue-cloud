@@ -31,6 +31,7 @@ anyhow = "1"
 
 criterion = { version = "0.3" } # , features = ["real_blackbox"]
 tokio = { version = "1", features = ["full"] }
+serial_test = "0.5"
 
 drogue-cloud-test-common = { path = "../test-common" }
 log = "0.4"

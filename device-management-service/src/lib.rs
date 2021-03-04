@@ -38,7 +38,7 @@ macro_rules! crud {
                 }))
             })
             .service({
-                let resource = concat!($base, stringify!($name), "s/{", stringify!($name), "_id}");
+                let resource = concat!($base, stringify!($name), "s/{", stringify!($name), "}");
                 log::debug!("{}", resource);
 
                 web::resource(resource)
@@ -106,7 +106,7 @@ macro_rules! app {
             let scope = drogue_cloud_device_management_service::crud!(
                 $sender,
                 scope,
-                "/apps/{app_id}/",
+                "/apps/{app}/",
                 endpoints::devices,
                 device
             );

@@ -96,8 +96,9 @@ mod test {
 
         assert!(Event::Application {
             instance: "instance1".into(),
-            id: "app1".into(),
+            application: "app1".into(),
             generation: 123,
+            uid: "a".into(),
             path: "spec/core".into()
         }
         .send_with(&sender)
@@ -110,8 +111,9 @@ mod test {
             events.unwrap(),
             vec![Event::Application {
                 instance: "instance1".into(),
-                id: "app1".into(),
+                application: "app1".into(),
                 generation: 123,
+                uid: "a".into(),
                 path: "spec/core".into()
             }]
         );
@@ -125,8 +127,9 @@ mod test {
             events_cloned.unwrap(),
             vec![Event::Application {
                 instance: "instance1".into(),
-                id: "app1".into(),
+                application: "app1".into(),
                 generation: 123,
+                uid: "a".into(),
                 path: "spec/core".into()
             }]
         );

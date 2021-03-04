@@ -58,36 +58,38 @@ macro_rules! test {
 /// This will ignore differences in the "generation", as they are not predictable.
 #[allow(irrefutable_let_patterns)]
 pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
-    let mut n = 0;
-    for actual in actual {
+    for (n, actual) in actual.into_iter().enumerate() {
         for i in actual.iter().zip(expected.iter_mut()) {
             // this if could be reworked when we have: https://github.com/rust-lang/rust/issues/54883
             if let Event::Application {
                 generation: actual_generation,
+                uid: actual_uid,
                 ..
             }
             | Event::Device {
                 generation: actual_generation,
+                uid: actual_uid,
                 ..
             } = i.0
             {
                 if let Event::Application {
                     generation: expected_generation,
+                    uid: expected_uid,
                     ..
                 }
                 | Event::Device {
                     generation: expected_generation,
+                    uid: expected_uid,
                     ..
                 } = i.1
                 {
-                    // can be collapsed in the future
                     *expected_generation = *actual_generation;
+                    *expected_uid = actual_uid.clone();
                 }
             }
         }
 
         assert_eq!(actual, expected, "actual[{}]", n,);
-        n += 1;
     }
 }
 
@@ -123,15 +125,17 @@ mod test {
     fn test_assert() {
         let expected = vec![Event::Application {
             instance: "instance".to_string(),
-            id: "app".to_string(),
+            application: "app".to_string(),
             path: ".".to_string(),
             generation: 0,
+            uid: "a".to_string(),
         }];
         let actual = vec![Event::Application {
             instance: "instance".to_string(),
-            id: "app".to_string(),
+            application: "app".to_string(),
             path: ".".to_string(),
             generation: 12345,
+            uid: "b".to_string(),
         }];
         assert_events(vec![actual], expected);
     }

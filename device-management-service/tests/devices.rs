@@ -33,7 +33,8 @@ async fn test_create_device() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -59,7 +60,8 @@ async fn test_create_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -146,7 +148,8 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -214,7 +217,8 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -270,7 +274,8 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".spec.credentials".into(),
             generation: 0,
         }]);
@@ -316,7 +321,8 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -373,7 +379,8 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -392,7 +399,8 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -405,7 +413,8 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         // devices  doesn't have a finalizer set
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -434,7 +443,8 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -454,7 +464,8 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".".into(),
             generation: 0,
         }]);
@@ -466,7 +477,8 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         // one event must have been fired, but notify about a metadata change
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
             instance: "drogue-instance".into(),
-            id: "app1".into(),
+            application: "app1".into(),
+            uid: "".into(),
             path: ".metadata".into(),
             generation: 0,
         }]);
@@ -531,7 +543,8 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
-            id: "device1".into(),
+            device: "device1".into(),
+            uid: "".into(),
             path: ".metadata".into(),
             generation: 0,
         }]);

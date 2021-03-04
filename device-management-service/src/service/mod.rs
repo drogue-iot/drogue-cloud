@@ -253,6 +253,7 @@ where
             let generation = app.next_generation()?;
 
             let name = app.name.clone();
+            let uid = app.uid.clone();
 
             // update
 
@@ -271,6 +272,7 @@ where
             Ok(Event::new_app(
                 self.instance.clone(),
                 name,
+                uid,
                 generation,
                 paths,
             ))
@@ -360,6 +362,9 @@ where
 
         let generation = app.next_generation()?;
         let name = app.name.clone();
+        // assign a new UID
+        let uid = Uuid::new_v4();
+        app.uid = uid;
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -374,7 +379,7 @@ where
                 _ => err,
             })?;
 
-        let events = Event::new_app(self.instance.clone(), name, generation, vec![]);
+        let events = Event::new_app(self.instance.clone(), name, uid, generation, vec![]);
 
         // send events to outbox
 
@@ -449,7 +454,7 @@ where
             return Err(ServiceError::NotFound.into());
         }
 
-        utils::check_preconditions(&params.preconditions, &current);
+        utils::check_preconditions(&params.preconditions, &current)?;
         // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next, we need to delete the application
@@ -465,6 +470,7 @@ where
 
         // next generation
         let generation = current.next_generation()?;
+        let uid = current.uid.clone();
 
         // if there are no finalizers ...
         let paths = if current.finalizers.is_empty() {
@@ -489,7 +495,7 @@ where
 
         // create events
 
-        let events = Event::new_app(self.instance.clone(), id, generation, paths);
+        let events = Event::new_app(self.instance.clone(), id, uid, generation, paths);
 
         // send events to outbox
 
@@ -514,7 +520,6 @@ where
         let generation = device.next_generation()?;
 
         let application = device.application.clone();
-        let name = device.name.clone();
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -529,6 +534,11 @@ where
             Some(app) if app.deletion_timestamp.is_none() => {}
             _ => return Err(ServiceError::ReferenceNotFound.into()),
         }
+
+        let name = device.name.clone();
+        // assign a new UID
+        let uid = Uuid::new_v4();
+        device.uid = uid;
 
         // create the device
 
@@ -547,8 +557,14 @@ where
 
         // create and persist events
 
-        let events =
-            Event::new_device(self.instance.clone(), application, name, generation, vec![]);
+        let events = Event::new_device(
+            self.instance.clone(),
+            application,
+            name,
+            uid,
+            generation,
+            vec![],
+        );
 
         // send events to outbox
 
@@ -622,6 +638,7 @@ where
             }
 
             let generation = device.next_generation()?;
+            let uid = current.uid.clone();
 
             accessor
                 .update(device, Some(aliases))
@@ -635,8 +652,14 @@ where
 
             // create events
 
-            let events =
-                Event::new_device(self.instance.clone(), application, name, generation, paths);
+            let events = Event::new_device(
+                self.instance.clone(),
+                application,
+                name,
+                uid,
+                generation,
+                paths,
+            );
 
             // send events to outbox
 
@@ -677,11 +700,12 @@ where
             return Err(ServiceError::NotFound.into());
         }
 
-        utils::check_preconditions(&params.preconditions, &current);
+        utils::check_preconditions(&params.preconditions, &current)?;
         // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next generation
         let generation = current.next_generation()?;
+        let uid = current.uid;
 
         // if there are no finalizers ...
         let path = if current.finalizers.is_empty() {
@@ -704,8 +728,14 @@ where
 
         // create events
 
-        let events =
-            Event::new_device(self.instance.clone(), application, device, generation, path);
+        let events = Event::new_device(
+            self.instance.clone(),
+            application,
+            device,
+            uid,
+            generation,
+            path,
+        );
 
         // send events to outbox
 

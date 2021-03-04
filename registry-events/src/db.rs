@@ -10,26 +10,30 @@ impl From<Event> for OutboxEntry {
         match e {
             Event::Application {
                 instance,
-                id,
+                application,
+                uid,
                 path,
                 generation,
             } => OutboxEntry {
-                instance_id: instance,
-                app_id: id,
-                device_id: None,
+                instance: instance,
+                app: application,
+                device: None,
+                uid,
                 path,
                 generation,
             },
             Event::Device {
                 instance,
                 application,
-                id,
+                device,
+                uid,
                 path,
                 generation,
             } => OutboxEntry {
-                instance_id: instance,
-                app_id: application,
-                device_id: Some(id),
+                instance: instance,
+                app: application,
+                device: Some(device),
+                uid,
                 path,
                 generation,
             },
@@ -39,20 +43,22 @@ impl From<Event> for OutboxEntry {
 
 impl From<OutboxEntry> for Event {
     fn from(entry: OutboxEntry) -> Self {
-        if let Some(device_id) = entry.device_id {
+        if let Some(device) = entry.device {
             Event::Device {
-                instance: entry.instance_id,
-                application: entry.app_id,
-                id: device_id,
+                instance: entry.instance,
+                application: entry.app,
+                device,
                 path: entry.path,
                 generation: entry.generation,
+                uid: entry.uid,
             }
         } else {
             Event::Application {
-                instance: entry.instance_id,
-                id: entry.app_id,
+                instance: entry.instance,
+                application: entry.app,
                 path: entry.path,
                 generation: entry.generation,
+                uid: entry.uid,
             }
         }
     }
