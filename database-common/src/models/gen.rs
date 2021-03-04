@@ -35,7 +35,11 @@ pub enum GenerationError {
 }
 
 pub trait Generation {
-    fn next_generation(&mut self) -> Result<u64, GenerationError> {
+    fn next_generation(&mut self, current: &dyn Generation) -> Result<u64, GenerationError> {
+        self.set_generation(current.generation() + 1)
+    }
+
+    fn set_next_generation(&mut self) -> Result<u64, GenerationError> {
         self.set_generation(self.generation() + 1)
     }
 
