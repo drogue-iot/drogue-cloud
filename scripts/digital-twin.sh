@@ -80,6 +80,6 @@ DIGITAL_TWIN=true source "$SCRIPTDIR/status.sh"
 tput setaf 7 && tput dim || true
 echo -----
 echo "You can display this information later on by running:"
-echo "   env DIGITAL_TWIN=true ./hack/status.sh"
+echo "   env DIGITAL_TWIN=true ./scripts/status.sh"
 echo
 tput sgr0 || true

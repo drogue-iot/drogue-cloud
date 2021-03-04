@@ -259,12 +259,12 @@ quick: build build-images tag-images
 # Do a local deploy
 #
 deploy: gen-deploy
-	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./hack/drogue.sh -d build/deploy
+	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drogue.sh -d build/deploy
 
 gen-deploy: require-container-registry
 	rm -Rf build/deploy
 	mkdir -p build/deploy
-	./hack/replace-images.py latest Always deploy "$(CONTAINER_REGISTRY)" build/deploy
+	./scripts/replace-images.py latest Always deploy "$(CONTAINER_REGISTRY)" build/deploy
 
 
 #
