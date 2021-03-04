@@ -7,7 +7,7 @@ source "$SCRIPTDIR/common.sh"
 
 CERT_ALTNAMES="$1"
 
-test -n "$CERT_ALTNAMES" || die "Missing alt-names argument: ./hack/gen-certs.sh <alt-names>"
+test -n "$CERT_ALTNAMES" || die "Missing alt-names argument: ./scripts/gen-certs.sh <alt-names>"
 
 OUT="${SCRIPTDIR}/../build/certs/endpoints"
 rm -Rf "$OUT"

@@ -21,13 +21,13 @@ build: prepare $(patsubst %, install-%-$(VERSION).zip, $(VARIANTS))
 
 
 INSTALLER=$(basename $(notdir $@))
-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find $(TOPDIR)/../hack -type f)
+install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find $(TOPDIR)/../scripts -type f)
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/scripts
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/base
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/knative
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
-	cp -pr $(BASEDIR)/hack/* $(OUTDIR)/stage/$(INSTALLER)/scripts
+	cp -pr $(BASEDIR)/scripts/* $(OUTDIR)/stage/$(INSTALLER)/scripts
 	# inject release version to cert script
 	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/common.sh
 	# FIXME: remove release related script for now, reconsider mixing scripts
@@ -37,7 +37,7 @@ install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find
 	cp -pr $(BASEDIR)/deploy/$*/* $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
 	cp -pr $(BASEDIR)/deploy/digital-twin/* $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
 	@echo "::group::Process YAML and zip"
-	cd build/stage/ && $(BASEDIR)/hack/replace-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
+	cd build/stage/ && $(BASEDIR)/scripts/replace-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
 	@echo "::endgroup::"
 
 

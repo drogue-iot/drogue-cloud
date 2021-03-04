@@ -59,10 +59,10 @@ Deploy all components using:
 
 ----
 # plain Kubernetes
-./hack/digital-twin.sh
+./scripts/digital-twin.sh
 
 # OpenShift, with routes
-env CLUSTER=openshift ./hack/digital-twin.sh
+env CLUSTER=openshift ./scripts/digital-twin.sh
 ----
 
 [TIP]
@@ -147,7 +147,7 @@ MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
 http -v POST "$ENDPOINT/publish/$DEVICE_ID/$CHANNEL" "model_id==$MODEL_ID" temp:=1.23
 ----
 
-NOTE: You can use the script `./hack/publish_loop.sh` to generate a constant stream of simulated temperature readings.
+NOTE: You can use the script `./scripts/publish_loop.sh` to generate a constant stream of simulated temperature readings.
 
 === Fetch from Ditto
 

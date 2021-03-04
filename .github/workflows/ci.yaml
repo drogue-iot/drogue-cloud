@@ -183,12 +183,12 @@ jobs:
           # A policy of "Always" is not going to work, as the images are pushed into the kind cluster
           # and cannot be pulled. Using "Always" would result in attempts to try to pull from a location
           # that does not exist.
-          ./hack/replace-images.py ${{ github.sha }} Never deploy dev.local tmp/deploy
+          ./scripts/replace-images.py ${{ github.sha }} Never deploy dev.local tmp/deploy
 
       - name: Deploy drogue
         env:
           TEST_CERTS_IMAGE: "dev.local/test-cert-generator:${{ github.sha }}"
-        run: ./hack/drogue.sh -d tmp/deploy
+        run: ./scripts/drogue.sh -d tmp/deploy
         timeout-minutes: 20
 
       - name: Collect logs
