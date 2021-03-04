@@ -250,10 +250,10 @@ where
             }
 
             // next generation
-            let generation = app.next_generation()?;
+            let generation = app.next_generation(&current)?;
 
             let name = app.name.clone();
-            let uid = app.uid.clone();
+            let uid = app.uid;
 
             // update
 
@@ -360,7 +360,7 @@ where
     async fn create_app(&self, application: Application) -> Result<(), Self::Error> {
         let (mut app, aliases) = Self::app_to_entity(application)?;
 
-        let generation = app.next_generation()?;
+        let generation = app.generation;
         let name = app.name.clone();
         // assign a new UID
         let uid = Uuid::new_v4();
@@ -469,8 +469,8 @@ where
         }
 
         // next generation
-        let generation = current.next_generation()?;
-        let uid = current.uid.clone();
+        let generation = current.set_next_generation()?;
+        let uid = current.uid;
 
         // if there are no finalizers ...
         let paths = if current.finalizers.is_empty() {
@@ -517,7 +517,7 @@ where
     async fn create_device(&self, device: Device) -> Result<(), Self::Error> {
         let (mut device, aliases) = Self::device_to_entity(device)?;
 
-        let generation = device.next_generation()?;
+        let generation = device.generation;
 
         let application = device.application.clone();
 
@@ -637,8 +637,8 @@ where
                 return Ok(());
             }
 
-            let generation = device.next_generation()?;
-            let uid = current.uid.clone();
+            let generation = device.next_generation(&current)?;
+            let uid = current.uid;
 
             accessor
                 .update(device, Some(aliases))
@@ -704,7 +704,7 @@ where
         // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next generation
-        let generation = current.next_generation()?;
+        let generation = current.set_next_generation()?;
         let uid = current.uid;
 
         // if there are no finalizers ...
