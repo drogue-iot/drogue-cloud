@@ -2,6 +2,7 @@ mod error;
 mod utils;
 mod x509;
 
+use crate::endpoints::params::DeleteParams;
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use actix_web::ResponseError;
 use async_trait::async_trait;
@@ -39,18 +40,19 @@ pub trait ManagementService: HealthCheckedService + Clone {
     type Error: ResponseError;
 
     async fn create_app(&self, data: Application) -> Result<(), Self::Error>;
-    async fn get_app(&self, id: &str) -> Result<Option<Application>, Self::Error>;
+    async fn get_app(&self, name: &str) -> Result<Option<Application>, Self::Error>;
     async fn update_app(&self, data: Application) -> Result<(), Self::Error>;
-    async fn delete_app(&self, id: &str) -> Result<(), Self::Error>;
+    async fn delete_app(&self, name: &str, params: DeleteParams) -> Result<(), Self::Error>;
 
     async fn create_device(&self, device: Device) -> Result<(), Self::Error>;
-    async fn get_device(
-        &self,
-        app_id: &str,
-        device_id: &str,
-    ) -> Result<Option<Device>, Self::Error>;
+    async fn get_device(&self, app: &str, name: &str) -> Result<Option<Device>, Self::Error>;
     async fn update_device(&self, device: Device) -> Result<(), Self::Error>;
-    async fn delete_device(&self, app_id: &str, device_id: &str) -> Result<(), Self::Error>;
+    async fn delete_device(
+        &self,
+        app: &str,
+        name: &str,
+        params: DeleteParams,
+    ) -> Result<(), Self::Error>;
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -431,11 +433,7 @@ where
         Ok(())
     }
 
-    async fn delete_app(&self, id: &str) -> Result<(), Self::Error> {
-        // FIXME: allow passing in uid and version
-        let expected_uid = "";
-        let expected_resource_verson = "";
-
+    async fn delete_app(&self, id: &str, params: DeleteParams) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
@@ -451,14 +449,15 @@ where
             return Err(ServiceError::NotFound.into());
         }
 
-        utils::check_versions(expected_uid, expected_resource_verson, &current)?;
+        utils::check_preconditions(&params.preconditions, &current);
+        // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next, we need to delete the application
 
-        // first, delete all devices and count the once we can only soft-delete
-
+        // first, delete all devices ...
         let remaining_devices = PostgresDeviceAccessor::new(&t).delete_app(&id).await?;
 
+        // ...and count the once we can only soft-delete
         if remaining_devices > 0 {
             // we have pending device deletions, so add the finalizer
             current.finalizers.push("has-devices".into());
@@ -467,20 +466,24 @@ where
         // next generation
         let generation = current.next_generation()?;
 
-        // then delete the application
-
+        // if there are no finalizers ...
         let paths = if current.finalizers.is_empty() {
+            // ... delete the application
             accessor.delete(id).await?;
 
+            // notify an object change
             vec![]
         } else {
+            // ... otherwise, mark the application deleted
             log::debug!("Pending finalizers: {:?}", current.finalizers);
+
             // update deleted timestamp
             current.deletion_timestamp = Some(Utc::now());
 
             // update the record
             accessor.update(current, None).await?;
 
+            // notify a resource change
             vec![".metadata".into()]
         };
 
@@ -653,11 +656,12 @@ where
         Ok(())
     }
 
-    async fn delete_device(&self, application: &str, device: &str) -> Result<(), Self::Error> {
-        // FIXME: allow passing in uid and version
-        let expected_uid = "";
-        let expected_resource_verson = "";
-
+    async fn delete_device(
+        &self,
+        application: &str,
+        device: &str,
+        params: DeleteParams,
+    ) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
@@ -673,36 +677,35 @@ where
             return Err(ServiceError::NotFound.into());
         }
 
-        utils::check_versions(expected_uid, expected_resource_verson, &current)?;
+        utils::check_preconditions(&params.preconditions, &current);
+        // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next generation
         let generation = current.next_generation()?;
 
+        // if there are no finalizers ...
         let path = if current.finalizers.is_empty() {
-            // no finalizers, we can directly delete
+            // ... we can directly delete
             accessor.delete(application, device).await?;
 
-            "."
+            vec![]
         } else {
+            // ... otherwise, mark the device deleted
+            log::debug!("Pending finalizers: {:?}", current.finalizers);
+
             // update deleted timestamp
             current.deletion_timestamp = Some(Utc::now());
 
             // update the record
             accessor.update(current, None).await?;
 
-            ".metadata"
-        }
-        .into();
+            vec![".metadata".into()]
+        };
 
         // create events
 
-        let events = Event::new_device(
-            self.instance.clone(),
-            application,
-            device,
-            generation,
-            vec![path],
-        );
+        let events =
+            Event::new_device(self.instance.clone(), application, device, generation, path);
 
         // send events to outbox
 

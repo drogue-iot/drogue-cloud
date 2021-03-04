@@ -1,3 +1,4 @@
+use crate::endpoints::params::Preconditions;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{Constraints, Resource},
@@ -16,6 +17,26 @@ fn is_ok_and_equal(expected: &str, actual: Uuid) -> Option<Uuid> {
         Ok(expected) if expected == actual => Some(expected),
         _ => None,
     }
+}
+
+/// Check if the provided preconditions match the provided current state.
+///
+/// This function relies on [`check_versions`] for the actual check.
+///
+/// The function will also return a set of `Constraints`, which maybe be used further on for
+/// optimistic locking.
+pub fn check_preconditions(
+    preconditions: &Option<Preconditions>,
+    current: &dyn Resource,
+) -> Result<Constraints, ServiceError> {
+    check_versions(
+        preconditions.as_ref().map(|p| p.uid.as_str()).unwrap_or(""),
+        preconditions
+            .as_ref()
+            .map(|p| p.resource_version.as_str())
+            .unwrap_or(""),
+        current,
+    )
 }
 
 /// Check if the expected UID and version match the provided current state.
