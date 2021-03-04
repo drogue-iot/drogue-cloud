@@ -1,3 +1,4 @@
+use crate::endpoints::params::DeleteParams;
 use crate::{
     service::{ManagementService, PostgresManagementService},
     WebData,
@@ -61,18 +62,19 @@ where
 
 pub async fn delete<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path((app_id, device_id)): web::Path<(String, String)>,
+    web::Path((app, device)): web::Path<(String, String)>,
+    params: web::Json<DeleteParams>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
-    log::debug!("Deleting device: '{}' / '{}'", app_id, device_id);
+    log::debug!("Deleting device: '{}' / '{}'", app, device);
 
-    if app_id.is_empty() || device_id.is_empty() {
+    if app.is_empty() || device.is_empty() {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    data.service.delete_device(&app_id, &device_id).await?;
+    data.service.delete_device(&app, &device, params.0).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
