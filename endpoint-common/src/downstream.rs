@@ -72,7 +72,9 @@ impl DownstreamSender {
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
             .ty(DEFAULT_TYPE_EVENT)
-            .source(source.clone())
+            // we need an "absolute" URL for the moment: until 0.4 is released
+            // see: https://github.com/cloudevents/sdk-rust/issues/106
+            .source(format!("drogue://{}", source))
             .inject(Id::new(publish.app_id, publish.device_id))
             .subject(&publish.channel)
             .time(Utc::now());
