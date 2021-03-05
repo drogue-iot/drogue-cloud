@@ -240,7 +240,8 @@ impl Examples {
                 meta = json!({ "name": self.app_id })
             );
             let create_device_cmd = format!(
-                r#"http POST {url}/api/v1/apps/app_id/devices metadata:='{meta}' spec:='{spec}'"#,
+                r#"http POST {url}/api/v1/apps/{app}/devices metadata:='{meta}' spec:='{spec}'"#,
+                app = self.app_id,
                 url = registry.url,
                 meta = shell_quote(json!({"application": self.app_id, "name": self.device_id})),
                 spec = shell_quote(json!({"credentials": {"credentials":[
