@@ -17,7 +17,7 @@ pub struct PublishCommonOptions {
     pub application: Option<String>,
     pub device: Option<String>,
 
-    pub model_id: Option<String>,
+    pub data_schema: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -122,7 +122,7 @@ pub async fn publish(
                 app_id: application.metadata.name.clone(),
                 device_id: device_id.clone(),
                 options: downstream::PublishOptions {
-                    model_id: opts.common.model_id,
+                    data_schema: opts.common.data_schema,
                     topic: suffix,
                     content_type: req
                         .headers()

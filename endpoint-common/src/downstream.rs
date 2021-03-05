@@ -5,10 +5,13 @@ use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, EventBuilder, EventBuilderV10};
 use drogue_cloud_service_api::EXT_INSTANCE;
 use drogue_cloud_service_common::{Id, IdInjector};
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::future::Future;
+
+const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Publish {
@@ -22,7 +25,7 @@ pub struct Publish {
 pub struct PublishOptions {
     pub time: Option<DateTime<Utc>>,
     pub topic: Option<String>,
-    pub model_id: Option<String>,
+    pub data_schema: Option<String>,
     pub content_type: Option<String>,
     pub extensions: HashMap<String, String>,
 }
@@ -61,21 +64,24 @@ impl DownstreamSender {
     where
         B: AsRef<[u8]>,
     {
-        let partitionkey = format!("{}/{}", publish.app_id, publish.device_id);
+        let app_enc = utf8_percent_encode(&publish.app_id, NON_ALPHANUMERIC);
+        let device_enc = utf8_percent_encode(&publish.device_id, NON_ALPHANUMERIC);
+
+        let source = format!("{}/{}", app_enc, device_enc);
 
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
-            .source("https://drogue.io/endpoint")
+            .ty(DEFAULT_TYPE_EVENT)
+            .source(source.clone())
             .inject(Id::new(publish.app_id, publish.device_id))
             .subject(&publish.channel)
-            .time(Utc::now())
-            .ty("io.drogue.iot.message");
+            .time(Utc::now());
 
-        event = event.extension("partitionkey", partitionkey);
+        event = event.extension("partitionkey", source);
         event = event.extension(EXT_INSTANCE, self.instance.clone());
 
-        if let Some(model_id) = publish.options.model_id {
-            event = event.extension("modelid", model_id);
+        if let Some(data_schema) = publish.options.data_schema {
+            event = event.extension("dataschema", data_schema);
         }
 
         for (k, v) in publish.options.extensions {
@@ -86,7 +92,9 @@ impl DownstreamSender {
         log::debug!("Payload size: {} bytes", body.as_ref().len());
 
         let event = match publish.options.content_type {
+            // pass through content type
             Some(t) => event.data(t, Vec::from(body.as_ref())),
+            // no content type, try JSON, then fall back to "bytes"
             None => {
                 // try decoding as JSON
                 match serde_json::from_slice::<Value>(body.as_ref()) {

@@ -52,7 +52,7 @@ pub async fn publish(
     );
 
     // eval model_id from query and function port mapping
-    let model_id = eval_model_id(opts.model_id.as_ref().cloned(), &device, &uplink);
+    let data_schema = eval_data_schema(opts.data_schema.as_ref().cloned(), &device, &uplink);
 
     let mut extensions = HashMap::new();
     extensions.insert("lorawanport".into(), uplink.port.to_string());
@@ -61,7 +61,7 @@ pub async fn publish(
 
     let device_id = uplink.dev_id;
 
-    log::info!("Device ID: {}, Model ID: {:?}", device_id, model_id);
+    log::info!("Device ID: {}, Data Schema: {:?}", device_id, data_schema);
 
     let (body, content_type) = match get_spec(&device, "ttn")["payload"]
         .as_str()
@@ -92,7 +92,7 @@ pub async fn publish(
                 options: downstream::PublishOptions {
                     time: Some(uplink.metadata.time),
                     content_type,
-                    model_id,
+                    data_schema,
                     extensions,
                     ..Default::default()
                 },
@@ -102,14 +102,14 @@ pub async fn publish(
         .await
 }
 
-fn eval_model_id(
+fn eval_data_schema(
     model_id: Option<String>,
     device: &Device,
     uplink: &ttn::Uplink,
 ) -> Option<String> {
     model_id.or_else(|| {
-        let fport = uplink.port.to_string();
-        get_spec(device, "lorawan")["ports"][fport]["model_id"]
+        let function_port = uplink.port.to_string();
+        get_spec(device, "lorawan")["ports"][function_port]["data_schema"]
             .as_str()
             .map(|str| str.to_string())
     })
@@ -131,15 +131,15 @@ mod test {
     fn test_model_mapping() {
         let lorawan_spec = json!({
             "ports": {
-             "1": { "model_id": "mod1",},
-             "5": {"model_id": "mod5",},
+             "1": { "data_schema": "mod1",},
+             "5": {"data_schema": "mod5",},
             }
         });
 
         let device = device(Some(lorawan_spec));
         let uplink = default_uplink(5);
 
-        let model_id = eval_model_id(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &uplink);
 
         assert_eq!(model_id, Some(String::from("mod5")));
     }
@@ -149,7 +149,7 @@ mod test {
         let device = device(None);
         let uplink = default_uplink(5);
 
-        let model_id = eval_model_id(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &uplink);
 
         assert_eq!(model_id, None);
     }
@@ -157,11 +157,11 @@ mod test {
     #[test]
     fn test_model_no_mapping_2() {
         let device = device(Some(json!({
-            "ports": { "1": {"model_id": "mod1"}}
+            "ports": { "1": {"data_schema": "mod1"}}
         })));
         let uplink = default_uplink(5);
 
-        let model_id = eval_model_id(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &uplink);
 
         assert_eq!(model_id, None);
     }
@@ -169,11 +169,11 @@ mod test {
     #[test]
     fn test_model_no_mapping_3() {
         let device = device(Some(json!({
-            "ports": { "1": {"no_model_id": "mod1"}}
+            "ports": { "1": {"no_data_schema": "mod1"}}
         })));
         let uplink = default_uplink(5);
 
-        let model_id = eval_model_id(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &uplink);
 
         assert_eq!(model_id, None);
     }
