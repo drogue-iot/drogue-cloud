@@ -1,28 +1,28 @@
 apiVersion: keycloak.org/v1alpha1
 kind: KeycloakClient
 metadata:
-  name: client
+  name: client-services
   labels:
-    app.kubernetes.io/part-of: console
+    app.kubernetes.io/part-of: backend
 spec:
   realmSelector:
     matchLabels:
       app.kubernetes.io/part-of: console
   client:
-    clientId: drogue
+    clientId: services
     clientAuthenticatorType: client-secret
     enabled: true
     rootUrl: ""
     publicClient: false
     implicitFlowEnabled: false
-    standardFlowEnabled: true
-    serviceAccountsEnabled: false
-    fullScopeAllowed: true
-    redirectUris:
-      - "http://not-yet-set"
+    standardFlowEnabled: false
+    directAccessGrantsEnabled: false
+    serviceAccountsEnabled: true
+    fullScopeAllowed: false
+    redirectUris: []
     defaultRoles:
-      - "drogue-user"
-      - "drogue-admin"
+      - "service-auth"
+      - "service-management"
     protocolMappers:
       - name: add-audience
         protocol: openid-connect

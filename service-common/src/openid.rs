@@ -1,8 +1,8 @@
 use anyhow::Context;
+use core::fmt::Formatter;
 use drogue_cloud_service_api::endpoints::Endpoints;
 use envconfig::Envconfig;
 use failure::Fail;
-use failure::_core::fmt::Formatter;
 use openid::Jws;
 use reqwest::Certificate;
 use std::fmt::Debug;
@@ -161,4 +161,28 @@ fn add_service_cert(mut client: reqwest::ClientBuilder) -> anyhow::Result<reqwes
     }
 
     Ok(client)
+}
+
+pub trait Expires {
+    /// Check if the resources expires before the duration elapsed.
+    fn expires_before(&self, duration: chrono::Duration) -> bool {
+        match self.expires_in() {
+            Some(expires) => expires >= duration,
+            None => false,
+        }
+    }
+
+    /// Get the duration until this resource expires. This may be negative.
+    fn expires_in(&self) -> Option<chrono::Duration> {
+        self.expires().map(|expires| expires - chrono::Utc::now())
+    }
+
+    /// Get the timestamp when the resource expires.
+    fn expires(&self) -> Option<chrono::DateTime<chrono::Utc>>;
+}
+
+impl Expires for openid::Bearer {
+    fn expires(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+        self.expires
+    }
 }
