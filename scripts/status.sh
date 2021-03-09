@@ -159,7 +159,7 @@ echo
 echo "Publish some data:"
 echo "-----------------------"
 echo
-echo "http -v POST \"$ENDPOINT/publish/$DEVICE_ID/$CHANNEL\" \"model_id=="$MODEL_ID"\" temp:=1.23"
+echo "http -v POST \"$ENDPOINT/publish/$DEVICE_ID/$CHANNEL\" \"model_id==$MODEL_ID\" temp:=1.23"
 echo
 echo "Check the twin status:"
 echo "-----------------------"
