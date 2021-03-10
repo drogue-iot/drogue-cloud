@@ -10,10 +10,13 @@ license = "Apache-2.0"
 anyhow = "1"
 snafu = "0.6"
 
-actix-rt = "1.1"
-actix-service = "1"
-actix-web = "3"
-actix-web-httpauth = "0.5.0"
+#actix-rt = "1.1"
+#actix-service = "1"
+#actix-web = "3"
+#actix-web-httpauth = "0.5.0"
+
+actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
+actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
 
 futures = "0.3"
 futures-core = "0.3"
@@ -21,7 +24,7 @@ futures-util = "0.3"
 
 envconfig = "0.9"
 
-reqwest = "0.10"
+reqwest = "0.11"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -31,13 +34,11 @@ uuid = { version = "0.8", features = ["v4"] }
 env_logger = "0.7"
 log = "0.4"
 
-cloudevents-sdk = "0.3"
-cloudevents-sdk-actix-web = "0.3"
-cloudevents-sdk-reqwest = "0.3"
+cloudevents-sdk = "0.4"
+cloudevents-sdk-actix-web = "0.4"
+cloudevents-sdk-reqwest = "0.4"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 
 dotenv = "0.15.0"
 jsonwebtokens = "1.0.0-alpha.13"
-
-awc = "2.0.0"

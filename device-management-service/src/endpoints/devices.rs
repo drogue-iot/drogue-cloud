@@ -9,13 +9,14 @@ use drogue_cloud_service_api::management::Device;
 
 pub async fn create<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path(app_id): web::Path<String>,
+    path: web::Path<String>,
     device: Json<Device>,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let app_id = path.into_inner();
     log::debug!("Creating device: '{}' / '{:?}'", app_id, device);
 
     if device.metadata.name.is_empty() || device.metadata.application.is_empty() {
@@ -27,7 +28,7 @@ where
     data.service.create_device(device.0).await?;
 
     let response = HttpResponse::Created()
-        .set_header(header::LOCATION, location.into_string())
+        .append_header((header::LOCATION, location.into_string()))
         .finish();
 
     Ok(response)
@@ -35,12 +36,14 @@ where
 
 pub async fn update<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path((app_id, device_id)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     device: Json<Device>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let (app_id, device_id) = path.into_inner();
+
     log::debug!(
         "Updating device: '{}' / '{}' / '{:?}'",
         app_id,
@@ -62,12 +65,14 @@ where
 
 pub async fn delete<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path((app, device)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     params: Option<web::Json<DeleteParams>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let (app, device) = path.into_inner();
+
     log::debug!("Deleting device: '{}' / '{}'", app, device);
 
     if app.is_empty() || device.is_empty() {
@@ -83,11 +88,13 @@ where
 
 pub async fn read<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path((app_id, device_id)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let (app_id, device_id) = path.into_inner();
+
     log::debug!("Reading device: '{}' / '{}'", app_id, device_id);
 
     if app_id.is_empty() || device_id.is_empty() {

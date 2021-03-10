@@ -26,7 +26,7 @@ pub async fn wait_for_command(
                     commands.unsubscribe(id.clone());
                     let cmd = command.unwrap();
                     Ok(HttpResponse::Ok()
-                        .header(HEADER_COMMAND, cmd.command)
+                        .insert_header((HEADER_COMMAND, cmd.command))
                         .body(cmd.payload.unwrap()))
                 }
                 _ => {
