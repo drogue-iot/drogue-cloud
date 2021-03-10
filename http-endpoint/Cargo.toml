@@ -28,7 +28,7 @@ actix-tls = "=3.0.0-beta.4"
 actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
 actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
 actix-web-httpauth = "0.6.0-beta.1"
-actix-web-actors = "3"
+actix-web-actors = "4.0.0-beta.3"
 
 futures = "0.3"
 futures-core = "0.3"

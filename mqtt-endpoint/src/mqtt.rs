@@ -50,13 +50,13 @@ macro_rules! connect {
 }
 
 pub async fn connect_v3<Io>(
-    mut connect: v3::Connect<Io>,
+    mut connect: v3::Handshake<Io>,
     app: App,
-) -> Result<v3::ConnectAck<Io, Session>, ServerError>
+) -> Result<v3::HandshakeAck<Io, Session>, ServerError>
 where
     Io: ClientCertificateRetriever + 'static,
 {
-    let certs = connect.io().get_ref().client_certs();
+    let certs = connect.io().client_certs();
     log::info!("Certs: {:?}", certs);
 
     // handle connect
@@ -68,13 +68,13 @@ where
 }
 
 pub async fn connect_v5<Io>(
-    mut connect: v5::Connect<Io>,
+    mut connect: v5::Handshake<Io>,
     app: App,
-) -> Result<v5::ConnectAck<Io, Session>, ServerError>
+) -> Result<v5::HandshakeAck<Io, Session>, ServerError>
 where
     Io: ClientCertificateRetriever + 'static,
 {
-    let certs = connect.io().get_ref().client_certs();
+    let certs = connect.io().client_certs();
     log::info!("Certs: {:?}", certs);
 
     match connect!(connect, app, certs) {
