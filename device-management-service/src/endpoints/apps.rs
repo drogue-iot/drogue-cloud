@@ -26,7 +26,7 @@ where
     data.service.create_app(app.0).await?;
 
     let response = HttpResponse::Created()
-        .set_header(header::LOCATION, location.into_string())
+        .append_header((header::LOCATION, location.into_string()))
         .finish();
 
     Ok(response)
@@ -34,12 +34,14 @@ where
 
 pub async fn update<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path(app_id): web::Path<String>,
+    path: web::Path<String>,
     app: Json<Application>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let app_id = path.into_inner();
+
     log::debug!("Updating app: '{:?}'", app);
 
     if app_id.is_empty() {
@@ -57,12 +59,14 @@ where
 
 pub async fn delete<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path(app): web::Path<String>,
+    path: web::Path<String>,
     params: Option<web::Json<DeleteParams>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let app = path.into_inner();
+
     log::debug!("Deleting app: '{}'", app);
 
     if app.is_empty() {
@@ -78,11 +82,12 @@ where
 
 pub async fn read<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    web::Path(app_id): web::Path<String>,
+    path: web::Path<String>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
 {
+    let app_id = path.into_inner();
     log::debug!("Reading app: '{}'", app_id);
 
     if app_id.is_empty() {

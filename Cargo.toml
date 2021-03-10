@@ -26,13 +26,22 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #drogue-ttn = { path = "../drogue-ttn" }
 #diesel = { git = 'https://github.com/diesel-rs/diesel', rev = "06494e8bdfe774bac9be5cab488b3d0cbec97f4e" }
 #openid = { git = "https://github.com/ctron/openid.git", branch = "feature/custom_ca_1" }
-actix-cors = { git = "https://github.com/ctron/actix-extras", rev = "8718685f0237ac8cf39c8f73a272bd1d7205ba8e" }
-actix-web-httpauth = { git = "https://github.com/ctron/actix-extras", rev = "8718685f0237ac8cf39c8f73a272bd1d7205ba8e" }
+#actix-cors = { git = "https://github.com/ctron/actix-extras", rev = "8718685f0237ac8cf39c8f73a272bd1d7205ba8e" }
+#actix-web-httpauth = { git = "https://github.com/ctron/actix-extras", rev = "8718685f0237ac8cf39c8f73a272bd1d7205ba8e" }
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
+
 #cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
 #cloudevents-sdk-reqwest = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
 #cloudevents-sdk-rdkafka = { git = "https://github.com/cloudevents/sdk-rust", rev = "da40d3d563e6a317122119597fc5742772262d6a" }
 
-cloudevents-sdk-04 = { package = 'cloudevents-sdk', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
-cloudevents-sdk-actix-web-04 = { package = 'cloudevents-sdk-actix-web', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
-cloudevents-sdk-reqwest-04 = { package = 'cloudevents-sdk-reqwest', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
+actix-cors = { path = "../actix-extras/actix-cors" }
+actix-web-httpauth = { path = "../actix-extras/actix-web-httpauth" }
+
+cloudevents-sdk = { path = "../sdk-rust" }
+cloudevents-sdk-actix-web = { path = "../sdk-rust/cloudevents-sdk-actix-web" }
+cloudevents-sdk-reqwest = { path = "../sdk-rust/cloudevents-sdk-reqwest" }
+cloudevents-sdk-rdkafka = { path = "../sdk-rust/cloudevents-sdk-rdkafka" }
+
+#cloudevents-sdk-04 = { package = 'cloudevents-sdk', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
+#cloudevents-sdk-actix-web-04 = { package = 'cloudevents-sdk-actix-web', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }
+#cloudevents-sdk-reqwest-04 = { package = 'cloudevents-sdk-reqwest', git = "https://github.com/ctron/sdk-rust", rev = "7f2b2daa56bae8ebf31b5eb58be9057f30b730bf" }

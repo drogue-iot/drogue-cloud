@@ -27,10 +27,10 @@ use std::ops::DerefMut;
 drogue_cloud_endpoint_common::retriever!();
 
 #[cfg(feature = "rustls")]
-drogue_cloud_endpoint_common::retriever_rustls!(actix_tls::rustls::TlsStream<T>);
+drogue_cloud_endpoint_common::retriever_rustls!(actix_tls::connect::ssl::rustls::TlsStream<T>);
 
 #[cfg(feature = "openssl")]
-drogue_cloud_endpoint_common::retriever_openssl!(actix_tls::openssl::SslStream<T>);
+drogue_cloud_endpoint_common::retriever_openssl!(actix_tls::connect::ssl::openssl::SslStream<T>);
 
 #[cfg(feature = "ntex")]
 retriever_none!(ntex::rt::net::TcpStream);

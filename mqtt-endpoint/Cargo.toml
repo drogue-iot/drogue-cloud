@@ -24,7 +24,7 @@ futures-util = "0.3"
 
 tokio = { version = "1", features = ["full"] }
 
-reqwest = "0.10"
+reqwest = "0.11"
 lazy_static = "1.4.0"
 
 serde = { version = "1", features = ["derive"] }
@@ -40,7 +40,7 @@ envconfig = "0.9"
 pem = "0.8"
 webpki = "0.21"
 
-cloudevents-sdk = "0.3"
+cloudevents-sdk = "0.4"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }

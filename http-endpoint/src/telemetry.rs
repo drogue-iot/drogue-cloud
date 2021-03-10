@@ -36,14 +36,22 @@ pub async fn publish_plain(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
-    web::Path(channel): web::Path<String>,
+    channel: web::Path<String>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     publish(
-        sender, auth, commands, channel, None, opts, req, body, certs,
+        sender,
+        auth,
+        commands,
+        channel.into_inner(),
+        None,
+        opts,
+        req,
+        body,
+        certs,
     )
     .await
 }
@@ -53,12 +61,13 @@ pub async fn publish_tail(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
-    web::Path((channel, suffix)): web::Path<(String, String)>,
+    path: web::Path<(String, String)>,
     web::Query(opts): web::Query<PublishOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
+    let (channel, suffix) = path.into_inner();
     publish(
         sender,
         auth,

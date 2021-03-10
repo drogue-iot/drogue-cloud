@@ -14,7 +14,7 @@ pub async fn login(login_handler: web::Data<Authenticator>) -> impl Responder {
         let auth_url = client.auth_uri(Some(&login_handler.scopes), None);
 
         HttpResponse::Found()
-            .header(http::header::LOCATION, auth_url.to_string())
+            .append_header((http::header::LOCATION, auth_url.to_string()))
             .finish()
     } else {
         // if we are missing the authenticator, we hide ourselves
@@ -34,7 +34,7 @@ pub async fn logout(login_handler: web::Data<Authenticator>) -> impl Responder {
             }
 
             return HttpResponse::Found()
-                .header(http::header::LOCATION, url.to_string())
+                .append_header((http::header::LOCATION, url.to_string()))
                 .finish();
         } else {
             log::info!("Missing logout URL");

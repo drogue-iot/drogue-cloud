@@ -1,5 +1,6 @@
 use crate::Config;
 use actix::clock::{interval_at, Instant};
+use actix_http::http::header::ContentType;
 use actix_web::{
     get,
     http::StatusCode,
@@ -26,6 +27,7 @@ use rdkafka::{
 };
 use serde::Deserialize;
 use std::{pin::Pin, time::Duration};
+use tokio_stream::wrappers::IntervalStream;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -136,7 +138,7 @@ impl MessageSpy {
     fn wrap(app_id: Option<String>, consumer: StreamConsumer) -> Result<Self, ServiceError> {
         Ok(MessageSpy {
             upstream: OwningHandle::new_with_fn(Box::new(consumer), |c| {
-                Box::new(unsafe { &*c }.start())
+                Box::new(unsafe { &*c }.stream())
             }),
             app_id,
         })
@@ -255,11 +257,11 @@ pub async fn stream_events(
     log::debug!("Config: {:?}", cfg);
 
     let stream = MessageSpy::new(cfg)?;
-    let hb = interval_at(Instant::now(), Duration::from_secs(5))
+    let hb = IntervalStream::new(interval_at(Instant::now(), Duration::from_secs(5)))
         .map(|_| Ok(Bytes::from("event: ping\n\n")));
     let stream = select(stream, hb);
 
     Ok(HttpResponse::Ok()
-        .header("content-type", "text/event-stream")
+        .append_header(ContentType(mime::TEXT_EVENT_STREAM))
         .streaming(stream))
 }
