@@ -176,7 +176,7 @@ cargo-build:
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
 	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
-	cargo build --release --workspace --exclude drogue-cloud-console-frontend
+	OPENSSL_NO_VENDOR=1 cargo build --release --workspace --exclude drogue-cloud-console-frontend
 
 
 #
