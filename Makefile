@@ -183,7 +183,7 @@ cargo-build:
 # Run the cargo tests.
 #
 cargo-test:
-	cargo test --release -- $(CARGO_TEST_OPTS)
+	OPENSSL_NO_VENDOR=1 cargo test --release -- $(CARGO_TEST_OPTS)
 
 
 #
