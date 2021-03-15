@@ -4,6 +4,7 @@ metadata:
   name: influxdb-pusher
   annotations:
     app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"influxdb"}]'
+    serving.knative.openshift.io/disableRoute: "true"
   labels:
     app.kubernetes.io/part-of: custom-app-1
 spec:
