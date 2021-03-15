@@ -5,6 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: vorto-converter
     app.kubernetes.io/part-of: digital-twin
+    networking.knative.dev/visibility: cluster-local
 spec:
   template:
     metadata:
