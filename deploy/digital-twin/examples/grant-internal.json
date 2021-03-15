@@ -1,0 +1,49 @@
+{
+  "entries": {
+    "DEFAULT": {
+      "subjects": {
+        "{{ request:subjectId }}": {
+          "type": "the creator"
+        }
+      },
+      "resources": {
+        "policy:/": {
+          "grant": [
+            "READ",
+            "WRITE"
+          ],
+          "revoke": []
+        },
+        "thing:/": {
+          "grant": [
+            "READ",
+            "WRITE"
+          ],
+          "revoke": []
+        },
+        "message:/": {
+          "grant": [
+            "READ",
+            "WRITE"
+          ],
+          "revoke": []
+        }
+      }
+    },
+    "internal": {
+      "subjects": {
+        "nginx:ditto": {
+          "type": "internal endpoint"
+        }
+      },
+      "resources": {
+        "thing:/": {
+          "grant": [
+            "WRITE"
+          ],
+          "revoke": []
+        }
+      }
+    }
+  }
+}

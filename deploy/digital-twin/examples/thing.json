@@ -1,0 +1,23 @@
+{
+  "thingId": "ctron:fritzbox",
+  "policyId": "ctron:internal",
+  "definition": "vorto.private.ctron.fritzbox:Fritzbox:1.0.0",
+  "attributes": {
+    "modelDisplayName": "Fritzbox"
+  },
+  "features": {
+    "Uplink": {
+      "definition": [
+        "vorto.private.ctron.fritzbox:Uplink:1.0.0"
+      ],
+      "properties": {
+        "status": {
+          "RateSend": 0,
+          "RateReceive": 0,
+          "BytesReceived": 0,
+          "BytesSent": 0
+        }
+      }
+    }
+  }
+}
