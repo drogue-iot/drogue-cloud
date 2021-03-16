@@ -3,17 +3,17 @@ use actix_web::{middleware::Condition, web, App, HttpServer};
 use actix_web_httpauth::middleware::HttpAuthentication;
 use anyhow::Context;
 use dotenv::dotenv;
-use drogue_cloud_database_common::error::ServiceError;
 use drogue_cloud_device_management_service::{
     app, endpoints,
-    service::{self, PostgresManagementService, PostgresManagementServiceConfig},
+    service::{self, PostgresManagementServiceConfig},
     Config, WebData,
 };
 use drogue_cloud_registry_events::reqwest::ReqwestEventSender;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     endpoints::create_endpoint_source,
-    openid::{create_client, AuthConfig, Authenticator, AuthenticatorError},
+    openid::{create_client, AuthConfig, Authenticator},
+    openid_auth,
 };
 use envconfig::Envconfig;
 
@@ -34,14 +34,11 @@ async fn main() -> anyhow::Result<()> {
     // OpenIdConnect
     let enable_auth = config.enable_auth;
 
-    let (client, scopes) = if enable_auth {
+    let client = if enable_auth {
         let config: AuthConfig = AuthConfig::init_from_env()?;
-        (
-            Some(create_client(&config, endpoints).await?),
-            config.scopes,
-        )
+        Some(create_client(&config, endpoints).await?)
     } else {
-        (None, "".into())
+        None
     };
 
     let sender = ReqwestEventSender::new(
@@ -52,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let data = web::Data::new(WebData {
-        authenticator: Authenticator::new(client, scopes).await,
+        authenticator: Some(Authenticator::new(client).await),
         service: service::PostgresManagementService::new(
             PostgresManagementServiceConfig::from_env()?,
             sender,
@@ -61,10 +58,24 @@ async fn main() -> anyhow::Result<()> {
 
     let max_json_payload_size = 64 * 1024;
 
-    HttpServer::new(move || app!(ReqwestEventSender, data, enable_auth, max_json_payload_size))
-        .bind(config.bind_addr)?
-        .run()
-        .await?;
+    HttpServer::new(move || {
+        let auth = openid_auth!(req -> {
+            req
+            .app_data::<web::Data<WebData<service::PostgresManagementService<ReqwestEventSender>>>>()
+            .as_ref()
+            .and_then(|d|d.authenticator.as_ref())
+        });
+        app!(
+            ReqwestEventSender,
+            data,
+            enable_auth,
+            max_json_payload_size,
+            auth
+        )
+    })
+    .bind(config.bind_addr)?
+    .run()
+    .await?;
 
     Ok(())
 }

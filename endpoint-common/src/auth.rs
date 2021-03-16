@@ -1,26 +1,33 @@
 use crate::x509::ClientCertificateChain;
-use actix_web::dev::{Payload, PayloadStream};
-use actix_web::{FromRequest, HttpRequest};
+use actix_web::{
+    dev::{Payload, PayloadStream},
+    {FromRequest, HttpRequest},
+};
 use anyhow::Context;
 use drogue_cloud_service_api::{
-    auth::{
-        AuthenticationClient, AuthenticationClientError, AuthenticationRequest,
-        AuthenticationResponse, Credential,
-    },
+    auth::{AuthenticationClientError, AuthenticationRequest, AuthenticationResponse, Credential},
     management::{Application, Device},
 };
-use drogue_cloud_service_common::auth::ReqwestAuthenticatorClient;
+use drogue_cloud_service_common::{
+    auth::ReqwestAuthenticatorClient,
+    config::ConfigFromEnv,
+    openid::{OpenIdTokenProvider, TokenConfig},
+};
 use envconfig::Envconfig;
 use futures::future::{err, ok, Ready};
 use http::HeaderValue;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::fmt::Debug;
 use x509_parser::prelude::X509Certificate;
 
 #[derive(Clone, Debug, Envconfig)]
 pub struct AuthConfig {
+    /// Disable authenticating towards the authentication service.
+    #[envconfig(from = "AUTH_CLIENT_DISABLE_AUTH", default = "false")]
+    pub auth_disabled: bool,
+
+    /// The URL of the authentication service.
     #[envconfig(from = "AUTH_SERVICE_URL")]
     pub auth_service_url: String,
 }
@@ -32,9 +39,15 @@ pub struct DeviceAuthenticator {
 
 pub type AuthResult<T> = Result<T, AuthenticationClientError<reqwest::Error>>;
 
-impl TryFrom<AuthConfig> for DeviceAuthenticator {
-    type Error = anyhow::Error;
-    fn try_from(config: AuthConfig) -> Result<Self, Self::Error> {
+impl DeviceAuthenticator {
+    /// Create a new authentication client using the provided configuration.
+    ///
+    /// If the configuration has authentication enabled, but no token configuration is provided, an
+    /// error will be returned.
+    pub async fn with_config(
+        config: AuthConfig,
+        token_config: Option<TokenConfig>,
+    ) -> anyhow::Result<Self> {
         let url: Url = config
             .auth_service_url
             .parse()
@@ -42,13 +55,40 @@ impl TryFrom<AuthConfig> for DeviceAuthenticator {
         let url = url
             .join("/api/v1/auth")
             .context("Failed to build auth URL from base URL")?;
+
+        let token_provider = match (config.auth_disabled, token_config) {
+            (false, Some(token_config)) => Some(
+                OpenIdTokenProvider::discover_from(token_config)
+                    .await
+                    .context("Failed to discover OAuth2 client")?,
+            ),
+            (false, None) => None,
+            (true, None) => {
+                anyhow::bail!("Requested OAuth2 authentication without providing a configuration")
+            }
+            (true, Some(_)) => {
+                anyhow::bail!("Provided an OAuth2 configuration without requesting authentication")
+            }
+        };
+
         Ok(DeviceAuthenticator {
-            client: ReqwestAuthenticatorClient::new(Default::default(), url, None),
+            client: ReqwestAuthenticatorClient::new(Default::default(), url, token_provider),
         })
     }
-}
 
-impl DeviceAuthenticator {
+    /// Create a new authentication client by using configuration from the environment.
+    pub async fn new() -> anyhow::Result<Self> {
+        let config: AuthConfig = AuthConfig::init_from_env()?;
+
+        let token_config = match config.auth_disabled {
+            false => Some(TokenConfig::from_env()?),
+            true => None,
+        };
+
+        Self::with_config(config, token_config).await
+    }
+
+    // FIXME: check why this still exists
     /// authenticate with a combination of `<device>@<tenant>` / `<password>`.
     pub async fn x_authenticate_simple(
         &self,
@@ -268,9 +308,9 @@ pub struct DeviceAuthDetails {
 }
 
 impl FromRequest for DeviceAuthDetails {
+    type Config = ();
     type Error = ();
     type Future = Ready<Result<Self, Self::Error>>;
-    type Config = ();
 
     fn from_request(req: &HttpRequest, _: &mut Payload<PayloadStream>) -> Self::Future {
         match req.extensions().get::<DeviceAuthDetails>() {

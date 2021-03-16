@@ -1,7 +1,9 @@
 mod auth;
+mod cli;
 mod info;
 mod spy;
 
+use crate::auth::OpenIdClient;
 use actix_cors::Cors;
 use actix_web::{
     get,
@@ -12,10 +14,12 @@ use actix_web::{
 use actix_web_httpauth::middleware::HttpAuthentication;
 use drogue_cloud_service_common::{
     endpoints::{create_endpoint_source, EndpointSourceType},
-    error::ServiceError,
-    openid::{create_client, AuthConfig, Authenticator, AuthenticatorError},
+    openid::{create_client, AuthConfig, Authenticator},
+    openid_auth,
 };
 use envconfig::Envconfig;
+use openid::biscuit::jwk::JWKSet;
+use openid::Configurable;
 use serde_json::json;
 
 #[get("/")]
@@ -48,6 +52,36 @@ pub struct Config {
     pub kafka_topic: String,
 }
 
+/// Manually clone the client
+///
+/// See also: https://github.com/kilork/openid/issues/17
+fn clone_client(client: Option<&openid::Client>) -> Option<openid::Client> {
+    if let Some(client) = client {
+        let jwks = if let Some(jwks) = &client.jwks {
+            let keys = jwks.keys.clone();
+            Some(JWKSet { keys })
+        } else {
+            None
+        };
+
+        // The following two lines perform a "clone" without having the "Clone" trait.
+        // FIXME: get rid of the two .unwrap calls, wait for the upstream fix
+        let json = serde_json::to_value(client.provider.config()).unwrap();
+        let provider: openid::Config = serde_json::from_value(json).unwrap();
+
+        Some(openid::Client::new(
+            provider.into(),
+            client.client_id.clone(),
+            client.client_secret.clone(),
+            client.redirect_uri.as_ref().cloned(),
+            client.http_client.clone(),
+            jwks,
+        ))
+    } else {
+        None
+    }
+}
+
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -67,48 +101,30 @@ async fn main() -> anyhow::Result<()> {
 
     let enable_auth = config.enable_auth;
 
-    let (client, scopes) = if enable_auth {
-        let config: AuthConfig = AuthConfig::init_from_env()?;
-        (
-            Some(create_client(&config, endpoints).await?),
-            config.scopes,
-        )
+    let openid_client = if enable_auth {
+        let config = AuthConfig::init_from_env()?;
+        OpenIdClient {
+            client: Some(create_client(&config, endpoints.clone()).await?),
+            scopes: config.scopes,
+        }
     } else {
-        (None, "".into())
+        OpenIdClient {
+            client: None,
+            scopes: "".into(),
+        }
     };
 
-    let authenticator = web::Data::new(Authenticator::new(client, scopes).await);
+    let client: Option<openid::Client> = clone_client(openid_client.client.as_ref());
+
+    let authenticator = web::Data::new(Authenticator::new(client).await);
+    let openid_client = web::Data::new(openid_client);
 
     let bind_addr = config.bind_addr.clone();
 
     // http server
 
     HttpServer::new(move || {
-        let auth = HttpAuthentication::bearer(|req, auth| {
-            let token = auth.token().to_string();
-
-            async {
-                let authenticator = req.app_data::<web::Data<Authenticator>>();
-                log::info!("Authenticator: {:?}", &authenticator);
-                let authenticator = authenticator.ok_or_else(|| ServiceError::InternalError {
-                    message: "Missing authenticator instance".into(),
-                })?;
-
-                // authenticator.validate_token(token).await?;
-                // Ok(req)
-
-                match authenticator.validate_token(token).await {
-                    Ok(_) => Ok(req),
-                    Err(AuthenticatorError::Missing) => Err(ServiceError::InternalError {
-                        message: "Missing authenticator".into(),
-                    }
-                    .into()),
-                    Err(AuthenticatorError::Failed) => {
-                        Err(ServiceError::AuthenticationError.into())
-                    }
-                }
-            }
-        });
+        let auth = openid_auth!(req -> req.app_data::<web::Data<Authenticator>>().map(|data|data.get_ref()));
 
         App::new()
             .wrap(middleware::Logger::default())
@@ -117,13 +133,16 @@ async fn main() -> anyhow::Result<()> {
             .data(config.clone())
             .app_data(authenticator.clone())
             .app_data(endpoint_source.clone())
+            .app_data(openid_client.clone())
             .service(
                 web::scope("/api/v1")
                     .wrap(Condition::new(enable_auth, auth))
                     .service(info::get_info),
             )
+            // everything from here on is unauthenticated or not using the middleware
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
             .service(index)
+            .service(cli::login)
             .service(auth::login)
             .service(auth::logout)
             .service(auth::code)

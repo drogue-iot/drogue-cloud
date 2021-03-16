@@ -48,7 +48,7 @@ percent-encoding = "2"
 base64 = "0.13"
 http = "0.2"
 
-openid = "0.7"
+openid = "0.8"
 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }

@@ -7,6 +7,4 @@ resources:
   - realm.yaml
   - client.yaml
   - client-grafana.yaml
-  - client-services.yaml
-  - client-cli.yaml
   - user.yaml

@@ -47,6 +47,20 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.password
+            # this is a workaround as the name of the variable conflicts with an automatically generated
+            # variable from Kubernetes, which doesn't parse as an int
+            - name: MQTT_ENDPOINT_PORT
+              value: "0"
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_SECRET
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

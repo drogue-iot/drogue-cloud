@@ -1,14 +1,11 @@
 use anyhow::Context;
-use core::fmt::Formatter;
+use core::fmt::{Debug, Formatter};
 use drogue_cloud_service_api::endpoints::Endpoints;
 use envconfig::Envconfig;
 use failure::Fail;
 use openid::Jws;
 use reqwest::Certificate;
-use std::fmt::Debug;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::{fs::File, io::Read, path::Path};
 use thiserror::Error;
 use url::Url;
 
@@ -33,10 +30,9 @@ pub enum AuthenticatorError {
     Failed,
 }
 
+/// An authenticator to authenticate incoming requests.
 pub struct Authenticator {
     pub client: Option<openid::Client>,
-    pub scopes: String,
-    pub bearer: Option<openid::Bearer>,
 }
 
 impl Debug for Authenticator {
@@ -57,41 +53,28 @@ impl Debug for Authenticator {
 }
 
 impl Authenticator {
-    pub async fn new(client: Option<openid::Client>, scopes: String) -> Authenticator {
-        let cli = client.as_ref().ok_or(AuthenticatorError::Missing);
-        let bearer = match cli {
-            Ok(c) => c.request_token_using_client_credentials().await.ok(),
-            Err(_) => None,
-        };
-
-        Authenticator {
-            client,
-            bearer,
-            scopes,
-        }
+    pub async fn new(client: Option<openid::Client>) -> Authenticator {
+        Authenticator { client }
     }
 
     pub async fn validate_token<S: AsRef<str>>(&self, token: S) -> Result<(), AuthenticatorError> {
         let client = self.client.as_ref().ok_or(AuthenticatorError::Missing)?;
 
         let mut token = Jws::new_encoded(token.as_ref());
-        match client.decode_token(&mut token) {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                log::info!("Failed to decode token: {}", err);
-                Err(AuthenticatorError::Failed)
-            }
-        }?;
 
-        log::info!("Token: {:#?}", token);
+        client.decode_token(&mut token).map_err(|err| {
+            log::debug!("Failed to decode token: {}", err);
+            AuthenticatorError::Failed
+        })?;
 
-        match client.validate_token(&token, None, None) {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                log::info!("Validation failed: {}", err);
-                Err(AuthenticatorError::Failed)
-            }
-        }
+        log::debug!("Token: {:#?}", token);
+
+        client.validate_token(&token, None, None).map_err(|err| {
+            log::info!("Validation failed: {}", err);
+            AuthenticatorError::Failed
+        })?;
+
+        Ok(())
     }
 }
 
@@ -126,7 +109,7 @@ pub async fn create_client(
 
     let issuer_url = issuer_url.ok_or_else(|| {
         anyhow::anyhow!(
-            "Failed to detect 'issuer URL'. Consider using a env-var based configuration."
+            "Failed to detect 'issuer URL'. Consider using an env-var based configuration."
         )
     })?;
 
@@ -176,28 +159,4 @@ fn add_service_cert(mut client: reqwest::ClientBuilder) -> anyhow::Result<reqwes
     }
 
     Ok(client)
-}
-
-pub trait Expires {
-    /// Check if the resources expires before the duration elapsed.
-    fn expires_before(&self, duration: chrono::Duration) -> bool {
-        match self.expires_in() {
-            Some(expires) => expires >= duration,
-            None => false,
-        }
-    }
-
-    /// Get the duration until this resource expires. This may be negative.
-    fn expires_in(&self) -> Option<chrono::Duration> {
-        self.expires().map(|expires| expires - chrono::Utc::now())
-    }
-
-    /// Get the timestamp when the resource expires.
-    fn expires(&self) -> Option<chrono::DateTime<chrono::Utc>>;
-}
-
-impl Expires for openid::Bearer {
-    fn expires(&self) -> Option<chrono::DateTime<chrono::Utc>> {
-        self.expires
-    }
 }

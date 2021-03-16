@@ -53,23 +53,31 @@ echo "* Additional admin user:"
 echo "    username: admin"
 echo "    password: admin123456"
 echo
+echo "Get an access token:"
+echo "----------------------"
+echo
+echo "  bash:"
+echo "    TOKEN=\$(http --auth admin:admin123456 GET $BACKEND_URL/cli/login | jq -r .access)"
+echo "  fish:"
+echo "    set TOKEN (http --auth admin:admin123456 GET $BACKEND_URL/cli/login | jq -r .access)"
+echo
 echo "Manage applications/devices:"
-echo "-------------------------"
+echo "------------------------------"
 echo
 echo "URL:"
 echo "    ${MGMT_URL}"
 echo
 echo "Applications:"
-echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps metadata:='{\"name\":\"app_id\"}'"
-echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id metadata:='{\"name\":\"app_id\"}' spec:='{\"core\": {\"disabled\": true}}'"
-echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/apps/app_id"
+echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps metadata:='{\"name\":\"app_id\"}'" \"Authorization:Bearer \$TOKEN\"
+echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id" \"Authorization:Bearer \$TOKEN\"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id metadata:='{\"name\":\"app_id\"}' spec:='{\"core\": {\"disabled\": true}}'" \"Authorization:Bearer \$TOKEN\"
+echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/apps/app_id" \"Authorization:Bearer \$TOKEN\"
 echo
 echo "Devices:"
-echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps/app_id/devices metadata:='{\"application\": \"app_id\", \"name\":\"device_id\"}' spec:='{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
-echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id/devices/device_id"
-echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id/devices/device_id metadata:='{\"application\": \"app_id\", \"name\":\"device_id\"}' spec:='{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
-echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/apps/app_id/devices/device_id"
+echo "  Create:  http POST   ${MGMT_URL}/api/v1/apps/app_id/devices metadata:='{\"application\": \"app_id\", \"name\":\"device_id\"}' spec:='{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'" \"Authorization:Bearer \$TOKEN\"
+echo "  Read:    http GET    ${MGMT_URL}/api/v1/apps/app_id/devices/device_id" \"Authorization:Bearer \$TOKEN\"
+echo "  Update:  http PUT    ${MGMT_URL}/api/v1/apps/app_id/devices/device_id metadata:='{\"application\": \"app_id\", \"name\":\"device_id\"}' spec:='{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'" \"Authorization:Bearer \$TOKEN\"
+echo "  Delete:  http DELETE ${MGMT_URL}/api/v1/apps/app_id/devices/device_id" \"Authorization:Bearer \$TOKEN\"
 echo
 echo "Publish data:"
 echo "---------------"
@@ -119,22 +127,13 @@ function sete() {
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
 
+TWIN_API=$(service_url "registry")
+
 echo
 echo "=========================================================================================="
 echo " Digital Twin:"
 echo "=========================================================================================="
 echo
-
-sete ENDPOINT="$(kubectl get ksvc -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.url}')"
-
-case $CLUSTER in
-openshift)
-sete TWIN_API="https://ditto:ditto@$(kubectl -n "$DROGUE_NS" get route ditto-console -o jsonpath='{.spec.host}')"
-  ;;
-*)
-sete TWIN_API="http://ditto:ditto@$(kubectl -n "$DROGUE_NS" get ingress ditto -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)"
-  ;;
-esac
 
 sete DEVICE_ID="my:dev1"
 sete CHANNEL="foo"
@@ -154,17 +153,17 @@ echo
 echo "Create a new device:"
 echo "-----------------------"
 echo
-echo "cat FirstTestDevice.json | http PUT \"$TWIN_API/api/2/things/$DEVICE_ID\""
+echo "cat FirstTestDevice.json | http PUT $TWIN_API/api/2/things/$DEVICE_ID"
 echo
 echo "Publish some data:"
 echo "-----------------------"
 echo
-echo "http -v POST \"$ENDPOINT/publish/$DEVICE_ID/$CHANNEL\" \"model_id==$MODEL_ID\" temp:=1.23"
+echo "http -v POST $TWIN_API/publish/\$DEVICE_ID/\$CHANNEL \"model_id==$MODEL_ID\" temp:=1.23"
 echo
 echo "Check the twin status:"
 echo "-----------------------"
 echo
-echo "http \"$TWIN_API/api/2/things/$DEVICE_ID\""
+echo "http $TWIN_API/api/2/things/\$DEVICE_ID"
 echo
 
 fi

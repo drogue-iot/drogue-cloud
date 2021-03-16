@@ -18,14 +18,12 @@ use bytestring::ByteString;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
-    auth::AuthConfig, downstream::DownstreamSender, error::EndpointError,
-    x509::ClientCertificateChain,
+    downstream::DownstreamSender, error::EndpointError, x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::Outcome as AuthOutcome;
 use envconfig::Envconfig;
 use futures::future;
 use ntex::web;
-use std::convert::TryInto;
 
 #[derive(Clone, Debug, Envconfig)]
 pub struct Config {
@@ -84,7 +82,9 @@ async fn main() -> anyhow::Result<()> {
 
     let app = App {
         downstream: DownstreamSender::new()?,
-        authenticator: DeviceAuthenticator(AuthConfig::init_from_env()?.try_into()?),
+        authenticator: DeviceAuthenticator(
+            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
+        ),
         commands: commands.clone(),
     };
 

@@ -1,9 +1,9 @@
 use chrono::Duration;
-use drogue_cloud_database_common::error::ServiceError;
-use drogue_cloud_database_common::models::outbox::{
-    OutboxAccessor, OutboxEntry, PostgresOutboxAccessor,
+use drogue_cloud_database_common::{
+    error::ServiceError,
+    models::outbox::{OutboxAccessor, OutboxEntry, PostgresOutboxAccessor},
+    Client,
 };
-use drogue_cloud_database_common::Client;
 use drogue_cloud_registry_events::Event;
 use futures::TryStreamExt;
 use log::LevelFilter;
@@ -33,19 +33,19 @@ macro_rules! test {
         let outbox = drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor::new(&c);
 
         let data = web::Data::new(WebData {
-            authenticator: drogue_cloud_service_common::openid::Authenticator {
-                client: None,
-                scopes: "".into(),
-            },
+            authenticator: None,
             service: service::PostgresManagementService::new(db.config.clone(), sender.clone())
                 .unwrap(),
         });
 
+        let auth = drogue_cloud_service_common::mock_auth!();
+
         let mut $sender = sender;
         let $outbox = outbox;
 
-        let mut $app =
-            actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024)).await;
+        let $app =
+            actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024, auth))
+                .await;
 
         $code;
 

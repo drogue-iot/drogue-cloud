@@ -1,5 +1,4 @@
 use super::management;
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -35,9 +34,9 @@ pub enum Outcome {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum AuthenticationClientError<E: 'static>
+pub enum AuthenticationClientError<E>
 where
-    E: std::error::Error,
+    E: std::error::Error + 'static,
 {
     /// An error from the underlying API client (e.g. reqwest).
     #[error("client error: {0}")]
@@ -48,6 +47,9 @@ where
     /// A remote error, performing the request.
     #[error("service error: {0}")]
     Service(ErrorInformation),
+    /// A token provider error.
+    #[error("token error: {0}")]
+    Token(#[source] Box<dyn std::error::Error>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -61,22 +63,6 @@ impl fmt::Display for ErrorInformation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: {}", self.error, self.message)
     }
-}
-
-/// A client, authenticating devices.
-#[async_trait]
-pub trait AuthenticationClient {
-    type Error: std::error::Error;
-
-    /// Authenticate a device.
-    ///
-    /// Any kind of error should always be treated as an authentication failure. A successful
-    /// call still doesn't mean that the authentication service authenticated the device. The
-    /// caller needs to inspect the outcome in the [AuthenticationResponse](drogue_cloud_service_api::auth::AuthenticationResponse).
-    async fn authenticate(
-        &self,
-        request: AuthenticationRequest,
-    ) -> Result<AuthenticationResponse, AuthenticationClientError<Self::Error>>;
 }
 
 /// The result of an authentication request.

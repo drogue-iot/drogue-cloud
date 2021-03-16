@@ -3,15 +3,12 @@ mod common;
 use crate::common::{assert_events, init, outbox_retrieve};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
-use actix_web_httpauth::middleware::HttpAuthentication;
-use drogue_cloud_database_common::error::ServiceError;
 use drogue_cloud_device_management_service::{
     app, endpoints,
-    service::{self, PostgresManagementService},
+    service::{self},
     WebData,
 };
 use drogue_cloud_registry_events::{mock::MockEventSender, Event};
-use drogue_cloud_service_common::openid::AuthenticatorError;
 use drogue_cloud_test_common::{client, db};
 use http::{header, HeaderValue};
 use serde_json::json;
@@ -25,7 +22,7 @@ async fn test_create_app() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
@@ -48,7 +45,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
         // try read, must not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // create, must succeed, event sent
@@ -56,7 +53,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
@@ -68,7 +65,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
         }]);
 
         // read, must exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -98,7 +95,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
                     "disabled": true,
                 }
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // event must have been fired
@@ -111,7 +108,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
         }]);
 
         // read, must exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -139,7 +136,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
         }));
 
         // delete, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
@@ -152,11 +149,11 @@ async fn test_crud_app() -> anyhow::Result<()> {
         }]);
 
         // try read, must not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // second delete, must report "not found"
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // no additional event must be fired
@@ -171,7 +168,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
         // try read, must not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // create, must succeed
@@ -183,7 +180,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
                     "foo/bar": "baz",
                 },
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // an event must have been fired
@@ -196,7 +193,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
         }]);
 
         // read, must exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
 
@@ -233,7 +230,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
                     "disabled": true,
                 }
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
@@ -255,7 +252,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
         ]);
 
         // read, must exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -299,7 +296,7 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -317,7 +314,7 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
@@ -344,7 +341,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
                     ],
                 }
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -358,7 +355,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         }]);
 
         // read, must exist, with cert
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -403,7 +400,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -423,7 +420,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
         }]);
 
         // read, must exist, but no cert
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -458,7 +455,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
                 "name": "app1",
                 "finalizers": ["foo", "bar"],
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -471,7 +468,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
             generation: 0,
         }]);
 
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -485,7 +482,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         }]);
 
         // read, must exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let mut result: serde_json::Value = test::read_body_json(resp).await;
@@ -511,7 +508,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         // delete one finalizer
         result["metadata"]["finalizers"] = json!(["bar"]);
 
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&result).send_request(&mut app).await;
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&result).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // get another metadata event
@@ -526,7 +523,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         ]);
 
         // read, must exist (one less finalizer, some deletion timestamp)
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let mut result: serde_json::Value = test::read_body_json(resp).await;
@@ -550,7 +547,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
         // delete last finalizer
         result["metadata"]["finalizers"] = json!([]);
 
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&result).send_request(&mut app).await;
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&result).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // no more events when cleaning up after finalizers
@@ -567,12 +564,12 @@ async fn test_delete_precondition() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // read, must exist ... take uid and resource_version
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -586,7 +583,7 @@ async fn test_delete_precondition() -> anyhow::Result<()> {
             "preconditions": {
                 "uid": format!("wrong-{}", uid),
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         // wrong uid, must fail with conflict
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
@@ -595,7 +592,7 @@ async fn test_delete_precondition() -> anyhow::Result<()> {
             "preconditions": {
                 "resourceVersion": format!("wrong-{}", resource_version),
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         // wrong resource_version, must fail with conflict
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
@@ -605,7 +602,7 @@ async fn test_delete_precondition() -> anyhow::Result<()> {
                 "uid": uid,
                 "resourceVersion": resource_version,
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         // all good, must succeed
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
