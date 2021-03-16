@@ -12,7 +12,7 @@ use url::Url;
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
 
 #[derive(Debug, Envconfig)]
-pub struct AuthConfig {
+pub struct AuthenticatorConfig {
     #[envconfig(from = "CLIENT_ID")]
     pub client_id: String,
     #[envconfig(from = "CLIENT_SECRET")]
@@ -78,7 +78,7 @@ impl Authenticator {
     }
 }
 
-impl ClientConfig for AuthConfig {
+impl ClientConfig for AuthenticatorConfig {
     fn client_id(&self) -> String {
         self.client_id.clone()
     }

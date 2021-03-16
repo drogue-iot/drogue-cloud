@@ -124,7 +124,7 @@ impl OpenIdTokenProvider {
 
         match lock.deref() {
             // check if someone else refreshed the token in the meantime
-            Some(token) if !token.expired() => return Ok(token.clone()),
+            Some(token) if !token.expires_before(self.refresh_before) => return Ok(token.clone()),
             _ => {}
         }
 

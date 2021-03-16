@@ -11,10 +11,9 @@ use actix_web::{
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
-use actix_web_httpauth::middleware::HttpAuthentication;
 use drogue_cloud_service_common::{
     endpoints::{create_endpoint_source, EndpointSourceType},
-    openid::{create_client, AuthConfig, Authenticator},
+    openid::{create_client, Authenticator, AuthenticatorConfig},
     openid_auth,
 };
 use envconfig::Envconfig;
@@ -102,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
     let enable_auth = config.enable_auth;
 
     let openid_client = if enable_auth {
-        let config = AuthConfig::init_from_env()?;
+        let config = AuthenticatorConfig::init_from_env()?;
         OpenIdClient {
             client: Some(create_client(&config, endpoints.clone()).await?),
             scopes: config.scopes,
