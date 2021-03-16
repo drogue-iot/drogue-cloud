@@ -1,10 +1,19 @@
 use actix_web::{
-    get, http::header, middleware, post, web, App, HttpResponse, HttpServer, Responder,
+    get,
+    http::header,
+    middleware::{self, Condition},
+    post, web, App, HttpResponse, HttpServer, Responder,
 };
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     downstream::{self, DownstreamSender},
     error::HttpEndpointError,
+};
+use drogue_cloud_service_common::openid::Authenticator;
+use drogue_cloud_service_common::{
+    endpoints::create_endpoint_source,
+    openid::{create_client, AuthenticatorConfig},
+    openid_auth,
 };
 use envconfig::Envconfig;
 use serde::Deserialize;
@@ -16,7 +25,7 @@ struct Config {
     pub max_json_payload_size: usize,
     #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
     pub bind_addr: String,
-    #[envconfig(from = "ENABLE_AUTH", default = "false")]
+    #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
 }
 
@@ -27,6 +36,11 @@ pub struct CommandOptions {
 
     pub command: String,
     pub timeout: Option<u64>,
+}
+
+#[derive(Debug)]
+pub struct WebData {
+    pub authenticator: Option<Authenticator>,
 }
 
 #[get("/")]
@@ -86,14 +100,44 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::init_from_env()?;
     let max_json_payload_size = config.max_json_payload_size;
 
+    // the endpoint source we choose
+    let endpoint_source = create_endpoint_source()?;
+
+    // extract required endpoint information
+    let endpoints = endpoint_source.eval_endpoints().await?;
+
+    let enable_auth = config.enable_auth;
+
+    let client = if enable_auth {
+        let config = AuthenticatorConfig::init_from_env()?;
+        Some(create_client(&config, endpoints).await?)
+    } else {
+        None
+    };
+
+    let data = web::Data::new(WebData {
+        authenticator: Some(Authenticator::new(client).await),
+    });
+
     HttpServer::new(move || {
+        let auth = openid_auth!(req -> {
+            req
+            .app_data::<web::Data<WebData>>()
+            .as_ref()
+            .and_then(|d|d.authenticator.as_ref())
+        });
         App::new()
             .wrap(middleware::Logger::default())
+            .app_data(data.clone())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone())
             .service(health)
             .service(index)
-            .service(command)
+            .service(
+                web::scope("/")
+                    .wrap(Condition::new(enable_auth, auth))
+                    .service(command),
+            )
     })
     .bind(config.bind_addr)?
     .run()

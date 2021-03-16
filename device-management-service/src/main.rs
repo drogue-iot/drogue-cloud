@@ -1,6 +1,5 @@
 use actix_cors::Cors;
 use actix_web::{middleware::Condition, web, App, HttpServer};
-use actix_web_httpauth::middleware::HttpAuthentication;
 use anyhow::Context;
 use dotenv::dotenv;
 use drogue_cloud_device_management_service::{
@@ -12,7 +11,7 @@ use drogue_cloud_registry_events::reqwest::ReqwestEventSender;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     endpoints::create_endpoint_source,
-    openid::{create_client, AuthConfig, Authenticator},
+    openid::{create_client, Authenticator, AuthenticatorConfig},
     openid_auth,
 };
 use envconfig::Envconfig;
@@ -35,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let enable_auth = config.enable_auth;
 
     let client = if enable_auth {
-        let config: AuthConfig = AuthConfig::init_from_env()?;
+        let config: AuthenticatorConfig = AuthenticatorConfig::init_from_env()?;
         Some(create_client(&config, endpoints).await?)
     } else {
         None

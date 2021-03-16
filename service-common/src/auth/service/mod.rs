@@ -36,6 +36,6 @@ where
 #[macro_export]
 macro_rules! openid_auth {
     ($req:ident -> $($extract:tt)* ) => {
-        HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*))
+        actix_web_httpauth::middleware::HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*))
     };
 }

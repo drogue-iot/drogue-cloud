@@ -1,5 +1,4 @@
 use actix_web::{web, App, HttpServer};
-use actix_web_httpauth::middleware::HttpAuthentication;
 use dotenv::dotenv;
 use drogue_cloud_authentication_service::{
     endpoints,
@@ -9,7 +8,7 @@ use drogue_cloud_authentication_service::{
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     endpoints::create_endpoint_source,
-    openid::{create_client, AuthConfig, Authenticator},
+    openid::{create_client, Authenticator, AuthenticatorConfig},
     openid_auth,
 };
 use envconfig::Envconfig;
@@ -30,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
 
     let max_json_payload_size = config.max_json_payload_size;
 
-    let auth_config: AuthConfig = AuthConfig::init_from_env()?;
+    let auth_config: AuthenticatorConfig = AuthenticatorConfig::init_from_env()?;
     let client = Some(create_client(&auth_config, endpoints).await?);
 
     let data = web::Data::new(WebData {
