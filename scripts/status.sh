@@ -111,7 +111,7 @@ echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@a
 echo
 echo "Send command to that device from another terminal window:"
 echo
-echo "  http POST $COMMAND_ENDPOINT_URL/command?application=app_id\&device=device_id\&command=set-temp temp:=25"
+echo "  http POST $COMMAND_ENDPOINT_URL/command?application=app_id\&device=device_id\&command=set-temp temp:=25" \"Authorization:Bearer \$TOKEN\"
 echo
 
 #
