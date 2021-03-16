@@ -1,15 +1,18 @@
-use drogue_cloud_service_common::error::ErrorResponse;
-use drogue_cloud_service_common::openid::Authenticator;
-
 use actix_web::{get, http, web, HttpResponse, Responder};
 use drogue_cloud_console_common::UserInfo;
+use drogue_cloud_service_common::error::ErrorResponse;
 use openid::{biscuit::jws::Compact, Bearer, Configurable};
 use serde::Deserialize;
 use serde_json::json;
 use std::fmt::Debug;
 
+pub struct OpenIdClient {
+    pub client: Option<openid::Client>,
+    pub scopes: String,
+}
+
 #[get("/ui/login")]
-pub async fn login(login_handler: web::Data<Authenticator>) -> impl Responder {
+pub async fn login(login_handler: web::Data<OpenIdClient>) -> impl Responder {
     if let Some(client) = login_handler.client.as_ref() {
         let auth_url = client.auth_uri(Some(&login_handler.scopes), None);
 
@@ -24,7 +27,7 @@ pub async fn login(login_handler: web::Data<Authenticator>) -> impl Responder {
 
 /// An endpoint that will redirect to the SSO "end session" endpoint
 #[get("/ui/logout")]
-pub async fn logout(login_handler: web::Data<Authenticator>) -> impl Responder {
+pub async fn logout(login_handler: web::Data<OpenIdClient>) -> impl Responder {
     if let Some(client) = login_handler.client.as_ref() {
         if let Some(url) = &client.provider.config().end_session_endpoint {
             let mut url = url.clone();
@@ -53,7 +56,7 @@ pub struct LoginQuery {
 
 #[get("/ui/token")]
 pub async fn code(
-    login_handler: web::Data<Authenticator>,
+    login_handler: web::Data<OpenIdClient>,
     query: web::Query<LoginQuery>,
 ) -> impl Responder {
     if let Some(client) = login_handler.client.as_ref() {
@@ -97,7 +100,7 @@ pub struct RefreshQuery {
 
 #[get("/ui/refresh")]
 pub async fn refresh(
-    login_handler: web::Data<Authenticator>,
+    login_handler: web::Data<OpenIdClient>,
     query: web::Query<RefreshQuery>,
 ) -> impl Responder {
     if let Some(client) = login_handler.client.as_ref() {

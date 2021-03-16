@@ -10,7 +10,7 @@ use url::Url;
 #[derive(Debug)]
 pub struct WebData<S: ManagementService> {
     pub service: S,
-    pub authenticator: Authenticator,
+    pub authenticator: Option<Authenticator>,
 }
 
 #[derive(Envconfig)]
@@ -62,26 +62,7 @@ macro_rules! crud {
 
 #[macro_export]
 macro_rules! app {
-    ($sender:ty, $data:expr, $enable_auth:expr, $max_json_payload_size:expr) => {{
-        let auth_middleware = HttpAuthentication::bearer(|req, auth| {
-            let token = auth.token().to_string();
-
-            async {
-                let app_data =
-                    req.app_data::<web::Data<WebData<PostgresManagementService<$sender>>>>();
-                let app_data = app_data
-                    .ok_or_else(|| ServiceError::Internal("Missing app_data instance".into()))?;
-
-                match app_data.authenticator.validate_token(token).await {
-                    Ok(_) => Ok(req),
-                    Err(AuthenticatorError::Missing) => {
-                        Err(ServiceError::Internal("Missing authenticator".into()).into())
-                    }
-                    Err(AuthenticatorError::Failed) => Err(ServiceError::NotAuthorized.into()),
-                }
-            }
-        });
-
+    ($sender:ty, $data:expr, $enable_auth:expr, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
             .data(web::JsonConfig::default().limit($max_json_payload_size))
             // FIXME: bind to a different port
@@ -93,7 +74,7 @@ macro_rules! app {
         let app = {
             let scope = web::scope("/api/v1")
                 .wrap(Cors::permissive())
-                .wrap(Condition::new($enable_auth, auth_middleware));
+                .wrap(Condition::new($enable_auth, $auth));
 
             let scope = drogue_cloud_device_management_service::crud!(
                 $sender,

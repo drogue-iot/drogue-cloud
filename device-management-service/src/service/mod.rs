@@ -28,7 +28,6 @@ use drogue_cloud_service_api::{
     },
     Translator,
 };
-use drogue_cloud_service_common::config::ConfigFromEnv;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
@@ -60,8 +59,6 @@ pub struct PostgresManagementServiceConfig {
     pub pg: deadpool_postgres::Config,
     pub instance: String,
 }
-
-impl<'de> ConfigFromEnv<'de> for PostgresManagementServiceConfig {}
 
 impl<S> DatabaseService for PostgresManagementService<S>
 where

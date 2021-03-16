@@ -18,11 +18,11 @@ use futures::{
     Stream, StreamExt,
 };
 use owning_ref::OwningHandle;
-use rdkafka::util::Timeout;
 use rdkafka::{
     config::{ClientConfig, RDKafkaLogLevel},
     consumer::{stream_consumer::StreamConsumer, CommitMode, Consumer, DefaultConsumerContext},
     message::BorrowedMessage,
+    util::Timeout,
     TopicPartitionList,
 };
 use serde::Deserialize;

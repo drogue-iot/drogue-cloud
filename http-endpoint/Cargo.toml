@@ -62,7 +62,7 @@ mime = "0.3"
 
 tokio = { version = "1", features = ["full"] }
 
-openid = "0.7"
+openid = "0.8"
 
 [dependencies.rust-tls]
 version = "0.19"

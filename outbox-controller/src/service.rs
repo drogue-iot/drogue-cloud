@@ -8,7 +8,6 @@ use drogue_cloud_database_common::models::outbox::{
 use drogue_cloud_database_common::DatabaseService;
 use drogue_cloud_registry_events::Event;
 use drogue_cloud_service_api::health::HealthCheckedService;
-use drogue_cloud_service_common::config::ConfigFromEnv;
 use futures::Stream;
 use serde::Deserialize;
 use std::pin::Pin;
@@ -24,8 +23,6 @@ pub struct OutboxServiceConfig {
 pub struct OutboxService {
     pool: Pool,
 }
-
-impl<'de> ConfigFromEnv<'de> for OutboxServiceConfig {}
 
 impl DatabaseService for OutboxService {
     fn pool(&self) -> &Pool {

@@ -16,6 +16,8 @@ spec:
       - type: password
         value: admin123456
         temporary: false
+    realmRoles:
+      - "offline_access"
     clientRoles:
       drogue:
         - "drogue-admin"

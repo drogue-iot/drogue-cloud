@@ -14,15 +14,13 @@ use actix_web::{
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
-    auth::{AuthConfig, DeviceAuthenticator},
+    auth::DeviceAuthenticator,
     command_endpoint::{CommandServer, CommandServerConfig},
     downstream::DownstreamSender,
 };
-use drogue_cloud_service_common::{endpoints::create_endpoint_source, openid};
 use envconfig::Envconfig;
 use futures::future;
 use serde_json::json;
-use std::convert::TryInto;
 use std::ops::DerefMut;
 
 drogue_cloud_endpoint_common::retriever!();
@@ -46,8 +44,6 @@ struct Config {
     pub bind_addr: String,
     #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:8081")]
     pub health_bind_addr: String,
-    #[envconfig(from = "AUTH_SERVICE_URL")]
-    pub auth_service_url: Option<String>,
     #[envconfig(from = "DISABLE_TLS", default = "false")]
     pub disable_tls: bool,
     #[envconfig(from = "CERT_BUNDLE_FILE")]
@@ -81,27 +77,7 @@ async fn main() -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
     let http_server_commands = commands.clone();
 
-    // the endpoint source we choose
-    let endpoint_source = create_endpoint_source()?;
-
-    // extract required endpoint information
-    let endpoints = endpoint_source.eval_endpoints().await?;
-
-    // OpenIdConnect
-
-    let auth_config: openid::AuthConfig = openid::AuthConfig::init_from_env()?;
-    let (client, scopes) = (
-        Some(openid::create_client(&auth_config, endpoints).await?),
-        auth_config.scopes,
-    );
-    let service_authenticator = openid::Authenticator::new(client, scopes).await;
-
-    let mut device_authenticator: DeviceAuthenticator = AuthConfig::init_from_env()?.try_into()?;
-    device_authenticator
-        .client
-        .set_service_token(service_authenticator.bearer.clone());
-
-    let service_authenticator = web::Data::new(service_authenticator);
+    let device_authenticator = DeviceAuthenticator::new().await?;
 
     let http_server = HttpServer::new(move || {
         let app = App::new()
@@ -111,9 +87,7 @@ async fn main() -> anyhow::Result<()> {
             .data(sender.clone())
             .data(http_server_commands.clone());
 
-        let app = app
-            .app_data(Data::new(device_authenticator.clone()))
-            .app_data(Data::new(service_authenticator.clone()));
+        let app = app.app_data(Data::new(device_authenticator.clone()));
 
         app.service(index)
             // the standard endpoint

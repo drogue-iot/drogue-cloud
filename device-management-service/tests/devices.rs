@@ -3,15 +3,12 @@ mod common;
 use crate::common::{assert_events, init, outbox_retrieve};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
-use actix_web_httpauth::middleware::HttpAuthentication;
-use drogue_cloud_database_common::error::ServiceError;
 use drogue_cloud_device_management_service::{
     app, endpoints,
-    service::{self, PostgresManagementService},
+    service::{self},
     WebData,
 };
 use drogue_cloud_registry_events::{mock::MockEventSender, Event};
-use drogue_cloud_service_common::openid::AuthenticatorError;
 use drogue_cloud_test_common::{client, db};
 use http::{header, HeaderValue};
 use serde_json::json;
@@ -25,7 +22,7 @@ async fn test_create_device() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
@@ -51,7 +48,7 @@ async fn test_create_device() -> anyhow::Result<()> {
                     ]
                 }
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1/devices/device1")));
@@ -78,7 +75,7 @@ async fn test_create_device_no_app() -> anyhow::Result<()> {
                 "name": "device1",
                 "application": "app1"
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -99,7 +96,7 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         // we don't check application events this time
@@ -111,7 +108,7 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
                 "application": "app1",
                 "name": "" // empty name
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
@@ -128,7 +125,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         // we don't check application events this time
@@ -140,7 +137,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
                 "application": "app1",
                 "name": "device1",
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -159,7 +156,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
                 "application": "app1",
                 "name": "device1",
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
@@ -174,7 +171,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
         // read, must not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -183,7 +180,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         // we don't test for application events this time
@@ -191,7 +188,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         outbox_retrieve(&outbox).await?;
 
         // read, must still not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -209,7 +206,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                     ]
                 }
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -224,7 +221,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }]);
 
         // read, must exist now
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -266,7 +263,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                     ]
                 }
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -281,7 +278,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }]);
 
         // read, must have changed
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -313,7 +310,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }));
 
         // delete, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -328,7 +325,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }]);
 
         // read, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -345,7 +342,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                     ]
                 }
             }
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -353,7 +350,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(sender.retrieve().unwrap(), vec![]);
 
         // delete, second time, must result in "not found"
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -372,7 +369,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -391,7 +388,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
                 "application": "app1",
                 "name": "device1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -406,7 +403,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         }]);
 
         // delete application, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // one event must have been fired for the application, the device event is omitted as the
@@ -420,7 +417,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         }]);
 
         // read device, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     })
@@ -436,7 +433,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -456,7 +453,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
                 "name": "device1",
                 "finalizers": ["foo"], // create a device with finalizer
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -471,7 +468,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // delete application, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // one event must have been fired, but notify about a metadata change
@@ -484,7 +481,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // the application must still exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -509,7 +506,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }));
 
         // read device, must still exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -534,7 +531,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 
         // now delete the device, must succeed, but soft deleted
 
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -550,7 +547,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // read device, must still exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -581,7 +578,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
                 "name": "device1",
                 "finalizers": [],
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -589,11 +586,11 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(sender.retrieve().unwrap(), vec![]);
 
         // read device, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // read app, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     })
@@ -607,7 +604,7 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -623,13 +620,13 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
                     ]
                 }
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // get current state
 
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -664,11 +661,11 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
         update1["spec"]["credentials"] = json!({});
 
         // update device once (using current version) ... must succeed
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update1).send_request(&mut app).await;
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update1).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // update device twice (using previous version) ... must fail
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update2).send_request(&mut app).await;
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update2).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
     })
@@ -682,7 +679,7 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
@@ -698,13 +695,13 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
                     ]
                 }
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // get current state
 
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -736,7 +733,7 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
         let update = result.clone();
 
         // delete, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&mut app).await;
+        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // recreate
@@ -752,11 +749,11 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
                     ]
                 }
             },
-        })).send_request(&mut app).await;
+        })).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // update device (using previous version) ... must fail
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update).send_request(&mut app).await;
+        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
     })

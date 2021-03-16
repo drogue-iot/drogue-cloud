@@ -57,6 +57,7 @@ set -ex
 
 command -v 'kubectl' &>/dev/null || die "Missing the command 'kubectl'"
 command -v 'curl' &>/dev/null || die "Missing the command 'curl'"
+command -v 'jq' &>/dev/null || die "Missing the command 'jq'"
 command -v 'docker' &>/dev/null || command -v 'podman' &>/dev/null || die "Missing the command 'docker' or 'podman'"
 
 # Create the namespace first
@@ -119,6 +120,9 @@ kubectl -n "$DROGUE_NS" set env deployment/console-backend "SSO_URL=$SSO_URL" "R
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/device-management-service "SSO_URL=$SSO_URL"
+kubectl -n "$DROGUE_NS" set env deployment/authentication-service "SSO_URL=$SSO_URL"
+kubectl -n "$DROGUE_NS" set env deployment/http-endpoint "SSO_URL=$SSO_URL"
+kubectl -n "$DROGUE_NS" set env deployment/mqtt-endpoint "SSO_URL=$SSO_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL" "GF_SERVER_ROOT_URL=$DASHBOARD_URL"
 

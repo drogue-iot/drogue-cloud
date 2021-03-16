@@ -16,7 +16,6 @@ use drogue_cloud_service_api::{
     },
     Dialect, Translator,
 };
-use drogue_cloud_service_common::config::ConfigFromEnv;
 use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use serde::Deserialize;
 use std::io::Cursor;
@@ -33,8 +32,6 @@ pub trait AuthenticationService: HealthCheckedService + Clone {
 pub struct AuthenticationServiceConfig {
     pub pg: deadpool_postgres::Config,
 }
-
-impl<'de> ConfigFromEnv<'de> for AuthenticationServiceConfig {}
 
 impl DatabaseService for PostgresAuthenticationService {
     fn pool(&self) -> &Pool {

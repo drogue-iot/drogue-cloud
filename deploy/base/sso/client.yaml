@@ -16,8 +16,9 @@ spec:
     publicClient: false
     implicitFlowEnabled: false
     standardFlowEnabled: true
-    serviceAccountsEnabled: false
-    fullScopeAllowed: true
+    directAccessGrantsEnabled: true
+    serviceAccountsEnabled: true
+    fullScopeAllowed: false
     redirectUris:
       - "http://not-yet-set"
     defaultRoles:

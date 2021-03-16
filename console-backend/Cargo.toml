@@ -23,6 +23,7 @@ actix-web-httpauth = "=0.6.0-beta.1"
 tokio-stream = { version = "0.1", features = ["time"] }
 
 openid = "0.8"
+biscuit = '0.5'
 url = "2"
 reqwest = "0.11"
 ring = "0.16.18" # required due to an issue in the public API
