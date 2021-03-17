@@ -1,4 +1,4 @@
-use actix_web::{get, http, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, http, web, HttpResponse, Responder};
 use drogue_cloud_console_common::UserInfo;
 use drogue_cloud_service_common::error::ErrorResponse;
 use openid::{biscuit::jws::Compact, Bearer, Configurable};
@@ -12,9 +12,7 @@ pub struct OpenIdClient {
 }
 
 #[get("/ui/login")]
-pub async fn login(req: HttpRequest) -> impl Responder {
-    let login_handler: Option<&web::Data<OpenIdClient>> = req.app_data();
-
+pub async fn login(login_handler: Option<web::Data<OpenIdClient>>) -> impl Responder {
     if let Some(client) = login_handler {
         let auth_url = client.client.auth_uri(Some(&client.scopes), None);
 
@@ -29,9 +27,7 @@ pub async fn login(req: HttpRequest) -> impl Responder {
 
 /// An endpoint that will redirect to the SSO "end session" endpoint
 #[get("/ui/logout")]
-pub async fn logout(req: HttpRequest) -> impl Responder {
-    let login_handler: Option<&web::Data<OpenIdClient>> = req.app_data();
-
+pub async fn logout(login_handler: Option<web::Data<OpenIdClient>>) -> impl Responder {
     if let Some(client) = login_handler {
         if let Some(url) = &client.client.provider.config().end_session_endpoint {
             let mut url = url.clone();
@@ -59,9 +55,10 @@ pub struct LoginQuery {
 }
 
 #[get("/ui/token")]
-pub async fn code(req: HttpRequest, query: web::Query<LoginQuery>) -> impl Responder {
-    let login_handler: Option<&web::Data<OpenIdClient>> = req.app_data();
-
+pub async fn code(
+    login_handler: Option<web::Data<OpenIdClient>>,
+    query: web::Query<LoginQuery>,
+) -> impl Responder {
     if let Some(client) = login_handler {
         let response = client
             .client
@@ -103,8 +100,10 @@ pub struct RefreshQuery {
 }
 
 #[get("/ui/refresh")]
-pub async fn refresh(req: HttpRequest, query: web::Query<RefreshQuery>) -> impl Responder {
-    let login_handler: Option<&web::Data<OpenIdClient>> = req.app_data();
+pub async fn refresh(
+    login_handler: Option<web::Data<OpenIdClient>>,
+    query: web::Query<RefreshQuery>,
+) -> impl Responder {
     if let Some(client) = login_handler {
         let response = client
             .client

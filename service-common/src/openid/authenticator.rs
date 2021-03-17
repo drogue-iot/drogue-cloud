@@ -4,7 +4,8 @@ use core::fmt::{Debug, Formatter};
 use drogue_cloud_service_api::endpoints::Endpoints;
 use envconfig::Envconfig;
 use failure::Fail;
-use openid::{Client, Jws};
+use openid::biscuit::jws::Compact;
+use openid::{Client, Empty, Jws, StandardClaims};
 use reqwest::Certificate;
 use std::{fs::File, io::Read, path::Path};
 use thiserror::Error;
@@ -72,7 +73,10 @@ impl Authenticator {
         Ok(Self::from_client(create_client(config, endpoints).await?))
     }
 
-    pub async fn validate_token<S: AsRef<str>>(&self, token: S) -> Result<(), AuthenticatorError> {
+    pub async fn validate_token<S: AsRef<str>>(
+        &self,
+        token: S,
+    ) -> Result<Compact<StandardClaims, Empty>, AuthenticatorError> {
         let mut token = Jws::new_encoded(token.as_ref());
 
         self.client.decode_token(&mut token).map_err(|err| {
@@ -89,7 +93,7 @@ impl Authenticator {
                 AuthenticatorError::Failed
             })?;
 
-        Ok(())
+        Ok(token)
     }
 }
 

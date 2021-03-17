@@ -1,6 +1,6 @@
 mod common;
 
-use crate::common::{assert_events, init, outbox_retrieve};
+use crate::common::{assert_events, call_http, init, outbox_retrieve, user};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use drogue_cloud_device_management_service::{
@@ -18,11 +18,11 @@ use serial_test::serial;
 #[serial]
 async fn test_create_app() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = call_http(&app, user("foo"), test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
-        })).send_request(&app).await;
+        }))).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
         assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
@@ -604,6 +604,72 @@ async fn test_delete_precondition() -> anyhow::Result<()> {
             }
         })).send_request(&app).await;
         // all good, must succeed
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_auth_app() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+        let resp = call_http(&app, user("foo"), test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": "app1",
+            },
+        })))
+        .await;
+
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
+
+        // get as user "foo"
+
+        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/v1/apps/app1")).await;
+
+        // must succeed
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // get as user "bar"
+
+        let resp = call_http(&app, user("bar"), test::TestRequest::get().uri("/api/v1/apps/app1")).await;
+
+        // must fail
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+        // update as user "bar"
+
+        let resp = call_http(&app, user("bar"), test::TestRequest::put().uri("/api/v1/apps/app1").set_json(&json!({
+            "metadata": {
+                "name": "app1"
+            },
+            "spec": {
+                "core": {
+                    "disabled": true,
+                }
+            }
+        }))).await;
+
+        // must fail
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+        // delete as user "bar"
+
+        let resp = call_http(&app, user("bar"), test::TestRequest::delete().uri("/api/v1/apps/app1")).await;
+
+        // must fail
+
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+        // delete as user "foo"
+
+        let resp = call_http(&app, user("foo"), test::TestRequest::delete().uri("/api/v1/apps/app1")).await;
+
+        // must succeed
+
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     })

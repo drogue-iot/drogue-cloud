@@ -1,16 +1,18 @@
-use crate::endpoints::params::DeleteParams;
 use crate::{
+    endpoints::params::DeleteParams,
     service::{ManagementService, PostgresManagementService},
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::management::Device;
+use drogue_cloud_service_common::auth::UserInformation;
 
 pub async fn create<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
     path: web::Path<String>,
     device: Json<Device>,
+    user: UserInformation,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error>
 where
@@ -25,7 +27,7 @@ where
 
     let location = req.url_for("device", &[&app_id, &device.metadata.name])?;
 
-    data.service.create_device(device.0).await?;
+    data.service.create_device(&user, device.0).await?;
 
     let response = HttpResponse::Created()
         .append_header((header::LOCATION, location.into_string()))
@@ -37,6 +39,7 @@ where
 pub async fn update<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
     path: web::Path<(String, String)>,
+    user: UserInformation,
     device: Json<Device>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
@@ -58,7 +61,7 @@ where
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    data.service.update_device(device.0).await?;
+    data.service.update_device(&user, device.0).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -66,6 +69,7 @@ where
 pub async fn delete<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
     path: web::Path<(String, String)>,
+    user: UserInformation,
     params: Option<web::Json<DeleteParams>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
@@ -80,7 +84,12 @@ where
     }
 
     data.service
-        .delete_device(&app, &device, params.map(|p| p.0).unwrap_or_default())
+        .delete_device(
+            &user,
+            &app,
+            &device,
+            params.map(|p| p.0).unwrap_or_default(),
+        )
         .await?;
 
     Ok(HttpResponse::NoContent().finish())
@@ -89,6 +98,7 @@ where
 pub async fn read<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
     path: web::Path<(String, String)>,
+    user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
@@ -101,7 +111,7 @@ where
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    let device = data.service.get_device(&app_id, &device_id).await?;
+    let device = data.service.get_device(&user, &app_id, &device_id).await?;
 
     let result = match device {
         None => HttpResponse::NotFound().finish(),
