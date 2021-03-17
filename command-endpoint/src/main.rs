@@ -2,7 +2,7 @@ use actix_web::{
     get,
     http::header,
     middleware::{self, Condition},
-    post, web, App, HttpResponse, HttpServer, Responder,
+    web, App, HttpResponse, HttpServer, Responder,
 };
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
@@ -53,7 +53,6 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[post("/command")]
 async fn command(
     endpoint: web::Data<DownstreamSender>,
     web::Query(opts): web::Query<CommandOptions>,
@@ -134,9 +133,9 @@ async fn main() -> anyhow::Result<()> {
             .service(health)
             .service(index)
             .service(
-                web::scope("/")
+                web::resource("/command")
                     .wrap(Condition::new(enable_auth, auth))
-                    .service(command),
+                    .route(web::post().to(command)),
             )
     })
     .bind(config.bind_addr)?
