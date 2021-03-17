@@ -110,7 +110,10 @@ impl OpenIdTokenProvider {
     /// a newly refreshed token.
     pub async fn provide_token(&self) -> Result<openid::Bearer, openid::error::Error> {
         match self.current_token.read().await.deref() {
-            Some(token) if !token.expires_before(self.refresh_before) => return Ok(token.clone()),
+            Some(token) if !token.expires_before(self.refresh_before) => {
+                log::debug!("Token still valid");
+                return Ok(token.clone());
+            }
             _ => {}
         }
 
@@ -120,11 +123,16 @@ impl OpenIdTokenProvider {
     }
 
     async fn fetch_fresh_token(&self) -> Result<openid::Bearer, openid::error::Error> {
+        log::debug!("Fetching fresh token...");
+
         let mut lock = self.current_token.write().await;
 
         match lock.deref() {
             // check if someone else refreshed the token in the meantime
-            Some(token) if !token.expires_before(self.refresh_before) => return Ok(token.clone()),
+            Some(token) if !token.expires_before(self.refresh_before) => {
+                log::debug!("Token already got refreshed");
+                return Ok(token.clone());
+            }
             _ => {}
         }
 
