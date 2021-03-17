@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: RUST_LOG
-              value: info
+              value: debug
             - name: RUST_BACKTRACE
               value: "1"
             # this is a workaround as the name of the variable conflicts with an automatically generated

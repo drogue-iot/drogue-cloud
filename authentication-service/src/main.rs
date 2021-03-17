@@ -5,12 +5,7 @@ use drogue_cloud_authentication_service::{
     service::{self, AuthenticationServiceConfig},
     Config, WebData,
 };
-use drogue_cloud_service_common::{
-    config::ConfigFromEnv,
-    endpoints::create_endpoint_source,
-    openid::{create_client, Authenticator, AuthenticatorConfig},
-    openid_auth,
-};
+use drogue_cloud_service_common::{config::ConfigFromEnv, openid::Authenticator, openid_auth};
 use envconfig::Envconfig;
 
 #[actix_web::main]
@@ -21,19 +16,17 @@ async fn main() -> anyhow::Result<()> {
     // Initialize config from environment variables
     let config = Config::init_from_env().unwrap();
 
-    // the endpoint source we choose
-    let endpoint_source = create_endpoint_source()?;
-
-    // extract required endpoint information
-    let endpoints = endpoint_source.eval_endpoints().await?;
-
     let max_json_payload_size = config.max_json_payload_size;
+    let enable_auth = config.enable_auth;
 
-    let auth_config: AuthenticatorConfig = AuthenticatorConfig::init_from_env()?;
-    let client = Some(create_client(&auth_config, endpoints).await?);
+    let authenticator = if enable_auth {
+        Some(Authenticator::new().await?)
+    } else {
+        None
+    };
 
     let data = web::Data::new(WebData {
-        authenticator: Some(Authenticator::new(client).await),
+        authenticator,
         service: service::PostgresAuthenticationService::new(
             AuthenticationServiceConfig::from_env()?,
         )?,
@@ -46,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
             .as_ref()
             .and_then(|data|data.authenticator.as_ref())
         });
-        drogue_cloud_authentication_service::app!(data, max_json_payload_size, auth)
+        drogue_cloud_authentication_service::app!(data, max_json_payload_size, enable_auth, auth)
     })
     .bind(config.bind_addr)?
     .run()

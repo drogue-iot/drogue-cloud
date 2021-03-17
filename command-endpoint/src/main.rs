@@ -9,12 +9,7 @@ use drogue_cloud_endpoint_common::{
     downstream::{self, DownstreamSender},
     error::HttpEndpointError,
 };
-use drogue_cloud_service_common::openid::Authenticator;
-use drogue_cloud_service_common::{
-    endpoints::create_endpoint_source,
-    openid::{create_client, AuthenticatorConfig},
-    openid_auth,
-};
+use drogue_cloud_service_common::{openid::Authenticator, openid_auth};
 use envconfig::Envconfig;
 use serde::Deserialize;
 use serde_json::json;
@@ -99,24 +94,15 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::init_from_env()?;
     let max_json_payload_size = config.max_json_payload_size;
 
-    // the endpoint source we choose
-    let endpoint_source = create_endpoint_source()?;
-
-    // extract required endpoint information
-    let endpoints = endpoint_source.eval_endpoints().await?;
-
     let enable_auth = config.enable_auth;
 
-    let client = if enable_auth {
-        let config = AuthenticatorConfig::init_from_env()?;
-        Some(create_client(&config, endpoints).await?)
+    let authenticator = if enable_auth {
+        Some(Authenticator::new().await?)
     } else {
         None
     };
 
-    let data = web::Data::new(WebData {
-        authenticator: Some(Authenticator::new(client).await),
-    });
+    let data = web::Data::new(WebData { authenticator });
 
     HttpServer::new(move || {
         let auth = openid_auth!(req -> {

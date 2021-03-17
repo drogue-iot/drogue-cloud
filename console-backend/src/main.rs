@@ -54,31 +54,27 @@ pub struct Config {
 /// Manually clone the client
 ///
 /// See also: https://github.com/kilork/openid/issues/17
-fn clone_client(client: Option<&openid::Client>) -> Option<openid::Client> {
-    if let Some(client) = client {
-        let jwks = if let Some(jwks) = &client.jwks {
-            let keys = jwks.keys.clone();
-            Some(JWKSet { keys })
-        } else {
-            None
-        };
-
-        // The following two lines perform a "clone" without having the "Clone" trait.
-        // FIXME: get rid of the two .unwrap calls, wait for the upstream fix
-        let json = serde_json::to_value(client.provider.config()).unwrap();
-        let provider: openid::Config = serde_json::from_value(json).unwrap();
-
-        Some(openid::Client::new(
-            provider.into(),
-            client.client_id.clone(),
-            client.client_secret.clone(),
-            client.redirect_uri.as_ref().cloned(),
-            client.http_client.clone(),
-            jwks,
-        ))
+fn clone_client(client: &openid::Client) -> openid::Client {
+    let jwks = if let Some(jwks) = &client.jwks {
+        let keys = jwks.keys.clone();
+        Some(JWKSet { keys })
     } else {
         None
-    }
+    };
+
+    // The following two lines perform a "clone" without having the "Clone" trait.
+    // FIXME: get rid of the two .unwrap calls, wait for the upstream fix
+    let json = serde_json::to_value(client.provider.config()).unwrap();
+    let provider: openid::Config = serde_json::from_value(json).unwrap();
+
+    openid::Client::new(
+        provider.into(),
+        client.client_id.clone(),
+        client.client_secret.clone(),
+        client.redirect_uri.as_ref().cloned(),
+        client.http_client.clone(),
+        jwks,
+    )
 }
 
 #[actix_web::main]
@@ -102,21 +98,20 @@ async fn main() -> anyhow::Result<()> {
 
     let openid_client = if enable_auth {
         let config = AuthenticatorConfig::init_from_env()?;
-        OpenIdClient {
-            client: Some(create_client(&config, endpoints.clone()).await?),
+        Some(OpenIdClient {
+            client: create_client(&config, endpoints.clone()).await?,
             scopes: config.scopes,
-        }
+        })
     } else {
-        OpenIdClient {
-            client: None,
-            scopes: "".into(),
-        }
+        None
     };
 
-    let client: Option<openid::Client> = clone_client(openid_client.client.as_ref());
+    let authenticator = openid_client.as_ref().map(|client| {
+        let client = clone_client(&client.client);
+        web::Data::new(Authenticator::from_client(client))
+    });
 
-    let authenticator = web::Data::new(Authenticator::new(client).await);
-    let openid_client = web::Data::new(openid_client);
+    let openid_client = openid_client.map(web::Data::new);
 
     let bind_addr = config.bind_addr.clone();
 
@@ -125,14 +120,26 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(move || {
         let auth = openid_auth!(req -> req.app_data::<web::Data<Authenticator>>().map(|data|data.get_ref()));
 
-        App::new()
+        let app = App::new()
             .wrap(middleware::Logger::default())
             .wrap(Cors::permissive().supports_credentials())
             .data(web::JsonConfig::default().limit(4096))
-            .data(config.clone())
-            .app_data(authenticator.clone())
+            .data(config.clone());
+
+        let app = if let Some(authenticator) = &authenticator {
+            app.app_data(authenticator.clone())
+        } else {
+            app
+        };
+
+        let app = if let Some(openid_client) = &openid_client {
+            app.app_data(openid_client.clone())
+        } else {
+            app
+        };
+
+        app
             .app_data(endpoint_source.clone())
-            .app_data(openid_client.clone())
             .service(
                 web::scope("/api/v1")
                     .wrap(Condition::new(enable_auth, auth))

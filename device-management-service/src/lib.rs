@@ -64,6 +64,7 @@ macro_rules! crud {
 macro_rules! app {
     ($sender:ty, $data:expr, $enable_auth:expr, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
+            .wrap(actix_web::middleware::Logger::default())
             .data(web::JsonConfig::default().limit($max_json_payload_size))
             // FIXME: bind to a different port
             .service(
