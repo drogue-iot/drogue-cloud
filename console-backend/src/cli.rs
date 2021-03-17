@@ -5,8 +5,10 @@ use http::header;
 use serde_json::json;
 
 #[get("/cli/login")]
-pub async fn login(req: HttpRequest, login_handler: web::Data<OpenIdClient>) -> impl Responder {
-    if let Some(client) = login_handler.client.as_ref() {
+pub async fn login(req: HttpRequest) -> impl Responder {
+    let login_handler: Option<&web::Data<OpenIdClient>> = req.app_data();
+
+    if let Some(client) = login_handler {
         let basic = match req
             .headers()
             .get(header::AUTHORIZATION)
@@ -23,10 +25,11 @@ pub async fn login(req: HttpRequest, login_handler: web::Data<OpenIdClient>) -> 
         };
 
         let result = client
+            .client
             .request_token_using_password_credentials(
                 username,
                 password,
-                Some(&format!("{} offline_access", &login_handler.scopes)),
+                Some(&format!("{} offline_access", &client.scopes)),
             )
             .await;
 

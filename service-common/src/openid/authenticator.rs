@@ -1,9 +1,10 @@
+use crate::endpoints::eval_endpoints;
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use drogue_cloud_service_api::endpoints::Endpoints;
 use envconfig::Envconfig;
 use failure::Fail;
-use openid::Jws;
+use openid::{Client, Jws};
 use reqwest::Certificate;
 use std::{fs::File, io::Read, path::Path};
 use thiserror::Error;
@@ -32,47 +33,61 @@ pub enum AuthenticatorError {
 
 /// An authenticator to authenticate incoming requests.
 pub struct Authenticator {
-    pub client: Option<openid::Client>,
+    pub client: openid::Client,
 }
 
 impl Debug for Authenticator {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut d = f.debug_struct("Authenticator");
-
-        match self.client {
-            None => {
-                d.field("client", &"None".to_string());
-            }
-            Some(_) => {
-                d.field("client", &"Some(...)".to_string());
-            }
-        }
-
+        d.field("client", &"...");
         d.finish()
     }
 }
 
+impl From<openid::Client> for Authenticator {
+    fn from(client: Client) -> Self {
+        Self::from_client(client)
+    }
+}
+
 impl Authenticator {
-    pub async fn new(client: Option<openid::Client>) -> Authenticator {
+    /// Create a new authenticator by evaluating endpoints and SSO configuration.
+    pub async fn new() -> anyhow::Result<Self> {
+        Self::from_endpoints(eval_endpoints().await?).await
+    }
+
+    pub async fn from_endpoints(endpoints: Endpoints) -> anyhow::Result<Self> {
+        let config = AuthenticatorConfig::init_from_env()?;
+        Self::from_config(&config, endpoints).await
+    }
+
+    pub fn from_client(client: openid::Client) -> Self {
         Authenticator { client }
     }
 
-    pub async fn validate_token<S: AsRef<str>>(&self, token: S) -> Result<(), AuthenticatorError> {
-        let client = self.client.as_ref().ok_or(AuthenticatorError::Missing)?;
+    pub async fn from_config(
+        config: &AuthenticatorConfig,
+        endpoints: Endpoints,
+    ) -> anyhow::Result<Self> {
+        Ok(Self::from_client(create_client(config, endpoints).await?))
+    }
 
+    pub async fn validate_token<S: AsRef<str>>(&self, token: S) -> Result<(), AuthenticatorError> {
         let mut token = Jws::new_encoded(token.as_ref());
 
-        client.decode_token(&mut token).map_err(|err| {
+        self.client.decode_token(&mut token).map_err(|err| {
             log::debug!("Failed to decode token: {}", err);
             AuthenticatorError::Failed
         })?;
 
         log::debug!("Token: {:#?}", token);
 
-        client.validate_token(&token, None, None).map_err(|err| {
-            log::info!("Validation failed: {}", err);
-            AuthenticatorError::Failed
-        })?;
+        self.client
+            .validate_token(&token, None, None)
+            .map_err(|err| {
+                log::info!("Validation failed: {}", err);
+                AuthenticatorError::Failed
+            })?;
 
         Ok(())
     }

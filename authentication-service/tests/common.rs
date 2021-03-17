@@ -24,6 +24,7 @@ macro_rules! test {
         let $v = test::init_service(drogue_cloud_authentication_service::app!(
             data,
             16 * 1024,
+            false,
             auth
         ))
         .await;

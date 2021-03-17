@@ -34,6 +34,10 @@ pub struct EndpointConfig {
     pub command_url: Option<String>,
 }
 
+pub async fn eval_endpoints() -> anyhow::Result<Endpoints> {
+    create_endpoint_source()?.eval_endpoints().await
+}
+
 pub fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
     let source = std::env::var_os("ENDPOINT_SOURCE").unwrap_or_else(|| "env".into());
     match source.to_str() {
