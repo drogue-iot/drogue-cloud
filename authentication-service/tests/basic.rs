@@ -62,7 +62,8 @@ async fn test_auth_passes_password() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
         application: "app1".into(),
         device: "device1".into(),
-        credential: Credential::Password("foo".into())
+        credential: Credential::Password("foo".into()),
+        r#as: None,
     } => device1_json())
 }
 
@@ -74,7 +75,8 @@ async fn test_auth_passes_password_with_device_username() -> anyhow::Result<()> 
     test_auth!(AuthenticationRequest{
         application: "app1".into(),
         device: "device1".into(),
-        credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into()}
+        credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into()},
+        r#as: None,
     } => device1_json())
 }
 
@@ -86,7 +88,8 @@ async fn test_auth_fails_password_with_non_matching_device_username() -> anyhow:
     test_auth!(AuthenticationRequest{
         application: "app1".into(),
         device: "device1".into(),
-        credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into()}
+        credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into()},
+        r#as: None,
     } => json!("fail"))
 }
 
@@ -96,7 +99,8 @@ async fn test_auth_fails_wrong_password() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device1".into(),
-            credential: Credential::Password("foo1".into())
+            credential: Credential::Password("foo1".into()),
+            r#as: None,
     } => json!("fail"))
 }
 
@@ -106,7 +110,8 @@ async fn test_auth_fails_missing_tenant() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app2".into(),
             device: "device1".into(),
-            credential: Credential::Password("foo".into())
+            credential: Credential::Password("foo".into()),
+            r#as: None,
     } => json!("fail"))
 }
 
@@ -116,7 +121,8 @@ async fn test_auth_fails_missing_device() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device2".into(),
-            credential: Credential::Password("foo".into())
+            credential: Credential::Password("foo".into()),
+            r#as: None,
     } => json!("fail"))
 }
 
@@ -126,7 +132,8 @@ async fn test_auth_passes_username_password() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()}
+            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()},
+            r#as: None,
     } => device3_json())
 }
 
@@ -136,7 +143,8 @@ async fn test_auth_passes_username_password_by_alias() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "12:34:56".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()}
+            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()},
+            r#as: None,
     } => device3_json())
 }
 
@@ -147,7 +155,8 @@ async fn test_auth_fails_password_only() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
-            credential: Credential::Password("bar".into())
+            credential: Credential::Password("bar".into()),
+            r#as: None,
     } => json!("fail"))
 }
 
@@ -158,6 +167,7 @@ async fn test_auth_passes_password_only() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
-            credential: Credential::Password("baz".into())
+            credential: Credential::Password("baz".into()),
+            r#as: None,
     }  => device3_json())
 }

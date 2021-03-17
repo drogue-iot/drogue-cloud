@@ -259,7 +259,8 @@ async fn test_x509_client_cert() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
         application: app_id.into(),
         device: device_id.into(),
-        credential: Credential::Certificate(from_pem(DEVICE1_CRT)?)
+        credential: Credential::Certificate(from_pem(DEVICE1_CRT)?),
+        r#as: None
     } => device1_json())
 }
 
@@ -274,6 +275,7 @@ async fn test_x509_client_cert_bad() -> anyhow::Result<()> {
     test_auth!(AuthenticationRequest{
         application: app_id.into(),
         device: device_id.into(),
-        credential: Credential::Certificate(from_pem(DEVICE1_CRT_BAD)?)
+        credential: Credential::Certificate(from_pem(DEVICE1_CRT_BAD)?),
+        r#as: None
     } => json!("fail"))
 }

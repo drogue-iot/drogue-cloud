@@ -119,15 +119,15 @@ impl AuthenticationService for PostgresAuthenticationService {
                     // check gateway
                     match request.r#as {
                         Some(as_id) => {
-                            if (as_id != request.device) {
+                            if as_id != request.device {
                                 match accessor.lookup(&application.metadata.name, &as_id).await? {
                                     Some(as_device) => {
                                         let as_manage: management::Device = as_device.into();
                                         match as_manage.section::<DeviceSpecGatewaySelector>() {
                                             Some(Ok(gateway_selector)) => {
-                                                if (gateway_selector
+                                                if gateway_selector
                                                     .match_names
-                                                    .contains(&request.device))
+                                                    .contains(&request.device)
                                                 {
                                                     log::debug!(
                                                         "Device {:?} allowed to publish as {:?}",
