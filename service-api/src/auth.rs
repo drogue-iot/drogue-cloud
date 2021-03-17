@@ -7,6 +7,7 @@ pub struct AuthenticationRequest {
     pub application: String,
     pub device: String,
     pub credential: Credential,
+    pub r#as: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

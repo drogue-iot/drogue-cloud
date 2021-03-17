@@ -105,8 +105,13 @@ impl DeviceAuthenticator {
             percent_encoding::percent_decode_str(password).decode_utf8(),
         ) {
             ([Ok(device), Ok(tenant)], Ok(password)) => {
-                self.authenticate(tenant, device, Credential::Password(password.to_string()))
-                    .await
+                self.authenticate(
+                    tenant,
+                    device,
+                    Credential::Password(password.to_string()),
+                    None,
+                )
+                .await
             }
             _ => Ok(AuthenticationResponse::failed()),
         }
@@ -117,6 +122,7 @@ impl DeviceAuthenticator {
         application: A,
         device: D,
         credential: Credential,
+        r#as: Option<String>,
     ) -> AuthResult<AuthenticationResponse>
     where
         A: ToString,
@@ -127,6 +133,7 @@ impl DeviceAuthenticator {
                 application: application.to_string(),
                 device: device.to_string(),
                 credential,
+                r#as,
             })
             .await
     }
@@ -139,7 +146,7 @@ impl DeviceAuthenticator {
         certs: Vec<Vec<u8>>,
     ) -> AuthResult<AuthenticationResponse> {
         let (app_id, device_id) = Self::ids_from_cert(&certs)?;
-        self.authenticate(app_id, device_id, Credential::Certificate(certs))
+        self.authenticate(app_id, device_id, Credential::Certificate(certs), None)
             .await
     }
 
@@ -172,7 +179,7 @@ impl DeviceAuthenticator {
         ) {
             // Username/password <device>@<tenant> / <password>, Client ID: ???
             (Some(Username::Scoped { scope, device }), Some(password), _, None) => {
-                self.authenticate(&scope, &device, Credential::Password(password.into()))
+                self.authenticate(&scope, &device, Credential::Password(password.into()), None)
                     .await
             }
             // Username/password <username> / <password>, Client ID: <device>@<tenant>
@@ -189,6 +196,7 @@ impl DeviceAuthenticator {
                         username,
                         password: password.into(),
                     },
+                    None,
                 )
                 .await
             }
@@ -213,6 +221,7 @@ impl DeviceAuthenticator {
         device: Option<D>,
         auth: Option<&HeaderValue>,
         certs: Option<Vec<Vec<u8>>>,
+        r#as: Option<String>,
     ) -> AuthResult<AuthenticationResponse>
     where
         T: AsRef<str>,
@@ -229,7 +238,7 @@ impl DeviceAuthenticator {
                 }),
                 None,
             ) => {
-                self.authenticate(&scope, &device, Credential::Password(password))
+                self.authenticate(&scope, &device, Credential::Password(password), r#as)
                     .await
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
@@ -238,6 +247,7 @@ impl DeviceAuthenticator {
                     scope.as_ref(),
                     username.into_string(),
                     Credential::Password(password),
+                    r#as,
                 )
                 .await
             }
@@ -250,6 +260,7 @@ impl DeviceAuthenticator {
                         username: username.into_string(),
                         password,
                     },
+                    r#as,
                 )
                 .await
             }
@@ -271,6 +282,7 @@ impl DeviceAuthenticator {
                     &scope,
                     device.as_ref(),
                     Credential::UsernamePassword { username, password },
+                    r#as,
                 )
                 .await
             }

@@ -26,6 +26,7 @@ pub async fn publish(
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
             cert.map(|c| c.0),
+            None,
         )
         .await
         .map_err(|err| HttpEndpointError(err.into()))?

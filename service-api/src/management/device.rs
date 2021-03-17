@@ -70,3 +70,20 @@ pub enum Credential {
     #[serde(rename = "cert")]
     Certificate(String),
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceSpecGatewaySelector {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub match_names: Vec<String>,
+}
+
+impl Dialect for DeviceSpecGatewaySelector {
+    fn key() -> &'static str {
+        "gatewaySelector"
+    }
+    fn section() -> Section {
+        Section::Spec
+    }
+}

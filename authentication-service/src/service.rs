@@ -12,7 +12,7 @@ use drogue_cloud_service_api::{
     auth::{self, AuthenticationRequest, Outcome},
     management::{
         self, Application, ApplicationStatusTrustAnchorEntry, ApplicationStatusTrustAnchors,
-        Device, DeviceSpecCore, DeviceSpecCredentials,
+        Device, DeviceSpecCore, DeviceSpecCredentials, DeviceSpecGatewaySelector,
     },
     Dialect, Translator,
 };
@@ -61,6 +61,16 @@ impl PostgresAuthenticationService {
     }
 }
 
+macro_rules! pass {
+    ($application:expr, $device:expr) => {{
+        log::info!("app {:?}", $application);
+        Outcome::Pass {
+            application: $application,
+            device: strip_credentials($device),
+        }
+    }};
+}
+
 #[async_trait]
 impl AuthenticationService for PostgresAuthenticationService {
     type Error = ServiceError;
@@ -68,7 +78,7 @@ impl AuthenticationService for PostgresAuthenticationService {
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error> {
         let c = self.pool.get().await?;
 
-        // lookup the tenant
+        // lookup the application
 
         let application = PostgresApplicationAccessor::new(&c);
         let application = match application.lookup(&request.application).await? {
@@ -80,7 +90,7 @@ impl AuthenticationService for PostgresAuthenticationService {
 
         log::debug!("Found application: {:?}", application);
 
-        // validate tenant
+        // validate application
 
         if !validate_app(&application) {
             return Ok(Outcome::Fail);
@@ -88,8 +98,8 @@ impl AuthenticationService for PostgresAuthenticationService {
 
         // lookup the device
 
-        let device = PostgresDeviceAccessor::new(&c);
-        let device = match device
+        let accessor = PostgresDeviceAccessor::new(&c);
+        let device = match accessor
             .lookup(&application.metadata.name, &request.device)
             .await?
         {
@@ -105,10 +115,51 @@ impl AuthenticationService for PostgresAuthenticationService {
 
         Ok(
             match validate_credential(&application, &device, request.credential) {
-                true => Outcome::Pass {
-                    application,
-                    device: strip_credentials(device),
-                },
+                true => {
+                    // check gateway
+                    match request.r#as {
+                        Some(as_id) => {
+                            if (as_id != request.device) {
+                                match accessor.lookup(&application.metadata.name, &as_id).await? {
+                                    Some(as_device) => {
+                                        let as_manage: management::Device = as_device.into();
+                                        match as_manage.section::<DeviceSpecGatewaySelector>() {
+                                            Some(Ok(gateway_selector)) => {
+                                                if (gateway_selector
+                                                    .match_names
+                                                    .contains(&request.device))
+                                                {
+                                                    log::debug!(
+                                                        "Device {:?} allowed to publish as {:?}",
+                                                        &request.device,
+                                                        as_id
+                                                    );
+                                                    pass!(application, device)
+                                                } else {
+                                                    log::debug!("Device {:?} not allowed to publish as {:?}, gateway not listed", &request.device, as_id);
+                                                    Outcome::Fail
+                                                }
+                                            }
+                                            _ => {
+                                                log::debug!("Device {:?} not allowed to publish as {:?}, no gateways configured", &request.device, as_id);
+                                                Outcome::Fail
+                                            }
+                                        }
+                                    }
+                                    None => {
+                                        log::debug!("Device {:?} not allowed to publish as {:?}, device does not exist", &request.device, as_id);
+                                        Outcome::Fail
+                                    }
+                                }
+                            } else {
+                                pass!(application, device)
+                            }
+                        }
+                        None => {
+                            pass!(application, device)
+                        }
+                    }
+                }
                 false => Outcome::Fail,
             },
         )

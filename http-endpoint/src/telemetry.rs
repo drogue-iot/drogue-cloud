@@ -101,6 +101,7 @@ pub async fn publish(
             opts.common.device,
             req.headers().get(http::header::AUTHORIZATION),
             certs.map(|c| c.0),
+            opts.r#as.clone(),
         )
         .await
         .map_err(|err| HttpEndpointError(err.into()))?
@@ -114,7 +115,6 @@ pub async fn publish(
     };
 
     // If we have an "as" parameter, we publish as another device.
-    // FIXME: we need to validate the device as well
     let device_id = match opts.r#as {
         // use the "as" information as device id
         Some(device_id) => device_id,
