@@ -25,6 +25,10 @@ pub struct Application {
     pub deletion_timestamp: Option<DateTime<Utc>>,
     pub finalizers: Vec<String>,
 
+    /// ownership information
+    pub owner: Option<String>,
+
+    /// arbitrary payload
     pub data: Value,
 }
 
@@ -118,6 +122,8 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
             deletion_timestamp: row.try_get("DELETION_TIMESTAMP")?,
             finalizers: super::row_to_vec(&row, "FINALIZERS")?,
 
+            owner: row.try_get("OWNER")?,
+
             data: row.try_get::<_, Json<_>>("DATA")?.0,
         })
     }
@@ -163,6 +169,7 @@ SELECT
     A2.ANNOTATIONS,
     A2.DELETION_TIMESTAMP,
     A2.FINALIZERS,
+    A2.OWNER,
     A2.DATA
 FROM
         APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
@@ -205,6 +212,7 @@ SELECT
     RESOURCE_VERSION,
     DELETION_TIMESTAMP,
     FINALIZERS,
+    OWNER,
     DATA
 FROM APPLICATIONS
     WHERE NAME = $1
@@ -248,6 +256,7 @@ INSERT INTO APPLICATIONS (
     GENERATION,
     RESOURCE_VERSION,
     FINALIZERS,
+    OWNER,
     DATA
 ) VALUES (
     $1,
@@ -258,7 +267,8 @@ INSERT INTO APPLICATIONS (
     $6,
     $7,
     $8,
-    $9
+    $9,
+    $10
 )"#,
                 &[
                     &name,
@@ -269,6 +279,7 @@ INSERT INTO APPLICATIONS (
                     &(application.generation as i64),
                     &Uuid::new_v4(),
                     &application.finalizers,
+                    &application.owner,
                     &Json(data),
                 ],
             )

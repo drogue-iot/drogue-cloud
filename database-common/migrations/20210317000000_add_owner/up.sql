@@ -1,0 +1,4 @@
+
+ALTER TABLE applications
+    ADD COLUMN OWNER VARCHAR(256)
+;

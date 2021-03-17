@@ -5,9 +5,10 @@ use http::header;
 use serde_json::json;
 
 #[get("/cli/login")]
-pub async fn login(req: HttpRequest) -> impl Responder {
-    let login_handler: Option<&web::Data<OpenIdClient>> = req.app_data();
-
+pub async fn login(
+    login_handler: Option<web::Data<OpenIdClient>>,
+    req: HttpRequest,
+) -> impl Responder {
     if let Some(client) = login_handler {
         let basic = match req
             .headers()

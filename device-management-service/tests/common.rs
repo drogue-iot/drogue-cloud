@@ -1,3 +1,5 @@
+use actix_http::{HttpMessage, Request};
+use actix_web::dev::{Service, ServiceResponse};
 use chrono::Duration;
 use drogue_cloud_database_common::{
     error::ServiceError,
@@ -5,6 +7,7 @@ use drogue_cloud_database_common::{
     Client,
 };
 use drogue_cloud_registry_events::Event;
+use drogue_cloud_service_common::auth::UserInformation;
 use futures::TryStreamExt;
 use log::LevelFilter;
 
@@ -17,7 +20,7 @@ pub fn init() {
 
 #[macro_export]
 macro_rules! test {
-    (($app:ident, $sender:ident, $outbox:ident) => $code:tt) => {{
+    (($app:ident, $sender:ident, $outbox:ident) => $($code:tt)*) => {{
         init();
 
         let cli = client();
@@ -44,10 +47,23 @@ macro_rules! test {
         let $outbox = outbox;
 
         let $app =
-            actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024, auth))
+            actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024, auth)
+                .wrap_fn(|req, srv|{
+                    log::warn!("Running test-user middleware");
+                    use actix_web::dev::Service;
+                    use actix_web::HttpMessage;
+                    {
+                        let user : Option<&drogue_cloud_service_common::auth::UserInformation> = req.app_data();
+                        if let Some(user) = user {
+                            log::warn!("Replacing user with test-user: {:?}", user);
+                            req.extensions_mut().insert(user.clone());
+                        }
+                    }
+                    srv.call(req)
+                }))
                 .await;
 
-        $code;
+        $($code)*;
 
         Ok(())
     }};
@@ -114,6 +130,36 @@ where
     }
 
     Ok(result)
+}
+
+pub fn user(id: &str) -> UserInformation {
+    use serde_json::json;
+
+    let claims = serde_json::from_value(json!({
+        "sub": id,
+        "iss": "drogue:iot:test",
+        "aud": "drogue",
+        "exp": 0,
+        "iat": 0,
+    }))
+    .unwrap();
+
+    UserInformation::Authenticated(claims)
+}
+
+pub async fn call_http<S, B, E>(
+    app: &S,
+    user: UserInformation,
+    req: actix_web::test::TestRequest,
+) -> S::Response
+where
+    S: Service<Request, Response = ServiceResponse<B>, Error = E>,
+    E: std::fmt::Debug,
+{
+    let req = req.to_request();
+    req.extensions_mut().insert(user);
+
+    actix_web::test::call_service(app, req).await
 }
 
 #[cfg(test)]

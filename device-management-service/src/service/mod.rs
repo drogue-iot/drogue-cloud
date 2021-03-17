@@ -1,8 +1,10 @@
+mod authn;
 mod error;
 mod utils;
 mod x509;
 
 use crate::endpoints::params::DeleteParams;
+use crate::service::authn::{ensure, ensure_with};
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use actix_web::ResponseError;
 use async_trait::async_trait;
@@ -28,6 +30,7 @@ use drogue_cloud_service_api::{
     },
     Translator,
 };
+use drogue_cloud_service_common::auth::Identity;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
@@ -38,16 +41,47 @@ use uuid::Uuid;
 pub trait ManagementService: HealthCheckedService + Clone {
     type Error: ResponseError;
 
-    async fn create_app(&self, data: Application) -> Result<(), Self::Error>;
-    async fn get_app(&self, name: &str) -> Result<Option<Application>, Self::Error>;
-    async fn update_app(&self, data: Application) -> Result<(), Self::Error>;
-    async fn delete_app(&self, name: &str, params: DeleteParams) -> Result<(), Self::Error>;
+    async fn create_app(
+        &self,
+        identity: &dyn Identity,
+        data: Application,
+    ) -> Result<(), Self::Error>;
+    async fn get_app(
+        &self,
+        identity: &dyn Identity,
+        name: &str,
+    ) -> Result<Option<Application>, Self::Error>;
+    async fn update_app(
+        &self,
+        identity: &dyn Identity,
+        data: Application,
+    ) -> Result<(), Self::Error>;
+    async fn delete_app(
+        &self,
+        identity: &dyn Identity,
+        name: &str,
+        params: DeleteParams,
+    ) -> Result<(), Self::Error>;
 
-    async fn create_device(&self, device: Device) -> Result<(), Self::Error>;
-    async fn get_device(&self, app: &str, name: &str) -> Result<Option<Device>, Self::Error>;
-    async fn update_device(&self, device: Device) -> Result<(), Self::Error>;
+    async fn create_device(
+        &self,
+        identity: &dyn Identity,
+        device: Device,
+    ) -> Result<(), Self::Error>;
+    async fn get_device(
+        &self,
+        identity: &dyn Identity,
+        app: &str,
+        name: &str,
+    ) -> Result<Option<Device>, Self::Error>;
+    async fn update_device(
+        &self,
+        identity: &dyn Identity,
+        device: Device,
+    ) -> Result<(), Self::Error>;
     async fn delete_device(
         &self,
+        identity: &dyn Identity,
         app: &str,
         name: &str,
         params: DeleteParams,
@@ -146,6 +180,9 @@ where
             resource_version: Uuid::nil(), // will be set internally
             deletion_timestamp: None,      // will be set internally
             finalizers: app.metadata.finalizers,
+
+            owner: None, // will be set internally
+
             data: json!({
                 "spec": app.spec,
                 "status": app.status,
@@ -210,6 +247,7 @@ where
     async fn perform_update_app<S1, S2>(
         &self,
         t: &Transaction<'_>,
+        identity: Option<&dyn Identity>,
         mut app: models::app::Application,
         aliases: Option<HashSet<TypedAlias>>,
         expected_uid: S1,
@@ -226,6 +264,10 @@ where
             Some(app) => Ok(app),
             None => Err(ServiceError::NotFound),
         }?;
+
+        if let Some(identity) = identity {
+            ensure(&current, identity)?;
+        }
 
         utils::check_versions(expected_uid, expected_resource_version, &current)?;
 
@@ -308,7 +350,7 @@ where
 
         // we removed the last of the devices blocking the deletion
         app.finalizers.retain(|f| f != "has-devices");
-        self.perform_update_app(t, app, None, "", "").await?;
+        self.perform_update_app(t, None, app, None, "", "").await?;
 
         // done
 
@@ -354,7 +396,11 @@ where
 {
     type Error = PostgresManagementServiceError<S::Error>;
 
-    async fn create_app(&self, application: Application) -> Result<(), Self::Error> {
+    async fn create_app(
+        &self,
+        identity: &dyn Identity,
+        application: Application,
+    ) -> Result<(), Self::Error> {
         let (mut app, aliases) = Self::app_to_entity(application)?;
 
         let generation = app.generation;
@@ -362,6 +408,7 @@ where
         // assign a new UID
         let uid = Uuid::new_v4();
         app.uid = uid;
+        app.owner = identity.user_id().map(Into::into);
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -395,17 +442,29 @@ where
         Ok(())
     }
 
-    async fn get_app(&self, name: &str) -> Result<Option<Application>, Self::Error> {
+    async fn get_app(
+        &self,
+        identity: &dyn Identity,
+        name: &str,
+    ) -> Result<Option<Application>, Self::Error> {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)
             .get(name, Lock::None)
             .await?;
 
+        if let Some(app) = &app {
+            ensure(app, identity)?;
+        }
+
         Ok(app.map(Into::into))
     }
 
-    async fn update_app(&self, application: Application) -> Result<(), Self::Error> {
+    async fn update_app(
+        &self,
+        identity: &dyn Identity,
+        application: Application,
+    ) -> Result<(), Self::Error> {
         let expected_uid = application.metadata.uid.clone();
         let expected_resource_version = application.metadata.resource_version.clone();
 
@@ -417,6 +476,7 @@ where
         let events = self
             .perform_update_app(
                 &t,
+                Some(identity),
                 app,
                 Some(aliases),
                 expected_uid,
@@ -435,7 +495,12 @@ where
         Ok(())
     }
 
-    async fn delete_app(&self, id: &str, params: DeleteParams) -> Result<(), Self::Error> {
+    async fn delete_app(
+        &self,
+        identity: &dyn Identity,
+        id: &str,
+        params: DeleteParams,
+    ) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
 
@@ -450,6 +515,9 @@ where
         if current.deletion_timestamp.is_some() {
             return Err(ServiceError::NotFound.into());
         }
+
+        //
+        ensure(&current, identity)?;
 
         utils::check_preconditions(&params.preconditions, &current)?;
         // there is no need to use the provided constraints, we as locked the entry "for update"
@@ -511,7 +579,11 @@ where
         Ok(())
     }
 
-    async fn create_device(&self, device: Device) -> Result<(), Self::Error> {
+    async fn create_device(
+        &self,
+        identity: &dyn Identity,
+        device: Device,
+    ) -> Result<(), Self::Error> {
         let (mut device, aliases) = Self::device_to_entity(device)?;
 
         let generation = device.generation;
@@ -527,10 +599,13 @@ where
 
         // if there is no entry, or it is marked for deletion, we don't allow adding a new device
 
-        match app {
-            Some(app) if app.deletion_timestamp.is_none() => {}
+        let app = match app {
+            Some(app) if app.deletion_timestamp.is_none() => app,
             _ => return Err(ServiceError::ReferenceNotFound.into()),
-        }
+        };
+
+        // ensure we have access to the application, but don't confirm the device if we don't
+        ensure_with(&app, identity, || ServiceError::ReferenceNotFound)?;
 
         let name = device.name.clone();
         // assign a new UID
@@ -580,10 +655,19 @@ where
 
     async fn get_device(
         &self,
+        identity: &dyn Identity,
         app_id: &str,
         device_id: &str,
     ) -> Result<Option<Device>, Self::Error> {
         let c = self.pool.get().await?;
+
+        let app = PostgresApplicationAccessor::new(&c)
+            .get(app_id, Lock::None)
+            .await?
+            .ok_or(ServiceError::NotFound)?;
+
+        // ensure we have access, but don't confirm the device if we don't
+        ensure_with(&app, identity, || ServiceError::NotFound)?;
 
         let device = PostgresDeviceAccessor::new(&c)
             .get(app_id, device_id, Lock::None)
@@ -592,7 +676,11 @@ where
         Ok(device.map(Into::into))
     }
 
-    async fn update_device(&self, device: Device) -> Result<(), Self::Error> {
+    async fn update_device(
+        &self,
+        identity: &dyn Identity,
+        device: Device,
+    ) -> Result<(), Self::Error> {
         let expected_resource_version = device.metadata.resource_version.clone();
         let expected_uid = device.metadata.uid.clone();
 
@@ -603,6 +691,16 @@ where
 
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
+
+        let accessor = PostgresApplicationAccessor::new(&t);
+
+        let current = match accessor.get(&application, Lock::None).await? {
+            Some(device) => Ok(device),
+            None => Err(ServiceError::NotFound),
+        }?;
+
+        // ensure we have access, but don't confirm the device if we don't
+        ensure_with(&current, identity, || ServiceError::NotFound)?;
 
         let accessor = PostgresDeviceAccessor::new(&t);
 
@@ -678,6 +776,7 @@ where
 
     async fn delete_device(
         &self,
+        identity: &dyn Identity,
         application: &str,
         device: &str,
         params: DeleteParams,
@@ -697,6 +796,19 @@ where
             return Err(ServiceError::NotFound.into());
         }
 
+        // check if the user has access to the device, we can do this after some initial checks
+        // that would return "not found" anyway.
+        // Instead of "no access" we return "not found" here, as we don't want users that don't
+        // have access to application to probe for devices.
+        let app = PostgresApplicationAccessor::new(&t)
+            .get(application, Lock::None)
+            .await?
+            .ok_or(ServiceError::NotFound)?;
+
+        // ensure we have access, but don't confirm the device if we don't
+        ensure_with(&app, identity, || ServiceError::NotFound)?;
+
+        // check the preconditions
         utils::check_preconditions(&params.preconditions, &current)?;
         // there is no need to use the provided constraints, we as locked the entry "for update"
 
