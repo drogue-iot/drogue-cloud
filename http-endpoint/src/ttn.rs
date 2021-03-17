@@ -20,13 +20,22 @@ pub async fn publish(
     body: web::Bytes,
     cert: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
+    let uplink: ttn::Uplink = serde_json::from_slice(&body).map_err(|err| {
+        log::info!("Failed to decode payload: {}", err);
+        EndpointError::InvalidFormat {
+            source: Box::new(err),
+        }
+    })?;
+
+    let device_id = uplink.clone().dev_id;
+
     let (application, device) = match auth
         .authenticate_http(
             opts.application,
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
             cert.map(|c| c.0),
-            None,
+            Some(device_id.clone()),
         )
         .await
         .map_err(|err| HttpEndpointError(err.into()))?
@@ -38,13 +47,6 @@ pub async fn publish(
             device,
         } => (application, device),
     };
-
-    let uplink: ttn::Uplink = serde_json::from_slice(&body).map_err(|err| {
-        log::info!("Failed to decode payload: {}", err);
-        EndpointError::InvalidFormat {
-            source: Box::new(err),
-        }
-    })?;
 
     log::info!(
         "Application / Device properties: {:?} / {:?}",
@@ -59,8 +61,6 @@ pub async fn publish(
     extensions.insert("lorawanport".into(), uplink.port.to_string());
     extensions.insert("loraretry".into(), uplink.is_retry.to_string());
     extensions.insert("hwaddr".into(), uplink.hardware_serial);
-
-    let device_id = uplink.dev_id;
 
     log::info!("Device ID: {}, Data Schema: {:?}", device_id, data_schema);
 
@@ -81,8 +81,6 @@ pub async fn publish(
             (body, None)
         }
     };
-
-    // FIXME: need to authorize device
 
     sender
         .publish_http_default(
