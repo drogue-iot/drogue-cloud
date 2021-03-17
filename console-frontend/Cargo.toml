@@ -18,7 +18,11 @@ yew = "0.17"
 yew-router = "0.14"
 patternfly-yew = "0.0.17"
 
-wasm-bindgen = "0.2"
+# For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
+# Updating this dependency requires:
+#  * Update the dependency version here
+#  * Create a new builder image, with the same version of wasm-bindgen pre-installed
+wasm-bindgen = "=0.2.69"
 
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["EventSource", "EventSourceInit", "Window", "Location"] }
