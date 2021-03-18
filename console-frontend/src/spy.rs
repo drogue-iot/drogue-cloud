@@ -8,7 +8,7 @@ use itertools::Itertools;
 use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::{closure::Closure, JsValue};
-use web_sys::{EventSource, EventSourceInit, HtmlInputElement};
+use web_sys::{EventSource, EventSourceInit};
 use yew::prelude::*;
 
 pub struct Spy {
@@ -16,7 +16,7 @@ pub struct Spy {
     source: Option<EventSource>,
     events: SharedTableModel<Entry>,
 
-    app_id_ref: NodeRef,
+    application: String,
 
     running: bool,
     total_received: usize,
@@ -30,6 +30,7 @@ pub enum Msg {
     Error(String),
     /// Source failed
     Failed,
+    SetApplication(String),
 }
 
 const DEFAULT_MAX_SIZE: usize = 200;
@@ -87,8 +88,8 @@ impl Component for Spy {
             link,
             source: None,
             running: false,
-            app_id_ref: NodeRef::default(),
             total_received: 0,
+            application: String::new(),
         }
     }
 
@@ -116,6 +117,9 @@ impl Component for Spy {
                 error("Source error", "Failed to connect to the event source");
                 self.running = false;
             }
+            Msg::SetApplication(application) => {
+                self.application = application;
+            }
         }
         true
     }
@@ -125,6 +129,13 @@ impl Component for Spy {
     }
 
     fn view(&self) -> Html {
+        let can_start = !self.running && self.app_id_filter().is_some();
+
+        let v = |value: &str| match value {
+            "" => InputState::Error,
+            _ => InputState::Default,
+        };
+
         return html! {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
@@ -138,20 +149,24 @@ impl Component for Spy {
                         <ToolbarGroup>
                             <ToolbarItem>
                                 <TextInput
-                                    ref=self.app_id_ref.clone()
                                     disabled=self.running
+                                    onchange=self.link.callback(|app|Msg::SetApplication(app))
+                                    validator=Validator::from(v)
                                     placeholder="Application ID to spy on"/>
                             </ToolbarItem>
                             <ToolbarItem>
                                 <Button
-                                    disabled=self.running
+                                    disabled=!can_start
                                     label="Start" icon=Icon::Play variant=Variant::Primary
                                     onclick=self.link.callback(|_|Msg::StartPressed)
                                     />
                             </ToolbarItem>
                         </ToolbarGroup>
                         <ToolbarItem modifiers=vec![ToolbarElementModifier::Right.all()]>
-                            <strong>{"events received: "}{self.total_received}</strong>
+                            { if self.running { html!{
+                                <strong>{"events received: "}{self.total_received}</strong>
+                            } } else { html!{} } }
+
                         </ToolbarItem>
                     </Toolbar>
 
@@ -187,17 +202,10 @@ impl Component for Spy {
 
 impl Spy {
     fn app_id_filter(&self) -> Option<String> {
-        let input = self.app_id_ref.cast::<HtmlInputElement>();
-        log::info!("Input: {:?}", input);
-        if let Some(input) = input {
-            let value = input.value();
-            log::info!("Input value: '{}'", value);
-            match value.is_empty() {
-                true => None,
-                false => Some(value),
-            }
-        } else {
-            None
+        let value = self.application.clone();
+        match value.is_empty() {
+            true => None,
+            false => Some(value),
         }
     }
 

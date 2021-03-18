@@ -1,4 +1,5 @@
 use crate::{
+    auth::Resource,
     default_resource, diffable,
     error::ServiceError,
     generation,
@@ -35,6 +36,12 @@ pub struct Application {
 diffable!(Application);
 generation!(Application => generation);
 default_resource!(Application);
+
+impl Resource for Application {
+    fn owner(&self) -> Option<&str> {
+        self.owner.as_deref()
+    }
+}
 
 /// Extract a section from the application data. Prevents cloning the whole struct.
 fn extract_sect(mut app: Application, key: &str) -> (Application, Option<Map<String, Value>>) {

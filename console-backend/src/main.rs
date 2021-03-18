@@ -12,13 +12,15 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use drogue_cloud_service_common::{
+    client::{UserAuthClient, UserAuthClientConfig},
+    config::ConfigFromEnv,
+    defaults,
     endpoints::{create_endpoint_source, EndpointSourceType},
     openid::{create_client, Authenticator, AuthenticatorConfig},
     openid_auth,
 };
-use envconfig::Envconfig;
-use openid::biscuit::jwk::JWKSet;
-use openid::Configurable;
+use openid::{biscuit::jwk::JWKSet, Configurable};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[get("/")]
@@ -31,24 +33,19 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[derive(Clone, Debug, Envconfig)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
+    #[serde(default = "defaults::health_bind_addr")]
     pub health_bind_addr: String,
-    #[envconfig(from = "ENABLE_AUTH", default = "true")]
+    #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[envconfig(
-        from = "KAFKA_BOOTSTRAP_SERVERS",
-        default = "kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092"
-    )]
+    #[serde(default = "defaults::kafka_bootstrap_servers")]
     pub kafka_boostrap_servers: String,
-    #[envconfig(
-        from = "KAFKA_TOPIC",
-        default = "knative-messaging-kafka.drogue-iot.iot-channel"
-    )]
     pub kafka_topic: String,
+
+    pub user_auth: UserAuthClientConfig,
 }
 
 /// Manually clone the client
@@ -81,7 +78,7 @@ fn clone_client(client: &openid::Client) -> openid::Client {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let config = Config::init_from_env()?;
+    let config = Config::from_env()?;
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;
@@ -96,8 +93,10 @@ async fn main() -> anyhow::Result<()> {
 
     let enable_auth = config.enable_auth;
 
+    log::info!("Authentication enabled: {}", enable_auth);
+
     let openid_client = if enable_auth {
-        let config = AuthenticatorConfig::init_from_env()?;
+        let config = AuthenticatorConfig::from_env()?;
         Some(OpenIdClient {
             client: create_client(&config, endpoints.clone()).await?,
             scopes: config.scopes,
@@ -110,6 +109,15 @@ async fn main() -> anyhow::Result<()> {
         let client = clone_client(&client.client);
         web::Data::new(Authenticator::from_client(client))
     });
+
+    let user_auth = openid_client
+        .as_ref()
+        .map(|client| {
+            let client = clone_client(&client.client);
+            UserAuthClient::from_openid_client(&config.user_auth, client)
+        })
+        .transpose()?
+        .map(web::Data::new);
 
     let openid_client = openid_client.map(web::Data::new);
 
@@ -134,6 +142,12 @@ async fn main() -> anyhow::Result<()> {
 
         let app = if let Some(openid_client) = &openid_client {
             app.app_data(openid_client.clone())
+        } else {
+            app
+        };
+
+        let app = if let Some(user_auth) = &user_auth {
+            app.app_data(user_auth.clone())
         } else {
             app
         };

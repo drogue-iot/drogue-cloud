@@ -1,19 +1,12 @@
-use drogue_cloud_database_common::{error::ServiceError, models::app::Application};
+//! Common authn/authz logic
+
+use crate::error::ServiceError;
+use drogue_cloud_service_api::auth::authz::Outcome;
 use drogue_cloud_service_common::auth::Identity;
 
+/// A resource that can be checked.
 pub trait Resource {
     fn owner(&self) -> Option<&str>;
-}
-
-impl Resource for Application {
-    fn owner(&self) -> Option<&str> {
-        self.owner.as_ref().map(|s| s.as_str())
-    }
-}
-
-pub enum Outcome {
-    Allow,
-    Deny,
 }
 
 /// Authorize an operation.

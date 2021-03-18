@@ -9,7 +9,7 @@ use drogue_cloud_database_common::{
 };
 use drogue_cloud_service_api::health::HealthCheckedService;
 use drogue_cloud_service_api::{
-    auth::{self, AuthenticationRequest, Outcome},
+    auth::authn::{self, AuthenticationRequest, Outcome},
     management::{
         self, Application, ApplicationStatusTrustAnchorEntry, ApplicationStatusTrustAnchors,
         Device, DeviceSpecCore, DeviceSpecCredentials, DeviceSpecGatewaySelector,
@@ -194,7 +194,7 @@ fn validate_app(app: &management::Application) -> bool {
     true
 }
 
-fn validate_credential(app: &Application, device: &Device, cred: auth::Credential) -> bool {
+fn validate_credential(app: &Application, device: &Device, cred: authn::Credential) -> bool {
     let credentials = match device.section::<DeviceSpecCredentials>() {
         Some(Ok(credentials)) => credentials.credentials,
         _ => {
@@ -206,17 +206,17 @@ fn validate_credential(app: &Application, device: &Device, cred: auth::Credentia
     log::debug!("Checking credentials: {:?}", cred);
 
     match cred {
-        auth::Credential::Password(provided_password) => {
+        authn::Credential::Password(provided_password) => {
             validate_password(device, &credentials, &provided_password)
         }
-        auth::Credential::UsernamePassword {
+        authn::Credential::UsernamePassword {
             username: provided_username,
             password: provided_password,
             ..
         } => {
             validate_username_password(device, &credentials, &provided_username, &provided_password)
         }
-        auth::Credential::Certificate(chain) => {
+        authn::Credential::Certificate(chain) => {
             let now = Utc::now();
             validate_certificate(app, device, &credentials, chain, &now)
         }

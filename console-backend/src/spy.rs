@@ -10,8 +10,10 @@ use actix_web::{
 };
 use cloudevents::{event::ExtensionValue, Event};
 use cloudevents_sdk_rdkafka::MessageExt;
-use drogue_cloud_service_api::EXT_APPLICATION;
-use drogue_cloud_service_common::{error::ServiceError, openid::Authenticator};
+use drogue_cloud_service_api::{auth::authz::AuthorizationRequest, EXT_APPLICATION};
+use drogue_cloud_service_common::{
+    client::UserAuthClient, error::ServiceError, openid::Authenticator,
+};
 use futures::{
     stream::select,
     task::{Context, Poll},
@@ -34,7 +36,7 @@ use uuid::Uuid;
 pub struct SpyConfig {
     bootstrap_servers: String,
     topic: String,
-    app_id: Option<String>,
+    app: String,
 }
 
 pub struct MessageSpy {
@@ -42,7 +44,7 @@ pub struct MessageSpy {
         Box<StreamConsumer>,
         Box<rdkafka::consumer::MessageStream<'static, DefaultConsumerContext>>,
     >,
-    app_id: Option<String>,
+    app: String,
 }
 
 impl MessageSpy {
@@ -52,7 +54,7 @@ impl MessageSpy {
 
     /// Create a new message spy without using group management
     ///
-    /// This is currently blocked by:https://github.com/edenhill/librdkafka/issues/3261
+    /// This is currently blocked by: https://github.com/edenhill/librdkafka/issues/3261
     #[allow(dead_code)]
     fn new_without_group(cfg: SpyConfig) -> Result<Self, ServiceError> {
         let consumer: StreamConsumer<DefaultConsumerContext> = ClientConfig::new()
@@ -103,7 +105,7 @@ impl MessageSpy {
 
         log::info!("Subscribed");
 
-        Self::wrap(cfg.app_id, consumer)
+        Self::wrap(cfg.app, consumer)
     }
 
     fn new_with_group(cfg: SpyConfig) -> Result<Self, ServiceError> {
@@ -132,15 +134,15 @@ impl MessageSpy {
 
         log::info!("Subscribed");
 
-        Self::wrap(cfg.app_id, consumer)
+        Self::wrap(cfg.app, consumer)
     }
 
-    fn wrap(app_id: Option<String>, consumer: StreamConsumer) -> Result<Self, ServiceError> {
+    fn wrap(app: String, consumer: StreamConsumer) -> Result<Self, ServiceError> {
         Ok(MessageSpy {
             upstream: OwningHandle::new_with_fn(Box::new(consumer), |c| {
                 Box::new(unsafe { &*c }.stream())
             }),
-            app_id,
+            app,
         })
     }
 
@@ -154,9 +156,8 @@ impl MessageSpy {
 
     /// Test if the message/event matches an optional filter.
     fn matches(&self, event: &Event) -> bool {
-        match (&self.app_id, event.extension(EXT_APPLICATION)) {
-            (None, _) => true,
-            (Some(app_id_1), Some(ExtensionValue::String(app_id_2))) => app_id_1 == app_id_2,
+        match event.extension(EXT_APPLICATION) {
+            Some(ExtensionValue::String(other_app)) => &self.app == other_app,
             _ => false,
         }
     }
@@ -234,7 +235,7 @@ impl Stream for MessageSpy {
 #[derive(Deserialize, Debug, Clone)]
 pub struct SpyQuery {
     token: String,
-    app: Option<String>,
+    app: String,
 }
 
 #[get("/spy")]
@@ -242,16 +243,35 @@ pub async fn stream_events(
     authenticator: web::Data<Authenticator>,
     query: web::Query<SpyQuery>,
     config: web::Data<Config>,
+    user_auth: Option<web::Data<UserAuthClient>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    authenticator
+    let user = authenticator
         .validate_token(query.token.clone())
         .await
         .map_err(|_| ServiceError::AuthenticationError)?;
 
+    if let Some(user_auth) = user_auth {
+        user_auth
+            .authorize(AuthorizationRequest {
+                application: query.app.clone(),
+                user_id: user
+                    .payload()
+                    .map_err(|_| ServiceError::TokenError)?
+                    .sub
+                    .clone(),
+            })
+            .await
+            .map_err(|err| ServiceError::InternalError {
+                message: format!("Authorization failed: {}", err),
+            })?
+            .outcome
+            .ensure(|| ServiceError::AuthenticationError)?
+    }
+
     let cfg = SpyConfig {
         bootstrap_servers: config.kafka_boostrap_servers.clone(),
         topic: config.kafka_topic.clone(),
-        app_id: query.app.as_ref().cloned(),
+        app: query.app.clone(),
     };
 
     log::debug!("Config: {:?}", cfg);

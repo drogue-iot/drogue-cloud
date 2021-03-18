@@ -2,14 +2,14 @@ use serde::Deserialize;
 
 use crate::command::wait_for_command;
 use actix_web::{http::header, post, web, HttpResponse};
-use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
+    commands::Commands,
     downstream::{self, DownstreamSender, Outcome, PublishResponse},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth::{self, ErrorInformation};
+use drogue_cloud_service_api::auth::{authn, ErrorInformation};
 use drogue_cloud_service_common::Id;
 
 #[derive(Deserialize)]
@@ -107,8 +107,8 @@ pub async fn publish(
         .map_err(|err| HttpEndpointError(err.into()))?
         .outcome
     {
-        auth::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
-        auth::Outcome::Pass {
+        authn::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
+        authn::Outcome::Pass {
             application,
             device,
         } => (application, device),

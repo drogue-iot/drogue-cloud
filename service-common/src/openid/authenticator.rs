@@ -1,26 +1,23 @@
-use crate::endpoints::eval_endpoints;
+use crate::config::ConfigFromEnv;
+use crate::{defaults, endpoints::eval_endpoints};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use drogue_cloud_service_api::endpoints::Endpoints;
-use envconfig::Envconfig;
 use failure::Fail;
-use openid::biscuit::jws::Compact;
-use openid::{Client, Empty, Jws, StandardClaims};
+use openid::{biscuit::jws::Compact, Client, Empty, Jws, StandardClaims};
 use reqwest::Certificate;
+use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::Path};
 use thiserror::Error;
 use url::Url;
 
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
 
-#[derive(Debug, Envconfig)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthenticatorConfig {
-    #[envconfig(from = "CLIENT_ID")]
     pub client_id: String,
-    #[envconfig(from = "CLIENT_SECRET")]
     pub client_secret: String,
-    // Note: "roles" may be required for the "aud" claim when using Keycloak
-    #[envconfig(from = "SCOPES", default = "openid profile email")]
+    #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
 }
 
@@ -58,7 +55,7 @@ impl Authenticator {
     }
 
     pub async fn from_endpoints(endpoints: Endpoints) -> anyhow::Result<Self> {
-        let config = AuthenticatorConfig::init_from_env()?;
+        let config = AuthenticatorConfig::from_env()?;
         Self::from_config(&config, endpoints).await
     }
 

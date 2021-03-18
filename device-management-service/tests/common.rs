@@ -132,6 +132,7 @@ where
     Ok(result)
 }
 
+#[allow(dead_code)]
 pub fn user(id: &str) -> UserInformation {
     use serde_json::json;
 
@@ -147,6 +148,7 @@ pub fn user(id: &str) -> UserInformation {
     UserInformation::Authenticated(claims)
 }
 
+#[allow(dead_code)]
 pub async fn call_http<S, B, E>(
     app: &S,
     user: UserInformation,

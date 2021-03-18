@@ -6,7 +6,7 @@ use drogue_cloud_endpoint_common::{
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::{auth, management::Device};
+use drogue_cloud_service_api::{auth::authn, management::Device};
 use drogue_ttn::http as ttn;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -32,8 +32,8 @@ pub async fn publish(
         .map_err(|err| HttpEndpointError(err.into()))?
         .outcome
     {
-        auth::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
-        auth::Outcome::Pass {
+        authn::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
+        authn::Outcome::Pass {
             application,
             device,
         } => (application, device),
