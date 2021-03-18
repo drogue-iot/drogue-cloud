@@ -6,3 +6,4 @@ bases:
   - auth
   - registry
   - outbox
+  - user-auth

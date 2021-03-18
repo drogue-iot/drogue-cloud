@@ -1,48 +1,64 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: authentication-service
+  name: user-auth-service
   annotations:
     app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"Deployment","name":"postgres"}]'
   labels:
-    app.kubernetes.io/name: authentication-service
+    app.kubernetes.io/name: user-auth-service
     app.kubernetes.io/part-of: device-registry
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: authentication-service
+      app.kubernetes.io/name: user-auth-service
       app.kubernetes.io/part-of: device-registry
   strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: authentication-service
+        app.kubernetes.io/name: user-auth-service
         app.kubernetes.io/part-of: device-registry
     spec:
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
       containers:
         - name: service
-          image: ghcr.io/drogue-iot/authentication-service:latest
+          image: ghcr.io/drogue-iot/user-auth-service:latest
           imagePullPolicy: Always
           env:
             - name: RUST_LOG
               value: debug
             - name: BIND_ADDR
               value: 0.0.0.0:8080
-            - name: PG__HOST
+            - name: SERVICE__PG__HOST
               value: postgres
-            - name: PG__DBNAME
+            - name: SERVICE__PG__DBNAME
               valueFrom:
                 configMapKeyRef:
                   name: postgres-config
                   key: databaseName
-            - name: PG__USER
+            - name: SERVICE__PG__USER
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.username
-            - name: PG__PASSWORD
+            - name: SERVICE__PG__PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret
@@ -76,3 +92,7 @@ spec:
           resources:
             limits:
               memory: 128Mi
+      volumes:
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-drogue

@@ -1,6 +1,7 @@
 use crate::openid::OpenIdTokenProvider;
 use drogue_cloud_service_api::auth::{
-    AuthenticationClientError, AuthenticationRequest, AuthenticationResponse, ErrorInformation,
+    authn::{AuthenticationRequest, AuthenticationResponse},
+    ClientError, ErrorInformation,
 };
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use url::Url;
@@ -26,12 +27,12 @@ impl ReqwestAuthenticatorClient {
     async fn inject_token(
         &self,
         builder: RequestBuilder,
-    ) -> Result<RequestBuilder, AuthenticationClientError<reqwest::Error>> {
+    ) -> Result<RequestBuilder, ClientError<reqwest::Error>> {
         if let Some(provider) = &self.token_provider {
             let token = provider
                 .provide_token()
                 .await
-                .map_err(|err| AuthenticationClientError::Token(Box::new(err)))?;
+                .map_err(|err| ClientError::Token(Box::new(err)))?;
             Ok(builder.bearer_auth(token.access_token))
         } else {
             Ok(builder)
@@ -41,7 +42,7 @@ impl ReqwestAuthenticatorClient {
     pub async fn authenticate(
         &self,
         request: AuthenticationRequest,
-    ) -> Result<AuthenticationResponse, AuthenticationClientError<reqwest::Error>> {
+    ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
         let req = self.client.post(self.auth_service_url.clone());
         let req = self.inject_token(req).await?;
 
@@ -59,7 +60,7 @@ impl ReqwestAuthenticatorClient {
                 Err(err) => {
                     log::debug!("Authentication failed for {:?}. Result: {:?}", request, err);
 
-                    Err(AuthenticationClientError::Request(format!(
+                    Err(ClientError::Request(format!(
                         "Failed to decode service response: {}",
                         err
                     )))
@@ -68,7 +69,7 @@ impl ReqwestAuthenticatorClient {
             code => match response.json::<ErrorInformation>().await {
                 Ok(result) => {
                     log::debug!("Service reported error ({}): {}", code, result);
-                    Err(AuthenticationClientError::Service(result))
+                    Err(ClientError::Service(result))
                 }
                 Err(err) => {
                     log::debug!(
@@ -77,7 +78,7 @@ impl ReqwestAuthenticatorClient {
                         request,
                         err
                     );
-                    Err(AuthenticationClientError::Request(format!(
+                    Err(ClientError::Request(format!(
                         "Failed to decode service error response: {}",
                         err
                     )))

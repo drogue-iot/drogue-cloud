@@ -38,6 +38,7 @@ ALL_IMAGES=\
 	command-endpoint \
 	test-cert-generator \
 	outbox-controller \
+	user-auth-service \
 
 
 #

@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod error;
 pub mod models;
 pub mod utils;
@@ -7,8 +8,10 @@ use async_trait::async_trait;
 use deadpool::managed::Object;
 use deadpool_postgres::{ClientWrapper, Pool};
 use std::ops::Deref;
-use tokio_postgres::types::BorrowToSql;
-use tokio_postgres::{types::ToSql, Error, Row, RowStream, Statement, ToStatement, Transaction};
+use tokio_postgres::{
+    types::{BorrowToSql, ToSql},
+    Error, Row, RowStream, Statement, ToStatement, Transaction,
+};
 
 #[async_trait]
 pub trait Client: Sync {

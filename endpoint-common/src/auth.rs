@@ -5,11 +5,14 @@ use actix_web::{
 };
 use anyhow::Context;
 use drogue_cloud_service_api::{
-    auth::{AuthenticationClientError, AuthenticationRequest, AuthenticationResponse, Credential},
+    auth::{
+        authn::{AuthenticationRequest, AuthenticationResponse, Credential},
+        ClientError,
+    },
     management::{Application, Device},
 };
 use drogue_cloud_service_common::{
-    auth::ReqwestAuthenticatorClient,
+    client::ReqwestAuthenticatorClient,
     config::ConfigFromEnv,
     openid::{OpenIdTokenProvider, TokenConfig},
 };
@@ -37,7 +40,7 @@ pub struct DeviceAuthenticator {
     pub client: ReqwestAuthenticatorClient,
 }
 
-pub type AuthResult<T> = Result<T, AuthenticationClientError<reqwest::Error>>;
+pub type AuthResult<T> = Result<T, ClientError<reqwest::Error>>;
 
 impl DeviceAuthenticator {
     /// Create a new authentication client using the provided configuration.
@@ -300,13 +303,10 @@ impl DeviceAuthenticator {
         match certs.get(0) {
             Some(cert) => Ok(x509_parser::parse_x509_certificate(&cert)
                 .map_err(|err| {
-                    AuthenticationClientError::Request(format!(
-                        "Failed to parse client certificate: {}",
-                        err
-                    ))
+                    ClientError::Request(format!("Failed to parse client certificate: {}", err))
                 })?
                 .1),
-            None => Err(AuthenticationClientError::Request(
+            None => Err(ClientError::Request(
                 "Empty client certificate chain".into(),
             )),
         }

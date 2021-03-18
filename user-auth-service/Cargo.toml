@@ -1,0 +1,56 @@
+[package]
+name = "drogue-cloud-user-auth-service"
+version = "0.4.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2018"
+
+[lib]
+
+[dependencies]
+
+anyhow = "1"
+
+actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
+actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
+actix-web-httpauth = "=0.6.0-beta.1"
+
+tokio = { version = "1", features = ["full"] }
+
+async-trait = "0.1"
+futures = "0.3"
+futures-core = "0.3"
+futures-util = "0.3"
+
+chrono = "0.4"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+env_logger = "0.7"
+log = "0.4"
+
+native-tls = "0.2"
+sha2 = "0.9"
+rustls = { version = "0.19" }
+
+dotenv = "0.15"
+config = "0.10"
+
+thiserror = "1"
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+
+[dev-dependencies]
+actix-rt = "2.0.0-beta.2"
+actix-service = "2.0.0-beta.4"
+testcontainers = "0.12"
+serial_test = "0.5"
+drogue-cloud-test-common = { path = "../test-common" }
+pem = "0.8"

@@ -59,6 +59,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: KAFKA_TOPIC
               value: knative-messaging-kafka.$(NAMESPACE).iot-channel
+            - name: USER_AUTH__URL
+              value: http://user-auth-service.$(NAMESPACE).svc.cluster.local.
           ports:
             - containerPort: 8080
               name: endpoint

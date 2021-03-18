@@ -12,10 +12,10 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use dotenv::dotenv;
-use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command_endpoint::{CommandServer, CommandServerConfig},
+    commands::Commands,
     downstream::DownstreamSender,
 };
 use envconfig::Envconfig;

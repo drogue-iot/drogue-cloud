@@ -16,6 +16,7 @@ members = [
     "test-common",
     "registry-events",
     "outbox-controller",
+    "user-auth-service",
 ]
 
 [patch.crates-io]

@@ -1380,7 +1380,7 @@ dependencies = [
  "ring",
  "serde 1.0.124",
  "serde_json",
- "snafu",
+ "thiserror",
  "tokio-stream",
  "url",
  "uuid",
@@ -1439,6 +1439,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
  "drogue-cloud-test-common",
  "env_logger 0.8.3",
  "futures",
@@ -1735,6 +1736,46 @@ dependencies = [
  "serde_json",
  "testcontainers",
  "walkdir",
+]
+
+[[package]]
+name = "drogue-cloud-user-auth-service"
+version = "0.4.0"
+dependencies = [
+ "actix-http",
+ "actix-rt",
+ "actix-service",
+ "actix-web",
+ "actix-web-httpauth",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "config",
+ "deadpool",
+ "deadpool-postgres",
+ "dotenv",
+ "drogue-cloud-database-common",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "drogue-cloud-test-common",
+ "env_logger 0.7.1",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "log",
+ "native-tls",
+ "pem 0.8.3",
+ "rustls",
+ "serde 1.0.124",
+ "serde_json",
+ "serial_test",
+ "sha2",
+ "testcontainers",
+ "thiserror",
+ "tokio",
+ "tokio-postgres",
 ]
 
 [[package]]

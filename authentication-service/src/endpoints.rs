@@ -4,7 +4,7 @@ use crate::{
 };
 use actix_web::{get, post, web, HttpResponse};
 use drogue_cloud_service_api::{
-    auth::{AuthenticationRequest, AuthenticationResponse},
+    auth::authn::{AuthenticationRequest, AuthenticationResponse},
     health::HealthCheckedService,
 };
 use serde_json::json;

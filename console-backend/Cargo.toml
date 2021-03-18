@@ -39,7 +39,7 @@ chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.5"
 
 anyhow = "1"
-snafu = "0.6"
+thiserror = "1"
 failure = "0.1" # required for converting error away from failure
 
 serde = "1"

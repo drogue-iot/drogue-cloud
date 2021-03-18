@@ -1,16 +1,16 @@
-mod authn;
 mod error;
 mod utils;
 mod x509;
 
-use crate::endpoints::params::DeleteParams;
-use crate::service::authn::{ensure, ensure_with};
-use crate::{service::error::PostgresManagementServiceError, utils::epoch};
+use crate::{
+    endpoints::params::DeleteParams, service::error::PostgresManagementServiceError, utils::epoch,
+};
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_cloud_database_common::{
+    auth::{ensure, ensure_with},
     error::ServiceError,
     models::{
         self,
