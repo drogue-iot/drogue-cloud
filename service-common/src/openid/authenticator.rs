@@ -30,6 +30,7 @@ pub enum AuthenticatorError {
 }
 
 /// An authenticator to authenticate incoming requests.
+#[derive(Clone)]
 pub struct Authenticator {
     pub client: openid::Client,
 }
@@ -70,6 +71,7 @@ impl Authenticator {
         Ok(Self::from_client(create_client(config, endpoints).await?))
     }
 
+    /// Validate a bearer token.
     pub async fn validate_token<S: AsRef<str>>(
         &self,
         token: S,

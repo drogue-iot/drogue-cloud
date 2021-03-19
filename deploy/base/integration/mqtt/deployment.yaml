@@ -1,0 +1,92 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: mqtt-integration
+  labels:
+    app.kubernetes.io/name: mqtt-integration
+    app.kubernetes.io/part-of: integrations
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mqtt-integration
+      app.kubernetes.io/part-of: integrations
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mqtt-integration
+        app.kubernetes.io/part-of: integrations
+    spec:
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
+      containers:
+        - name: endpoint
+          image: ghcr.io/drogue-iot/mqtt-integration:latest
+          imagePullPolicy: Always
+          env:
+            - name: RUST_LOG
+              value: debug
+            - name: BIND_ADDR_MQTT
+              value: "0.0.0.0:8883"
+            - name: CERT_BUNDLE_FILE
+              value: /etc/endpoint/tls.crt
+            - name: KEY_FILE
+              value: /etc/endpoint/tls.key
+            - name: AUTH_SERVICE_URL
+              value: http://authentication-service:8080
+            # this is a workaround as the name of the variable conflicts with an automatically generated
+            # variable from Kubernetes, which doesn't parse as an int
+            - name: MQTT_ENDPOINT_PORT
+              value: "0"
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_SECRET
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE__KAFKA_TOPIC
+              value: knative-messaging-kafka.$(NAMESPACE).iot-channel
+            - name: USER_AUTH__URL
+              value: http://user-auth-service.$(NAMESPACE).svc.cluster.local.
+          ports:
+            - containerPort: 8883
+              name: endpoint
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: 8883
+          resources:
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - mountPath: /etc/endpoint
+              name: endpoint-tls
+      volumes:
+        - name: endpoint-tls
+          secret:
+            secretName: mqtt-endpoint-tls
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-drogue

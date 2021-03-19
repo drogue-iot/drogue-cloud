@@ -39,6 +39,7 @@ ALL_IMAGES=\
 	test-cert-generator \
 	outbox-controller \
 	user-auth-service \
+	mqtt-integration \
 
 
 #
