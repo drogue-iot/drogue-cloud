@@ -34,6 +34,3 @@ cloudevents-sdk = { git = "https://github.com/ctron/sdk-rust", rev = "66ffe07a16
 cloudevents-sdk-actix-web = { git = "https://github.com/ctron/sdk-rust", rev = "66ffe07a16fb7bac780a24f31042eed564514301" }
 cloudevents-sdk-reqwest = { git = "https://github.com/ctron/sdk-rust", rev = "66ffe07a16fb7bac780a24f31042eed564514301" }
 cloudevents-sdk-rdkafka = { git = "https://github.com/ctron/sdk-rust", rev = "66ffe07a16fb7bac780a24f31042eed564514301" }
-
-# required until #15 is fixed
-openid = { git = "https://github.com/ctron/openid", rev = "713094dc665127a32821e21aa5b6db7c9c42d98d" }

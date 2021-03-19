@@ -1372,7 +1372,7 @@ dependencies = [
  "futures",
  "log",
  "mime",
- "openid",
+ "openid 0.9.0",
  "owning_ref",
  "pem 0.8.3",
  "rdkafka",
@@ -1481,7 +1481,7 @@ dependencies = [
  "http",
  "indexmap",
  "log",
- "openid",
+ "openid 0.8.0",
  "pem 0.8.3",
  "rand 0.7.3",
  "reqwest",
@@ -1523,7 +1523,7 @@ dependencies = [
  "http",
  "log",
  "mime",
- "openid",
+ "openid 0.9.0",
  "percent-encoding",
  "reqwest",
  "serde 1.0.124",
@@ -1564,7 +1564,7 @@ dependencies = [
  "jsonwebtokens",
  "log",
  "mime",
- "openid",
+ "openid 0.8.0",
  "openssl",
  "percent-encoding",
  "reqwest",
@@ -1713,7 +1713,7 @@ dependencies = [
  "kube",
  "kube-derive",
  "log",
- "openid",
+ "openid 0.9.0",
  "openshift-openapi",
  "pem 0.8.3",
  "reqwest",
@@ -3119,7 +3119,26 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "openid"
 version = "0.8.0"
-source = "git+https://github.com/ctron/openid?rev=713094dc665127a32821e21aa5b6db7c9c42d98d#713094dc665127a32821e21aa5b6db7c9c42d98d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1a8eda7e7dfeb77f45ece7a680b1744d32a38974d6d7e31000fd3717d0a4a1d"
+dependencies = [
+ "base64 0.13.0",
+ "biscuit",
+ "chrono",
+ "lazy_static",
+ "reqwest",
+ "serde 1.0.124",
+ "serde_json",
+ "thiserror",
+ "url",
+ "validator",
+]
+
+[[package]]
+name = "openid"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6149d8675c12a2b392f8086ce78e5d543d487c3c95fd4ed93cfa4cdf69004564"
 dependencies = [
  "base64 0.13.0",
  "biscuit",

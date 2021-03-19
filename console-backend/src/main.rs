@@ -19,7 +19,6 @@ use drogue_cloud_service_common::{
     openid::{create_client, Authenticator, AuthenticatorConfig},
     openid_auth,
 };
-use openid::{biscuit::jwk::JWKSet, Configurable};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -46,32 +45,6 @@ pub struct Config {
     pub kafka_topic: String,
 
     pub user_auth: UserAuthClientConfig,
-}
-
-/// Manually clone the client
-///
-/// See also: https://github.com/kilork/openid/issues/17
-fn clone_client(client: &openid::Client) -> openid::Client {
-    let jwks = if let Some(jwks) = &client.jwks {
-        let keys = jwks.keys.clone();
-        Some(JWKSet { keys })
-    } else {
-        None
-    };
-
-    // The following two lines perform a "clone" without having the "Clone" trait.
-    // FIXME: get rid of the two .unwrap calls, wait for the upstream fix
-    let json = serde_json::to_value(client.provider.config()).unwrap();
-    let provider: openid::Config = serde_json::from_value(json).unwrap();
-
-    openid::Client::new(
-        provider.into(),
-        client.client_id.clone(),
-        client.client_secret.clone(),
-        client.redirect_uri.as_ref().cloned(),
-        client.http_client.clone(),
-        jwks,
-    )
 }
 
 #[actix_web::main]
@@ -105,17 +78,13 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let authenticator = openid_client.as_ref().map(|client| {
-        let client = clone_client(&client.client);
-        web::Data::new(Authenticator::from_client(client))
-    });
+    let authenticator = openid_client
+        .as_ref()
+        .map(|client| web::Data::new(Authenticator::from_client(client.client.clone())));
 
     let user_auth = openid_client
         .as_ref()
-        .map(|client| {
-            let client = clone_client(&client.client);
-            UserAuthClient::from_openid_client(&config.user_auth, client)
-        })
+        .map(|client| UserAuthClient::from_openid_client(&config.user_auth, client.client.clone()))
         .transpose()?
         .map(web::Data::new);
 
