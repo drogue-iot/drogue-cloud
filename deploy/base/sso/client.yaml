@@ -20,7 +20,8 @@ spec:
     serviceAccountsEnabled: true
     fullScopeAllowed: false
     redirectUris:
-      - "http://not-yet-set"
+      # used for the CLI
+      - "http://localhost:*"
     defaultRoles:
       - "drogue-user"
       - "drogue-admin"

@@ -12,3 +12,35 @@ Applications are isolated from each other.
 
 Each device is owned by exactly one application and has at least one ID to identify it. Device IDs are unique in the
 scope of an application.
+
+== Endpoints
+
+Endpoints, more explicitly *protocol endpoints*, is where device connect to, in order to communicate with the system.
+
+On the device facing side these endpoints implement a device specific protocol, and on the cloud facing side, they
+communicate using Knative and Cloud Events.
+
+A protocol might be a binary protocol, custom to the device. Or also some other higher level API, based on existing
+communication protocols like MQTT, HTTP, or CoAP.
+
+This is sometimes also called:
+
+* Protocol Adapter
+* South-bound
+* Device-bound
+
+== Integrations
+
+Integrations provide ways to integrate _your application_ with the event stream of the system.
+
+While integration may support different protocols (like HTTP, MQTT) they should focus on content being encoded as
+_Cloud Events_.
+
+In general there are two different ways of receiving data through integrations: push or pull. In the case of "push",
+the cloud side of Drogue will try to push events to an endpoint that you define. In the case of "pull", you connect
+to an integration endpoint and subscribe to events you are interested in. Once subscribed, events will be pushed
+through that communication channel.
+
+This is sometimes also called:
+
+* North-bound

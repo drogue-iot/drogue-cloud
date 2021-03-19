@@ -6,15 +6,6 @@ edition = "2018"
 
 [dependencies]
 
-drogue-cloud-console-common = { path = "../console-common" }
-drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common" }
-
-#actix = "0.10"
-#actix-web = "3" # we need v4 as we need tokio 1
-#actix-cors = "0.5"
-#actix-web-httpauth = "0.5"
-
 actix = "=0.11.0-beta.3"
 actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
 actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
@@ -23,7 +14,7 @@ actix-web-httpauth = "=0.6.0-beta.1"
 tokio-stream = { version = "0.1", features = ["time"] }
 
 openid = "0.9"
-biscuit = '0.5'
+biscuit = "0.5"
 url = "2"
 reqwest = "0.11"
 ring = "0.16.18" # required due to an issue in the public API
@@ -54,8 +45,7 @@ cloudevents-sdk-rdkafka = "0.4"
 
 uuid = { version = "0.8", features = ["v4"] }
 
-owning_ref = "0.4"
-
-[dependencies.rdkafka]
-version = "0.25"
-features = ["ssl", "sasl"]
+drogue-cloud-console-common = { path = "../console-common" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use url::Url;
 
+/// A client for authorizing user requests.
 #[derive(Clone, Debug)]
 pub struct UserAuthClient {
     client: reqwest::Client,

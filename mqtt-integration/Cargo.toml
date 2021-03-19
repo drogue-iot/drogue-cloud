@@ -1,0 +1,69 @@
+[package]
+name = "drogue-cloud-mqtt-integration"
+version = "0.2.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+
+anyhow = "1"
+async-trait = "0.1.42"
+
+ntex = "0.3"
+ntex-rt = "0.2"
+ntex-service = "0.1.5"
+ntex-mqtt = "0.6.4"
+bytes = "1"
+bytestring = "1"
+http = "0.2.1"
+
+futures = "0.3"
+futures-core = "0.3"
+futures-util = "0.3"
+
+tokio = { version = "1", features = ["full"] }
+
+reqwest = "0.11"
+lazy_static = "1.4.0"
+mime = "0.3"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+uuid = { version = "0.8", features = ["v4"] }
+
+env_logger = "0.7"
+dotenv = "0.15"
+log = "0.4"
+
+openid = "0.9"
+
+pem = "0.8"
+webpki = "0.21"
+
+cloudevents-sdk = "0.4"
+
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-integration-common = { path = "../integration-common" }
+
+[dependencies.open-ssl]
+version = "0.10"
+optional = true
+package = "openssl"
+features = ["v111"]
+
+[dependencies.rust-tls]
+version = "0.19"
+optional = true
+package = "rustls"
+# "dangerous" is required in order to implement ther ClientCertVerified trait
+# see: https://github.com/ctz/rustls/issues/467
+features = ["dangerous_configuration"]
+
+[features]
+default = ["rustls"]
+openssl = ["open-ssl", "ntex/openssl"]
+rustls = ["rust-tls", "ntex/rustls"]

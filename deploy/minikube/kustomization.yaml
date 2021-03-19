@@ -12,3 +12,4 @@ bases:
   - service/grafana
   - service/console
   - service/registry
+  - integration/mqtt

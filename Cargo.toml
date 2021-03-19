@@ -17,6 +17,8 @@ members = [
     "registry-events",
     "outbox-controller",
     "user-auth-service",
+    "integration-common",
+    "mqtt-integration",
 ]
 
 [patch.crates-io]
@@ -24,6 +26,9 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #patternfly-yew = { path = "../patternfly-yew" }
 #patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", branch = "main" }
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
+
+# required for https://github.com/ntex-rs/ntex-mqtt/pull/48
+ntex-mqtt = { git = "https://github.com/ctron/ntex-mqtt", rev = "23c1a1fb47059a4b3780eb43204f4491e1abb226" }
 
 # required due to missing "beta" versions of more recent "beta" actix versions
 actix-cors = { git = "https://github.com/ctron/actix-extras", rev = "a580096e7c7e929ac9b6b77abee7403890006e0a" }
