@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::fmt::Debug;
 
+#[derive(Clone)]
 pub struct OpenIdClient {
     pub client: openid::Client,
     pub scopes: String,

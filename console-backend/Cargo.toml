@@ -22,7 +22,7 @@ actix-cors = "=0.6.0-beta.1"
 actix-web-httpauth = "=0.6.0-beta.1"
 tokio-stream = { version = "0.1", features = ["time"] }
 
-openid = "0.8"
+openid = "0.9"
 biscuit = '0.5'
 url = "2"
 reqwest = "0.11"

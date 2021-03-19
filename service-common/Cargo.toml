@@ -17,7 +17,7 @@ actix-web-httpauth = "=0.6.0-beta.1"
 actix-service = "=2.0.0-beta.4"
 
 reqwest = "0.11"
-openid = "0.8"
+openid = "0.9"
 
 failure = "0.1" # required for converting error away from failure
 url = "2"
