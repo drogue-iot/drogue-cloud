@@ -10,7 +10,7 @@ spec:
     app.kubernetes.io/name: mqtt-integration
     app.kubernetes.io/part-of: integrations
   ports:
-    - name: endpoint
+    - name: service
       protocol: TCP
-      port: 443
-      targetPort: endpoint
+      port: 8883
+      targetPort: service

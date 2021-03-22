@@ -34,7 +34,7 @@ spec:
               name: client-secret
               readOnly: true
       containers:
-        - name: endpoint
+        - name: service
           image: ghcr.io/drogue-iot/mqtt-integration:latest
           imagePullPolicy: Always
           env:
@@ -72,7 +72,7 @@ spec:
               value: http://user-auth-service.$(NAMESPACE).svc.cluster.local.
           ports:
             - containerPort: 8883
-              name: endpoint
+              name: service
               protocol: TCP
           readinessProbe:
             tcpSocket:

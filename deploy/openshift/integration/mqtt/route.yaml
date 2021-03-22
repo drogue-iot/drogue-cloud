@@ -7,6 +7,6 @@ spec:
     kind: Service
     name: mqtt-integration
   port:
-    targetPort: endpoint
+    targetPort: service
   tls:
     termination: passthrough
