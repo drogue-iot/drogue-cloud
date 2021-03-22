@@ -13,11 +13,10 @@ use ntex::{
 use ntex_mqtt::{v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
 use pem::parse_many;
-use rust_tls::NoClientAuth;
-use rust_tls::{internal::pemfile::certs, PrivateKey, ServerConfig};
+use rust_tls::{internal::pemfile::certs, NoClientAuth, PrivateKey, ServerConfig};
 use std::{fs::File, io::BufReader, sync::Arc};
 
-const DEFAULT_MAX_SIZE: u32 = 1024;
+const DEFAULT_MAX_SIZE: u32 = 4 * 1024;
 
 fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
     let mut tls_config = ServerConfig::new(Arc::new(NoClientAuth));
@@ -62,7 +61,7 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
 }
 
 macro_rules! create_server {
-    ($app:expr) => {{
+    ($app:expr, $max_size:expr) => {{
         let app3 = $app.clone();
         let app5 = $app.clone();
 
@@ -72,6 +71,7 @@ macro_rules! create_server {
                 let app = app3.clone();
                 ok::<_, ()>(fn_service(move |req| connect_v3(req, app.clone())))
             }))
+            .max_size($max_size)
             .control(fn_factory_with_config(|session: v3::Session<Session>| {
                 ok::<_, ServerError>(fn_service(move |req| control_v3(session.clone(), req)))
             }))
@@ -83,7 +83,7 @@ macro_rules! create_server {
                 let app = app5.clone();
                 ok::<_, ()>(fn_service(move |req| connect_v5(req, app.clone())))
             }))
-            .max_size(DEFAULT_MAX_SIZE)
+            .max_size($max_size)
             .control(fn_factory_with_config(|session: v5::Session<Session>| {
                 ok::<_, ServerError>(fn_service(move |req| control_v5(session.clone(), req)))
             }))
@@ -97,11 +97,14 @@ pub fn build(
     addr: Option<&str>,
     builder: ServerBuilder,
     app: App,
+    config: &Config,
 ) -> anyhow::Result<ServerBuilder> {
     let addr = addr.unwrap_or("127.0.0.1:1883");
+    let max_size = config.max_size.unwrap_or(DEFAULT_MAX_SIZE);
+
     log::info!("Starting MQTT (non-TLS) server: {}", addr);
 
-    Ok(builder.bind("mqtt", addr, move || create_server!(app))?)
+    Ok(builder.bind("mqtt", addr, move || create_server!(app, max_size))?)
 }
 
 pub fn build_tls(
@@ -114,10 +117,11 @@ pub fn build_tls(
     log::info!("Starting MQTT (TLS) server: {}", addr);
 
     let tls_acceptor = Acceptor::new(tls_config(config)?);
+    let max_size = config.max_size.unwrap_or(DEFAULT_MAX_SIZE);
 
     Ok(builder.bind("mqtt", addr, move || {
         pipeline_factory(tls_acceptor.clone())
             .map_err(|err| MqttError::Service(ServerError::InternalError(err.to_string())))
-            .and_then(create_server!(app))
+            .and_then(create_server!(app, max_size))
     })?)
 }

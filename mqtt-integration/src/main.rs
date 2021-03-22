@@ -28,6 +28,8 @@ pub struct Config {
     #[serde(default)]
     pub bind_addr_mqtt: Option<String>,
 
+    pub max_size: Option<u32>,
+
     pub service: ServiceConfig,
     pub user_auth: UserAuthClientConfig,
 }
@@ -83,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
     let builder = if !config.disable_tls {
         build_tls(addr, builder, app, &config)?
     } else {
-        build(addr, builder, app)?
+        build(addr, builder, app, &config)?
     };
 
     log::info!("Starting server");
