@@ -94,6 +94,17 @@ echo
 echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
 echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'"
 echo
+echo "Subscribe to device data:"
+echo "---------------------------"
+echo
+echo "Data published by devices can be received via MQTT."
+echo
+echo "Structured content mode (MQTT v3.1.1 and v5):"
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$TOKEN\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'"
+echo
+echo "Binary content mode (MQTT v5 only):"
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$TOKEN\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'" -up content-mode=binary
+echo
 echo "Send commands to the device:"
 echo "------------------------------"
 echo
