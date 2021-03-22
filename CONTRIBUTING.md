@@ -195,7 +195,6 @@ You will need to have `npm` installed, as it will drive parts of the build.
 * Start the console backend locally
   * Set `CLIENT_ID` to `drogue`
   * Set `CLIENT_SECRET` to the value of `kubectl get secret keycloak-client-secret-drogue -o jsonpath='{.data[\'CLIENT_SECRET\']}' | base64 -d`
-* Add `http://localhost:8010` to the list of valid redirect targets in the `keycloakclients/drogue` resource
 * Run the console:
   ~~~
   cd console-frontend

@@ -1,4 +1,4 @@
-use crate::openid::OpenIdTokenProvider;
+use crate::{defaults, openid::OpenIdTokenProvider};
 use drogue_cloud_service_api::auth::{
     authz::{AuthorizationRequest, AuthorizationResponse},
     ClientError, ErrorInformation,
@@ -18,10 +18,20 @@ pub struct UserAuthClient {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserAuthClientConfig {
+    #[serde(default = "defaults::user_auth_url")]
     pub url: Url,
     #[serde(default)]
     #[serde(with = "humantime_serde")]
     pub refresh_before: Option<Duration>,
+}
+
+impl Default for UserAuthClientConfig {
+    fn default() -> Self {
+        Self {
+            url: defaults::user_auth_url(),
+            refresh_before: None,
+        }
+    }
 }
 
 impl UserAuthClient {

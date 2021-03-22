@@ -1,3 +1,5 @@
+use url::Url;
+
 #[inline]
 pub fn enable_auth() -> bool {
     true
@@ -24,6 +26,16 @@ pub fn kafka_bootstrap_servers() -> String {
 }
 
 #[inline]
+pub fn kafka_topic() -> String {
+    "knative-messaging-kafka.drogue-iot.iot-channel".into()
+}
+
+#[inline]
 pub fn oauth2_scopes() -> String {
     "openid profile email".into()
+}
+
+#[inline]
+pub fn user_auth_url() -> Url {
+    Url::parse("http://user-auth-service.drogue-iot.svc.cluster.local.").unwrap()
 }
