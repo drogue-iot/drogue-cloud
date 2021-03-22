@@ -28,7 +28,7 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 
 # required for https://github.com/ntex-rs/ntex-mqtt/pull/48
-ntex-mqtt = { git = "https://github.com/ctron/ntex-mqtt", rev = "23c1a1fb47059a4b3780eb43204f4491e1abb226" }
+ntex-mqtt = { git = "https://github.com/ctron/ntex-mqtt", rev = "3cc8305f2f5382a132825a18f49aa9238fa15bcd" }
 
 # required due to missing "beta" versions of more recent "beta" actix versions
 actix-cors = { git = "https://github.com/ctron/actix-extras", rev = "a580096e7c7e929ac9b6b77abee7403890006e0a" }
