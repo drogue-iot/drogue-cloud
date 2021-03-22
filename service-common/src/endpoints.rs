@@ -6,6 +6,8 @@ use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
 use std::fmt::Debug;
 
+const DEFAULT_REALM: &str = "drogue";
+
 pub type EndpointSourceType = Box<dyn EndpointSource + Send + Sync>;
 
 #[async_trait]
@@ -28,6 +30,10 @@ pub struct EndpointConfig {
     pub mqtt_host: Option<String>,
     #[envconfig(from = "MQTT_ENDPOINT_PORT", default = "8883")]
     pub mqtt_port: u16,
+    #[envconfig(from = "MQTT_INTEGRATION_HOST")]
+    pub mqtt_integration_host: Option<String>,
+    #[envconfig(from = "MQTT_INTEGRATION_PORT", default = "8883")]
+    pub mqtt_integration_port: u16,
     #[envconfig(from = "DEVICE_REGISTRY_URL")]
     pub device_registry_url: Option<String>,
     #[envconfig(from = "COMMAND_ENDPOINT_URL")]
@@ -88,6 +94,14 @@ impl EndpointSource for EnvEndpointSource {
             host: host.clone(),
             port: self.0.mqtt_port,
         });
+        let mqtt_integration = self
+            .0
+            .mqtt_integration_host
+            .as_ref()
+            .map(|host| MqttEndpoint {
+                host: host.clone(),
+                port: self.0.mqtt_integration_port,
+            });
         let registry = self
             .0
             .device_registry_url
@@ -101,11 +115,12 @@ impl EndpointSource for EnvEndpointSource {
             .issuer_url
             .as_ref()
             .cloned()
-            .unwrap_or_else(|| sso_to_issuer_url(&sso));
+            .unwrap_or_else(|| sso_to_issuer_url(&sso, DEFAULT_REALM));
 
         Ok(Endpoints {
             http,
             mqtt,
+            mqtt_integration,
             sso: Some(sso),
             issuer_url: Some(issuer_url),
             redirect_url: self.0.redirect_url.as_ref().cloned(),
@@ -116,8 +131,8 @@ impl EndpointSource for EnvEndpointSource {
     }
 }
 
-fn sso_to_issuer_url(sso: &str) -> String {
-    format!("{}/auth/realms/drogue", sso)
+fn sso_to_issuer_url(sso: &str, realm: &str) -> String {
+    format!("{}/auth/realms/{}", sso, realm)
 }
 
 #[derive(Clone, Debug)]
@@ -151,6 +166,7 @@ impl EndpointSource for OpenshiftEndpointSource {
         let routes: Api<Route> = Api::namespaced(client.clone(), &self.namespace);
 
         let mqtt = host_from_route(&routes.get("mqtt-endpoint").await?);
+        let mqtt_integration = host_from_route(&routes.get("mqtt-integration").await?);
         let http = url_from_route(&routes.get("http-endpoint").await?);
         let command = url_from_route(&routes.get("command-endpoint").await?);
         let sso = url_from_route(&routes.get("keycloak").await?);
@@ -177,7 +193,13 @@ impl EndpointSource for OpenshiftEndpointSource {
                 host: mqtt,
                 port: 443,
             }),
-            issuer_url: sso.as_ref().map(|sso| sso_to_issuer_url(&sso)),
+            mqtt_integration: mqtt_integration.map(|mqtt| MqttEndpoint {
+                host: mqtt,
+                port: 443,
+            }),
+            issuer_url: sso
+                .as_ref()
+                .map(|sso| sso_to_issuer_url(&sso, DEFAULT_REALM)),
             command_url: command,
             sso,
             redirect_url: frontend,

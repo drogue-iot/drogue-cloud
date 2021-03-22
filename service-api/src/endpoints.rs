@@ -20,6 +20,7 @@ pub struct RegistryEndpoint {
 pub struct Endpoints {
     pub http: Option<HttpEndpoint>,
     pub mqtt: Option<MqttEndpoint>,
+    pub mqtt_integration: Option<MqttEndpoint>,
     pub sso: Option<String>,
     pub issuer_url: Option<String>,
     pub redirect_url: Option<String>,

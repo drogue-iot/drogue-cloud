@@ -3,6 +3,7 @@ use anyhow::Error;
 use drogue_cloud_service_api::endpoints::{Endpoints, MqttEndpoint};
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew::virtual_dom::VChild;
 use yew::{
     format::{Json, Nothing},
     services::fetch::*,
@@ -99,6 +100,7 @@ impl Index {
     fn render_endpoints(&self, endpoints: &Endpoints) -> Html {
         let mut service_cards = Vec::new();
         let mut endpoint_cards = Vec::new();
+        let mut integration_cards = Vec::new();
         let mut demo_cards = Vec::new();
 
         if let Some(backend) = Backend::get() {
@@ -115,10 +117,14 @@ impl Index {
             endpoint_cards.push(self.render_card("HTTP endpoint", &http.url, false));
         }
         if let Some(mqtt) = &endpoints.mqtt {
-            endpoint_cards.push(self.render_mqtt_endpoint(&mqtt));
+            endpoint_cards.push(self.render_mqtt_endpoint(&mqtt, "MQTT endpoint"));
         }
         if let Some(url) = &endpoints.command_url {
             endpoint_cards.push(self.render_card("Command endpoint", url, false));
+        }
+
+        if let Some(mqtt) = &endpoints.mqtt_integration {
+            integration_cards.push(self.render_mqtt_endpoint(&mqtt, "MQTT integration"));
         }
 
         for (label, url) in &endpoints.demos {
@@ -128,32 +134,25 @@ impl Index {
         return html! {
             <Flex
                 >
-                <Flex>
-                    <Flex modifiers=vec![FlexModifier::Column.all()]>
-                        <FlexItem>
-                            <Title size=Size::XLarge>{"Services"}</Title>
-                        </FlexItem>
-                        { service_cards.into_flex_items() }
-                    </Flex>
-                </Flex>
-                <Flex>
-                    <Flex modifiers=vec![FlexModifier::Column.all()]>
-                        <FlexItem>
-                            <Title size=Size::XLarge>{"Endpoints"}</Title>
-                        </FlexItem>
-                        { endpoint_cards.into_flex_items() }
-                    </Flex>
-                </Flex>
-                <Flex>
-                    <Flex modifiers=vec![FlexModifier::Column.all()]>
-                        <FlexItem>
-                            <Title size=Size::XLarge>{"Demos"}</Title>
-                        </FlexItem>
-                        { demo_cards.into_flex_items() }
-                    </Flex>
-                </Flex>
+                { Self::render_cards("Services", service_cards) }
+                { Self::render_cards("Endpoints", endpoint_cards) }
+                { Self::render_cards("Integrations", integration_cards) }
+                { Self::render_cards("Demos", demo_cards) }
             </Flex>
         };
+    }
+
+    fn render_cards(label: &str, cards: Vec<Html>) -> VChild<Flex> {
+        html_nested! {
+            <Flex>
+                <Flex modifiers=vec![FlexModifier::Column.all()]>
+                    <FlexItem>
+                        <Title size=Size::XLarge>{label}</Title>
+                    </FlexItem>
+                    { cards.into_flex_items() }
+                </Flex>
+            </Flex>
+        }
     }
 
     fn render_card<S: AsRef<str>>(&self, label: &str, url: S, link: bool) -> Html {
@@ -175,10 +174,10 @@ impl Index {
         }
     }
 
-    fn render_mqtt_endpoint(&self, mqtt: &MqttEndpoint) -> Html {
+    fn render_mqtt_endpoint(&self, mqtt: &MqttEndpoint, label: &str) -> Html {
         html! {
             <Card
-                title={html_nested!{<>{"MQTT endpoint"}</>}}
+                title={html_nested!{<>{label}</>}}
                 >
                 <Clipboard readonly=true value=&mqtt.host/>
                 <Clipboard readonly=true value={format!("{}", mqtt.port)}/>
