@@ -29,3 +29,18 @@ pub struct Endpoints {
     #[serde(default)]
     pub demos: Vec<(String, String)>,
 }
+
+impl Endpoints {
+    pub fn publicize(&self) -> Endpoints {
+        Endpoints {
+            http: None,
+            mqtt: None,
+            sso: self.sso.clone(),
+            issuer_url: self.issuer_url.clone(),
+            redirect_url: None,
+            registry: None,
+            command_url: None,
+            demos: Vec::new(),
+        }
+    }
+}
