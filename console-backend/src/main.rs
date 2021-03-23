@@ -140,6 +140,10 @@ async fn main() -> anyhow::Result<()> {
             .service(auth::logout)
             .service(auth::code)
             .service(auth::refresh)
+            .service(
+                web::scope("/.well-known")
+                    .service(info::get_public_endpoints)
+            )
             //fixme : use a different port
             .service(health)
     })
