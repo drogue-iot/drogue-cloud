@@ -2968,7 +2968,7 @@ dependencies = [
 [[package]]
 name = "ntex-mqtt"
 version = "0.6.4"
-source = "git+https://github.com/ctron/ntex-mqtt?rev=23c1a1fb47059a4b3780eb43204f4491e1abb226#23c1a1fb47059a4b3780eb43204f4491e1abb226"
+source = "git+https://github.com/ntex-rs/ntex-mqtt?rev=a136525c5f40efb3cf507e966c7b42b86b93767a#a136525c5f40efb3cf507e966c7b42b86b93767a"
 dependencies = [
  "bitflags",
  "derive_more",
