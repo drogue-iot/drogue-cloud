@@ -171,6 +171,12 @@ impl Session {
             _ => Err(v5::codec::SubscribeAckReason::TopicFilterInvalid),
         }?;
 
+        // scope the group id, as we currently only have a single kafka topic
+
+        let group_id = group_id.map(|g| format!("{}:{}", app, g));
+
+        // log the request
+
         log::debug!(
             "Request to subscribe to app: {} (group: {:?})",
             app,
@@ -201,7 +207,7 @@ impl Session {
             bootstrap_servers: self.config.kafka_bootstrap_servers.clone(),
             topic: self.config.kafka_topic.clone(),
             app: app.to_string(),
-            consumer_group: group_id.map(ToString::to_string),
+            consumer_group: group_id,
         })
         .map_err(|err| {
             log::info!("Failed to subscribe to Kafka topic: {}", err);
