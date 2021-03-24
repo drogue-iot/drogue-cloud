@@ -11,6 +11,6 @@ spec:
    app.kubernetes.io/part-of: device-registry
  ports:
    - name: api
-     port: 8080
+     port: 80
      protocol: TCP
-     targetPort: 8080
+     targetPort: api

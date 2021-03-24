@@ -11,4 +11,7 @@ spec:
     kind: KafkaChannel
     name: registry
   subscriber:
-    uri: http://outbox-controller.drogue-iot.svc.cluster.local:8080/
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: outbox-controller
