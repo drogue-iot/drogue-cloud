@@ -35,6 +35,7 @@ impl Endpoints {
         Endpoints {
             http: None,
             mqtt: None,
+            mqtt_integration: None,
             sso: self.sso.clone(),
             issuer_url: self.issuer_url.clone(),
             redirect_url: None,
