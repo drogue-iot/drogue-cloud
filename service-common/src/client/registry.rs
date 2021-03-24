@@ -27,11 +27,10 @@ impl RegistryClient {
         device: &str,
         token: &str,
     ) -> Result<management::Device, ClientError<reqwest::Error>> {
-        let req =
-            self.client
-                .get(self.device_registry_url.join(
-                    &format!("/api/v1/apps/{}/devices/{}", application, device),
-                )?);
+        let req = self.client.get(
+            self.device_registry_url
+                .join(&format!("/api/v1/apps/{}/devices/{}", application, device))?,
+        );
         let req = req.bearer_auth(token);
 
         let response: Response = req.send().await.map_err(|err| {
@@ -57,9 +56,7 @@ impl RegistryClient {
                 }
             },
             StatusCode::NOT_FOUND => Err(ClientError::Request("Device Not Found".to_string())),
-            code => Err(ClientError::Request(
-                format!("Unexpected code {:?}", code),
-            )),
+            code => Err(ClientError::Request(format!("Unexpected code {:?}", code))),
         }
     }
 }
