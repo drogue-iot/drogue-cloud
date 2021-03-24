@@ -27,6 +27,9 @@ pub async fn connect_v5<Io>(
 ) -> Result<v5::HandshakeAck<Io, Session>, ServerError> {
     match app.connect(Connect::V5(&connect)).await {
         Ok(session) => Ok(connect.ack(session).with(|ack| {
+            ack.retain_available = Some(false);
+            ack.shared_subscription_available = Some(true);
+            ack.subscription_identifiers_available = Some(true);
             ack.wildcard_subscription_available = Some(false);
         })),
         Err(_) => Ok(connect.failed(ConnectAckReason::BadUserNameOrPassword)),
