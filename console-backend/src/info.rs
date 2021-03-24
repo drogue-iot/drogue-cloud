@@ -11,7 +11,7 @@ pub async fn get_info(endpoint_source: web::Data<EndpointSourceType>) -> impl Re
     }
 }
 
-#[get("/endpoints")]
+#[get("/drogue-endpoints")]
 pub async fn get_public_endpoints(
     endpoint_source: web::Data<EndpointSourceType>,
 ) -> impl Responder {
