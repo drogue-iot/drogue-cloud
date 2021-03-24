@@ -47,7 +47,6 @@ pub struct Config {
 
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
-    pub redirect_url: String,
 
     #[serde(default)]
     pub user_auth: UserAuthClientConfig,
@@ -61,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;
+    let endpoints = endpoint_source.eval_endpoints().await?;
 
     log::info!("Using endpoint source: {:?}", endpoint_source);
     let endpoint_source: Data<EndpointSourceType> = Data::new(endpoint_source);
@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (openid_client, authenticator) = if enable_auth {
         let client = TokenConfig::from_env()?
-            .into_client(Some(config.redirect_url.clone()))
+            .into_client(endpoints.redirect_url)
             .await?;
         (
             Some(OpenIdClient {
