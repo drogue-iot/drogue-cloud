@@ -1,6 +1,12 @@
-use crate::backend::{Backend, BackendInformation, Token};
-use crate::error::error;
-use crate::{components::placeholder::Placeholder, examples::Examples, index::Index, spy::Spy};
+use crate::preferences::Preferences;
+use crate::{
+    backend::{Backend, BackendInformation, Token},
+    components::placeholder::Placeholder,
+    error::error,
+    examples::Examples,
+    index::Index,
+    spy::Spy,
+};
 use anyhow::Error;
 use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::UserInfo;
@@ -34,7 +40,10 @@ pub struct Main {
     access_code: Option<String>,
     task: Option<FetchTask>,
     refresh_task: Option<TimeoutTask>,
+    /// Something failed, we can no longer work.
     app_failure: bool,
+    /// We are in the process of authenticating.
+    authenticating: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -48,14 +57,14 @@ pub enum Msg {
     /// Set the backend information
     Endpoint(BackendInformation),
     /// Exchange the authentication code for an access token
-    GetToken,
+    GetToken(String),
     /// Set the access token
     SetAccessToken(Token),
-    /// Callback when the authentication/login failed
-    LoginFailed,
+    /// Callback when fetching the token failed
+    FetchTokenFailed,
     RetryLogin,
     /// Send to trigger refreshing the access token
-    RefreshToken,
+    RefreshToken(Option<String>),
     /// Trigger logout
     Logout,
 }
@@ -69,7 +78,7 @@ impl Component for Main {
         let location = window().location();
         let url = Url::parse(&location.href().unwrap()).unwrap();
 
-        log::info!("href: {:?}", url);
+        log::debug!("href: {:?}", url);
 
         let code = url.query_pairs().find_map(|(k, v)| {
             if k == "code" {
@@ -87,8 +96,8 @@ impl Component for Main {
             }
         });
 
-        log::info!("Access code: {:?}", code);
-        log::info!("Login error: {:?}", error);
+        log::debug!("Access code: {:?}", code);
+        log::debug!("Login error: {:?}", error);
 
         if let Some(error) = error {
             link.send_message(Msg::AppFailure(Toast {
@@ -118,6 +127,7 @@ impl Component for Main {
             task: None,
             refresh_task: None,
             app_failure: false,
+            authenticating: false,
         }
     }
 
@@ -134,10 +144,21 @@ impl Component for Main {
                 log::info!("Got backend: {:?}", backend);
                 Backend::set(Some(backend));
                 self.task = None;
-                if !self.app_failure && self.access_code.is_some() {
-                    // exchange code for token if we have a code and no app failure
-                    log::info!("Exchange access code for token");
-                    self.link.send_message(Msg::GetToken);
+                if !self.app_failure {
+                    if let Some(access_code) = self.access_code.take() {
+                        // exchange code for token if we have a code and no app failure
+                        log::info!("Exchange access code for token");
+                        self.authenticating = true;
+                        self.link.send_message(Msg::GetToken(access_code));
+                    } else if let Some(refresh) = Preferences::load()
+                        .ok()
+                        .and_then(|prefs| prefs.refresh_token)
+                    {
+                        log::info!("Re-using existing refresh token");
+                        self.authenticating = true;
+                        // try using existing refresh token
+                        self.link.send_message(Msg::RefreshToken(Some(refresh)))
+                    }
                 }
 
                 true
@@ -154,9 +175,8 @@ impl Component for Main {
                 self.app_failure = true;
                 true
             }
-            Msg::LoginFailed => {
-                error("Failed to log in", "Cloud not retrieve access token.");
-                self.app_failure = true;
+            Msg::FetchTokenFailed => {
+                self.authenticating = false;
                 true
             }
             Msg::RetryLogin => {
@@ -169,17 +189,33 @@ impl Component for Main {
                 }
                 false
             }
-            Msg::GetToken => {
+            Msg::GetToken(access_code) => {
                 // get the access token from the code
-                // this can only be called once the backend information and the access code is available
-                if Backend::get().is_some() && self.access_code.is_some() {
-                    self.task = Some(self.fetch_token().expect("Failed to create request"));
+                // this can only be called once the backend information
+                if Backend::get().is_some() {
+                    self.task = Some(
+                        self.fetch_token(&access_code)
+                            .expect("Failed to create request"),
+                    );
+                } else {
+                    self.access_code = Some(access_code);
                 }
                 true
             }
             Msg::SetAccessToken(token) => {
                 log::info!("Token: {:?}", token);
                 self.task = None;
+                self.authenticating = false;
+                Preferences::update_or_default(|mut prefs| {
+                    prefs.refresh_token = token.refresh_token.as_ref().cloned();
+                    Ok(prefs)
+                })
+                .map_err(|err| {
+                    log::warn!("Failed to store preferences: {}", err);
+                    err
+                })
+                .ok();
+
                 Backend::update_token(Some(token.clone()));
                 if let Some(timeout) = token.valid_for() {
                     log::info!("Token expires in {:?}", timeout);
@@ -192,27 +228,29 @@ impl Component for Main {
 
                     if rem < 30 {
                         // refresh now
-                        log::info!("Scheduling refresh now (had {} s remaining)", rem);
-                        self.link.send_message(Msg::RefreshToken);
+                        log::debug!("Scheduling refresh now (had {} s remaining)", rem);
+                        self.link
+                            .send_message(Msg::RefreshToken(token.refresh_token.as_ref().cloned()));
                     } else {
-                        log::info!("Scheduling refresh in {} seconds", rem);
+                        log::debug!("Scheduling refresh in {} seconds", rem);
+                        let refresh_token = token.refresh_token.as_ref().cloned();
                         self.refresh_task = Some(TimeoutService::spawn(
                             Duration::from_secs(rem as u64),
-                            self.link.callback(|_| {
+                            self.link.callback_once(move |_| {
                                 log::info!("Token timer expired, refreshing...");
-                                Msg::RefreshToken
+                                Msg::RefreshToken(refresh_token)
                             }),
                         ));
                     }
                 } else {
-                    log::info!("Token has no expiration set");
+                    log::debug!("Token has no expiration set");
                 }
                 true
             }
-            Msg::RefreshToken => {
+            Msg::RefreshToken(refresh_token) => {
                 log::info!("Refreshing access token");
 
-                match Backend::token().and_then(|t| t.refresh_token) {
+                match refresh_token {
                     Some(refresh_token) => {
                         self.task = match self.refresh_token(&refresh_token) {
                             Ok(task) => Some(task),
@@ -230,6 +268,11 @@ impl Component for Main {
                 true
             }
             Msg::Logout => {
+                Preferences::update_or_default(|mut prefs| {
+                    prefs.refresh_token = None;
+                    Ok(prefs)
+                })
+                .ok();
                 Backend::logout().ok();
                 false
             }
@@ -247,8 +290,12 @@ impl Component for Main {
                     <Nav>
                         <NavList>
                             <NavRouterItem<AppRoute> to=AppRoute::Index>{"Home"}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Examples>{"Getting started"}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
+                            <NavExpandable title="Getting started">
+                                <NavRouterItem<AppRoute> to=AppRoute::Examples>{"Examples"}</NavRouterItem<AppRoute>>
+                            </NavExpandable>
+                            <NavExpandable title="Tools">
+                                <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
+                            </NavExpandable>
                         </NavList>
                     </Nav>
                 </PageSidebar>
@@ -280,7 +327,6 @@ impl Component for Main {
                         >
                         <AppLauncherItem onclick=self.link.callback(|_|Msg::Logout)>{"Logout"}</AppLauncherItem>
                     </AppLauncher>
-
                 }
             }
             None => html! {},
@@ -313,7 +359,7 @@ impl Component for Main {
                                         />
                             </Page>
                         }
-                    } else if Backend::get().is_some() {
+                    } else if self.need_login() {
                         html!{ <Placeholder/> }
                     } else {
                         html!{}
@@ -329,6 +375,10 @@ impl Main {
     /// Check if the app and backend are ready to show the application.
     fn is_ready(&self) -> bool {
         !self.app_failure && Backend::get().is_some() && Backend::access_token().is_some()
+    }
+
+    fn need_login(&self) -> bool {
+        !self.app_failure && Backend::get().is_some() && !self.authenticating
     }
 
     fn fetch_backend(&self) -> Result<FetchTask, anyhow::Error> {
@@ -382,17 +432,12 @@ impl Main {
         )
     }
 
-    fn fetch_token(&self) -> Result<FetchTask, anyhow::Error> {
+    fn fetch_token<S: AsRef<str>>(&self, access_code: S) -> Result<FetchTask, anyhow::Error> {
         let mut url = Backend::url("/ui/token")
             .ok_or_else(|| anyhow::anyhow!("Missing backend information"))?;
 
-        url.query_pairs_mut().append_pair(
-            "code",
-            &self
-                .access_code
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Missing access code"))?,
-        );
+        url.query_pairs_mut()
+            .append_pair("code", access_code.as_ref());
 
         let req = Request::get(url.to_string()).body(Nothing)?;
 
@@ -448,13 +493,13 @@ impl Main {
 
                 match token {
                     Some(token) => Msg::SetAccessToken(token),
-                    None => Msg::LoginFailed,
+                    None => Msg::FetchTokenFailed,
                 }
             } else {
-                Msg::LoginFailed
+                Msg::FetchTokenFailed
             }
         } else {
-            Msg::LoginFailed
+            Msg::FetchTokenFailed
         }
     }
 }

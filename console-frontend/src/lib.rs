@@ -6,6 +6,7 @@ mod components;
 mod error;
 mod examples;
 mod index;
+mod preferences;
 mod spy;
 mod utils;
 

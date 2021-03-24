@@ -1,4 +1,4 @@
-use crate::error::ServerError;
+use crate::{error::ServerError, OpenIdClient};
 use cloudevents::Data;
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
 use drogue_cloud_service_api::auth::authz::AuthorizationRequest;
@@ -9,9 +9,11 @@ use futures::StreamExt;
 use ntex::util::{ByteString, Bytes};
 use ntex_mqtt::{types::QoS, v3, v5};
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::num::NonZeroU32;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    num::NonZeroU32,
+    sync::{Arc, Mutex},
+};
 use tokio::task::JoinHandle;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -27,6 +29,7 @@ pub struct ServiceConfig {
 pub struct App {
     pub authenticator: Option<Authenticator>,
     pub user_auth: Option<Arc<UserAuthClient>>,
+    pub openid_client: Option<OpenIdClient>,
     pub config: ServiceConfig,
 }
 
@@ -268,20 +271,20 @@ impl App {
         connect: &Connect<'_, Io>,
         auth: &Authenticator,
     ) -> Result<UserInformation, anyhow::Error> {
-        let token = match connect.credentials() {
-            (Some(username), Some(password)) if self.config.enable_username_password_auth => {
+        let token = match (connect.credentials(), &self.openid_client) {
+            ((Some(username), Some(password)), Some(openid_client)) => {
                 // we have a username and password, and are allowed to test this against SSO
                 let username = username.to_string();
                 let password = String::from_utf8(password.to_vec())?;
 
-                let token = auth
+                let token = openid_client
                     .client
                     .request_token_using_password_credentials(&username, &password, None)
                     .await?;
 
                 auth.validate_token(&token.access_token).await?
             }
-            (None, Some(password)) => {
+            ((None, Some(password)), _) => {
                 // password but no username is treated as a token
                 let password = String::from_utf8(password.to_vec())?;
                 auth.validate_token(&password).await?

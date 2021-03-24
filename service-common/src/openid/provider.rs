@@ -1,4 +1,4 @@
-use crate::openid::Expires;
+use crate::{defaults, openid::Expires};
 use async_std::sync::RwLock;
 use core::fmt::{self, Debug, Formatter};
 use serde::Deserialize;
@@ -10,7 +10,7 @@ use url::Url;
 /// A provider which provides access tokens for services.
 #[derive(Clone)]
 pub struct OpenIdTokenProvider {
-    client: Arc<openid::Client>,
+    pub client: Arc<openid::Client>,
     current_token: Arc<RwLock<Option<openid::Bearer>>>,
     refresh_before: chrono::Duration,
 }
@@ -40,16 +40,12 @@ pub struct TokenConfig {
     #[serde(default)]
     pub sso_url: Option<Url>,
 
-    #[serde(default = "default_realm")]
+    #[serde(default = "defaults::realm")]
     pub realm: String,
 
     #[serde(default)]
     #[serde(with = "humantime_serde")]
     pub refresh_before: Option<Duration>,
-}
-
-fn default_realm() -> String {
-    "drogue".into()
 }
 
 impl TokenConfig {
@@ -69,6 +65,13 @@ impl TokenConfig {
     }
 }
 
+impl TokenConfig {
+    pub async fn into_client(self, redirect: Option<String>) -> anyhow::Result<openid::Client> {
+        let issuer = self.issuer_url()?;
+        Ok(openid::Client::discover(self.client_id, self.client_secret, redirect, issuer).await?)
+    }
+}
+
 impl OpenIdTokenProvider {
     /// Create a new provider using the provided client.
     pub fn new(client: openid::Client, refresh_before: chrono::Duration) -> Self {
@@ -79,31 +82,14 @@ impl OpenIdTokenProvider {
         }
     }
 
-    /// Create a new provider by discovering the OAuth2 client.
-    pub async fn discover(
-        id: String,
-        secret: String,
-        issuer: Url,
-        refresh_before: chrono::Duration,
-    ) -> Result<Self, openid::error::Error> {
-        let client = openid::Client::discover(id, secret, None, issuer).await?;
-
-        Ok(Self::new(client, refresh_before))
-    }
-
+    /// Create a new provider by discovering the OAuth2 client from the configuration
     pub async fn discover_from(config: TokenConfig) -> anyhow::Result<Self> {
-        let issuer_url = config.issuer_url()?;
         let refresh_before = config
             .refresh_before
             .and_then(|d| chrono::Duration::from_std(d).ok())
             .unwrap_or_else(|| chrono::Duration::seconds(15));
-        Ok(Self::discover(
-            config.client_id,
-            config.client_secret,
-            issuer_url,
-            refresh_before,
-        )
-        .await?)
+
+        Ok(Self::new(config.into_client(None).await?, refresh_before))
     }
 
     /// return a fresh token, this may be an existing (non-expired) token

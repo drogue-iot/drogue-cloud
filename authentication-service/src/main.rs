@@ -1,4 +1,5 @@
 use actix_web::{web, App, HttpServer};
+use anyhow::Context;
 use dotenv::dotenv;
 use drogue_cloud_authentication_service::{
     endpoints,
@@ -6,7 +7,6 @@ use drogue_cloud_authentication_service::{
     Config, WebData,
 };
 use drogue_cloud_service_common::{config::ConfigFromEnv, openid::Authenticator, openid_auth};
-use envconfig::Envconfig;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
@@ -14,7 +14,9 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // Initialize config from environment variables
-    let config = Config::init_from_env().unwrap();
+    let config = Config::from_env().context("Failed to read configuration")?;
+
+    println!("Config: {:#?}", config);
 
     let max_json_payload_size = config.max_json_payload_size;
     let enable_auth = config.enable_auth;

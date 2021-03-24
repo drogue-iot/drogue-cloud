@@ -60,12 +60,12 @@ spec:
             - name: CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-client-secret-drogue
+                  name: keycloak-client-secret-services
                   key: CLIENT_ID
             - name: CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-client-secret-drogue
+                  name: keycloak-client-secret-services
                   key: CLIENT_SECRET
           ports:
             - containerPort: 8443
@@ -88,4 +88,4 @@ spec:
             secretName: http-endpoint-tls
         - name: client-secret
           secret:
-            secretName: keycloak-client-secret-drogue
+            secretName: keycloak-client-secret-services

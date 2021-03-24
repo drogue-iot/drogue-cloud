@@ -50,15 +50,19 @@ spec:
             # variable from Kubernetes, which doesn't parse as an int
             - name: MQTT_ENDPOINT_PORT
               value: "0"
+            # this is a workaround as the name of the variable conflicts with an automatically generated
+            # variable from Kubernetes, which doesn't parse as an int
+            - name: MQTT_INTEGRATION_PORT
+              value: "0"
             - name: CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-client-secret-drogue
+                  name: keycloak-client-secret-services
                   key: CLIENT_ID
             - name: CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-client-secret-drogue
+                  name: keycloak-client-secret-services
                   key: CLIENT_SECRET
           ports:
             - containerPort: 8080

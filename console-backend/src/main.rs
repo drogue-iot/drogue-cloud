@@ -16,7 +16,7 @@ use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
     endpoints::{create_endpoint_source, EndpointSourceType},
-    openid::{create_client, Authenticator, AuthenticatorConfig},
+    openid::{Authenticator, TokenConfig},
     openid_auth,
 };
 use serde::{Deserialize, Serialize};
@@ -45,6 +45,10 @@ pub struct Config {
     #[serde(default = "defaults::kafka_topic")]
     pub kafka_topic: String,
 
+    #[serde(default = "defaults::oauth2_scopes")]
+    pub scopes: String,
+    pub redirect_url: String,
+
     #[serde(default)]
     pub user_auth: UserAuthClientConfig,
 }
@@ -58,9 +62,6 @@ async fn main() -> anyhow::Result<()> {
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;
 
-    // extract required endpoint information
-    let endpoints = endpoint_source.eval_endpoints().await?;
-
     log::info!("Using endpoint source: {:?}", endpoint_source);
     let endpoint_source: Data<EndpointSourceType> = Data::new(endpoint_source);
 
@@ -70,19 +71,20 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Authentication enabled: {}", enable_auth);
 
-    let openid_client = if enable_auth {
-        let config = AuthenticatorConfig::from_env()?;
-        Some(OpenIdClient {
-            client: create_client(&config, endpoints.clone()).await?,
-            scopes: config.scopes,
-        })
+    let (openid_client, authenticator) = if enable_auth {
+        let client = TokenConfig::from_env()?
+            .into_client(Some(config.redirect_url.clone()))
+            .await?;
+        (
+            Some(OpenIdClient {
+                client,
+                scopes: config.scopes.clone(),
+            }),
+            Some(web::Data::new(Authenticator::new().await?)),
+        )
     } else {
-        None
+        (None, None)
     };
-
-    let authenticator = openid_client
-        .as_ref()
-        .map(|client| web::Data::new(Authenticator::from_client(client.client.clone())));
 
     let user_auth = openid_client
         .as_ref()

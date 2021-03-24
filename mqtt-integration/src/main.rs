@@ -5,14 +5,18 @@ mod mqtt;
 mod server;
 mod service;
 
-use crate::server::{build, build_tls};
-use crate::service::ServiceConfig;
+use crate::{
+    server::{build, build_tls},
+    service::ServiceConfig,
+};
 use dotenv::dotenv;
-use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
-use drogue_cloud_service_common::config::ConfigFromEnv;
-use drogue_cloud_service_common::endpoints::eval_endpoints;
-use drogue_cloud_service_common::openid::{create_client, Authenticator, AuthenticatorConfig};
+use drogue_cloud_service_common::{
+    client::{UserAuthClient, UserAuthClientConfig},
+    config::ConfigFromEnv,
+    openid::{Authenticator, TokenConfig},
+};
 use serde::Deserialize;
+use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -37,7 +41,14 @@ pub struct Config {
 #[derive(Clone)]
 pub struct OpenIdClient {
     pub client: openid::Client,
-    pub scopes: String,
+}
+
+impl Debug for OpenIdClient {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("OpenIdClient")
+            .field("client", &"...")
+            .finish()
+    }
 }
 
 #[ntex::main]
@@ -51,31 +62,29 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Authentication enabled: {}", enable_auth);
 
-    let endpoints = eval_endpoints().await?;
-
-    let openid_client = if enable_auth {
-        let config = AuthenticatorConfig::from_env()?;
-        Some(OpenIdClient {
-            client: create_client(&config, endpoints.clone()).await?,
-            scopes: config.scopes,
-        })
+    let (openid_client, authenticator, user_auth) = if enable_auth {
+        let client = TokenConfig::from_env()?.into_client(None).await?;
+        (
+            match config.service.enable_username_password_auth {
+                true => Some(OpenIdClient {
+                    client: client.clone(),
+                }),
+                false => None,
+            },
+            Some(Authenticator::new().await?),
+            Some(Arc::new(UserAuthClient::from_openid_client(
+                &config.user_auth,
+                client,
+            )?)),
+        )
     } else {
-        None
+        (None, None, None)
     };
-
-    let authenticator = openid_client
-        .as_ref()
-        .map(|client| Authenticator::from_client(client.client.clone()));
-
-    let user_auth = openid_client
-        .as_ref()
-        .map(|client| UserAuthClient::from_openid_client(&config.user_auth, client.client.clone()))
-        .transpose()?
-        .map(Arc::new);
 
     let app = service::App {
         authenticator,
         user_auth,
+        openid_client,
         config: config.service.clone(),
     };
 

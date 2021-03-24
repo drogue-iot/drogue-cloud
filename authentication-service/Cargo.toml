@@ -34,7 +34,6 @@ sha2 = "0.9"
 rustls = { version = "0.19" }
 
 dotenv = "0.15.0"
-envconfig = "0.9.1"
 
 thiserror = "1"
 config = "0.10"

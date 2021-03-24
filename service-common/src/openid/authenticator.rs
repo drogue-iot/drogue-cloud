@@ -1,20 +1,26 @@
-use crate::config::ConfigFromEnv;
-use crate::{defaults, endpoints::eval_endpoints};
+use crate::{config::ConfigFromEnv, defaults, endpoints::eval_endpoints};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use drogue_cloud_service_api::endpoints::Endpoints;
 use failure::Fail;
-use openid::{biscuit::jws::Compact, Client, Empty, Jws, StandardClaims};
+use futures::{stream, StreamExt, TryStreamExt};
+use openid::{biscuit::jws::Compact, Client, Configurable, Empty, Jws, StandardClaims};
 use reqwest::Certificate;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Read, path::Path};
+use std::{collections::HashMap, fs::File, io::Read, path::Path};
 use thiserror::Error;
 use url::Url;
 
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct AuthenticatorConfig {
+    #[serde(default)]
+    pub oauth: HashMap<String, AuthenticatorClientConfig>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthenticatorClientConfig {
     pub client_id: String,
     pub client_secret: String,
     #[serde(default = "defaults::oauth2_scopes")]
@@ -32,7 +38,7 @@ pub enum AuthenticatorError {
 /// An authenticator to authenticate incoming requests.
 #[derive(Clone)]
 pub struct Authenticator {
-    pub client: openid::Client,
+    clients: Vec<openid::Client>,
 }
 
 impl Debug for Authenticator {
@@ -45,7 +51,7 @@ impl Debug for Authenticator {
 
 impl From<openid::Client> for Authenticator {
     fn from(client: Client) -> Self {
-        Self::from_client(client)
+        Self::from_clients(vec![client])
     }
 }
 
@@ -57,18 +63,71 @@ impl Authenticator {
 
     pub async fn from_endpoints(endpoints: Endpoints) -> anyhow::Result<Self> {
         let config = AuthenticatorConfig::from_env()?;
-        Self::from_config(&config, endpoints).await
+        Self::from_config(config, endpoints).await
     }
 
-    pub fn from_client(client: openid::Client) -> Self {
-        Authenticator { client }
+    pub fn from_clients(clients: Vec<openid::Client>) -> Self {
+        Authenticator { clients }
     }
 
     pub async fn from_config(
-        config: &AuthenticatorConfig,
+        mut config: AuthenticatorConfig,
         endpoints: Endpoints,
     ) -> anyhow::Result<Self> {
-        Ok(Self::from_client(create_client(config, endpoints).await?))
+        let configs = config.oauth.drain().map(|(_, v)| v);
+        Self::from_configs(configs, endpoints).await
+    }
+
+    pub async fn from_configs<I>(configs: I, endpoints: Endpoints) -> anyhow::Result<Self>
+    where
+        I: IntoIterator<Item = AuthenticatorClientConfig>,
+    {
+        let clients = stream::iter(configs)
+            .map(Ok)
+            .and_then(|config| async { create_client(config, endpoints.clone()).await })
+            .try_collect()
+            .await?;
+
+        Ok(Self::from_clients(clients))
+    }
+
+    fn find_client(
+        &self,
+        token: &Compact<StandardClaims, Empty>,
+    ) -> Result<Option<&Client>, AuthenticatorError> {
+        let unverified_payload = token.unverified_payload().map_err(|err| {
+            log::info!("Failed to decode token payload: {}", err);
+            AuthenticatorError::Failed
+        })?;
+
+        let client_id = unverified_payload.azp.as_ref();
+
+        log::debug!(
+            "Searching client for: {} / {:?}",
+            unverified_payload.iss,
+            client_id
+        );
+
+        // find the client to use
+
+        let client = self.clients.iter().find(|client| {
+            let provider_iss = &client.provider.config().issuer;
+            let provider_id = &client.client_id;
+
+            log::debug!("Checking client: {} / {}", provider_iss, provider_id);
+            if provider_iss != &unverified_payload.iss {
+                return false;
+            }
+            if let Some(client_id) = client_id {
+                if client_id != provider_id {
+                    return false;
+                }
+            }
+
+            true
+        });
+
+        Ok(client)
     }
 
     /// Validate a bearer token.
@@ -78,25 +137,30 @@ impl Authenticator {
     ) -> Result<Compact<StandardClaims, Empty>, AuthenticatorError> {
         let mut token = Jws::new_encoded(token.as_ref());
 
-        self.client.decode_token(&mut token).map_err(|err| {
+        let client = self.find_client(&token)?.ok_or_else(|| {
+            log::debug!("Unable to find client");
+            AuthenticatorError::Failed
+        })?;
+
+        log::debug!("Using client: {}", client.client_id);
+
+        client.decode_token(&mut token).map_err(|err| {
             log::debug!("Failed to decode token: {}", err);
             AuthenticatorError::Failed
         })?;
 
         log::debug!("Token: {:#?}", token);
 
-        self.client
-            .validate_token(&token, None, None)
-            .map_err(|err| {
-                log::info!("Validation failed: {}", err);
-                AuthenticatorError::Failed
-            })?;
+        client.validate_token(&token, None, None).map_err(|err| {
+            log::info!("Validation failed: {}", err);
+            AuthenticatorError::Failed
+        })?;
 
         Ok(token)
     }
 }
 
-impl ClientConfig for AuthenticatorConfig {
+impl ClientConfig for AuthenticatorClientConfig {
     fn client_id(&self) -> String {
         self.client_id.clone()
     }
@@ -111,8 +175,8 @@ pub trait ClientConfig {
     fn client_secret(&self) -> String;
 }
 
-pub async fn create_client(
-    config: &dyn ClientConfig,
+pub async fn create_client<C: ClientConfig>(
+    config: C,
     endpoints: Endpoints,
 ) -> anyhow::Result<openid::Client> {
     let mut client = reqwest::ClientBuilder::new();

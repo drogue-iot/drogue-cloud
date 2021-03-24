@@ -29,6 +29,9 @@ pub struct Examples {
     password: String,
     payload: String,
 
+    binary_mode: bool,
+    consumer_group: Option<String>,
+
     refs: Refs,
 }
 
@@ -42,6 +45,9 @@ pub enum Msg {
     SetDeviceId(String),
     SetPassword(String),
     SetPayload(String),
+    SetBinaryMode(bool),
+    SetSharedConsumerMode(bool),
+    SetConsumerGroup(String),
 }
 
 impl Component for Examples {
@@ -59,6 +65,8 @@ impl Component for Examples {
             password: "hey-rodney".into(),
             payload: json!({"temp": 42}).to_string(),
             refs: Default::default(),
+            binary_mode: false,
+            consumer_group: None,
         }
     }
 
@@ -67,6 +75,7 @@ impl Component for Examples {
             Msg::FetchOverview => {
                 self.ft = Some(self.fetch_overview().unwrap());
             }
+            Msg::FetchOverviewFailed => return false,
             Msg::OverviewUpdate(e) => {
                 self.endpoints = Some(e);
             }
@@ -74,7 +83,14 @@ impl Component for Examples {
             Msg::SetDeviceId(device) => self.device_id = device,
             Msg::SetPassword(pwd) => self.password = pwd,
             Msg::SetPayload(payload) => self.payload = payload,
-            _ => return false,
+            Msg::SetBinaryMode(binary_mode) => self.binary_mode = binary_mode,
+            Msg::SetSharedConsumerMode(shared_consumer_mode) => match shared_consumer_mode {
+                true => self.consumer_group = Some(String::from("group-id")),
+                false => self.consumer_group = None,
+            },
+            Msg::SetConsumerGroup(group) => {
+                self.consumer_group = Some(group);
+            }
         }
         true
     }
@@ -84,7 +100,7 @@ impl Component for Examples {
     }
 
     fn view(&self) -> Html {
-        html! {
+        return html! {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
@@ -95,7 +111,7 @@ impl Component for Examples {
                     { self.render_overview() }
                 </PageSection>
             </>
-        }
+        };
     }
 }
 
@@ -231,6 +247,17 @@ impl Examples {
     }
 
     fn render_examples(&self, endpoints: &Endpoints) -> Vec<VChild<StackItem>> {
+        let v = |value: &str| match value {
+            "" => InputState::Error,
+            v => {
+                if v.chars().all(|c| c != '#' && c != '+' && c != '/') {
+                    InputState::Default
+                } else {
+                    InputState::Error
+                }
+            }
+        };
+
         let mut cards: Vec<_> = Vec::new();
 
         if let Some(registry) = &endpoints.registry {
@@ -249,20 +276,85 @@ impl Examples {
                 ]}})),
             );
             cards.push(html_nested!{
-            <Card title={html!{"Create a new application"}}>
-                <div>
-                {"As a first step, you will need to create a new application."}
-                </div>
-                <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_app_cmd/>
-            </Card>
+                <Card title={html!{"Create a new application"}}>
+                    <div>
+                    {"As a first step, you will need to create a new application."}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_app_cmd/>
+                </Card>
             });
             cards.push(html_nested!{
-            <Card title={html!{"Create a new device"}}>
-                <div>
-                {"As part of your application, you can then create a new device."}
-                </div>
-                <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_device_cmd/>
-            </Card>
+                <Card title={html!{"Create a new device"}}>
+                    <div>
+                    {"As part of your application, you can then create a new device."}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_device_cmd/>
+                </Card>
+            });
+        }
+
+        if let Some(mqtt) = &endpoints.mqtt_integration {
+            let opts = match self.binary_mode {
+                true => " -up content-mode=binary",
+                false => "",
+            };
+            let topic = match self.consumer_group {
+                None => format!("app/{app}", app = self.app_id),
+                Some(ref group) => {
+                    format!(
+                        "$shared/{group}/app/{app}",
+                        group = group,
+                        app = self.app_id
+                    )
+                }
+            };
+            let consume_mqtt_cmd = format!(
+                r#"mqtt sub -h {host} -p {port} -s -t '{topic}' {opts} -pw "{token}""#,
+                host = mqtt.host,
+                port = mqtt.port,
+                token = self.token(),
+                topic = topic,
+                opts = opts,
+            );
+            cards.push(html_nested!{
+                <Card title=html!{"Consume device data using MQTT"}>
+                    <div>
+                        {"The data, published by devices, can also be consumed using MQTT."}
+                    </div>
+                    <div>
+                        <Switch
+                            checked=self.binary_mode
+                            label="Binary content mode" label_off="Structured content mode"
+                            on_change=self.link.callback(|data| Msg::SetBinaryMode(data))
+                            />
+                    </div>
+                    <div>
+                        <Split gutter=true>
+                            <SplitItem>
+                            <div style="border-width: --pf-c-form-control--BorderWidth;">
+                        <Switch
+                            checked=self.consumer_group.is_some()
+                            label="Shared consumer: " label_off="Default consumer"
+                            on_change=self.link.callback(|data| Msg::SetSharedConsumerMode(data))
+                            />
+                            </div></SplitItem>
+                            <SplitItem>
+                        { if let Some(ref consumer_group) = self.consumer_group {html!{
+                            <TextInput
+                                value=consumer_group
+                                required=true
+                                onchange=self.link.callback(|consumer_group|Msg::SetConsumerGroup(consumer_group))
+                                validator=Validator::from(v)
+                                />
+                        }} else { html!{}} }
+                            </SplitItem>
+                        </Split>
+                    </div>
+                    <div>
+                        {"Run the following command in a new terminal window:"}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=consume_mqtt_cmd/>
+                </Card>
             });
         }
 
@@ -279,12 +371,12 @@ impl Examples {
                 )),
             );
             cards.push(html_nested!{
-            <Card title={html!{"Publish data using HTTP"}}>
-                <div>
-                    {"You can now publish data to the cloud using HTTP."}
-                </div>
-                <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
-            </Card>
+                <Card title={html!{"Publish data using HTTP"}}>
+                    <div>
+                        {"You can now publish data to the cloud using HTTP."}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
+                </Card>
             });
         }
 
@@ -299,12 +391,12 @@ impl Examples {
                 payload = shell_quote(&self.payload)
             );
             cards.push(html_nested!{
-            <Card title={html!{"Publish data using MQTT"}}>
-                <div>
-                    {"You can now publish data to the cloud using MQTT."}
-                </div>
-                <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_mqtt_cmd/>
-            </Card>
+                <Card title={html!{"Publish data using MQTT"}}>
+                    <div>
+                        {"You can now publish data to the cloud using MQTT."}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_mqtt_cmd/>
+                </Card>
             });
         }
 
@@ -314,6 +406,12 @@ impl Examples {
                 html_nested! {<StackItem> { card.clone() } </StackItem>}
             })
             .collect()
+    }
+
+    fn token(&self) -> String {
+        Backend::token()
+            .map(|token| token.access_token)
+            .unwrap_or_default()
     }
 }
 

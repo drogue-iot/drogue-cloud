@@ -21,6 +21,22 @@ spec:
         app.kubernetes.io/name: authentication-service
         app.kubernetes.io/part-of: device-registry
     spec:
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
       containers:
         - name: service
           image: ghcr.io/drogue-iot/authentication-service:latest
@@ -51,15 +67,19 @@ spec:
             # variable from Kubernetes, which doesn't parse as an int
             - name: MQTT_ENDPOINT_PORT
               value: "0"
-            - name: CLIENT_ID
+            # this is a workaround as the name of the variable conflicts with an automatically generated
+            # variable from Kubernetes, which doesn't parse as an int
+            - name: MQTT_INTEGRATION_PORT
+              value: "0"
+            - name: OAUTH__SERVICES__CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-client-secret-drogue
+                  name: keycloak-client-secret-services
                   key: CLIENT_ID
-            - name: CLIENT_SECRET
+            - name: OAUTH__SERVICES__CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: keycloak-client-secret-drogue
+                  name: keycloak-client-secret-services
                   key: CLIENT_SECRET
           readinessProbe:
             initialDelaySeconds: 2
@@ -76,3 +96,7 @@ spec:
           resources:
             limits:
               memory: 128Mi
+      volumes:
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-services

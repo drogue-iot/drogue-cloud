@@ -1,8 +1,8 @@
 pub mod endpoints;
 pub mod service;
 
-use drogue_cloud_service_common::openid::Authenticator;
-use envconfig::Envconfig;
+use drogue_cloud_service_common::{defaults, openid::Authenticator};
+use serde::Deserialize;
 
 pub struct WebData<S>
 where
@@ -12,15 +12,15 @@ where
     pub authenticator: Option<Authenticator>,
 }
 
-#[derive(Clone, Envconfig)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
+    #[serde(default = "defaults::health_bind_addr")]
     pub health_bind_addr: String,
-    #[envconfig(from = "ENABLE_AUTH", default = "true")]
+    #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
 }
 

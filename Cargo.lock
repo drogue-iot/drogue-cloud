@@ -1301,7 +1301,6 @@ dependencies = [
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
  "env_logger 0.7.1",
- "envconfig",
  "futures",
  "futures-core",
  "futures-util",
@@ -3341,9 +3340,8 @@ dependencies = [
 
 [[package]]
 name = "patternfly-yew"
-version = "0.0.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b5fde551b33b4d1155395b745c025547320ed36257156f6454e157d29465cfe"
+version = "0.0.18"
+source = "git+https://github.com/ctron/patternfly-yew?rev=be0f5a936d132833c8dfd2cc756f8f476ca88971#be0f5a936d132833c8dfd2cc756f8f476ca88971"
 dependencies = [
  "chrono",
  "js-sys",
@@ -3352,6 +3350,7 @@ dependencies = [
  "serde_json",
  "strum",
  "strum_macros",
+ "uuid",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
