@@ -9,10 +9,13 @@ use drogue_cloud_endpoint_common::{
     downstream::{self, DownstreamSender},
     error::HttpEndpointError,
 };
-use drogue_cloud_service_common::{openid::Authenticator, openid_auth};
+use drogue_cloud_service_common::{client::RegistryClient, openid::Authenticator, openid_auth};
 use envconfig::Envconfig;
 use serde::Deserialize;
 use serde_json::json;
+use url::Url;
+
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 
 #[derive(Envconfig, Clone, Debug)]
 struct Config {
@@ -22,6 +25,8 @@ struct Config {
     pub bind_addr: String,
     #[envconfig(from = "ENABLE_AUTH", default = "true")]
     pub enable_auth: bool,
+    #[envconfig(from = "REGISTRY_SERVICE_URL", default = "http://registry:8080")]
+    pub registry_service_url: String,
 }
 
 #[derive(Deserialize)]
@@ -53,6 +58,8 @@ async fn command(
     web::Query(opts): web::Query<CommandOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
+    registry: web::Data<RegistryClient>,
+    token: BearerAuth,
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::info!(
         "Send command '{}' to '{}' / '{}'",
@@ -60,26 +67,38 @@ async fn command(
         opts.application,
         opts.device
     );
+    let response = registry
+        .get_device(&opts.application, &opts.device, token.token())
+        .await;
 
-    endpoint
-        .publish_http_default(
-            downstream::Publish {
-                channel: opts.command,
-                app_id: opts.application,
-                device_id: opts.device,
-                options: downstream::PublishOptions {
-                    topic: None,
-                    content_type: req
-                        .headers()
-                        .get(header::CONTENT_TYPE)
-                        .and_then(|v| v.to_str().ok())
-                        .map(|s| s.to_string()),
-                    ..Default::default()
-                },
-            },
-            body,
-        )
-        .await
+    match response {
+        Ok(device) => {
+            log::debug!("Found device {:?}", device);
+            endpoint
+                .publish_http_default(
+                    downstream::Publish {
+                        channel: opts.command,
+                        app_id: opts.application,
+                        device_id: opts.device,
+                        options: downstream::PublishOptions {
+                            topic: None,
+                            content_type: req
+                                .headers()
+                                .get(header::CONTENT_TYPE)
+                                .and_then(|v| v.to_str().ok())
+                                .map(|s| s.to_string()),
+                            ..Default::default()
+                        },
+                    },
+                    body,
+                )
+                .await
+        }
+        Err(err) => {
+            log::info!("Error {:?}", err);
+            Ok(HttpResponse::NotAcceptable().finish())
+        }
+    }
 }
 
 #[actix_web::main]
@@ -104,6 +123,11 @@ async fn main() -> anyhow::Result<()> {
 
     let data = web::Data::new(WebData { authenticator });
 
+    let registry = RegistryClient::new(
+        Default::default(),
+        Url::parse(&config.registry_service_url)?,
+    );
+
     HttpServer::new(move || {
         let auth = openid_auth!(req -> {
             req
@@ -116,6 +140,7 @@ async fn main() -> anyhow::Result<()> {
             .app_data(data.clone())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone())
+            .data(registry.clone())
             .service(health)
             .service(index)
             .service(

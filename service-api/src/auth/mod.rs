@@ -4,6 +4,8 @@ pub mod authz;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+use url::ParseError;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ErrorInformation {
     pub error: String,
@@ -28,6 +30,9 @@ where
     /// A token provider error.
     #[error("token error: {0}")]
     Token(#[source] Box<dyn std::error::Error>),
+    /// Url error.
+    #[error("Url parse error")]
+    Url(#[from] ParseError),
 }
 
 impl fmt::Display for ErrorInformation {
