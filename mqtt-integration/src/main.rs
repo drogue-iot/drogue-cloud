@@ -13,6 +13,7 @@ use dotenv::dotenv;
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
+    defaults,
     openid::{Authenticator, TokenConfig},
 };
 use serde::Deserialize;
@@ -21,7 +22,7 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default)]
+    #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
     #[serde(default)]
     pub disable_tls: bool,
@@ -61,6 +62,12 @@ async fn main() -> anyhow::Result<()> {
     let enable_auth = config.enable_auth;
 
     log::info!("Authentication enabled: {}", enable_auth);
+    log::info!(
+        "User/password enabled: {}",
+        config.service.enable_username_password_auth
+    );
+    log::info!("Kafka servers: {}", config.service.kafka_bootstrap_servers);
+    log::info!("Kafka topic: {}", config.service.kafka_topic);
 
     let (openid_client, authenticator, user_auth) = if enable_auth {
         let client = TokenConfig::from_env()?.into_client(None).await?;

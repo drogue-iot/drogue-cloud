@@ -52,12 +52,12 @@ spec:
             # variable from Kubernetes, which doesn't parse as an int
             - name: MQTT_ENDPOINT_PORT
               value: "0"
-            - name: OAUTH__SERVICES__CLIENT_ID
+            - name: CLIENT_ID
               valueFrom:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_ID
-            - name: OAUTH__SERVICES__CLIENT_SECRET
+            - name: CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: keycloak-client-secret-services
