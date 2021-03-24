@@ -372,7 +372,11 @@ impl Session {
             _ => Err(v5::codec::SubscribeAckReason::TopicFilterInvalid),
         }?;
 
-        log::debug!("Request to subscribe to app: {}", app);
+        log::debug!(
+            "Request to subscribe to app: {} (group: {:?})",
+            app,
+            group_id
+        );
 
         // authorize topic for user
 
