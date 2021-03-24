@@ -301,6 +301,8 @@ impl Session {
     async fn run_stream(mut stream: Stream, sink: &mut Sink) -> Result<(), anyhow::Error> {
         let content_mode = stream.content_mode;
 
+        log::debug!("Running stream - content-mode: {:?}", content_mode);
+
         // run event stream
         while let Some(event) = stream.event_stream.next().await {
             log::debug!("Event: {:?}", event);
@@ -355,6 +357,8 @@ impl Session {
                 }
             }
             .map_err(|err| anyhow::anyhow!("Failed to send event: {}", err))?;
+
+            log::debug!("Sent message - go back to sleep");
         }
 
         Ok(())
@@ -374,7 +378,7 @@ impl Session {
             }
         };
 
-        let handle = ntex_rt::spawn(Box::pin(f));
+        let handle = ntex_rt::spawn(f);
 
         if let Ok(mut streams) = self.streams.lock() {
             streams.insert(topic, handle);

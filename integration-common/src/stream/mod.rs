@@ -14,6 +14,7 @@ use futures::{
     Stream, StreamExt,
 };
 use owning_ref::OwningHandle;
+use rdkafka::error::KafkaResult;
 use rdkafka::{
     config::{ClientConfig, RDKafkaLogLevel},
     consumer::{stream_consumer::StreamConsumer, CommitMode, Consumer, DefaultConsumerContext},
@@ -21,8 +22,11 @@ use rdkafka::{
     util::Timeout,
     TopicPartitionList,
 };
-use std::fmt::{Debug, Formatter};
-use std::{pin::Pin, time::Duration};
+use std::{
+    fmt::{Debug, Formatter},
+    pin::Pin,
+    time::Duration,
+};
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -72,7 +76,7 @@ impl EventStream {
             .set("session.timeout.ms", "6000")
             .set("enable.auto.commit", "false")
             .set_log_level(RDKafkaLogLevel::Debug)
-            .create_with_context(DefaultConsumerContext)?;
+            .create()?;
 
         log::debug!("Created consumer");
 
@@ -114,7 +118,7 @@ impl EventStream {
             .set("session.timeout.ms", "6000")
             .set("enable.auto.commit", "true")
             .set_log_level(RDKafkaLogLevel::Debug)
-            .create_with_context(DefaultConsumerContext)?;
+            .create()?;
 
         log::debug!("Created consumer");
 
@@ -134,17 +138,18 @@ impl EventStream {
         }
     }
 
-    /// Convert a Kafka message to an event.
-    fn to_event(&self, msg: &BorrowedMessage) -> Result<Event, EventStreamError> {
-        Ok(msg.to_event()?)
-    }
-
     /// Test if the message/event matches an optional filter.
     fn matches(&self, event: &Event) -> bool {
         match event.extension(EXT_APPLICATION) {
             Some(ExtensionValue::String(other_app)) => &self.app == other_app,
             _ => false,
         }
+    }
+
+    fn ack(&self, msg: &BorrowedMessage) -> KafkaResult<()> {
+        self.upstream
+            .as_owner()
+            .commit_message(&msg, CommitMode::Async)
     }
 }
 
@@ -162,31 +167,23 @@ impl Stream for EventStream {
 
         match next {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(next) => {
-                log::trace!("Event: {:?}", next);
-                match next {
-                    None => Poll::Ready(None),
-                    Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
-                    Some(Ok(msg)) => {
-                        let event = self
-                            .upstream
-                            .as_owner()
-                            .commit_message(&msg, CommitMode::Async)
-                            .map_err(|err| err.into())
-                            .and_then(|_| self.to_event(&msg))
-                            .map(|event| match self.matches(&event) {
-                                true => Some(event),
-                                false => None,
-                            })
-                            .transpose();
+            Poll::Ready(next) => match next {
+                None => Poll::Ready(None),
+                Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
+                Some(Ok(msg)) => {
+                    self.ack(&msg)?;
 
-                        match event {
-                            Some(result) => Poll::Ready(Some(result)),
-                            None => Poll::Pending,
+                    let event = msg.to_event()?;
+
+                    match self.matches(&event) {
+                        true => Poll::Ready(Some(Ok(event))),
+                        false => {
+                            cx.waker().wake_by_ref();
+                            Poll::Pending
                         }
                     }
                 }
-            }
+            },
         }
     }
 }
