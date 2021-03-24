@@ -49,6 +49,18 @@ pub struct TokenConfig {
 }
 
 impl TokenConfig {
+    /// pull in global configuration options
+    pub fn amend_with_env(mut self) -> Self {
+        // try fetching global SSO url
+        if self.sso_url.is_none() {
+            self.sso_url = std::env::var("SSO_URL")
+                .ok()
+                .and_then(|url| Url::parse(&url).ok());
+        }
+
+        self
+    }
+
     pub fn issuer_url(&self) -> anyhow::Result<Url> {
         match (&self.issuer_url, &self.sso_url) {
             (Some(issuer_url), _) => Ok(issuer_url.clone()),
@@ -58,7 +70,7 @@ impl TokenConfig {
             }
             _ => {
                 anyhow::bail!(
-                    "Invalid token provider configuration, need either 'ISSUER_URL' or  'SSO_URL'"
+                    "Invalid token provider configuration, need either issuer or SSO url"
                 );
             }
         }
@@ -66,9 +78,20 @@ impl TokenConfig {
 }
 
 impl TokenConfig {
-    pub async fn into_client(self, redirect: Option<String>) -> anyhow::Result<openid::Client> {
+    pub async fn into_client(
+        self,
+        client: reqwest::Client,
+        redirect: Option<String>,
+    ) -> anyhow::Result<openid::Client> {
         let issuer = self.issuer_url()?;
-        Ok(openid::Client::discover(self.client_id, self.client_secret, redirect, issuer).await?)
+        Ok(openid::Client::discover_with_client(
+            client,
+            self.client_id,
+            self.client_secret,
+            redirect,
+            issuer,
+        )
+        .await?)
     }
 }
 
@@ -83,13 +106,19 @@ impl OpenIdTokenProvider {
     }
 
     /// Create a new provider by discovering the OAuth2 client from the configuration
-    pub async fn discover_from(config: TokenConfig) -> anyhow::Result<Self> {
+    pub async fn discover_from(
+        client: reqwest::Client,
+        config: TokenConfig,
+    ) -> anyhow::Result<Self> {
         let refresh_before = config
             .refresh_before
             .and_then(|d| chrono::Duration::from_std(d).ok())
             .unwrap_or_else(|| chrono::Duration::seconds(15));
 
-        Ok(Self::new(config.into_client(None).await?, refresh_before))
+        Ok(Self::new(
+            config.into_client(client, None).await?,
+            refresh_before,
+        ))
     }
 
     /// return a fresh token, this may be an existing (non-expired) token

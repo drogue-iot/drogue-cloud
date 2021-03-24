@@ -19,7 +19,7 @@ use drogue_cloud_service_common::{
     openid::{Authenticator, TokenConfig},
     openid_auth,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 
 #[get("/")]
@@ -32,7 +32,7 @@ async fn health() -> impl Responder {
     HttpResponse::Ok().finish()
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
@@ -68,29 +68,35 @@ async fn main() -> anyhow::Result<()> {
     // OpenIdConnect
 
     let enable_auth = config.enable_auth;
+    let app_config = config.clone();
 
     log::info!("Authentication enabled: {}", enable_auth);
 
-    let (openid_client, authenticator) = if enable_auth {
-        let client = TokenConfig::from_env()?
-            .into_client(endpoints.redirect_url)
+    let (openid_client, user_auth, authenticator) = if enable_auth {
+        let client = reqwest::Client::new();
+        let ui_client = TokenConfig::from_env_prefix("UI")?
+            .amend_with_env()
+            .into_client(client.clone(), endpoints.redirect_url)
             .await?;
+
+        let user_auth = UserAuthClient::from_config(
+            client,
+            config.user_auth,
+            TokenConfig::from_env_prefix("USER_AUTH")?.amend_with_env(),
+        )
+        .await?;
+
         (
             Some(OpenIdClient {
-                client,
+                client: ui_client,
                 scopes: config.scopes.clone(),
             }),
+            Some(web::Data::new(user_auth)),
             Some(web::Data::new(Authenticator::new().await?)),
         )
     } else {
-        (None, None)
+        (None, None, None)
     };
-
-    let user_auth = openid_client
-        .as_ref()
-        .map(|client| UserAuthClient::from_openid_client(&config.user_auth, client.client.clone()))
-        .transpose()?
-        .map(web::Data::new);
 
     let openid_client = openid_client.map(web::Data::new);
 
@@ -105,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(Cors::permissive().supports_credentials())
             .data(web::JsonConfig::default().limit(4096))
-            .data(config.clone());
+            .data(app_config.clone());
 
         let app = if let Some(authenticator) = &authenticator {
             app.app_data(authenticator.clone())

@@ -1,3 +1,4 @@
+use crate::openid::TokenConfig;
 use crate::{defaults, openid::OpenIdTokenProvider};
 use drogue_cloud_service_api::auth::{
     authz::{AuthorizationRequest, AuthorizationResponse},
@@ -5,7 +6,6 @@ use drogue_cloud_service_api::auth::{
 };
 use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 use url::Url;
 
 /// A client for authorizing user requests.
@@ -20,16 +20,12 @@ pub struct UserAuthClient {
 pub struct UserAuthClientConfig {
     #[serde(default = "defaults::user_auth_url")]
     pub url: Url,
-    #[serde(default)]
-    #[serde(with = "humantime_serde")]
-    pub refresh_before: Option<Duration>,
 }
 
 impl Default for UserAuthClientConfig {
     fn default() -> Self {
         Self {
             url: defaults::user_auth_url(),
-            refresh_before: None,
         }
     }
 }
@@ -48,22 +44,15 @@ impl UserAuthClient {
         })
     }
 
-    pub fn from_openid_client(
-        config: &UserAuthClientConfig,
-        client: openid::Client,
+    pub async fn from_config(
+        client: reqwest::Client,
+        config: UserAuthClientConfig,
+        provider_config: TokenConfig,
     ) -> anyhow::Result<Self> {
         Self::new(
-            client.http_client.clone(),
-            config.url.clone(),
-            Some(OpenIdTokenProvider::new(
-                client,
-                config
-                    .refresh_before
-                    // map to chrono ...
-                    .and_then(|t| chrono::Duration::from_std(t).ok())
-                    // ... or fall back to 15 seconds
-                    .unwrap_or_else(|| chrono::Duration::seconds(15)),
-            )),
+            client.clone(),
+            config.url,
+            Some(OpenIdTokenProvider::discover_from(client, provider_config).await?),
         )
     }
 

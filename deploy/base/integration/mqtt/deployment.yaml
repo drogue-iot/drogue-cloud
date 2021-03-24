@@ -56,16 +56,6 @@ spec:
             # variable from Kubernetes, which doesn't parse as an int
             - name: MQTT_INTEGRATION_PORT
               value: "0"
-            - name: CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: keycloak-client-secret-services
-                  key: CLIENT_ID
-            - name: CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: keycloak-client-secret-services
-                  key: CLIENT_SECRET
             - name: OAUTH__DROGUE__CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -82,6 +72,16 @@ spec:
                   fieldPath: metadata.namespace
             - name: SERVICE__KAFKA_TOPIC
               value: knative-messaging-kafka.$(NAMESPACE).iot-channel
+            - name: USER_AUTH__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: USER_AUTH__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
             - name: USER_AUTH__URL
               value: http://user-auth-service.$(NAMESPACE).svc.cluster.local.
           ports:
