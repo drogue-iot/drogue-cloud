@@ -38,7 +38,7 @@ mod test {
 
         std::env::set_var("FOO__BAR", "baz");
 
-        let foo = Foo::from_env_prefix("FOO_").unwrap();
+        let foo = Foo::from_env_prefix("FOO").unwrap();
         assert_eq!(foo.bar, "baz");
 
         std::env::remove_var("FOO__BAR");
