@@ -114,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
             if cfg!(feature = "openssl") {
                 use open_ssl::ssl;
                 let method = ssl::SslMethod::tls_server();
-                let mut builder = ssl::SslAcceptor::mozilla_intermediate(method)?;
+                let mut builder = ssl::SslAcceptor::mozilla_intermediate_v5(method)?;
                 builder.set_private_key_file(key, ssl::SslFiletype::PEM)?;
                 builder.set_certificate_chain_file(cert)?;
                 // we ask for client certificates, but don't enforce them
