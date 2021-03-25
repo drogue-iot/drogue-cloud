@@ -4,8 +4,7 @@ use drogue_cloud_console_common::UserInfo;
 use http::{Response, Uri};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
-use std::time::Duration;
+use std::{sync::RwLock, time::Duration};
 use url::Url;
 use yew::{format::Text, prelude::*, services::fetch::*, utils::window};
 
@@ -23,7 +22,7 @@ pub struct Backend {
     token: Option<Token>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Token {
     pub access_token: String,
     pub id_token: String,

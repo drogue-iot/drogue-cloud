@@ -1,10 +1,12 @@
-use crate::preferences::Preferences;
+use crate::data::SharedDataOps;
 use crate::{
     backend::{Backend, BackendInformation, Token},
     components::placeholder::Placeholder,
+    data::SharedDataBridge,
     error::error,
-    examples::Examples,
+    examples::{self, Examples},
     index::Index,
+    preferences::Preferences,
     spy::Spy,
 };
 use anyhow::Error;
@@ -29,8 +31,8 @@ use yew_router::prelude::*;
 pub enum AppRoute {
     #[to = "/spy"]
     Spy,
-    #[to = "/examples"]
-    Examples,
+    #[to = "/examples{*:rest}"]
+    Examples(Examples),
     #[to = "/"]
     Index,
 }
@@ -40,6 +42,7 @@ pub struct Main {
     access_code: Option<String>,
     task: Option<FetchTask>,
     refresh_task: Option<TimeoutTask>,
+    token_holder: SharedDataBridge<Option<Token>>,
     /// Something failed, we can no longer work.
     app_failure: bool,
     /// We are in the process of authenticating.
@@ -59,7 +62,7 @@ pub enum Msg {
     /// Exchange the authentication code for an access token
     GetToken(String),
     /// Set the access token
-    SetAccessToken(Token),
+    SetAccessToken(Option<Token>),
     /// Callback when fetching the token failed
     FetchTokenFailed,
     RetryLogin,
@@ -121,6 +124,8 @@ impl Component for Main {
                 .ok();
         }
 
+        let token_holder = SharedDataBridge::from(&link, Msg::SetAccessToken);
+
         Self {
             link,
             access_code: code,
@@ -128,6 +133,7 @@ impl Component for Main {
             refresh_task: None,
             app_failure: false,
             authenticating: false,
+            token_holder,
         }
     }
 
@@ -202,7 +208,7 @@ impl Component for Main {
                 }
                 true
             }
-            Msg::SetAccessToken(token) => {
+            Msg::SetAccessToken(Some(token)) => {
                 log::info!("Token: {:?}", token);
                 self.task = None;
                 self.authenticating = false;
@@ -245,8 +251,16 @@ impl Component for Main {
                 } else {
                     log::debug!("Token has no expiration set");
                 }
+
+                // announce the new token
+
+                self.token_holder.set(Some(token));
+
+                // done
+
                 true
             }
+            Msg::SetAccessToken(None) => true,
             Msg::RefreshToken(refresh_token) => {
                 log::info!("Refreshing access token");
 
@@ -290,12 +304,14 @@ impl Component for Main {
                     <Nav>
                         <NavList>
                             <NavRouterItem<AppRoute> to=AppRoute::Index>{"Home"}</NavRouterItem<AppRoute>>
-                            <NavExpandable title="Getting started">
-                                <NavRouterItem<AppRoute> to=AppRoute::Examples>{"Examples"}</NavRouterItem<AppRoute>>
-                            </NavExpandable>
-                            <NavExpandable title="Tools">
+                            <NavRouterExpandable<AppRoute> title="Getting started">
+                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Register)>{Examples::Register.title()}</NavRouterItem<AppRoute>>
+                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Consume)>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
+                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Publish)>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
+                            </NavRouterExpandable<AppRoute>>
+                            <NavRouterExpandable<AppRoute> title="Tools">
                                 <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
-                            </NavExpandable>
+                            </NavRouterExpandable<AppRoute>>
                         </NavList>
                     </Nav>
                 </PageSidebar>
@@ -353,7 +369,10 @@ impl Component for Main {
                                                 match switch {
                                                     AppRoute::Spy => html!{<Spy/>},
                                                     AppRoute::Index => html!{<Index/>},
-                                                    AppRoute::Examples => html!{<Examples/>},
+
+                                                    AppRoute::Examples(example) => html!{
+                                                        <examples::ExamplePage example=example/>
+                                                    },
                                                 }
                                             })
                                         />
@@ -492,7 +511,7 @@ impl Main {
                 log::info!("Token: {:?}", token);
 
                 match token {
-                    Some(token) => Msg::SetAccessToken(token),
+                    Some(token) => Msg::SetAccessToken(Some(token)),
                     None => Msg::FetchTokenFailed,
                 }
             } else {

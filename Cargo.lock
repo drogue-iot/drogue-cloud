@@ -3343,7 +3343,7 @@ dependencies = [
 [[package]]
 name = "patternfly-yew"
 version = "0.0.18"
-source = "git+https://github.com/ctron/patternfly-yew?rev=be0f5a936d132833c8dfd2cc756f8f476ca88971#be0f5a936d132833c8dfd2cc756f8f476ca88971"
+source = "git+https://github.com/ctron/patternfly-yew?rev=5a1c63be8a497d3b835ec3618f1a86bce213ebf9#5a1c63be8a497d3b835ec3618f1a86bce213ebf9"
 dependencies = [
  "chrono",
  "js-sys",

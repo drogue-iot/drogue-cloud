@@ -3,6 +3,7 @@
 mod app;
 mod backend;
 mod components;
+mod data;
 mod error;
 mod examples;
 mod index;
