@@ -7,7 +7,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.5
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.6
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -178,14 +178,14 @@ cargo-build:
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
 	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
-	OPENSSL_NO_VENDOR=1 cargo build --release --workspace --exclude drogue-cloud-console-frontend
+	cargo build --release --workspace --exclude drogue-cloud-console-frontend
 
 
 #
 # Run the cargo tests.
 #
 cargo-test:
-	OPENSSL_NO_VENDOR=1 cargo test --release -- $(CARGO_TEST_OPTS)
+	cargo test --release -- $(CARGO_TEST_OPTS)
 
 
 #

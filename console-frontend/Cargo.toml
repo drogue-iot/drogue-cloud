@@ -22,7 +22,7 @@ patternfly-yew = "0.0.18"
 # Updating this dependency requires:
 #  * Update the dependency version here
 #  * Create a new builder image, with the same version of wasm-bindgen pre-installed
-wasm-bindgen = "=0.2.69"
+wasm-bindgen = "=0.2.71"
 
 js-sys = "0.3"
 web-sys = { version = "0.3", features = ["EventSource", "EventSourceInit", "Window", "Location"] }
