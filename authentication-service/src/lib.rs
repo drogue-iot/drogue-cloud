@@ -1,6 +1,7 @@
 pub mod endpoints;
 pub mod service;
 
+use drogue_cloud_service_common::health::HealthServerConfig;
 use drogue_cloud_service_common::{defaults, openid::Authenticator};
 use serde::Deserialize;
 
@@ -18,10 +19,11 @@ pub struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[serde(default = "defaults::health_bind_addr")]
-    pub health_bind_addr: String,
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
 }
 
 #[macro_export]
@@ -36,7 +38,5 @@ macro_rules! app {
                     .wrap(actix_web::middleware::Condition::new($enable_auth, $auth))
                     .service(endpoints::authenticate),
             )
-            //fixme : bind to a different port
-            .service(endpoints::health)
     };
 }

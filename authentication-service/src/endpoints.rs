@@ -2,21 +2,8 @@ use crate::{
     service::{self, AuthenticationService},
     WebData,
 };
-use actix_web::{get, post, web, HttpResponse};
-use drogue_cloud_service_api::{
-    auth::authn::{AuthenticationRequest, AuthenticationResponse},
-    health::HealthCheckedService,
-};
-use serde_json::json;
-
-#[get("/health")]
-pub async fn health(
-    data: web::Data<WebData<service::PostgresAuthenticationService>>,
-) -> Result<HttpResponse, actix_web::Error> {
-    data.service.is_ready().await?;
-
-    Ok(HttpResponse::Ok().json(json!({"success": true})))
-}
+use actix_web::{post, web, HttpResponse};
+use drogue_cloud_service_api::auth::authn::{AuthenticationRequest, AuthenticationResponse};
 
 #[post("/auth")]
 pub async fn authenticate(

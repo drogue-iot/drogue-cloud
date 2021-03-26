@@ -4,29 +4,42 @@ use actix_web::{
     middleware::{self, Condition},
     web, App, HttpResponse, HttpServer, Responder,
 };
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     downstream::{self, DownstreamSender},
     error::HttpEndpointError,
 };
-use drogue_cloud_service_common::{client::RegistryClient, openid::Authenticator, openid_auth};
-use envconfig::Envconfig;
+use drogue_cloud_service_common::{
+    client::RegistryClient,
+    config::ConfigFromEnv,
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+    openid::Authenticator,
+    openid_auth,
+};
+use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
 use url::Url;
 
-use actix_web_httpauth::extractors::bearer::BearerAuth;
-
-#[derive(Envconfig, Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 struct Config {
-    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[envconfig(from = "ENABLE_AUTH", default = "true")]
+    #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[envconfig(from = "REGISTRY_SERVICE_URL", default = "http://registry:8080")]
+    #[serde(default = "registry_service_url")]
     pub registry_service_url: String,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
+}
+
+fn registry_service_url() -> String {
+    "http://registry:8080".into()
 }
 
 #[derive(Deserialize)]
@@ -46,11 +59,6 @@ pub struct WebData {
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
-}
-
-#[get("/health")]
-async fn health() -> impl Responder {
-    HttpResponse::Ok().finish()
 }
 
 async fn command(
@@ -110,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
 
     let sender = DownstreamSender::new()?;
 
-    let config = Config::init_from_env()?;
+    let config = Config::from_env()?;
     let max_json_payload_size = config.max_json_payload_size;
 
     let enable_auth = config.enable_auth;
@@ -128,7 +136,13 @@ async fn main() -> anyhow::Result<()> {
         Url::parse(&config.registry_service_url)?,
     );
 
-    HttpServer::new(move || {
+    // health server
+
+    let health = HealthServer::new(config.health, vec![]);
+
+    // main server
+
+    let main = HttpServer::new(move || {
         let auth = openid_auth!(req -> {
             req
             .app_data::<web::Data<WebData>>()
@@ -141,7 +155,6 @@ async fn main() -> anyhow::Result<()> {
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone())
             .data(registry.clone())
-            .service(health)
             .service(index)
             .service(
                 web::resource("/command")
@@ -150,8 +163,13 @@ async fn main() -> anyhow::Result<()> {
             )
     })
     .bind(config.bind_addr)?
-    .run()
-    .await?;
+    .run();
+
+    // run
+
+    futures::try_join!(health.run(), main.err_into())?;
+
+    // exiting
 
     Ok(())
 }

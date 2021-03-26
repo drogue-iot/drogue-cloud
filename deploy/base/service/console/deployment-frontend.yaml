@@ -38,6 +38,14 @@ spec:
             - mountPath: /etc/config/login
               name: login-config
               readOnly: true
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 8080
+              path: /
       volumes:
         - name: run
           emptyDir: {}

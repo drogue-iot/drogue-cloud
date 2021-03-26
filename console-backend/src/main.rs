@@ -16,20 +16,17 @@ use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
     endpoints::{create_endpoint_source, EndpointSourceType},
+    health::{HealthServer, HealthServerConfig},
     openid::{Authenticator, TokenConfig},
     openid_auth,
 };
+use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
 
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
-}
-
-#[get("/health")]
-async fn health() -> impl Responder {
-    HttpResponse::Ok().finish()
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -50,6 +47,9 @@ pub struct Config {
 
     #[serde(default)]
     pub user_auth: UserAuthClientConfig,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
 }
 
 #[actix_web::main]
@@ -102,9 +102,13 @@ async fn main() -> anyhow::Result<()> {
 
     let bind_addr = config.bind_addr.clone();
 
-    // http server
+    // health server
 
-    HttpServer::new(move || {
+    let health = HealthServer::new(config.health, vec![]);
+
+    // main server
+
+    let main = HttpServer::new(move || {
         let auth = openid_auth!(req -> req.app_data::<web::Data<Authenticator>>().map(|data|data.get_ref()));
 
         let app = App::new()
@@ -150,12 +154,16 @@ async fn main() -> anyhow::Result<()> {
                 web::scope("/.well-known")
                     .service(info::get_public_endpoints)
             )
-            //fixme : use a different port
-            .service(health)
+
     })
     .bind(bind_addr)?
-    .run()
-    .await?;
+    .run();
+
+    // run
+
+    futures::try_join!(health.run(), main.err_into())?;
+
+    // exiting
 
     Ok(())
 }

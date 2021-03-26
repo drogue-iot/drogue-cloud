@@ -8,8 +8,10 @@ use drogue_cloud_device_management_service::{
     Config, WebData,
 };
 use drogue_cloud_registry_events::reqwest::ReqwestEventSender;
-use drogue_cloud_service_common::{config::ConfigFromEnv, openid::Authenticator, openid_auth};
-use envconfig::Envconfig;
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv, health::HealthServer, openid::Authenticator, openid_auth,
+};
+use futures::TryFutureExt;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
@@ -17,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // Initialize config from environment variables
-    let config = Config::init_from_env().unwrap();
+    let config = Config::from_env().unwrap();
 
     let enable_auth = config.enable_auth;
 
@@ -44,7 +46,13 @@ async fn main() -> anyhow::Result<()> {
 
     let max_json_payload_size = 64 * 1024;
 
-    HttpServer::new(move || {
+    // health server
+
+    let health = HealthServer::new(config.health, vec![Box::new(data.service.clone())]);
+
+    // main server
+
+    let main = HttpServer::new(move || {
         let auth = openid_auth!(req -> {
             req
             .app_data::<web::Data<WebData<service::PostgresManagementService<ReqwestEventSender>>>>()
@@ -60,8 +68,13 @@ async fn main() -> anyhow::Result<()> {
         )
     })
     .bind(config.bind_addr)?
-    .run()
-    .await?;
+    .run();
+
+    // run
+
+    futures::try_join!(health.run(), main.err_into())?;
+
+    // exiting
 
     Ok(())
 }

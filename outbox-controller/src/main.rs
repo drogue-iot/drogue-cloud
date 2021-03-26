@@ -15,29 +15,48 @@ use actix_web::{
 use anyhow::Context;
 use dotenv::dotenv;
 use drogue_cloud_registry_events::reqwest::ReqwestEventSender;
-use drogue_cloud_service_common::config::ConfigFromEnv;
-use envconfig::Envconfig;
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv,
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
+use futures::TryFutureExt;
+use serde::Deserialize;
 use serde_json::json;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use url::Url;
 
-#[derive(Envconfig, Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 struct Config {
-    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    #[envconfig(from = "RESEND_PERIOD", default = "1m")]
+    #[serde(default = "resend_period")]
+    #[serde(with = "humantime_serde")]
     /// Scan every x seconds for resending events.
-    pub resend_period: humantime::Duration,
+    pub resend_period: Duration,
 
-    #[envconfig(from = "BEFORE", default = "5m")]
+    #[serde(default = "before")]
+    #[serde(with = "humantime_serde")]
     /// Send events older than x seconds.
-    pub resend_before: humantime::Duration,
+    pub before: Duration,
 
-    #[envconfig(from = "K_SINK")]
+    #[serde(rename = "k_sink")]
     pub event_url: Url,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
+}
+
+const fn resend_period() -> Duration {
+    Duration::from_secs(60)
+}
+
+const fn before() -> Duration {
+    Duration::from_secs(5 * 60)
 }
 
 pub struct WebData {
@@ -54,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    let config = Config::init_from_env()?;
+    let config = Config::from_env()?;
     let max_json_payload_size = config.max_json_payload_size;
 
     let service = service::OutboxService::new(OutboxServiceConfig::from_env()?)?;
@@ -70,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
     // start resender
     Resender {
         interval: config.resend_period.into(),
-        before: chrono::Duration::from_std(config.resend_before.into())?,
+        before: chrono::Duration::from_std(config.before.into())?,
         service: Arc::new(service.clone()),
         sender: Arc::new(sender),
     }
@@ -78,7 +97,13 @@ async fn main() -> anyhow::Result<()> {
 
     let data = web::Data::new(WebData { service });
 
-    HttpServer::new(move || {
+    // health server
+
+    let health = HealthServer::new(config.health, vec![Box::new(data.service.clone())]);
+
+    // main
+
+    let main = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(max_json_payload_size))
@@ -88,8 +113,13 @@ async fn main() -> anyhow::Result<()> {
             .service(endpoints::events)
     })
     .bind(config.bind_addr)?
-    .run()
-    .await?;
+    .run();
+
+    // run
+
+    futures::try_join!(health.run(), main.err_into())?;
+
+    // exiting
 
     Ok(())
 }

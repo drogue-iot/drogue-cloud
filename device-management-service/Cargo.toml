@@ -18,7 +18,7 @@ http = "0.2"
 url = "2"
 
 dotenv = "0.15"
-envconfig = "0.9"
+config = "0.10"
 env_logger = "0.7"
 log = "0.4"
 thiserror = "1"
@@ -40,8 +40,6 @@ drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
-
-config = "0.10"
 
 deadpool = "0.7"
 deadpool-postgres = { version = "0.7", features = ["config"] }

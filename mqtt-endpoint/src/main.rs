@@ -16,27 +16,35 @@ use crate::{
 use bytes::Bytes;
 use bytestring::ByteString;
 use dotenv::dotenv;
-use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_endpoint_common::{
-    downstream::DownstreamSender, error::EndpointError, x509::ClientCertificateChain,
+    commands::Commands, downstream::DownstreamSender, error::EndpointError,
+    x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::authn::Outcome as AuthOutcome;
-use envconfig::Envconfig;
-use futures::future;
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv,
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
+use futures::TryFutureExt;
 use ntex::web;
+use serde::Deserialize;
 
-#[derive(Clone, Debug, Envconfig)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[envconfig(from = "DISABLE_TLS", default = "false")]
+    #[serde(default)]
     pub disable_tls: bool,
-    #[envconfig(from = "CERT_BUNDLE_FILE")]
-    pub cert_file: Option<String>,
-    #[envconfig(from = "KEY_FILE")]
+    #[serde(default)]
+    pub cert_bundle_file: Option<String>,
+    #[serde(default)]
     pub key_file: Option<String>,
-    #[envconfig(from = "BIND_ADDR_MQTT")]
+    #[serde(default)]
     pub bind_addr_mqtt: Option<String>,
-    #[envconfig(from = "BIND_ADDR_HTTP", default = "0.0.0.0:8080")]
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr_http: String,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -77,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    let config = Config::init_from_env()?;
+    let config = Config::from_env()?;
     let commands = Commands::new();
 
     let app = App {
@@ -101,6 +109,12 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting web server");
 
+    // health server
+
+    let health = HealthServer::new(config.health, vec![]);
+
+    // web server
+
     let web_server = web::server(move || {
         web::App::new()
             .data(web_app.clone())
@@ -109,7 +123,15 @@ async fn main() -> anyhow::Result<()> {
     .bind(config.bind_addr_http)?
     .run();
 
-    future::try_join(builder.workers(1).run(), web_server).await?;
+    // run
+
+    futures::try_join!(
+        health.run_ntex(),
+        builder.run().err_into(),
+        web_server.err_into(),
+    )?;
+
+    // exiting
 
     Ok(())
 }

@@ -24,7 +24,7 @@ use drogue_cloud_database_common::{
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
 use drogue_cloud_service_api::{
-    health::HealthCheckedService,
+    health::{HealthCheckError, HealthChecked},
     management::{
         Application, ApplicationSpecTrustAnchors, Credential, Device, DeviceSpecCredentials,
     },
@@ -38,7 +38,7 @@ use tokio_postgres::{error::SqlState, NoTls};
 use uuid::Uuid;
 
 #[async_trait]
-pub trait ManagementService: HealthCheckedService + Clone {
+pub trait ManagementService: Clone {
     type Error: ResponseError;
 
     async fn create_app(
@@ -103,15 +103,15 @@ where
     }
 }
 
-#[async_trait]
-impl<S> HealthCheckedService for PostgresManagementService<S>
+#[async_trait::async_trait]
+impl<S> HealthChecked for PostgresManagementService<S>
 where
     S: EventSender + Clone,
 {
-    type HealthCheckError = ServiceError;
-
-    async fn is_ready(&self) -> Result<(), Self::HealthCheckError> {
-        (self as &dyn DatabaseService).is_ready().await
+    async fn is_ready(&self) -> Result<(), HealthCheckError> {
+        Ok(DatabaseService::is_ready(self)
+            .await
+            .map_err(HealthCheckError::from)?)
     }
 }
 

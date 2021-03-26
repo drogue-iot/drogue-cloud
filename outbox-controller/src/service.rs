@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use chrono::Duration;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::error::ServiceError;
@@ -7,7 +6,7 @@ use drogue_cloud_database_common::models::outbox::{
 };
 use drogue_cloud_database_common::DatabaseService;
 use drogue_cloud_registry_events::Event;
-use drogue_cloud_service_api::health::HealthCheckedService;
+use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use futures::Stream;
 use serde::Deserialize;
 use std::pin::Pin;
@@ -30,12 +29,12 @@ impl DatabaseService for OutboxService {
     }
 }
 
-#[async_trait]
-impl HealthCheckedService for OutboxService {
-    type HealthCheckError = ServiceError;
-
-    async fn is_ready(&self) -> Result<(), Self::HealthCheckError> {
-        (self as &dyn DatabaseService).is_ready().await
+#[async_trait::async_trait]
+impl HealthChecked for OutboxService {
+    async fn is_ready(&self) -> Result<(), HealthCheckError> {
+        Ok(DatabaseService::is_ready(self)
+            .await
+            .map_err(HealthCheckError::from)?)
     }
 }
 

@@ -7,7 +7,7 @@ use drogue_cloud_database_common::{
     models::{app::*, device::*},
     DatabaseService,
 };
-use drogue_cloud_service_api::health::HealthCheckedService;
+use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use drogue_cloud_service_api::{
     auth::authn::{self, AuthenticationRequest, Outcome},
     management::{
@@ -22,7 +22,7 @@ use std::io::Cursor;
 use tokio_postgres::NoTls;
 
 #[async_trait]
-pub trait AuthenticationService: HealthCheckedService + Clone {
+pub trait AuthenticationService: Clone {
     type Error: ResponseError;
 
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error>;
@@ -39,12 +39,12 @@ impl DatabaseService for PostgresAuthenticationService {
     }
 }
 
-#[async_trait]
-impl HealthCheckedService for PostgresAuthenticationService {
-    type HealthCheckError = ServiceError;
-
-    async fn is_ready(&self) -> Result<(), Self::HealthCheckError> {
-        (self as &dyn DatabaseService).is_ready().await
+#[async_trait::async_trait]
+impl HealthChecked for PostgresAuthenticationService {
+    async fn is_ready(&self) -> Result<(), HealthCheckError> {
+        Ok(DatabaseService::is_ready(self)
+            .await
+            .map_err(HealthCheckError::from)?)
     }
 }
 

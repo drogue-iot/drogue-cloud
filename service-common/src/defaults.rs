@@ -7,12 +7,22 @@ pub fn enable_auth() -> bool {
 
 #[inline]
 pub fn realm() -> String {
-    return "drogue".into();
+    "drogue".into()
 }
 
 #[inline]
 pub fn health_bind_addr() -> String {
     "127.0.0.1:9090".into()
+}
+
+#[inline]
+pub fn health_workers() -> usize {
+    1
+}
+
+#[inline]
+pub fn max_payload_size() -> usize {
+    65536
 }
 
 #[inline]

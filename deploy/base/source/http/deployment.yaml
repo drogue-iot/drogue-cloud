@@ -42,6 +42,8 @@ spec:
               value: debug
             - name: BIND_ADDR
               value: "0.0.0.0:8443"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: AUTH_SERVICE_URL
               value: http://authentication-service:8080
             - name: CERT_BUNDLE_FILE
@@ -75,10 +77,21 @@ spec:
               name: command
               protocol: TCP
           readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
             httpGet:
-              scheme: HTTPS
-              port: 8443
-              path: /health
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
           volumeMounts:
             - mountPath: /etc/endpoint
               name: endpoint-tls

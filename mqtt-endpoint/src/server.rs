@@ -49,7 +49,7 @@ fn tls_config(config: &Config) -> anyhow::Result<ServerConfig> {
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("TLS configuration error: Missing key file"))?;
     let cert = config
-        .cert_file
+        .cert_bundle_file
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("TLS configuration error: Missing cert file"))?;
 
