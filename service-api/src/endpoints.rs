@@ -39,7 +39,7 @@ impl Endpoints {
             sso: self.sso.clone(),
             issuer_url: self.issuer_url.clone(),
             redirect_url: None,
-            registry: None,
+            registry: self.registry.clone(),
             command_url: None,
             demos: Vec::new(),
         }
