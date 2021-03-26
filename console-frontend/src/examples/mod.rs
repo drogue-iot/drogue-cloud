@@ -186,10 +186,10 @@ impl ExamplePage {
 
     fn render_main(&self, endpoints: Endpoints, data: ExampleData, token: Token) -> Html {
         return html! {
-            <Flex>
+            <Grid gutter=true>
 
-                <FlexItem
-                    modifiers=vec![FlexModifier::Flex1.into()]
+                <GridItem
+                    cols=[10]
                     >
                     <Stack gutter=true>
 
@@ -224,13 +224,13 @@ impl ExamplePage {
                         }
 
                     </Stack>
-                </FlexItem>
+                </GridItem>
 
-                <FlexItem modifiers=vec![FlexModifier::Flex1.into(), FlexModifier::Column.into()]>
+                <GridItem cols=[2]>
                     <CoreExampleData/>
-                </FlexItem>
+                </GridItem>
 
-            </Flex>
+            </Grid>
         };
     }
 }

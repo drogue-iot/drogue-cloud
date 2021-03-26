@@ -190,13 +190,55 @@ There are bonus points for adding your own tests ;-)
 
 ### … work on the frontend
 
+#### Additional dependencies
+
 You will need to have `npm` installed, as it will drive parts of the build.
 
-* Start the console backend locally
-  * Set `CLIENT_ID` to `drogue`
-  * Set `CLIENT_SECRET` to the value of `kubectl get secret keycloak-client-secret-drogue -o jsonpath='{.data[\'CLIENT_SECRET\']}' | base64 -d`
-* Run the console:
-  ~~~
-  cd console-frontend
-  npm run start:dev
-  ~~~
+You will also need `wasm-bindgen`, which can be installed locally using:
+
+~~~
+cargo install wasm-bindgen-cli --version "=0.2.71
+~~~
+
+NOTE: The version (here `0.2.71`) must match the exact version of the version in `console-frontend/Cargo.toml`.
+Otherwise, the frontend cannot be properly compiled, although it looks like compilation was successful. Note the
+following line in the build output:
+
+~~~
+[INFO]: Installing wasm-bindgen...
+Error: Not able to find or install a local wasm-bindgen.
+~~~
+
+#### Running
+
+You will need set a bunch of environment variables and start the `console-backend` with it:
+
+~~~
+# SSO_URL: must be replaced with your SSO instance, you can get it from the `./scripts/status.sh` script
+# export SSO_URL=https://keycloak-drogue-dev.apps.wonderful.iot-playground.org
+export REDIRECT_URL=http://localhost:8010
+export BIND_ADDR=localhost:8011
+export UI__CLIENT_ID=drogue
+export UI__CLIENT_SECRET=$(kubectl get secret keycloak-client-secret-services -o jsonpath="{.data['CLIENT_SECRET']}" | base64 -d)
+export NAMESPACE=drogue-dev
+export RUST_LOG=debug
+export ENDPOINT_SOURCE=env
+export HTTP_ENDPOINT_URL=http://http-endpoint
+export DEVICE_REGISTRY_URL=http://device-registry
+export MQTT_ENDPOINT_HOST=mqtt-endpoint
+export MQTT_ENDPOINT_PORT=443
+export MQTT_INTEGRATION_HOST=mqtt-integration
+export MQTT_INTEGRATION_PORT=443
+export USER_AUTH__CLIENT_ID=services
+export USER_AUTH__CLIENT_SECRET=$(kubectl get secret keycloak-client-secret-services -o jsonpath="{.data['CLIENT_SECRET']}" | base64 -d)
+export OAUTH__DROGUE__CLIENT_ID=drogue
+export OAUTH__DROGUE__CLIENT_SECRET=$(kubectl get secret keycloak-client-secret-services -o jsonpath="{.data['CLIENT_SECRET']}" | base64 -d)
+cargo run --package drogue-cloud-console-backend
+~~~
+
+Then you can start the `console-frontend` in the development mode:
+
+~~~
+cd console-frontend
+npm run start:dev
+~~~
