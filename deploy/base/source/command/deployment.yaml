@@ -17,7 +17,7 @@ spec:
         app.kubernetes.io/part-of: endpoints
     spec:
       initContainers:
-        - name: wait-for-client-secret
+        - name: wait-for-client-secret-drogue
           image: registry.access.redhat.com/ubi8-minimal
           imagePullPolicy: IfNotPresent
           command:
@@ -30,7 +30,22 @@ spec:
               done
           volumeMounts:
             - mountPath: /etc/client-secret
-              name: client-secret
+              name: client-secret-drogue
+              readOnly: true
+        - name: wait-for-client-secret-services
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret-services
               readOnly: true
       containers:
         - name: endpoint
@@ -56,12 +71,22 @@ spec:
             # variable from Kubernetes, which doesn't parse as an int
             - name: MQTT_INTEGRATION_PORT
               value: "0"
-            - name: CLIENT_ID
+            - name: OAUTH__DROGUE__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_ID
+            - name: OAUTH__DROGUE__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_SECRET
+            - name: OAUTH__SERVICES__CLIENT_ID
               valueFrom:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_ID
-            - name: CLIENT_SECRET
+            - name: OAUTH__SERVICES__CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: keycloak-client-secret-services
@@ -75,6 +100,9 @@ spec:
               port: 8080
               path: /health
       volumes:
-        - name: client-secret
+        - name: client-secret-drogue
           secret:
             secretName: keycloak-client-secret-drogue
+        - name: client-secret-services
+          secret:
+            secretName: keycloak-client-secret-services
