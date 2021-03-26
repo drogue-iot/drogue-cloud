@@ -4,6 +4,7 @@ pub mod config;
 pub mod defaults;
 pub mod endpoints;
 pub mod error;
+pub mod health;
 pub mod id;
 pub mod kube;
 pub mod openid;

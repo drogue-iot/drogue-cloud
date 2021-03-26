@@ -179,7 +179,7 @@ impl<'a> Client for deadpool_postgres::Transaction<'a> {
 
 /// A database based service.
 #[async_trait]
-pub trait DatabaseService: Sync {
+pub trait DatabaseService: Send + Sync + Sized {
     fn pool(&self) -> &Pool;
 
     async fn is_ready(&self) -> Result<(), ServiceError> {

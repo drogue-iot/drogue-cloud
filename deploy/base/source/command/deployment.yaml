@@ -56,6 +56,8 @@ spec:
               value: debug
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: REGISTRY_SERVICE_URL
               value: http://registry:8080
             - name: INSTANCE
@@ -96,9 +98,21 @@ spec:
               name: endpoint
               protocol: TCP
           readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
             httpGet:
-              port: 8080
-              path: /health
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
       volumes:
         - name: client-secret-drogue
           secret:

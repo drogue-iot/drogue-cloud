@@ -1,18 +1,19 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use deadpool_postgres::Pool;
-use drogue_cloud_database_common::auth::authorize;
-use drogue_cloud_database_common::{error::ServiceError, models::app::*, DatabaseService};
+use drogue_cloud_database_common::{
+    auth::authorize, error::ServiceError, models::app::*, DatabaseService,
+};
 use drogue_cloud_service_api::{
     auth::authz::{AuthorizationRequest, Outcome},
-    health::HealthCheckedService,
+    health::{HealthCheckError, HealthChecked},
 };
 use drogue_cloud_service_common::auth::Identity;
 use serde::Deserialize;
 use tokio_postgres::NoTls;
 
 #[async_trait]
-pub trait AuthorizationService: HealthCheckedService + Clone {
+pub trait AuthorizationService: Clone {
     type Error: ResponseError;
 
     async fn authorize(&self, request: AuthorizationRequest) -> Result<Outcome, Self::Error>;
@@ -29,12 +30,12 @@ impl DatabaseService for PostgresAuthorizationService {
     }
 }
 
-#[async_trait]
-impl HealthCheckedService for PostgresAuthorizationService {
-    type HealthCheckError = ServiceError;
-
-    async fn is_ready(&self) -> Result<(), Self::HealthCheckError> {
-        (self as &dyn DatabaseService).is_ready().await
+#[async_trait::async_trait]
+impl HealthChecked for PostgresAuthorizationService {
+    async fn is_ready(&self) -> Result<(), HealthCheckError> {
+        Ok(DatabaseService::is_ready(self)
+            .await
+            .map_err(HealthCheckError::from)?)
     }
 }
 

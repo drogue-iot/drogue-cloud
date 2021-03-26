@@ -56,6 +56,8 @@ spec:
               value: debug
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: ENABLE_AUTH
               value: "true"
             # this is a workaround as the name of the variable conflicts with an automatically generated
@@ -121,6 +123,22 @@ spec:
           resources:
             limits:
               memory: 64Mi
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
       volumes:
         - name: client-secret-drogue
           secret:

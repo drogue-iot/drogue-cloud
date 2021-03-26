@@ -42,6 +42,8 @@ spec:
               value: debug
             - name: BIND_ADDR_MQTT
               value: "0.0.0.0:8883"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: CERT_BUNDLE_FILE
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
@@ -88,15 +90,28 @@ spec:
             - containerPort: 8883
               name: service
               protocol: TCP
-          readinessProbe:
-            tcpSocket:
-              port: 8883
           resources:
             limits:
               memory: 64Mi
           volumeMounts:
             - mountPath: /etc/endpoint
               name: endpoint-tls
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
       volumes:
         - name: endpoint-tls
           secret:

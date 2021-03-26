@@ -18,8 +18,14 @@ use drogue_cloud_endpoint_common::{
     commands::Commands,
     downstream::DownstreamSender,
 };
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv,
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
 use envconfig::Envconfig;
-use futures::future;
+use futures::TryFutureExt;
+use serde::Deserialize;
 use serde_json::json;
 use std::ops::DerefMut;
 
@@ -34,32 +40,28 @@ drogue_cloud_endpoint_common::retriever_openssl!(actix_tls::connect::ssl::openss
 #[cfg(feature = "ntex")]
 retriever_none!(ntex::rt::net::TcpStream);
 
-#[derive(Envconfig, Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 struct Config {
-    #[envconfig(from = "MAX_JSON_PAYLOAD_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[envconfig(from = "MAX_PAYLOAD_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_payload_size")]
     pub max_payload_size: usize,
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8443")]
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:8081")]
-    pub health_bind_addr: String,
-    #[envconfig(from = "DISABLE_TLS", default = "false")]
+    #[serde(default)]
     pub disable_tls: bool,
-    #[envconfig(from = "CERT_BUNDLE_FILE")]
-    pub cert_file: Option<String>,
-    #[envconfig(from = "KEY_FILE")]
+    #[serde(default)]
+    pub cert_bundle_file: Option<String>,
+    #[serde(default)]
     pub key_file: Option<String>,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
 }
 
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
-}
-
-#[get("/health")]
-async fn health() -> impl Responder {
-    HttpResponse::Ok().finish()
 }
 
 #[actix_web::main]
@@ -72,7 +74,7 @@ async fn main() -> anyhow::Result<()> {
     let sender = DownstreamSender::new()?;
     let commands = Commands::new();
 
-    let config = Config::init_from_env()?;
+    let config = Config::from_env()?;
     let max_payload_size = config.max_payload_size;
     let max_json_payload_size = config.max_json_payload_size;
     let http_server_commands = commands.clone();
@@ -98,8 +100,6 @@ async fn main() -> anyhow::Result<()> {
             )
             // The Things Network variant
             .service(web::scope("/ttn").service(ttn::publish))
-            //fixme : bind to a different port
-            .service(health)
     })
     .on_connect(|con, ext| {
         if let Some(cert) = x509::from_socket(con) {
@@ -109,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let http_server = match (config.disable_tls, config.key_file, config.cert_file) {
+    let http_server = match (config.disable_tls, config.key_file, config.cert_bundle_file) {
         (false, Some(key), Some(cert)) => {
             if cfg!(feature = "openssl") {
                 use open_ssl::ssl;
@@ -146,15 +146,15 @@ async fn main() -> anyhow::Result<()> {
     let mut command_server =
         CommandServer::new(CommandServerConfig::init_from_env()?, commands.clone())?;
 
-    future::try_join(command_server.deref_mut(), http_server).await?;
+    // health server
 
-    // fixme
-    //
-    // let health_server = HttpServer::new(move || App::new().service(health))
-    //     .bind(config.health_bind_addr)?
-    //     .run();
-    //
-    // future::try_join(app_server, health_server).await?;
+    let health = HealthServer::new(config.health, vec![]);
+
+    futures::try_join!(
+        health.run(),
+        command_server.deref_mut().err_into(),
+        http_server.err_into()
+    )?;
 
     Ok(())
 }

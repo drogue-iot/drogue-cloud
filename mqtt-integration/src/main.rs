@@ -14,11 +14,15 @@ use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
     defaults,
+    health::{HealthServer, HealthServerConfig},
     openid::{Authenticator, TokenConfig},
 };
+use futures::TryFutureExt;
 use serde::Deserialize;
-use std::fmt::{Debug, Formatter};
-use std::sync::Arc;
+use std::{
+    fmt::{Debug, Formatter},
+    sync::Arc,
+};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -37,6 +41,9 @@ pub struct Config {
 
     pub service: ServiceConfig,
     pub user_auth: UserAuthClientConfig,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
 }
 
 #[derive(Clone)]
@@ -120,9 +127,17 @@ async fn main() -> anyhow::Result<()> {
         build(addr, builder, app, &app_config)?
     };
 
+    // health server
+
+    let health = HealthServer::new(config.health, vec![]);
+
     log::info!("Starting server");
 
-    builder.run().await?;
+    // run
+
+    futures::try_join!(health.run_ntex(), builder.run().err_into(),)?;
+
+    // exiting
 
     Ok(())
 }

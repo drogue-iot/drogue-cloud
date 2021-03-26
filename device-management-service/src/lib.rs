@@ -3,8 +3,8 @@ pub mod service;
 pub mod utils;
 
 use crate::service::ManagementService;
-use drogue_cloud_service_common::openid::Authenticator;
-use envconfig::Envconfig;
+use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
+use serde::Deserialize;
 use url::Url;
 
 #[derive(Debug)]
@@ -13,16 +13,17 @@ pub struct WebData<S: ManagementService> {
     pub authenticator: Option<Authenticator>,
 }
 
-#[derive(Envconfig)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[envconfig(from = "BIND_ADDR", default = "127.0.0.1:8080")]
+    #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[envconfig(from = "HEALTH_BIND_ADDR", default = "127.0.0.1:9090")]
-    pub health_bind_addr: String,
-    #[envconfig(from = "ENABLE_AUTH", default = "true")]
+    #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[envconfig(from = "K_SINK")]
+    #[serde(rename = "k_sink")]
     pub event_url: Url,
+
+    #[serde(default)]
+    pub health: HealthServerConfig,
 }
 
 #[macro_export]
@@ -66,10 +67,6 @@ macro_rules! app {
         let app = App::new()
             .wrap(actix_web::middleware::Logger::default())
             .data(web::JsonConfig::default().limit($max_json_payload_size))
-            // FIXME: bind to a different port
-            .service(
-                web::resource("/health").route(web::get().to(endpoints::health::health::<$sender>)),
-            )
             .app_data($data.clone());
 
         let app = {

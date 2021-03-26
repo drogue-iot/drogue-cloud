@@ -44,6 +44,8 @@ spec:
               value: "0.0.0.0:8883"
             - name: BIND_ADDR_HTTP
               value: "0.0.0.0:8080"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: CERT_BUNDLE_FILE
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
@@ -77,8 +79,21 @@ spec:
               name: command
               protocol: TCP
           readinessProbe:
-            tcpSocket:
-              port: 8883
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
           resources:
             limits:
               memory: 64Mi

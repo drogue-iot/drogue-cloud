@@ -30,6 +30,8 @@ spec:
               value: "1"
             - name: BIND_ADDR
               value: 0.0.0.0:8080
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: PG__HOST
               value: postgres
             - name: PG__DBNAME
@@ -50,11 +52,19 @@ spec:
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1
-            failureThreshold: 3 # required by knative webhook
-            timeoutSeconds: 1 # required by knative webhook
+            timeoutSeconds: 1
+            failureThreshold: 3
             httpGet:
-              port: 8080
-              path: /health
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
           ports:
             - containerPort: 8080
               name: api
