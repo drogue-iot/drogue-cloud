@@ -17,8 +17,10 @@ module.exports = (env, argv) => {
                 "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization"
             },
             historyApiFallback: {
+                // should be aligned with nginx.conf
                 rewrites: [
                     { from: /endpoints\/backend\.json/, to: '/endpoints/backend.json'},
+                    // don't translate *.svg
                     { from: /^(.*)\.(svg)$/, to: function(context) {
                             return context.match[0];
                     }},
