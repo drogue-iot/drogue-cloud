@@ -115,7 +115,7 @@ impl EndpointSource for EnvEndpointSource {
             .issuer_url
             .as_ref()
             .cloned()
-            .unwrap_or_else(|| sso_to_issuer_url(&sso, DEFAULT_REALM));
+            .unwrap_or_else(|| crate::utils::sso_to_issuer_url(&sso, DEFAULT_REALM));
 
         Ok(Endpoints {
             http,
@@ -129,10 +129,6 @@ impl EndpointSource for EnvEndpointSource {
             demos: get_demos(),
         })
     }
-}
-
-fn sso_to_issuer_url(sso: &str, realm: &str) -> String {
-    format!("{}/auth/realms/{}", sso, realm)
 }
 
 #[derive(Clone, Debug)]
@@ -199,7 +195,7 @@ impl EndpointSource for OpenshiftEndpointSource {
             }),
             issuer_url: sso
                 .as_ref()
-                .map(|sso| sso_to_issuer_url(&sso, DEFAULT_REALM)),
+                .map(|sso| crate::utils::sso_to_issuer_url(&sso, DEFAULT_REALM)),
             command_url: command,
             sso,
             redirect_url: frontend,

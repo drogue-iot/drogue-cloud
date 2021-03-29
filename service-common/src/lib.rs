@@ -8,5 +8,6 @@ pub mod health;
 pub mod id;
 pub mod kube;
 pub mod openid;
+mod utils;
 
 pub use id::*;

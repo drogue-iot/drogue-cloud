@@ -1,7 +1,6 @@
-use crate::{config::ConfigFromEnv, defaults, endpoints::eval_endpoints};
+use crate::{config::ConfigFromEnv, defaults};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
-use drogue_cloud_service_api::endpoints::Endpoints;
 use failure::Fail;
 use futures::{stream, StreamExt, TryStreamExt};
 use openid::{biscuit::jws::Compact, Client, Configurable, Empty, Jws, StandardClaims};
@@ -15,8 +14,26 @@ const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/ser
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthenticatorConfig {
+    #[serde(flatten)]
+    pub global: AuthenticatorGlobalConfig,
+
     #[serde(default)]
     pub oauth: HashMap<String, AuthenticatorClientConfig>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct AuthenticatorGlobalConfig {
+    #[serde(default)]
+    pub sso_url: Option<String>,
+
+    #[serde(default)]
+    pub issuer_url: Option<String>,
+
+    #[serde(default = "defaults::realm")]
+    pub realm: String,
+
+    #[serde(default)]
+    pub redirect_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -25,6 +42,37 @@ pub struct AuthenticatorClientConfig {
     pub client_secret: String,
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
+}
+
+impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
+    fn client_id(&self) -> String {
+        self.1.client_id.clone()
+    }
+
+    fn client_secret(&self) -> String {
+        self.1.client_secret.clone()
+    }
+
+    fn redirect_url(&self) -> Option<String> {
+        self.0.redirect_url.clone()
+    }
+
+    fn issuer_url(&self) -> anyhow::Result<Url> {
+        let url = self
+            .0
+            .issuer_url
+            .as_ref()
+            .cloned()
+            .or_else(|| {
+                self.0
+                    .sso_url
+                    .as_ref()
+                    .map(|sso| crate::utils::sso_to_issuer_url(&sso, &self.0.realm))
+            })
+            .ok_or_else(|| anyhow::anyhow!("Missing issuer or SSO URL"))?;
+
+        Url::parse(&url).context("Failed to parse issuer/SSO URL")
+    }
 }
 
 #[derive(Debug, Error)]
@@ -58,33 +106,31 @@ impl From<openid::Client> for Authenticator {
 impl Authenticator {
     /// Create a new authenticator by evaluating endpoints and SSO configuration.
     pub async fn new() -> anyhow::Result<Self> {
-        Self::from_endpoints(eval_endpoints().await?).await
-    }
-
-    pub async fn from_endpoints(endpoints: Endpoints) -> anyhow::Result<Self> {
-        let config = AuthenticatorConfig::from_env()?;
-        Self::from_config(config, endpoints).await
+        Self::from_config(AuthenticatorConfig::from_env()?).await
     }
 
     pub fn from_clients(clients: Vec<openid::Client>) -> Self {
         Authenticator { clients }
     }
 
-    pub async fn from_config(
-        mut config: AuthenticatorConfig,
-        endpoints: Endpoints,
-    ) -> anyhow::Result<Self> {
+    pub async fn from_config(mut config: AuthenticatorConfig) -> anyhow::Result<Self> {
         let configs = config.oauth.drain().map(|(_, v)| v);
-        Self::from_configs(configs, endpoints).await
+        Self::from_configs(config.global, configs).await
     }
 
-    pub async fn from_configs<I>(configs: I, endpoints: Endpoints) -> anyhow::Result<Self>
+    pub async fn from_configs<I>(
+        global: AuthenticatorGlobalConfig,
+        configs: I,
+    ) -> anyhow::Result<Self>
     where
         I: IntoIterator<Item = AuthenticatorClientConfig>,
     {
         let clients = stream::iter(configs)
             .map(Ok)
-            .and_then(|config| async { create_client(config, endpoints.clone()).await })
+            .and_then(|config| {
+                let global = global.clone();
+                async move { create_client(&(&global, &config)).await }
+            })
             .try_collect()
             .await?;
 
@@ -160,48 +206,24 @@ impl Authenticator {
     }
 }
 
-impl ClientConfig for AuthenticatorClientConfig {
-    fn client_id(&self) -> String {
-        self.client_id.clone()
-    }
-
-    fn client_secret(&self) -> String {
-        self.client_secret.clone()
-    }
-}
-
 pub trait ClientConfig {
     fn client_id(&self) -> String;
     fn client_secret(&self) -> String;
+    fn redirect_url(&self) -> Option<String>;
+    fn issuer_url(&self) -> anyhow::Result<Url>;
 }
 
-pub async fn create_client<C: ClientConfig>(
-    config: C,
-    endpoints: Endpoints,
-) -> anyhow::Result<openid::Client> {
+pub async fn create_client<C: ClientConfig>(config: &C) -> anyhow::Result<openid::Client> {
     let mut client = reqwest::ClientBuilder::new();
 
     client = add_service_cert(client)?;
-
-    let Endpoints {
-        redirect_url,
-        issuer_url,
-        ..
-    } = endpoints;
-
-    let issuer_url = issuer_url.ok_or_else(|| {
-        anyhow::anyhow!(
-            "Failed to detect 'issuer URL'. Consider using an env-var based configuration."
-        )
-    })?;
 
     let client = openid::DiscoveredClient::discover_with_client(
         client.build()?,
         config.client_id(),
         config.client_secret(),
-        redirect_url,
-        Url::parse(&issuer_url)
-            .with_context(|| format!("Failed to parse issuer URL: {}", issuer_url))?,
+        config.redirect_url(),
+        config.issuer_url()?,
     )
     .await
     .map_err(|err| anyhow::Error::from(err.compat()))?;
