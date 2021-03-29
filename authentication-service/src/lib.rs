@@ -1,8 +1,9 @@
 pub mod endpoints;
 pub mod service;
 
-use drogue_cloud_service_common::health::HealthServerConfig;
-use drogue_cloud_service_common::{defaults, openid::Authenticator};
+use crate::service::PostgresAuthenticationService;
+use drogue_cloud_service_api::health::HealthChecked;
+use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
 use serde::Deserialize;
 
 pub struct WebData<S>
@@ -39,4 +40,9 @@ macro_rules! app {
                     .service(endpoints::authenticate),
             )
     };
+}
+
+/// Build the health checks used for this service.
+pub fn health_checks(service: PostgresAuthenticationService) -> Vec<Box<dyn HealthChecked>> {
+    vec![Box::new(service)]
 }

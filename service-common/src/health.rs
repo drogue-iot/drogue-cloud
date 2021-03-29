@@ -1,5 +1,5 @@
 use crate::defaults;
-use actix_web::{web, App, HttpServer};
+use actix_web::HttpServer;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use futures::StreamExt;
 use serde::Deserialize;
@@ -24,12 +24,14 @@ impl Default for HealthServerConfig {
     }
 }
 
+/// A server, running health check endpoints.
 pub struct HealthServer {
     config: HealthServerConfig,
     checker: HealthChecker,
 }
 
-struct HealthChecker {
+/// Internal handling of health checking.
+pub struct HealthChecker {
     checks: Vec<Box<dyn HealthChecked>>,
 }
 
@@ -89,6 +91,17 @@ macro_rules! health_endpoint {
     };
 }
 
+macro_rules! health_app {
+    ($checker:expr) => {
+        App::new()
+            .wrap(Logger::default())
+            .app_data($checker.clone())
+            .route("/", web::get().to(index))
+            .route("/readiness", web::get().to(readiness))
+            .route("/liveness", web::get().to(liveness))
+    };
+}
+
 impl HealthServer {
     pub fn new(config: HealthServerConfig, checks: Vec<Box<dyn HealthChecked>>) -> Self {
         Self {
@@ -101,17 +114,15 @@ impl HealthServer {
     ///
     /// For running on a bare tokio setup, use [`run_with_tokio`].
     pub async fn run(self) -> anyhow::Result<()> {
+        use actix_web::web;
         use actix_web::web::Data;
         health_endpoint!(actix_web);
 
         let checker = web::Data::new(self.checker);
         HttpServer::new(move || {
-            App::new()
-                .wrap(actix_web::middleware::Logger::default())
-                .app_data(checker.clone())
-                .route("/", web::get().to(index))
-                .route("/readiness", web::get().to(readiness))
-                .route("/liveness", web::get().to(liveness))
+            use actix_web::middleware::Logger;
+            use actix_web::App;
+            health_app!(checker)
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)
@@ -124,17 +135,15 @@ impl HealthServer {
     /// Run the health server. This must be called from inside ntex.
     pub async fn run_ntex(self) -> anyhow::Result<()> {
         use ntex::web as ntex_web;
+        use ntex::web;
         use ntex::web::types::Data;
         health_endpoint!(ntex_web);
 
         let checker = ntex::web::types::Data::new(self.checker);
         ntex::web::server(move || {
-            ntex::web::App::new()
-                .wrap(ntex::web::middleware::Logger::default())
-                .app_data(checker.clone())
-                .route("/", ntex::web::get().to(index))
-                .route("/readiness", ntex::web::get().to(readiness))
-                .route("/liveness", ntex::web::get().to(liveness))
+            use ntex::web::middleware::Logger;
+            use ntex::web::App;
+            health_app!(checker)
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)

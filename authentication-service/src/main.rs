@@ -2,7 +2,7 @@ use actix_web::{web, App, HttpServer};
 use anyhow::Context;
 use dotenv::dotenv;
 use drogue_cloud_authentication_service::{
-    endpoints,
+    endpoints, health_checks,
     service::{self, AuthenticationServiceConfig},
     Config, WebData,
 };
@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![Box::new(data.service.clone())]);
+    let health = HealthServer::new(config.health, health_checks(data.service.clone()));
 
     // main server
 
