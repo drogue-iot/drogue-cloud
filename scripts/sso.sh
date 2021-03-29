@@ -12,8 +12,6 @@ source "$SCRIPTDIR/common.sh"
 : "${KEYCLOAK_OPERATOR_VERSION:=12.0.1}"
 : "${KEYCLOAK_CRDS:=true}"
 
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
 if [[ "$KEYCLOAK_CRDS" == true ]]; then
 
 kubectl apply \
