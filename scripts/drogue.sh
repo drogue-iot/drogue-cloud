@@ -121,6 +121,7 @@ fi
 
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST" "MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "MQTT_INTEGRATION_HOST=$MQTT_INTEGRATION_HOST" "MQTT_INTEGRATION_PORT=$MQTT_INTEGRATION_PORT"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEVICE_REGISTRY_URL=$MGMT_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "SSO_URL=$SSO_URL" "REDIRECT_URL=$CONSOLE_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"

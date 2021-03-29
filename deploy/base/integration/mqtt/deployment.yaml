@@ -50,14 +50,6 @@ spec:
               value: /etc/endpoint/tls.key
             - name: AUTH_SERVICE_URL
               value: http://authentication-service:8080
-            # this is a workaround as the name of the variable conflicts with an automatically generated
-            # variable from Kubernetes, which doesn't parse as an int
-            - name: MQTT_ENDPOINT_PORT
-              value: "0"
-            # this is a workaround as the name of the variable conflicts with an automatically generated
-            # variable from Kubernetes, which doesn't parse as an int
-            - name: MQTT_INTEGRATION_PORT
-              value: "0"
             - name: OAUTH__DROGUE__CLIENT_ID
               valueFrom:
                 secretKeyRef:
