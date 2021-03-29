@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+#
+# This is the central location defining which cluster type we use.
+#
+# During the creation of the installer, the default of this will be overridden.
+#
 : "${CLUSTER:=minikube}"
 
 : "${DROGUE_NS:=drogue-iot}"
