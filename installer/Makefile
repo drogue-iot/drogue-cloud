@@ -17,11 +17,11 @@ prepare:
 	mkdir -p build
 
 
-build: prepare $(patsubst %, install-%-$(VERSION).zip, $(VARIANTS))
+build: prepare $(patsubst %, drogue-install-%-$(VERSION).zip, $(VARIANTS))
 
 
 INSTALLER=$(basename $(notdir $@))
-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find $(TOPDIR)/../scripts -type f)
+drogue-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find $(TOPDIR)/../scripts -type f)
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/scripts
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/base
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/knative

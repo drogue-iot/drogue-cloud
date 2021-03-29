@@ -233,7 +233,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: installers
-          path: installer/build/install-*.zip
+          path: installer/build/drogue-install-*.zip
           if-no-files-found: error
 
       - name: Fetch container images
@@ -270,6 +270,6 @@ jobs:
           TAG: v${{ needs.check.outputs.version }}
         run: |
           # add install ZIPs
-          hub release edit -m "" $(find installer/build -type f -name "install-*.zip" -printf "-a %p ") $TAG
+          hub release edit -m "" $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") $TAG
           # finally, remove the draft status
           hub release edit -m "" --draft=false $TAG
