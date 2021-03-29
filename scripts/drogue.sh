@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-set -ex
+set -e
 
 command -v 'kubectl' &>/dev/null || die "Missing the command 'kubectl'"
 command -v 'curl' &>/dev/null || die "Missing the command 'curl'"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 : "${KAFKA_NS:=kafka}"
 : "${STRIMZI_VERSION:=0.20.0}"

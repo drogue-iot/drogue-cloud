@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 : "${KNATIVE_SERVING_VERSION:=0.19.0}"
 : "${KNATIVE_EVENTING_VERSION:=0.19.4}"
