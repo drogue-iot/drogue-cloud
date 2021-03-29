@@ -5,7 +5,6 @@
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "$SCRIPTDIR/common.sh"
 
-: "${CLUSTER:=minikube}"
 : "${CONSOLE:=true}"
 : "${DIGITAL_TWIN:=false}"
 

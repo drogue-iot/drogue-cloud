@@ -3,15 +3,12 @@
 set -e
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-: "${CLUSTER:="minikube"}"
+source "$SCRIPTDIR/common.sh"
 
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 
 : "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../deploy")}"
-
-source "$SCRIPTDIR/common.sh"
 
 command -v 'helm' &>/dev/null || die "Missing the command 'helm'"
 

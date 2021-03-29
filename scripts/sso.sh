@@ -10,7 +10,6 @@ SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "$SCRIPTDIR/common.sh"
 
 : "${KEYCLOAK_OPERATOR_VERSION:=12.0.1}"
-: "${CLUSTER:=minikube}"
 : "${KEYCLOAK_CRDS:=true}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"

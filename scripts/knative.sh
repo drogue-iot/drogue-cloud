@@ -6,7 +6,6 @@ set -e
 : "${KNATIVE_EVENTING_VERSION:=0.19.4}"
 : "${KOURIER_VERSION:=0.19.1}"
 : "${EVENTING_KAFKA_VERSION:=0.19.3}"
-: "${CLUSTER:=minikube}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 : "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../deploy")}"

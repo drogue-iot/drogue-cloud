@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-: "${CLUSTER:=minikube}"
-
-
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
@@ -60,7 +57,12 @@ command -v 'curl' &>/dev/null || die "Missing the command 'curl'"
 command -v 'jq' &>/dev/null || die "Missing the command 'jq'"
 command -v 'docker' &>/dev/null || command -v 'podman' &>/dev/null || die "Missing the command 'docker' or 'podman'"
 
+# Check if we can connect to the cluster
+
+kubectl version &>/dev/null || die "Unable to connect to the cluster: 'kubectl' must be able to connect to your cluster."
+
 # Create the namespace first
+
 if ! kubectl get ns "$DROGUE_NS" >/dev/null 2>&1; then
   kubectl create namespace "$DROGUE_NS"
   kubectl label namespace "$DROGUE_NS" bindings.knative.dev/include=true
@@ -72,7 +74,9 @@ fi
 [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]] && source "$SCRIPTDIR/sso.sh"
 
 # Install Drogue components (sources and services)
+
 kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/$CLUSTER/"
+
 # Remove the unnecessary and wrong host entry for keycloak ingress
 
 case $CLUSTER in
@@ -84,6 +88,8 @@ case $CLUSTER in
         kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]' || true
         ;;
 esac;
+
+# source the endpoint information
 
 source "${SCRIPTDIR}/endpoints.sh"
 
@@ -136,9 +142,11 @@ kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\
 kubectl -n "$DROGUE_NS" patch keycloakclient/client-grafana --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$DASHBOARD_URL/login/generic_oauth\"}]"
 
 # wait for other Knative services
+
 wait_for_ksvc influxdb-pusher
 
 # wait for the rest of the deployments
+
 kubectl wait deployment -l '!serving.knative.dev/service' --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
 
 # show status

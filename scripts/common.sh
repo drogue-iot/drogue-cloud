@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-: "${DROGUE_NS:=drogue-iot}"
 : "${CLUSTER:=minikube}"
+
+: "${DROGUE_NS:=drogue-iot}"
 : "${CONTAINER:=docker}"
 : "${TEST_CERTS_IMAGE:=ghcr.io/drogue-iot/test-cert-generator:latest}"
 
