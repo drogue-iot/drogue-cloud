@@ -1,12 +1,11 @@
 use anyhow::Context;
 use deadpool::managed::{PoolConfig, Timeouts};
 use serde_json::Value;
-use std::io::Write;
-use std::process::Stdio;
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     time::Duration,
 };
 use testcontainers::{
