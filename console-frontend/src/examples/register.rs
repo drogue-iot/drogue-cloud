@@ -1,5 +1,10 @@
-use super::shell_quote;
-use crate::{backend::Token, examples::data::ExampleData};
+use crate::{
+    backend::{Backend, Token},
+    examples::{
+        data::ExampleData,
+        {shell_quote, shell_single_quote},
+    },
+};
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use serde_json::json;
@@ -38,16 +43,16 @@ impl Component for RegisterDevices {
     }
 
     fn view(&self) -> Html {
-        let mut cards: Vec<_> = Vec::new();
-
-        cards.push(html!{
+        let mut cards: Vec<_> = vec![html! {
             <Alert
                 title="Requirements"
                 r#type=Type::Info inline=true
                 >
                 <Content>
                 <p>
-                    {"The following examples assume that you have "} <a href="https://httpie.io" target="_blank">{"HTTPie"}</a> {" and the "}
+                    {"The following examples assume that you have the "}
+                    <a href="https://github.com/drogue-iot/drg" target="_blank">{"Drogue Command Line Client"}</a>{", "}
+                    <a href="https://httpie.io" target="_blank">{"HTTPie"}</a> {", and the "}
                     <a href="https://hivemq.github.io/hivemq-mqtt-client/" target="_blank">{"MQTT client"}</a>
                     {" installed. The commands are also expected to be executed in a Bash like shell."}
                 </p>
@@ -56,26 +61,33 @@ impl Component for RegisterDevices {
 
                 </Content>
             </Alert>
-        });
+        }];
 
-        if let Some(registry) = &self.props.endpoints.registry {
-            let create_app_cmd = format!(
-                r#"http POST {url}/api/v1/apps metadata:='{meta}'"#,
-                url = registry.url,
-                meta = json!({ "name": self.props.data.app_id })
-            );
-            let create_device_cmd = format!(
-                r#"http POST {url}/api/v1/apps/{app}/devices metadata:='{meta}' spec:='{spec}'"#,
-                app = self.props.data.app_id,
-                url = registry.url,
-                meta = shell_quote(
-                    json!({"application": self.props.data.app_id, "name": self.props.data.device_id})
-                ),
-                spec = shell_quote(json!({"credentials": {"credentials":[
-                    {"pass": self.props.data.password},
-                ]}})),
-            );
+        if let Some(api) = Backend::url("") {
+            let login_cmd = format!(r#"drg login {url}"#, url = shell_quote(api));
             cards.push(html!{
+                <Card title=html!{"Log in"}>
+                    <div>
+                    {"Log in to the backend. This will ask you to open the login URL in the browser, in order to follow the OpenID Connect login flow."}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=login_cmd/>
+                </Card>
+            });
+        }
+
+        let create_app_cmd = format!(
+            r#"drg create app POST {name}"#,
+            name = self.props.data.app_id
+        );
+        let create_device_cmd = format!(
+            r#"drg create device --app {app} {device} --data {spec}"#,
+            app = self.props.data.app_id,
+            device = shell_quote(&self.props.data.device_id),
+            spec = shell_single_quote(json!({"spec":{"credentials": {"credentials":[
+                {"pass": self.props.data.password},
+            ]}}})),
+        );
+        cards.push(html!{
                 <Card title={html!{"Create a new application"}}>
                     <div>
                     {"As a first step, you will need to create a new application."}
@@ -83,7 +95,7 @@ impl Component for RegisterDevices {
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_app_cmd/>
                 </Card>
             });
-            cards.push(html!{
+        cards.push(html!{
                 <Card title={html!{"Create a new device"}}>
                     <div>
                     {"As part of your application, you can then create a new device."}
@@ -91,7 +103,6 @@ impl Component for RegisterDevices {
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_device_cmd/>
                 </Card>
             });
-        }
 
         cards
             .iter()

@@ -63,7 +63,7 @@ impl Component for PublishData {
 
         if let Some(mqtt) = &self.props.endpoints.mqtt {
             let publish_mqtt_cmd = format!(
-                r#"mqtt pub -v -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s -t temp -m '{payload}'"#,
+                r#"mqtt pub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s -t temp -m '{payload}'"#,
                 host = mqtt.host,
                 port = mqtt.port,
                 app_id = &self.props.data.app_id,

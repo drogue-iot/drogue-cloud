@@ -2,11 +2,12 @@ use crate::backend::Backend;
 use anyhow::Error;
 use drogue_cloud_service_api::endpoints::{Endpoints, MqttEndpoint};
 use patternfly_yew::*;
-use yew::prelude::*;
-use yew::virtual_dom::VChild;
+use std::rc::Rc;
 use yew::{
     format::{Json, Nothing},
+    prelude::*,
     services::fetch::*,
+    virtual_dom::VChild,
 };
 
 pub struct Index {
@@ -19,7 +20,7 @@ pub struct Index {
 pub enum Msg {
     FetchOverview,
     FetchOverviewFailed,
-    OverviewUpdate(Endpoints),
+    OverviewUpdate(Rc<Endpoints>),
 }
 
 impl Component for Index {
@@ -42,7 +43,7 @@ impl Component for Index {
                 true
             }
             Msg::OverviewUpdate(e) => {
-                self.endpoints = Some(e);
+                self.endpoints = Some((*e).clone());
                 true
             }
             _ => false,
@@ -80,7 +81,7 @@ impl Index {
                     let parts = response.into_parts();
                     if let (meta, Json(Ok(body))) = parts {
                         if meta.status.is_success() {
-                            return Msg::OverviewUpdate(body);
+                            return Msg::OverviewUpdate(Rc::new(body));
                         }
                     }
                     Msg::FetchOverviewFailed

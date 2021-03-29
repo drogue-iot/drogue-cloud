@@ -29,6 +29,7 @@ pub enum Msg {
     SetBinaryMode(bool),
     SetSharedConsumerMode(bool),
     SetConsumerGroup(String),
+    SetDrgToken(bool),
 
     OpenSpy,
 }
@@ -61,6 +62,9 @@ impl Component for ConsumeData {
                 self.data_agent
                     .update(|data| data.consumer_group = Some(group));
             }
+            Self::Message::SetDrgToken(drg_token) => self
+                .data_agent
+                .update(move |data| data.drg_token = drg_token),
             Self::Message::OpenSpy => RouteAgentDispatcher::<()>::new()
                 .send(RouteRequest::ChangeRoute(Route::new_default_state("/spy"))),
         }
@@ -105,11 +109,15 @@ impl Component for ConsumeData {
                     )
                 }
             };
+            let token = match self.props.data.drg_token {
+                true => "\"$(drg token)\"".into(),
+                false => format!("\"{}\"", self.props.token.access_token),
+            };
             let consume_mqtt_cmd = format!(
-                r#"mqtt sub -h {host} -p {port} -s -t '{topic}' {opts} -pw "{token}""#,
+                r#"mqtt sub -h {host} -p {port} -s -t '{topic}' {opts} -pw {token}"#,
                 host = mqtt.host,
                 port = mqtt.port,
-                token = self.props.token.access_token,
+                token = token,
                 topic = topic,
                 opts = opts,
             );
@@ -123,6 +131,13 @@ impl Component for ConsumeData {
                             checked=self.props.data.binary_mode
                             label="Binary content mode" label_off="Structured content mode"
                             on_change=self.link.callback(|data| Msg::SetBinaryMode(data))
+                            />
+                    </div>
+                    <div>
+                        <Switch
+                            checked=self.props.data.drg_token
+                            label="Use 'drg token' to get the access token" label_off="Show current token in example"
+                            on_change=self.link.callback(|data| Msg::SetDrgToken(data))
                             />
                     </div>
                     <div>

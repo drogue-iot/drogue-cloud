@@ -1,8 +1,7 @@
-use crate::data::SharedDataOps;
 use crate::{
     backend::{Backend, BackendInformation, Token},
     components::placeholder::Placeholder,
-    data::SharedDataBridge,
+    data::{SharedDataBridge, SharedDataOps},
     error::error,
     examples::{self, Examples},
     index::Index,

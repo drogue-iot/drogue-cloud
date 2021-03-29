@@ -12,6 +12,7 @@ pub struct ExampleData {
 
     pub binary_mode: bool,
     pub consumer_group: Option<String>,
+    pub drg_token: bool,
 }
 
 impl Default for ExampleData {
@@ -23,6 +24,7 @@ impl Default for ExampleData {
             payload: json!({"temp": 42}).to_string(),
             binary_mode: false,
             consumer_group: None,
+            drg_token: true,
         }
     }
 }

@@ -48,6 +48,12 @@ pub fn shell_quote<S: ToString>(s: S) -> String {
     s.to_string().replace('\\', "\\\\").replace('\'', "\\\'")
 }
 
+/// Escape into single-quote string
+pub fn shell_single_quote<S: ToString>(s: S) -> String {
+    let s = s.to_string().replace('\'', r#"'"'"'"#);
+    format!("'{}'", s)
+}
+
 pub fn url_encode<S: AsRef<str>>(s: S) -> String {
     percent_encoding::utf8_percent_encode(s.as_ref(), percent_encoding::NON_ALPHANUMERIC)
         .to_string()

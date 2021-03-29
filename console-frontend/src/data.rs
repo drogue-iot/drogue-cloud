@@ -1,10 +1,13 @@
-use std::collections::HashSet;
-use std::ops::{Deref, DerefMut};
+use std::fmt::Debug;
+use std::{
+    collections::HashSet,
+    ops::{Deref, DerefMut},
+};
 use yew::{agent::*, Callback, Component, ComponentLink};
 
 pub struct SharedDataHolder<T>
 where
-    T: Default + Clone + PartialEq + 'static,
+    T: Default + Debug + Clone + PartialEq + 'static,
 {
     link: AgentLink<Self>,
     data: T,
@@ -24,7 +27,7 @@ pub enum Response<T> {
 
 impl<T> Agent for SharedDataHolder<T>
 where
-    T: Default + Clone + PartialEq + 'static,
+    T: Default + Debug + Clone + PartialEq + 'static,
 {
     type Reach = Context<Self>;
     type Message = ();
@@ -42,7 +45,9 @@ where
     fn update(&mut self, _: Self::Message) {}
 
     fn connected(&mut self, id: HandlerId) {
-        self.subscribers.insert(id);
+        if id.is_respondable() {
+            self.subscribers.insert(id);
+        }
     }
 
     fn handle_input(&mut self, msg: Self::Input, id: HandlerId) {
@@ -59,8 +64,10 @@ where
             }
 
             Self::Input::UpdateState(mutator) => {
-                let new = self.data.clone();
-                mutator(&mut self.data);
+                let mut new = self.data.clone();
+                log::debug!("old data: {:?}", new);
+                mutator(&mut new);
+                log::debug!("new data: {:?}", new);
                 if new != self.data {
                     self.data = new;
                     self.notify_all();
@@ -70,13 +77,15 @@ where
     }
 
     fn disconnected(&mut self, id: HandlerId) {
-        self.subscribers.remove(&id);
+        if id.is_respondable() {
+            self.subscribers.remove(&id);
+        }
     }
 }
 
 impl<T> SharedDataHolder<T>
 where
-    T: Default + Clone + PartialEq,
+    T: Default + Debug + Clone + PartialEq,
 {
     pub fn notify_all(&mut self) {
         for sub in self.subscribers.iter() {
@@ -87,11 +96,11 @@ where
 
 pub struct SharedDataDispatcher<T>(Dispatcher<SharedDataHolder<T>>)
 where
-    T: Default + Clone + PartialEq + 'static;
+    T: Default + Debug + Clone + PartialEq + 'static;
 
 impl<T> SharedDataDispatcher<T>
 where
-    T: Default + Clone + PartialEq + 'static,
+    T: Default + Debug + Clone + PartialEq + 'static,
 {
     pub fn new() -> Self {
         Self(SharedDataHolder::dispatcher())
@@ -100,7 +109,7 @@ where
 
 impl<T> Default for SharedDataDispatcher<T>
 where
-    T: Default + Clone + PartialEq + 'static,
+    T: Default + Debug + Clone + PartialEq + 'static,
 {
     fn default() -> Self {
         Self::new()
@@ -109,7 +118,7 @@ where
 
 impl<T> Deref for SharedDataDispatcher<T>
 where
-    T: Default + Clone + PartialEq + 'static,
+    T: Default + Debug + Clone + PartialEq + 'static,
 {
     type Target = Dispatcher<SharedDataHolder<T>>;
 
@@ -120,7 +129,7 @@ where
 
 impl<T> DerefMut for SharedDataDispatcher<T>
 where
-    T: Default + Clone + PartialEq + 'static,
+    T: Default + Debug + Clone + PartialEq + 'static,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
@@ -129,11 +138,11 @@ where
 
 pub struct SharedDataBridge<T>(Box<dyn Bridge<SharedDataHolder<T>>>)
 where
-    T: Default + Clone + PartialEq + 'static;
+    T: Default + Debug + Clone + PartialEq + 'static;
 
 impl<T> SharedDataBridge<T>
 where
-    T: Default + Clone + PartialEq,
+    T: Default + Debug + Clone + PartialEq,
 {
     pub fn new(callback: Callback<Response<T>>) -> SharedDataBridge<T> {
         Self(SharedDataHolder::bridge(callback))
@@ -157,7 +166,7 @@ where
 
 impl<T> Deref for SharedDataBridge<T>
 where
-    T: Default + Clone + PartialEq,
+    T: Default + Debug + Clone + PartialEq,
 {
     type Target = Box<dyn Bridge<SharedDataHolder<T>>>;
 
@@ -167,7 +176,7 @@ where
 }
 impl<T> DerefMut for SharedDataBridge<T>
 where
-    T: Default + Clone + PartialEq,
+    T: Default + Debug + Clone + PartialEq,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
@@ -176,7 +185,7 @@ where
 
 pub trait SharedDataOps<T>
 where
-    T: Default + Clone + PartialEq,
+    T: Default + Debug + Clone + PartialEq,
 {
     fn set(&mut self, data: T);
 
@@ -187,7 +196,7 @@ where
 
 impl<T> SharedDataOps<T> for dyn Bridge<SharedDataHolder<T>>
 where
-    T: Default + Clone + PartialEq,
+    T: Default + Debug + Clone + PartialEq,
 {
     fn set(&mut self, data: T) {
         self.send(Request::SetState(data))
