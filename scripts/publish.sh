@@ -10,19 +10,25 @@ TEMP=${1:-42}
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "$SCRIPTDIR/common.sh"
 
-MGMT_URL=$(service_url "registry")
+BACKEND_URL=$(service_url "console-backend")
 HTTP_ENDPOINT_URL=$(service_url "http-endpoint" https)
 
+# login
+if ! drg token; then
+  drg login $BACKEND_URL
+fi
+
 # app
-if ! http --check-status ${MGMT_URL}/api/v1/apps/${APP} >/dev/null 2>&1; then
-  http POST ${MGMT_URL}/api/v1/apps metadata:="{\"name\":\"${APP}\"}"
+if ! drg get app ${APP}; then
+  drg create app ${APP}
+  drg get app ${APP}
 fi
 
 # device
-if ! http --check-status ${MGMT_URL}/api/v1/apps/${APP}/devices/${DEVICE} >/dev/null 2>&1; then
-  http POST ${MGMT_URL}/api/v1/apps/${APP}/devices \
-       metadata:="{\"application\": \"${APP}\", \"name\":\"${DEVICE}\"}" \
-       spec:="{\"credentials\": {\"credentials\":[{ \"pass\": \"${PASS}\" }]}}"
+if ! drg get device --app ${APP} ${DEVICE}; then
+  drg create device --app ${APP} ${DEVICE} --data \
+      "{\"credentials\": {\"credentials\":[{ \"pass\": \"${PASS}\" }]}}"
+  drg get device --app ${APP} ${DEVICE}
 fi
 
 # temp

@@ -69,7 +69,7 @@ echo "  Edit:    drg edit app app_id"
 echo "  Delete   drg delete app app_id"
 echo
 echo "Devices:"
-echo "  Create:  drg create device --app app_id device_id --data '{\"spec\":{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}}'"
+echo "  Create:  drg create device --app app_id device_id --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
 echo "  Read:    drg get device --app app_id device_id"
 echo "  Edit:    drg edit device --app app_id device_id"
 echo "  Delete:  drg delete device --app app_id device_id"
