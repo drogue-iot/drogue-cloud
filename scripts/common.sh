@@ -97,11 +97,9 @@ function wait_for_resource() {
 
   echo "Waiting until $resource exists..."
 
-  set +x
   while ! kubectl get "$resource" -n "$DROGUE_NS" >/dev/null 2>&1; do
     sleep 5
   done
-  set -x
 }
 
 # we nudge (delete the deploys) because of: https://github.com/knative/serving/issues/10344
