@@ -5,6 +5,7 @@ is assumed, which includes Mac OS X.
 
 == Command line tools
 
+* `drg`- aka https://github.com/drogue-iot/drg[Drogue command line client]
 * `http` - aka https://httpie.org/[HTTPie]
 * `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
 * `kubectl` - https://kubernetes.io/docs/tasks/tools/install-kubectl/
