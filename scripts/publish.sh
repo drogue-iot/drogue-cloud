@@ -10,7 +10,6 @@ TEMP=${1:-42}
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "$SCRIPTDIR/common.sh"
 
-: "${CLUSTER:=minikube}"
 MGMT_URL=$(service_url "registry")
 HTTP_ENDPOINT_URL=$(service_url "http-endpoint" https)
 
