@@ -43,31 +43,18 @@ Run the installer script `./script/drogue.sh`, adding the options appropriate fo
 
 You can use the environment variable `CLUSTER` to define which cluster type you have.
 
-NOTE: Yes, you downloaded a cluster type specific package, and still need to provide the cluster type. We are working
-on this.
-
-=== Running for Minikube
-
-As "Minikube" is the default, simply run:
-
-[source,shell]
-----
-./script/drogue.sh
-----
-
-=== Running for Kind
+[NOTE]
+.Default cluster type
+====
+By default, the cluster type will be `minikube` for the script in the repository. For the installers, this default
+value will be changed to the type you download for the installer. You can still override the default, using:
 
 [source,shell]
 ----
 env CLUSTER=kind ./script/drogue.sh
 ----
 
-=== Running for OpenShift
-
-[source,shell]
-----
-env CLUSTER=openshift ./script/drogue.sh
-----
+====
 
 == Additional installer options
 
