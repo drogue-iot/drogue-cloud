@@ -1,5 +1,4 @@
 mod auth;
-mod cli;
 mod info;
 mod spy;
 
