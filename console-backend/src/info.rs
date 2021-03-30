@@ -1,6 +1,8 @@
 use actix_web::{get, web, HttpResponse, Responder};
 
+use drogue_cloud_service_api::version::DrogueVersion;
 use drogue_cloud_service_common::endpoints::EndpointSourceType;
+
 use serde_json::json;
 
 #[get("/info")]
@@ -19,4 +21,9 @@ pub async fn get_public_endpoints(
         Ok(endpoints) => HttpResponse::Ok().json(endpoints.publicize()),
         Err(err) => HttpResponse::InternalServerError().json(json!( {"error": err.to_string()})),
     }
+}
+
+#[get("/drogue-version")]
+pub async fn get_drogue_version(version: web::Data<DrogueVersion>) -> impl Responder {
+    HttpResponse::Ok().json(version.get_version())
 }
