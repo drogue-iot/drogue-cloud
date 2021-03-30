@@ -1,5 +1,12 @@
 # Release cheat sheet
 
+## Next version
+
+Preparing for a new version (not release, like a milestone):
+
+* Change the version in all crates to e.g. `0.4.0`
+  * Pay attention to the `service-api` crate as its version will be reported externally
+
 ## Overall process
 
 * Create a new tag
