@@ -151,6 +151,7 @@ async fn main() -> anyhow::Result<()> {
             .service(
                 web::scope("/.well-known")
                     .service(info::get_public_endpoints)
+                    .service(info::get_drogue_version)
             )
 
     })

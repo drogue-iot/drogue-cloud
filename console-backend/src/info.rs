@@ -24,6 +24,6 @@ pub async fn get_public_endpoints(
 }
 
 #[get("/drogue-version")]
-pub async fn get_drogue_version(version: web::Data<DrogueVersion>) -> impl Responder {
-    HttpResponse::Ok().json(version.get_version())
+pub async fn get_drogue_version() -> impl Responder {
+    HttpResponse::Ok().json(DrogueVersion::new())
 }
