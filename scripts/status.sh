@@ -105,7 +105,7 @@ echo "------------------------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
-echo "Publish data from the device and specify how long will you wait for a command with 'ttd' parameter (in seconds)"
+echo "Publish data from the device and specify how long will you wait for a command with 'ct' parameter (in seconds)"
 echo
 echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
@@ -117,7 +117,7 @@ echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@a
 echo
 echo "Send command to that device from another terminal window:"
 echo
-echo "  http POST $COMMAND_ENDPOINT_URL/command?application=app_id\&device=device_id\&command=set-temp temp:=25" \"Authorization:Bearer \$TOKEN\"
+echo "  http POST $COMMAND_ENDPOINT_URL/command application==app_id device==device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg token\)\"
 echo
 
 #
