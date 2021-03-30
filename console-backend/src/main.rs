@@ -144,7 +144,6 @@ async fn main() -> anyhow::Result<()> {
             // everything from here on is unauthenticated or not using the middleware
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
             .service(index)
-            .service(cli::login)
             .service(auth::login)
             .service(auth::logout)
             .service(auth::code)
