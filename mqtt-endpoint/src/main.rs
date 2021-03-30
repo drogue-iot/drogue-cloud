@@ -67,14 +67,20 @@ impl App {
             .as_ref()
             .map(|p| String::from_utf8(p.to_vec()))
             .transpose()
-            .map_err(|_| EndpointError::AuthenticationError)?;
+            .map_err(|err| {
+                log::debug!("Failed to convert password: {}", err);
+                EndpointError::AuthenticationError
+            })?;
 
         Ok(self
             .authenticator
             .authenticate_mqtt(username.as_ref(), password, &client_id, certs)
             .await
-            .map_err(|err| EndpointError::AuthenticationServiceError {
-                source: Box::new(err),
+            .map_err(|err| {
+                log::debug!("Failed to call authentication service: {}", err);
+                EndpointError::AuthenticationServiceError {
+                    source: Box::new(err),
+                }
             })?
             .outcome)
     }
