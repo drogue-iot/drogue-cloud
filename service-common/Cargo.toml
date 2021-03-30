@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-service-common"
-version = "0.1.0"
+version = "0.4.0"
 authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2018"
 
