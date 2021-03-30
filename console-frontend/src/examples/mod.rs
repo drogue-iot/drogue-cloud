@@ -1,8 +1,10 @@
+mod commands;
 mod consume;
 mod data;
 mod publish;
 mod register;
 
+pub use commands::*;
 pub use consume::*;
 pub use publish::*;
 pub use register::*;
@@ -32,6 +34,8 @@ pub enum Examples {
     Consume,
     #[to = "/publish"]
     Publish,
+    #[to = "/commands"]
+    Commands,
 }
 
 impl Examples {
@@ -40,6 +44,7 @@ impl Examples {
             Self::Register => "Registering devices".into(),
             Self::Consume => "Consuming data".into(),
             Self::Publish => "Publishing data".into(),
+            Self::Commands => "Command & control".into(),
         }
     }
 }
@@ -209,7 +214,6 @@ impl ExamplePage {
                                     <RegisterDevices
                                         endpoints=endpoints.clone()
                                         data=data.clone()
-                                        token=token.clone()
                                         />
                                 },
                                 Examples::Consume => html!{
@@ -221,6 +225,12 @@ impl ExamplePage {
                                 },
                                 Examples::Publish => html!{
                                     <PublishData
+                                        endpoints=endpoints.clone()
+                                        data=data.clone()
+                                        />
+                                },
+                                Examples::Commands => html!{
+                                    <CommandAndControl
                                         endpoints=endpoints.clone()
                                         data=data.clone()
                                         token=token.clone()

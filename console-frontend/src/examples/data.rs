@@ -13,18 +13,28 @@ pub struct ExampleData {
     pub binary_mode: bool,
     pub consumer_group: Option<String>,
     pub drg_token: bool,
+
+    pub cmd_empty_message: bool,
+    pub cmd_name: String,
+    pub cmd_payload: String,
 }
 
 impl Default for ExampleData {
     fn default() -> Self {
         Self {
-            app_id: "app1".to_string(),
-            device_id: "device1".to_string(),
-            password: "hey-rodney".to_string(),
+            app_id: "app1".into(),
+            device_id: "device1".into(),
+            password: "hey-rodney".into(),
             payload: json!({"temp": 42}).to_string(),
+
             binary_mode: false,
             consumer_group: None,
+
             drg_token: true,
+
+            cmd_empty_message: false,
+            cmd_name: "set-temp".into(),
+            cmd_payload: json!({"target-temp": 23}).to_string(),
         }
     }
 }

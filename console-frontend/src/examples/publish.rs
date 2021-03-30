@@ -1,5 +1,4 @@
-use super::{shell_quote, url_encode};
-use crate::{backend::Token, examples::data::ExampleData};
+use crate::examples::{data::ExampleData, shell_quote, shell_single_quote, url_encode};
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
@@ -8,7 +7,6 @@ use yew::prelude::*;
 pub struct Props {
     pub endpoints: Endpoints,
     pub data: ExampleData,
-    pub token: Token,
 }
 
 pub struct PublishData {
@@ -63,13 +61,13 @@ impl Component for PublishData {
 
         if let Some(mqtt) = &self.props.endpoints.mqtt {
             let publish_mqtt_cmd = format!(
-                r#"mqtt pub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s -t temp -m '{payload}'"#,
+                r#"mqtt pub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s -t temp -m {payload}"#,
                 host = mqtt.host,
                 port = mqtt.port,
                 app_id = &self.props.data.app_id,
                 device_id = shell_quote(url_encode(&self.props.data.device_id)),
                 password = shell_quote(&self.props.data.password),
-                payload = shell_quote(&self.props.data.payload)
+                payload = shell_single_quote(&self.props.data.payload)
             );
             cards.push(html!{
                 <Card title={html!{"Publish data using MQTT"}}>

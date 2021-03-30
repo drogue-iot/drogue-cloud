@@ -1,5 +1,5 @@
 use crate::{
-    backend::{Backend, Token},
+    backend::Backend,
     examples::{
         data::ExampleData,
         {shell_quote, shell_single_quote},
@@ -14,7 +14,6 @@ use yew::prelude::*;
 pub struct Props {
     pub endpoints: Endpoints,
     pub data: ExampleData,
-    pub token: Token,
 }
 
 pub struct RegisterDevices {
@@ -75,17 +74,14 @@ impl Component for RegisterDevices {
             });
         }
 
-        let create_app_cmd = format!(
-            r#"drg create app POST {name}"#,
-            name = self.props.data.app_id
-        );
+        let create_app_cmd = format!(r#"drg create app {name}"#, name = self.props.data.app_id);
         let create_device_cmd = format!(
             r#"drg create device --app {app} {device} --data {spec}"#,
             app = self.props.data.app_id,
             device = shell_quote(&self.props.data.device_id),
-            spec = shell_single_quote(json!({"spec":{"credentials": {"credentials":[
+            spec = shell_single_quote(json!({"credentials": {"credentials":[
                 {"pass": self.props.data.password},
-            ]}}})),
+            ]}})),
         );
         cards.push(html!{
                 <Card title={html!{"Create a new application"}}>

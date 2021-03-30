@@ -307,6 +307,7 @@ impl Component for Main {
                                 <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Register)>{Examples::Register.title()}</NavRouterItem<AppRoute>>
                                 <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Consume)>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
                                 <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Publish)>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
+                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Commands)>{Examples::Commands.title()}</NavRouterItem<AppRoute>>
                             </NavRouterExpandable<AppRoute>>
                             <NavRouterExpandable<AppRoute> title="Tools">
                                 <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
