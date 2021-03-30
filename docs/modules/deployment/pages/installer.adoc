@@ -47,7 +47,7 @@ You can use the environment variable `CLUSTER` to define which cluster type you 
 .Default cluster type
 ====
 By default, the cluster type will be `minikube` for the script in the repository. For the installers, this default
-value will be changed to the type you download for the installer. You can still override the default, using:
+value will be changed to the installer type you downloaded. You can still override the default, using:
 
 [source,shell]
 ----
