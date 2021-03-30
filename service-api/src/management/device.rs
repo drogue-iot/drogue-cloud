@@ -87,3 +87,31 @@ impl Dialect for DeviceSpecGatewaySelector {
         Section::Spec
     }
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct DeviceSpecCommands {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub commands: Vec<Command>,
+}
+
+impl Dialect for DeviceSpecCommands {
+    fn key() -> &'static str {
+        "commands"
+    }
+    fn section() -> Section {
+        Section::Spec
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Command {
+    #[serde(rename = "external")]
+    External(ExternalEndpoint),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ExternalEndpoint {
+    pub endpoint: String,
+    pub r#type: Option<String>,
+}

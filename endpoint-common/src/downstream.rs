@@ -43,7 +43,7 @@ pub struct PublishResponse {
 
 #[derive(Clone, Debug)]
 pub struct DownstreamSender {
-    client: reqwest::Client,
+    pub client: reqwest::Client,
     sink: String,
     instance: String,
 }

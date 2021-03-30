@@ -10,6 +10,7 @@ use drogue_cloud_endpoint_common::{
     downstream::{self, DownstreamSender},
     error::HttpEndpointError,
 };
+use drogue_cloud_service_api::management::{Command, ExternalEndpoint};
 use drogue_cloud_service_common::{
     client::RegistryClient,
     config::ConfigFromEnv,
@@ -21,6 +22,7 @@ use drogue_cloud_service_common::{
 use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
+use std::str;
 use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -62,7 +64,7 @@ async fn index() -> impl Responder {
 }
 
 async fn command(
-    endpoint: web::Data<DownstreamSender>,
+    sender: web::Data<DownstreamSender>,
     web::Query(opts): web::Query<CommandOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
@@ -81,31 +83,85 @@ async fn command(
 
     match response {
         Ok(device) => {
-            log::debug!("Found device {:?}", device);
-            endpoint
-                .publish_http_default(
-                    downstream::Publish {
-                        channel: opts.command,
-                        app_id: opts.application,
-                        device_id: opts.device,
-                        options: downstream::PublishOptions {
-                            topic: None,
-                            content_type: req
-                                .headers()
-                                .get(header::CONTENT_TYPE)
-                                .and_then(|v| v.to_str().ok())
-                                .map(|s| s.to_string()),
-                            ..Default::default()
-                        },
+            if RegistryClient::validate_device(&device) {
+                match RegistryClient::get_command(&device) {
+                    Some(external_command) => match external_command {
+                        Command::External(endpoint) => {
+                            let (url, payload) = map_command(opts, &body, endpoint);
+                            log::debug!(
+                                "Sending {:?} to external command endpoint {:?}",
+                                payload,
+                                url
+                            );
+                            let resp = sender.client.post(url).json(&payload).send().await;
+
+                            match resp {
+                                Ok(r) => Ok(HttpResponse::build(r.status()).finish()),
+                                Err(_) => Ok(HttpResponse::NotAcceptable().finish()),
+                            }
+                        }
                     },
-                    body,
-                )
-                .await
+                    None => {
+                        sender
+                            .publish_http_default(
+                                downstream::Publish {
+                                    channel: opts.command,
+                                    app_id: opts.application,
+                                    device_id: opts.device,
+                                    options: downstream::PublishOptions {
+                                        topic: None,
+                                        content_type: req
+                                            .headers()
+                                            .get(header::CONTENT_TYPE)
+                                            .and_then(|v| v.to_str().ok())
+                                            .map(|s| s.to_string()),
+                                        ..Default::default()
+                                    },
+                                },
+                                body,
+                            )
+                            .await
+                    }
+                }
+            } else {
+                Ok(HttpResponse::NotAcceptable().finish())
+            }
         }
         Err(err) => {
             log::info!("Error {:?}", err);
             Ok(HttpResponse::NotAcceptable().finish())
         }
+    }
+}
+
+fn map_command(
+    opts: CommandOptions,
+    body: &web::Bytes,
+    endpoint: ExternalEndpoint,
+) -> (String, serde_json::Value) {
+    if Some("ttn".to_owned()) == endpoint.r#type {
+        (
+            endpoint.endpoint,
+            json!({
+              "dev_id": opts.device,
+              "port": 1,
+              "confirmed": false,
+              "payload_fields": {
+                "command": opts.command,
+                "command_payload": str::from_utf8(body).unwrap()
+              }
+            }),
+        )
+    } else {
+        (
+            endpoint.endpoint,
+            json!({
+                "application": opts.application,
+                "device": opts.device,
+                "command": opts.command,
+                "payload": str::from_utf8(body).unwrap()
+            }),
+        )
     }
 }
 

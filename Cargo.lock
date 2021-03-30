@@ -1332,6 +1332,7 @@ dependencies = [
  "config",
  "dotenv",
  "drogue-cloud-endpoint-common",
+ "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
  "futures",

@@ -3,7 +3,10 @@ use url::Url;
 
 use drogue_cloud_service_api::auth::ClientError;
 
-use drogue_cloud_service_api::management;
+use drogue_cloud_service_api::{
+    management::{self, DeviceSpecCommands, DeviceSpecCore},
+    Translator,
+};
 
 /// An device registry client backed by reqwest.
 #[derive(Clone, Debug)]
@@ -57,6 +60,34 @@ impl RegistryClient {
             },
             StatusCode::NOT_FOUND => Err(ClientError::Request("Device Not Found".to_string())),
             code => Err(ClientError::Request(format!("Unexpected code {:?}", code))),
+        }
+    }
+
+    /// Validate if device is enabled
+    pub fn validate_device(device: &management::Device) -> bool {
+        match device.section::<DeviceSpecCore>() {
+            // found "core", decoded successfully -> check
+            Some(Ok(core)) => {
+                if core.disabled {
+                    return false;
+                }
+            }
+            // found "core", but could not decode -> fail
+            Some(Err(_)) => {
+                return false;
+            }
+            // no "core" section
+            _ => {}
+        };
+
+        // done
+        true
+    }
+
+    pub fn get_command(device: &management::Device) -> Option<management::Command> {
+        match device.section::<DeviceSpecCommands>() {
+            Some(Ok(commands)) => Some(commands.commands[0].clone()),
+            _ => None,
         }
     }
 }

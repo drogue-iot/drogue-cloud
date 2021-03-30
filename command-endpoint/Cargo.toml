@@ -43,5 +43,6 @@ cloudevents-sdk-reqwest = "0.4"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-api = { path = "../service-api" }
 
 jsonwebtokens = "1.0.0-alpha.13"
