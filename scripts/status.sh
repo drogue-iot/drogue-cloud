@@ -80,10 +80,10 @@ echo
 echo "Data published by devices can be received via MQTT. Possibly start this in another terminal, having the access token set as shown before."
 echo
 echo "Structured content mode (MQTT v3.1.1 and v5):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$TOKEN\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'"
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$\(drg token\)\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'"
 echo
 echo "Binary content mode (MQTT v5 only):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$TOKEN\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'" -up content-mode=binary
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$\(drg token\)\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'" -up content-mode=binary
 echo
 echo "Publish data:"
 echo "---------------"
