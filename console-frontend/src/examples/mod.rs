@@ -243,10 +243,30 @@ impl ExamplePage {
                 </GridItem>
 
                 <GridItem cols=[2]>
-                    <CoreExampleData/>
+                    <CoreExampleData
+                        endpoints=endpoints.clone()
+                        />
                 </GridItem>
 
             </Grid>
         };
+    }
+}
+
+fn note_local_certs(local_certs: bool) -> Html {
+    match local_certs {
+        true => html! {
+            <Alert  r#type=Type::Warning title="Check your path!" inline=true>
+                <Content>
+                    <p>{r#"
+                    This command uses the locally generated certificate bundle. The command will fail if you are not executing it from the root directory of the installer or repository."#}
+                    </p><p>
+                    {r#"
+                    Alternatively, you may adapt the path to the "#} <code> {"ca-bundle.pem"}</code> {r#"file in the command yourself.
+                    "#}</p>
+                </Content>
+            </Alert>
+        },
+        false => html! {},
     }
 }

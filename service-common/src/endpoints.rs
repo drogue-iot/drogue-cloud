@@ -38,6 +38,8 @@ pub struct EndpointConfig {
     pub device_registry_url: Option<String>,
     #[envconfig(from = "COMMAND_ENDPOINT_URL")]
     pub command_url: Option<String>,
+    #[envconfig(from = "LOCAL_CERTS", default = "false")]
+    pub local_certs: bool,
 }
 
 pub async fn eval_endpoints() -> anyhow::Result<Endpoints> {
@@ -127,6 +129,7 @@ impl EndpointSource for EnvEndpointSource {
             registry,
             command_url: self.0.command_url.as_ref().cloned(),
             demos: get_demos(),
+            local_certs: self.0.local_certs,
         })
     }
 }
@@ -201,6 +204,7 @@ impl EndpointSource for OpenshiftEndpointSource {
             redirect_url: frontend,
             registry: registry.map(|url| RegistryEndpoint { url }),
             demos,
+            local_certs: false,
         };
 
         Ok(result)
