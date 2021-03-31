@@ -10,7 +10,7 @@ echo "Run with retry: $CONTAINER " "$@"
 
 while (( RETRY < MAX_RETRY )); do
   echo "Pushing image - attempt $RETRY of $MAX_RETRY"
-  (( RETRY -- ))
+  (( RETRY ++ ))
   "$CONTAINER" "$@" && exit 0
   echo "Failed to execute ... sleeping: $WAIT seconds"
   sleep "$WAIT"
