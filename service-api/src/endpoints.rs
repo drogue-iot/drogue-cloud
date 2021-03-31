@@ -28,6 +28,8 @@ pub struct Endpoints {
     pub command_url: Option<String>,
     #[serde(default)]
     pub demos: Vec<(String, String)>,
+    #[serde(default)]
+    pub local_certs: bool,
 }
 
 impl Endpoints {
@@ -42,6 +44,7 @@ impl Endpoints {
             registry: self.registry.clone(),
             command_url: None,
             demos: Vec::new(),
+            local_certs: false,
         }
     }
 }

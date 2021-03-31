@@ -1,4 +1,5 @@
 use crate::data::{self, SharedDataBridge, SharedDataOps};
+use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use serde_json::json;
 use yew::prelude::*;
@@ -12,7 +13,10 @@ pub struct ExampleData {
 
     pub binary_mode: bool,
     pub consumer_group: Option<String>,
+
     pub drg_token: bool,
+    // whether to use a local certificate
+    pub enable_local_cert: bool,
 
     pub cmd_empty_message: bool,
     pub cmd_name: String,
@@ -31,6 +35,7 @@ impl Default for ExampleData {
             consumer_group: None,
 
             drg_token: true,
+            enable_local_cert: true,
 
             cmd_empty_message: false,
             cmd_name: "set-temp".into(),
@@ -39,8 +44,16 @@ impl Default for ExampleData {
     }
 }
 
+impl ExampleData {
+    pub fn local_certs(&self, offer_local_certs: bool) -> bool {
+        offer_local_certs && self.enable_local_cert
+    }
+}
+
 #[derive(Clone, Debug, Properties, PartialEq, Eq)]
-pub struct Props {}
+pub struct Props {
+    pub endpoints: Endpoints,
+}
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -50,6 +63,7 @@ pub enum Msg {
     SetDeviceId(String),
     SetPassword(String),
     SetPayload(String),
+    SetLocalCerts(bool),
 }
 
 pub struct CoreExampleData {
@@ -85,6 +99,9 @@ impl Component for CoreExampleData {
             Msg::SetDeviceId(device) => self.data_agent.update(|mut data| data.device_id = device),
             Msg::SetPassword(pwd) => self.data_agent.update(|mut data| data.password = pwd),
             Msg::SetPayload(payload) => self.data_agent.update(|mut data| data.payload = payload),
+            Msg::SetLocalCerts(local_certs) => self
+                .data_agent
+                .update(move |mut data| data.enable_local_cert = local_certs),
             Msg::SetData(data) => self.data = Some(data),
         }
         true
@@ -166,6 +183,17 @@ impl CoreExampleData {
                         </Form>
                     </Card>
                 </StackItem>
+            {if self.props.endpoints.local_certs {html!{
+                <StackItem>
+                    <Card title=html!{"Certificates"}>
+                        <Switch
+                            checked=data.enable_local_cert
+                            label="Use local test certificates" label_off="Use system default certificates"
+                            on_change=self.link.callback(|data| Msg::SetLocalCerts(data))
+                            />
+                    </Card>
+                </StackItem>
+            }} else {html!{}}}
             </Stack>
         };
     }
