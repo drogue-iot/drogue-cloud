@@ -1,7 +1,7 @@
 use crate::{
     backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
-    examples::{data::ExampleData, shell_quote, shell_single_quote, url_encode},
+    examples::{data::ExampleData, note_local_certs, shell_quote, shell_single_quote, url_encode},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
@@ -88,6 +88,11 @@ impl Component for CommandAndControl {
             </Alert>
         }];
 
+        let local_certs = self
+            .props
+            .data
+            .local_certs(self.props.endpoints.local_certs);
+
         if let Some(http) = &self.props.endpoints.http {
             let payload = match self.props.data.cmd_empty_message {
                 true => "".into(),
@@ -97,7 +102,7 @@ impl Component for CommandAndControl {
                 ),
             };
             let publish_http_cmd = format!(
-                r#"{payload}http --auth {auth} POST {url}/v1/foo?ct=30"#,
+                r#"{payload}http --auth {auth} {certs}POST {url}/v1/foo?ct=30"#,
                 payload = payload,
                 url = http.url,
                 auth = shell_quote(format!(
@@ -106,6 +111,9 @@ impl Component for CommandAndControl {
                     device_id = url_encode(&self.props.data.device_id),
                     password = &self.props.data.password,
                 )),
+                certs = local_certs
+                    .then(|| "--verify build/certs/endpoints/ca-bundle.pem ")
+                    .unwrap_or("")
             );
             cards.push(html!{
                 <Card title={html!{"Receive commands using HTTP long-polling"}}>
@@ -129,18 +137,22 @@ impl Component for CommandAndControl {
                         "#}
                     </Alert>
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
+                    {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
         if let Some(mqtt) = &self.props.endpoints.mqtt {
             let publish_mqtt_cmd = format!(
-                r#"mqtt sub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s -t command/inbox"#,
+                r#"mqtt sub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t command/inbox"#,
                 host = mqtt.host,
                 port = mqtt.port,
                 app_id = &self.props.data.app_id,
                 device_id = shell_quote(url_encode(&self.props.data.device_id)),
                 password = shell_quote(&self.props.data.password),
+                certs = local_certs
+                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem")
+                    .unwrap_or("")
             );
             cards.push(html!{
                 <Card title={html!{"Receive commands using MQTT subscriptions"}}>
@@ -148,6 +160,7 @@ impl Component for CommandAndControl {
                         {"Using MQTT, you can simply subscribe to commands."}
                     </div>
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_mqtt_cmd/>
+                    {note_local_certs(local_certs)}
                 </Card>
             });
         }

@@ -108,6 +108,8 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
+            - name: LOCAL_CERTS
+              value: "true"
           ports:
             - containerPort: 8080
               name: endpoint

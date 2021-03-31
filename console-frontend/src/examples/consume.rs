@@ -1,7 +1,7 @@
 use crate::{
     backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
-    examples::data::ExampleData,
+    examples::{data::ExampleData, note_local_certs},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
@@ -92,6 +92,11 @@ impl Component for ConsumeData {
             }
         };
 
+        let local_certs = self
+            .props
+            .data
+            .local_certs(self.props.endpoints.local_certs);
+
         let mut cards: Vec<_> = Vec::new();
 
         if let Some(mqtt) = &self.props.endpoints.mqtt_integration {
@@ -114,12 +119,15 @@ impl Component for ConsumeData {
                 false => format!("\"{}\"", self.props.token.access_token),
             };
             let consume_mqtt_cmd = format!(
-                r#"mqtt sub -h {host} -p {port} -s -t '{topic}' {opts} -pw {token}"#,
+                r#"mqtt sub -h {host} -p {port} -s {certs}-t '{topic}' {opts} -pw {token}"#,
                 host = mqtt.host,
                 port = mqtt.port,
                 token = token,
                 topic = topic,
                 opts = opts,
+                certs = local_certs
+                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem")
+                    .unwrap_or("")
             );
             cards.push(html!{
                 <Card title=html!{"Consume device data using MQTT"}>
@@ -166,6 +174,7 @@ impl Component for ConsumeData {
                         {"Run the following command in a new terminal window:"}
                     </div>
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=consume_mqtt_cmd/>
+                    {note_local_certs(local_certs)}
                 </Card>
             });
         }
