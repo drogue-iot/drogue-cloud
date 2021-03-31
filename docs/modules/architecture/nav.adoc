@@ -2,6 +2,6 @@
 ** xref:index.adoc[Overview]
 ** xref:data.adoc[Data plane]
 ** xref:control.adoc[Control plane]
-** xref:devices.adoc[Devices, Gateways & Services]
+** xref:devices.adoc[Devices, gateways & services]
 ** xref:addons.adoc[Additional components]
-** xref:services.adoc[Services]
+** xref:services.adoc[Noteworthy services]

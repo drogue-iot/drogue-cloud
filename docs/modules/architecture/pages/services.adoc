@@ -1,4 +1,4 @@
-= Noteworth services
+= Noteworthy services
 
 Drogue Cloud consists of multiple internal and external services, as explained in this chapter. The following sub-sections
 list a few of the core services, considered interfacing points for users of Drogue Cloud.
