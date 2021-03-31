@@ -250,6 +250,7 @@ jobs:
       - name: Tag and push images
         run: |
           make push "IMAGE_TAG=$VERSION"
+          sleep 10 # delay a bit for API rate limiting issues
 
       - name: Create Release
         id: create-release

@@ -219,7 +219,7 @@ tag-image($(IMAGES)): require-container-registry
 #
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && $(CONTAINER) push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && ./scripts/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
