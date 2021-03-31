@@ -1,4 +1,5 @@
 * xref:index.adoc[Deployment]
+** xref:index.adoc[Overview]
 ** xref:pre-reqs.adoc[Pre-Requisites]
 ** xref:cluster.adoc[Prepare the cluster]
 ** xref:installer.adoc[Run the installer]

@@ -1,0 +1,43 @@
+= Noteworth services
+
+Drogue Cloud consists of multiple internal and external services, as explained in this chapter. The following sub-sections
+list a few of the core services, considered interfacing points for users of Drogue Cloud.
+
+== APIs
+
+=== Management API
+
+The management access to the device registry.
+
+== Endpoints
+
+Protocol endpoints, used for devices to communicate with the system.
+
+=== HTTP endpoint
+
+A general purpose HTTP endpoint.
+
+It provides API compatible with:
+
+* Drogue IoT
+* The Things Network
+* Eclipse Hono
+
+=== MQTT endpoint
+
+A general purpose MQTT endpoint, providing a Drogue IoT specific API.
+
+=== Command endpoint
+
+A drop-off point, with an HTTP API, for cloud-to-device messages.
+
+== Integrations
+
+Integration services allow cloud side applications to interface with Drogue IoT, in order to communicate with devices.
+
+=== MQTT Integration
+
+The MQTT integration is a multi-application, push based integration, which allows to use MQTT v3.1.1 and v5 for
+receiving events coming from devices.
+
+It provides events in the MQTT cloud events format 1.0, in both _structured_ and _binary_ mode.

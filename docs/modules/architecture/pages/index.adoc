@@ -1,0 +1,29 @@
+= Architecture
+
+The main purpose of Drogue IoT cloud is to connect applications with devices. For applications the devices
+are the _gateways_ into the real world. They allow to monitor by acquiring sensor information, or interact with
+by showing information or controling actuators.
+
+image:basics.svg[Basics]
+
+Of course this diagram over-simplifies the problem. And still, connecting to a device to a simple, single
+backend application is a trivial task.
+
+So what does Drogue Cloud do? And why is it a more complex than a simple MQTT broker? The following sections will
+dive into the architecture of Drogue Cloud, and will explain what the benefit if this architecture is.
+
+The following sections will use _My device_ and _My application_. These are the devices and applications that a
+user of Drogue Cloud would bring and try to connect. These application are not provided by Drogue Cloud.
+
+xref:drogue-device:ROOT:index.adoc[Drogue Device] provides tools to create the firmware of such devices if they are embedded micro-controllers. However, Drogue Cloud also allows to integrate larger devices, like Linux
+systems, gateways and it can integrate with other, existing IoT services.
+
+Drogue Cloud is intended to create an _as a service_ experience. This means that the typical user of Drogue Cloud
+would not set up and install Drogue Cloud, but use an existing, hosted instance. Still, it is possible to set up
+your own instance, and use this for only one application and user. However, the decision to make this a shared multi-user system, make some aspects more complicated. Then again, if your setup grows, you shouldn't have any problems scaling up.
+
+The following section will provide more information about:
+
+* xref:data.adoc[The data plane]
+* xref:control.adoc[The control plane]
+* xref:services.adoc[The actual services]

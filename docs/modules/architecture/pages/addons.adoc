@@ -1,0 +1,24 @@
+= Additional components
+
+When deploying Drogue Cloud, or using the sandbox, you might encounter additional services, which are not part of the
+core Drogue Cloud architecture (yet).
+
+== Grafana & InfluxDB
+
+The default deployment contains a Grafana and InfluxDB instance, which is set up in a way that temperature readings
+are automatically stored in the InfluxDB instance. The Grafana dashboard has an example dashboard visualizing these
+readings.
+
+"Temperate readings" are identified by a payload being JSON and containing a `temp` field on the root level object.
+
+This is considered an example, and allows to quickly try out Drogue Cloud services. Typically, Grafana and InfluxDB
+would be "user application", which would run outside the Drogue Cloud namespace or cluster.
+
+== Eclipse Ditto
+
+Eclipse Ditto is a digital-twin solution, which can be integrated with Cloud Events and Drogue Cloud.
+
+We have an "addon" deployment for this in our repository, and also deploy this on our sandbox instance. However,
+currently Eclipse Ditto is not part of the core Drogue Cloud infrastructure.
+
+The integration of Ditto is a future goal, but as of now still a work in progress.

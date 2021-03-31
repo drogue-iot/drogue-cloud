@@ -1,0 +1,68 @@
+= Control plane
+
+== Device registry
+
+The device registry stores the configuration of xref:ROOT:concepts.adoc#applications[applications] and xref:ROOT:concepts.adoc#devices[devices].
+
+While the system has a single sign-on system for the user facing services, devices, especially embedded devices, are
+more limited and using OAuth tokens might not be a good fit. In general, devices have different usage patterns when it
+comes to authentication and authorization. Open ID connect and OAuth are designed with a strong focus on HTTP. Which is
+great, when it comes to authenticate users using browsers and REST clients, but becomes a burden when embedded systems
+and protocols like MQTT and CoAP come into play.
+
+Drogue Cloud tries to make it as easy as possible for devices to connect to the cloud side, and so we believe that
+technologies like pre-shared keys, X.509 client certificates, or simple "username/password" credentials are a better fit
+for devices. Still, for user/application facing application we use Open ID connect, as you can read in <<Single sign-on>>.
+
+A PostgreSQL compatible database is used to persist the information. The device registry component consists of several
+services, which provides internal and external APIs to access the data stored in this database.
+
+image:control-plane.svg[Control plane overview]
+
+=== Provided services
+
+(Device) Management API:: Allows external access to the application and device information. This is a REST API, which
+allows using management tools and applications to create, edit, delete, and view data stored inside the device registry.
+
+User Auth Service:: Allows internal applications to check if a user has access to a requested resource.
++
+This is for example used by the web frontend, to ensure a user may use the "message spy" to access messages of this
+application. Or by the management API to check if a user may perform the requested operation on a resource.
++
+This service works with read-only access to the database, and can work with a ready-only slave replica.
+
+Device Auth Service:: Allows internal application to authenticate and authorize a device.
++
+For example, this service is being used by the protocol endpoints, to grant devices access for publishing data to the
+system. Validating credentials like passwords or X.509 client certificates. Once authenticated, it also reports backs
+additional device configuration for the endpoints, like core mapping information for the LoRaWAN "function ports".
++
+This service works with read-only access to the database, and can work with a ready-only slave replica.
+
+=== Change events for integration
+
+In addition to the management API, which allows getting/reading information out of the registry, the registry will also
+send "change events", when resources get modified.
+
+This is again built on top of Knative eventing, and allows services to act on the modification of applications and
+devices. Using this concept, it is possible to implement "controllers" (or "operators"), which reconcile the desired
+state of a resource.
+
+One example of this, is the "The Things Network" (TTN) controller, which detects a TTN specific section in the device
+configuration, and then tries to create an appropriate device in a linked TTN instance.
+
+NOTE: Currently, this functionality is considered "internal", and such change events cannot be consumed from outside the
+system.
+
+== Single sign-on
+
+Drogue Cloud has a single sign-on (SSO) service, which by default is implemented by Keycloak. As mentioned before, the
+SSO service is used to authenticate users and applications, not devices. It is also used internally, to manage access
+between the internal services.
+
+The authorization however, the check if a user has access to a device or application, is handled by the
+"user auth service", which is backed by the device registry.
+
+The SSO service is also used in order to integrate other services, like the Eclipse Ditto based digital twin service,
+or the example Grafana Dashboard.
+

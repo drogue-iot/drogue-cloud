@@ -1,0 +1,30 @@
+= Devices, Gateways & Services
+
+Most of this documentation talks about "devices". However, what we actually mean is: devices, gateways, and services.
+
+image:devices.svg[Different device types]
+
+Device:: A device, directly connected to Drogue Cloud.
++
+This may be an embedded device, or a more powerfull compute node
+with a full blown operating system. It may also be a containerized application, running inside an Edge node, connecting
+to Drogue Cloud.
+
+Gateway:: A device, which acts as a proxy for other devices, that may not directly connect to Drogue Cloud.
++
+This may be some kind of Linux machine, which allows non-IP enabled devices, like Bluetooth Low Energy (BLE) devices,
+to connect to Drogue Cloud, by forwarding messages between the two protocols.
+
+Services:: In some cases a gateway is not a single device, but a bigger, maybe cloud based, service as well. Still it acts
+as a proxy for devices to communicate with Drogue Cloud.
++
+An example might be "The Things Network" (TTN), or "Sigfox". Both services have their own technical infrastructure to which devices
+connect. These services act as a proxy to their devices.
++
+From a Drogue Cloud perspective such services are "gateways" as well.
+
+It may be, that between Drogue Cloud and the actual device, additional "gateways", like a LoRaWAN gateway, are in place. A LoRa
+device might connect to its local gateway, which connects to the TTN network, which then connects to Drogue Cloud.
+
+However, for Drogue Cloud only the device which directly connects (TTN service) and the originating device (the actual device) is
+important. Intermediate gateways may be in play, but are not relevant.
