@@ -108,7 +108,7 @@ impl Index {
             service_cards.push(self.render_card("API", backend.current_url(), false));
         }
         if let Some(sso) = &endpoints.sso {
-            service_cards.push(self.render_card("Single-sign on", sso, true));
+            service_cards.push(self.render_card("Single sign-on", sso, true));
         }
         if let Some(registry) = &endpoints.registry {
             service_cards.push(self.render_card("Device registry", &registry.url, false));
