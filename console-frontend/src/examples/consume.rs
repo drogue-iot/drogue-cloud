@@ -126,7 +126,7 @@ impl Component for ConsumeData {
                 topic = topic,
                 opts = opts,
                 certs = local_certs
-                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem")
+                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
