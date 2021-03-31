@@ -39,6 +39,13 @@ You will need:
   * Podman or docker
   * A Kubernetes cluster (also see below)
 
+By default, the cluster type will be aligned with the downloaded installer. However, you can override this using
+the `CLUSTER` variable:
+
+~~~shell
+env CLUSTER=kind ./scripts/drogue.sh
+~~~
+
 ### Minikube
 
 * Install Minikube – https://minikube.sigs.k8s.io/docs/start/
@@ -55,7 +62,7 @@ minikube tunnel # in a separate terminal, as it keeps running
 
 ~~~shell
 kind create cluster
-env CLUSTER=kind ./scripts/drogue.sh
+./scripts/drogue.sh
 ~~~
 
 
