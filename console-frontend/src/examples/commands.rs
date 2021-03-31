@@ -151,7 +151,7 @@ impl Component for CommandAndControl {
                 device_id = shell_quote(url_encode(&self.props.data.device_id)),
                 password = shell_quote(&self.props.data.password),
                 certs = local_certs
-                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem")
+                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{

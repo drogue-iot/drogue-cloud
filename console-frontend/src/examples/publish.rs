@@ -80,7 +80,7 @@ impl Component for PublishData {
                 password = shell_quote(&self.props.data.password),
                 payload = shell_single_quote(&self.props.data.payload),
                 certs = local_certs
-                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem")
+                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
