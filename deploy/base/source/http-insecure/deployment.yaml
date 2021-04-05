@@ -17,6 +17,22 @@ spec:
         app.kubernetes.io/name: http-insecure-endpoint
         app.kubernetes.io/part-of: endpoints
     spec:
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
       containers:
         - name: endpoint
           image: ghcr.io/drogue-iot/http-endpoint:latest
@@ -26,10 +42,27 @@ spec:
               value: debug
             - name: BIND_ADDR
               value: "0.0.0.0:8080"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
             - name: AUTH_SERVICE_URL
               value: http://authentication-service:8080
             - name: DISABLE_TLS
               value: "true"
+            - name: INSTANCE
+              valueFrom:
+                configMapKeyRef:
+                  name: configuration
+                  key: instance
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
           ports:
             - containerPort: 8080
               name: endpoint
@@ -38,7 +71,22 @@ spec:
               name: command
               protocol: TCP
           readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
             httpGet:
-              scheme: HTTP
-              port: 8080
-              path: /health
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
+      volumes:
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-services
