@@ -11,6 +11,7 @@ bases:
   - ../base/sso
   - source/mqtt
   - source/http
+  #- source/http-insecure
   - source/command
   - ../base/service/influxdb
   - service/grafana

@@ -131,6 +131,9 @@ kubectl -n "$DROGUE_NS" set env deployment/authentication-service "SSO_URL=$SSO_
 kubectl -n "$DROGUE_NS" set env deployment/user-auth-service "SSO_URL=$SSO_URL"
 kubectl -n "$DROGUE_NS" set env deployment/command-endpoint "SSO_URL=$SSO_URL"
 kubectl -n "$DROGUE_NS" set env deployment/http-endpoint "SSO_URL=$SSO_URL"
+if [ "$(kubectl -n drogue-iot get deployment http-insecure-endpoint --ignore-not-found)" != "" ] ; then
+  kubectl -n "$DROGUE_NS" set env deployment/http-insecure-endpoint "SSO_URL=$SSO_URL"
+fi
 kubectl -n "$DROGUE_NS" set env deployment/mqtt-endpoint "SSO_URL=$SSO_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/mqtt-integration "SSO_URL=$SSO_URL"
