@@ -2,7 +2,7 @@
 
 The Drogue IoT Cloud project takes care of IoT on the cloud side.
 
-image::architecture.svg[Overview diagram]
+image::basics.svg[Overview diagram]
 
 It offers:
 
