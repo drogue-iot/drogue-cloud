@@ -1,0 +1,46 @@
+openapi: "3.0.0"
+info:
+  title: Drogue Cloud API
+  version: "0.5"
+  contact:
+    url: https://drogue.io
+servers:
+  - url: "http://localhost:8080"
+externalDocs:
+  description: Drogue Cloud Documentation
+  url: https://book.drogue.io
+security:
+  - api_key: []
+paths:
+  "/.well-known/drogue-version":
+    get:
+      description: "Get version"
+      responses:
+        "200":
+          description: "Version response"
+          content:
+            "application/json":
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: string
+                    enum: ["true"]
+                required:
+                  - success
+    post:
+      description: "Test post"
+      responses:
+        "200":
+          description: "Default response"
+
+components:
+  securitySchemes:
+    api_key:
+      type: oauth2
+      description: Log in using your Drogue Cloud account
+      flows:
+        implicit:
+          authorizationUrl: "https://keycloak-drogue-dev.apps.wonderful.iot-playground.org/auth/realms/drogue/protocol/openid-connect/auth"
+          scopes:
+            openid: OpenID Connect

@@ -25,7 +25,7 @@ members = [
 [patch.crates-io]
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "fe51e06fb2c44b1d3e3fd627cedea3fd582487ef" }
 #patternfly-yew = { path = "../patternfly-yew" }
-#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "ed20f13b257f870a4c0182361569fb2e3a90f775" }
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "49b7f09b1a091e2bcf0e8b280c7e980ea34ad1a5" }
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 
 # required for https://github.com/ntex-rs/ntex-mqtt/pull/48

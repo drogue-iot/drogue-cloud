@@ -1380,6 +1380,7 @@ dependencies = [
  "ring",
  "serde 1.0.124",
  "serde_json",
+ "serde_yaml",
  "thiserror",
  "tokio-stream",
  "url",
@@ -3346,9 +3347,8 @@ dependencies = [
 
 [[package]]
 name = "patternfly-yew"
-version = "0.0.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9980de408a83d4b042f8ab73d5ed19e0c48abd32b80e7d7a85f70c63e2c01b9a"
+version = "0.0.19"
+source = "git+https://github.com/ctron/patternfly-yew?rev=49b7f09b1a091e2bcf0e8b280c7e980ea34ad1a5#49b7f09b1a091e2bcf0e8b280c7e980ea34ad1a5"
 dependencies = [
  "chrono",
  "js-sys",

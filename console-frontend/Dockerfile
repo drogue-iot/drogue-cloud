@@ -12,6 +12,8 @@ COPY console-frontend/nginx.sh /nginx.sh
 RUN chmod a+x /nginx.sh
 ENV BACKEND_URL "http://localhost:8011"
 
+COPY console-frontend/dev/endpoints/ui-config.json /ui-config.template.json
+
 CMD ["/nginx.sh"]
 
 COPY console-frontend/dist/ /public/

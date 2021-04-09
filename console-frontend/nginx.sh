@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -e
+set -x
+set -o pipefail
+
 : "${BACKEND_URL:=http://localhost:8011}"
 
 echo "Setting backend endpoint:"
@@ -18,6 +22,13 @@ fi
 echo "Final backend information:"
 echo "---"
 cat /endpoints/backend.json
+echo "---"
+
+jq --arg url "$BACKEND_URL" '. + {url: $url}' < /ui-config.template.json | tee /endpoints/ui-config.json
+
+echo "Final Swagger UI config:"
+echo "---"
+cat /endpoints/ui-config.json
 echo "---"
 
 exec /usr/sbin/nginx -g "daemon off;"
