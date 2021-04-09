@@ -142,7 +142,8 @@ kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL" "GF_SERVER
 
 kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"
 
-kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris\",\"value\": [\"$CONSOLE_URL\", \"http://localhost:*\"]}]"
+kubectl -n "$DROGUE_NS" annotate ingress/keycloak --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'
+kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris\",\"value\": [\"${CONSOLE_URL}\", \"${CONSOLE_URL}/*\", \"http://localhost:*\"]}]"
 kubectl -n "$DROGUE_NS" patch keycloakclient/client-grafana --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$DASHBOARD_URL/login/generic_oauth\"}]"
 
 # wait for other Knative services

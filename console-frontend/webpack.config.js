@@ -19,7 +19,10 @@ module.exports = (env, argv) => {
             historyApiFallback: {
                 // should be aligned with nginx.conf
                 rewrites: [
-                    { from: /endpoints\/backend\.json/, to: '/endpoints/backend.json'},
+                    // don't translate endpoints
+                    { from: /endpoints\/.*/, to: function(context) {
+                            return context.match[0];
+                    }},
                     // don't translate *.svg
                     { from: /^(.*)\.(svg)$/, to: function(context) {
                             return context.match[0];
@@ -35,10 +38,13 @@ module.exports = (env, argv) => {
             compress: argv.mode === 'production',
             port: 8010,
         },
-        entry: './main.js',
+        entry: {
+            main: './main.js',
+            api: './api.js',
+        },
         output: {
             path: distPath,
-            filename: "main.js",
+            filename: "[name].js",
             webassemblyModuleFilename: "main.wasm"
         },
         module: {
@@ -131,6 +137,20 @@ module.exports = (env, argv) => {
                             }
                         }
                     ]
+                },
+                {
+                    test: /\.yaml$/,
+                    use: [
+                        { loader: 'json-loader' },
+                        { loader: 'yaml-loader' }
+                    ]
+                },
+                {
+                    test: /\.css$/,
+                    use: [
+                        { loader: 'style-loader' },
+                        { loader: 'css-loader' },
+                    ]
                 }
             ],
         },
@@ -141,7 +161,13 @@ module.exports = (env, argv) => {
             new CopyWebpackPlugin([
                 { from: './static', to: distPath },
                 // copy over images
-                { from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'), to: path.resolve(distPath, "images") }
+                { from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'), to: path.resolve(distPath, "images") },
+                {
+                    // Copy the Swagger OAuth2 redirect file to the project root;
+                    // that file handles the OAuth2 redirect after authenticating the end-user.
+                    from: 'node_modules/swagger-ui/dist/oauth2-redirect.html',
+                    to: './'
+                }
             ]),
             new WasmPackPlugin({
                 crateDirectory: ".",

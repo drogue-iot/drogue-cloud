@@ -14,7 +14,7 @@ spec:
     enabled: true
     rootUrl: ""
     publicClient: true
-    implicitFlowEnabled: false
+    implicitFlowEnabled: true
     standardFlowEnabled: true
     directAccessGrantsEnabled: true
     serviceAccountsEnabled: false

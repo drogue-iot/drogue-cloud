@@ -1,3 +1,4 @@
+mod api;
 mod auth;
 mod info;
 mod spy;
@@ -8,7 +9,7 @@ use actix_web::{
     get,
     middleware::{self, Condition},
     web::{self, Data},
-    App, HttpResponse, HttpServer, Responder,
+    App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
@@ -21,11 +22,16 @@ use drogue_cloud_service_common::{
 };
 use futures::TryFutureExt;
 use serde::Deserialize;
-use serde_json::json;
 
 #[get("/")]
-async fn index() -> impl Responder {
-    HttpResponse::Ok().json(json!({"success": true}))
+async fn index(req: HttpRequest, client: web::Data<OpenIdClient>) -> impl Responder {
+    match api::spec(req, client) {
+        Ok(spec) => HttpResponse::Ok().json(spec),
+        Err(err) => {
+            log::warn!("Failed to generate OpenAPI spec: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]

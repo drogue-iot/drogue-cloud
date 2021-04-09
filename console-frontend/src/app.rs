@@ -312,6 +312,7 @@ impl Component for Main {
                             <NavRouterExpandable<AppRoute> title="Tools">
                                 <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
                             </NavRouterExpandable<AppRoute>>
+                            <NavItem to="/api" target="_blank">{"API "}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAltIcon}</span></NavItem>
                         </NavList>
                     </Nav>
                 </PageSidebar>
