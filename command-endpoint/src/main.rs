@@ -11,9 +11,8 @@ use drogue_cloud_endpoint_common::{
     error::HttpEndpointError,
 };
 use drogue_cloud_service_api::management::{Command, ExternalEndpoint};
-use drogue_cloud_service_common::client::Context;
 use drogue_cloud_service_common::{
-    client::RegistryClient,
+    client::{Context, RegistryClient},
     config::ConfigFromEnv,
     defaults,
     health::{HealthServer, HealthServerConfig},
