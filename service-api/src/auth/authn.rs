@@ -1,5 +1,7 @@
 use crate::management;
+use core::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt::Formatter;
 
 /// Authenticate a device.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -10,7 +12,7 @@ pub struct AuthenticationRequest {
     pub r#as: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum Credential {
     #[serde(rename = "user")]
     UsernamePassword { username: String, password: String },
@@ -18,6 +20,28 @@ pub enum Credential {
     Password(String),
     #[serde(rename = "cert")]
     Certificate(Vec<Vec<u8>>),
+}
+
+struct Ellipsis;
+
+impl fmt::Debug for Ellipsis {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str("...")
+    }
+}
+
+impl fmt::Debug for Credential {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Password(_) => f.debug_tuple("Password").field(&Ellipsis).finish(),
+            Self::UsernamePassword { username, .. } => f
+                .debug_struct("UsernamePassword")
+                .field("username", username)
+                .field("password", &Ellipsis)
+                .finish(),
+            Self::Certificate(_) => f.debug_tuple("Certificate").field(&Ellipsis).finish(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -113,6 +137,28 @@ mod test {
                 r#"{"outcome":{"pass":{"application":{"metadata":{"name":"a1","creationTimestamp":"1970-01-01T00:00:01Z","generation":0}},"device":{"metadata":{"application":"a1","name":"d1","creationTimestamp":"1970-01-01T00:00:01.234Z","generation":0}}}}}"#
             ),
             str.unwrap()
+        );
+    }
+
+    #[test]
+    fn test_no_leak_password() {
+        assert_eq!(
+            "Password(...)",
+            format!("{:?}", Credential::Password("foo".into()))
+        );
+    }
+
+    #[test]
+    fn test_no_leak_username_password() {
+        assert_eq!(
+            r#"UsernamePassword { username: "foo", password: ... }"#,
+            format!(
+                "{:?}",
+                Credential::UsernamePassword {
+                    username: "foo".into(),
+                    password: "bar".into()
+                }
+            )
         );
     }
 }
