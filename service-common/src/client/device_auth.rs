@@ -1,9 +1,9 @@
-use crate::openid::OpenIdTokenProvider;
+use crate::{client::Context, openid::OpenIdTokenProvider};
 use drogue_cloud_service_api::auth::{
     authn::{AuthenticationRequest, AuthenticationResponse},
     ClientError, ErrorInformation,
 };
-use reqwest::{Client, RequestBuilder, Response, StatusCode};
+use reqwest::{Client, Response, StatusCode};
 use url::Url;
 
 /// An authentication client backed by reqwest.
@@ -24,27 +24,13 @@ impl ReqwestAuthenticatorClient {
         }
     }
 
-    async fn inject_token(
-        &self,
-        builder: RequestBuilder,
-    ) -> Result<RequestBuilder, ClientError<reqwest::Error>> {
-        if let Some(provider) = &self.token_provider {
-            let token = provider
-                .provide_token()
-                .await
-                .map_err(|err| ClientError::Token(Box::new(err)))?;
-            Ok(builder.bearer_auth(token.access_token))
-        } else {
-            Ok(builder)
-        }
-    }
-
     pub async fn authenticate(
         &self,
         request: AuthenticationRequest,
+        context: Context,
     ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
         let req = self.client.post(self.auth_service_url.clone());
-        let req = self.inject_token(req).await?;
+        let req = super::inject_token(self.token_provider.clone(), req, context).await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
             log::warn!("Error while authenticating {:?}: {}", request, err);

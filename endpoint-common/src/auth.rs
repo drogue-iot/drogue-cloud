@@ -132,12 +132,15 @@ impl DeviceAuthenticator {
         D: ToString,
     {
         self.client
-            .authenticate(AuthenticationRequest {
-                application: application.to_string(),
-                device: device.to_string(),
-                credential,
-                r#as,
-            })
+            .authenticate(
+                AuthenticationRequest {
+                    application: application.to_string(),
+                    device: device.to_string(),
+                    credential,
+                    r#as,
+                },
+                Default::default(),
+            )
             .await
     }
 

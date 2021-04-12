@@ -1,26 +1,31 @@
-use reqwest::{Client, Response, StatusCode};
-use url::Url;
-
-use drogue_cloud_service_api::auth::ClientError;
-
+use crate::{client::Context, openid::OpenIdTokenProvider};
 use drogue_cloud_service_api::{
+    auth::ClientError,
     management::{self, DeviceSpecCommands, DeviceSpecCore},
     Translator,
 };
+use reqwest::{Client, Response, StatusCode};
+use url::Url;
 
 /// An device registry client backed by reqwest.
 #[derive(Clone, Debug)]
 pub struct RegistryClient {
     client: Client,
     device_registry_url: Url,
+    token_provider: Option<OpenIdTokenProvider>,
 }
 
 impl RegistryClient {
     /// Create a new client instance.
-    pub fn new(client: Client, url: Url) -> Self {
+    pub fn new(
+        client: Client,
+        device_registry_url: Url,
+        token_provider: Option<OpenIdTokenProvider>,
+    ) -> Self {
         Self {
             client,
-            device_registry_url: url,
+            device_registry_url,
+            token_provider,
         }
     }
 
@@ -28,13 +33,13 @@ impl RegistryClient {
         &self,
         application: &str,
         device: &str,
-        token: &str,
+        context: Context,
     ) -> Result<management::Device, ClientError<reqwest::Error>> {
         let req = self.client.get(
             self.device_registry_url
                 .join(&format!("/api/v1/apps/{}/devices/{}", application, device))?,
         );
-        let req = req.bearer_auth(token);
+        let req = super::inject_token(self.token_provider.clone(), req, context).await?;
 
         let response: Response = req.send().await.map_err(|err| {
             log::warn!("Error while accessing registry: {}", err);

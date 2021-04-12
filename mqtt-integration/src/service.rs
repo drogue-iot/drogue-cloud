@@ -188,10 +188,13 @@ impl Session {
         match (&self.user_auth, &self.user.user_id()) {
             (Some(user_auth), Some(user)) => {
                 user_auth
-                    .authorize(AuthorizationRequest {
-                        application: app.to_string(),
-                        user_id: user.to_string(),
-                    })
+                    .authorize(
+                        AuthorizationRequest {
+                            application: app.to_string(),
+                            user_id: user.to_string(),
+                        },
+                        Default::default(),
+                    )
                     .await
                     .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
             }
