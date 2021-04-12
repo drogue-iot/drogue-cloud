@@ -32,14 +32,17 @@ pub async fn stream_events(
 
     if let Some(user_auth) = user_auth {
         user_auth
-            .authorize(AuthorizationRequest {
-                application: query.app.clone(),
-                user_id: user
-                    .payload()
-                    .map_err(|_| ServiceError::TokenError)?
-                    .sub
-                    .clone(),
-            })
+            .authorize(
+                AuthorizationRequest {
+                    application: query.app.clone(),
+                    user_id: user
+                        .payload()
+                        .map_err(|_| ServiceError::TokenError)?
+                        .sub
+                        .clone(),
+                },
+                Default::default(),
+            )
             .await
             .map_err(|err| ServiceError::InternalError {
                 message: format!("Authorization failed: {}", err),

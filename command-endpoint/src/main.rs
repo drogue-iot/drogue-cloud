@@ -11,6 +11,7 @@ use drogue_cloud_endpoint_common::{
     error::HttpEndpointError,
 };
 use drogue_cloud_service_api::management::{Command, ExternalEndpoint};
+use drogue_cloud_service_common::client::Context;
 use drogue_cloud_service_common::{
     client::RegistryClient,
     config::ConfigFromEnv,
@@ -78,7 +79,13 @@ async fn command(
         opts.device
     );
     let response = registry
-        .get_device(&opts.application, &opts.device, token.token())
+        .get_device(
+            &opts.application,
+            &opts.device,
+            Context {
+                provided_token: Some(token.token().into()),
+            },
+        )
         .await;
 
     match response {
@@ -190,6 +197,7 @@ async fn main() -> anyhow::Result<()> {
     let registry = RegistryClient::new(
         Default::default(),
         Url::parse(&config.registry_service_url)?,
+        None,
     );
 
     // health server
