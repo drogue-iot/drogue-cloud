@@ -91,35 +91,6 @@ impl DeviceAuthenticator {
         Self::with_config(config, token_config).await
     }
 
-    // FIXME: check why this still exists
-    /// authenticate with a combination of `<device>@<tenant>` / `<password>`.
-    pub async fn x_authenticate_simple(
-        &self,
-        device: &str,
-        password: &str,
-    ) -> AuthResult<AuthenticationResponse> {
-        let tok: Vec<_> = device
-            .split('@')
-            .map(|s| percent_encoding::percent_decode_str(s).decode_utf8())
-            .collect();
-
-        match (
-            tok.as_slice(),
-            percent_encoding::percent_decode_str(password).decode_utf8(),
-        ) {
-            ([Ok(device), Ok(tenant)], Ok(password)) => {
-                self.authenticate(
-                    tenant,
-                    device,
-                    Credential::Password(password.to_string()),
-                    None,
-                )
-                .await
-            }
-            _ => Ok(AuthenticationResponse::failed()),
-        }
-    }
-
     pub async fn authenticate<A, D>(
         &self,
         application: A,
