@@ -54,7 +54,7 @@ See the document [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Community
 
-* [Drogue IoT IRC Chat Room](https://matrix.to/#/#drogue-iot:matrix.org)
+* [Drogue IoT Matrix Chat Room](https://matrix.to/#/#drogue-iot:matrix.org)
 * We have bi-weekly calls at 9:00 AM (GMT). [Check the calendar](https://calendar.google.com/calendar/u/0/embed?src=ofuctjec399jr6kara7n0uidqg@group.calendar.google.com&pli=1) to see which week we are having the next call, and feel free to join!
 * [Drogue IoT Forum](https://discourse.drogue.io/)
 * [Drogue IoT YouTube channel](https://www.youtube.com/channel/UC7GZUy2hKidvY6V_3QZfCcA)
