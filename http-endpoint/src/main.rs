@@ -99,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
                     .service(telemetry::publish_tail),
             )
             // The Things Network variant
-            .service(web::scope("/ttn").service(ttn::publish))
+            .service(web::scope("/ttn").service(ttn::publish_v2))
     })
     .on_connect(|con, ext| {
         if let Some(cert) = x509::from_socket(con) {
