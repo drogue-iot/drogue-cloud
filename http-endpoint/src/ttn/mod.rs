@@ -1,26 +1,172 @@
 mod v2;
+mod v3;
 
 pub use v2::*;
+pub use v3::*;
 
-use drogue_cloud_service_api::management::Device;
-use drogue_ttn::http as ttn;
+use crate::telemetry::PublishCommonOptions;
+use actix_web::{web, HttpResponse};
+use chrono::{DateTime, Utc};
+use drogue_cloud_endpoint_common::{
+    auth::DeviceAuthenticator,
+    downstream::{self, DownstreamSender},
+    error::{EndpointError, HttpEndpointError},
+    x509::ClientCertificateChain,
+};
+use drogue_cloud_service_api::{auth::authn, management::Device};
 use serde_json::Value;
+use std::collections::HashMap;
 
-fn eval_data_schema(
+fn eval_data_schema<S: AsRef<str>>(
     model_id: Option<String>,
     device: &Device,
-    uplink: &ttn::Uplink,
+    r#as: &Option<Device>,
+    port: S,
 ) -> Option<String> {
     model_id.or_else(|| {
-        let function_port = uplink.port.to_string();
-        get_spec(device, "lorawan")["ports"][function_port]["data_schema"]
+        get_spec(device, r#as, "lorawan")["ports"][port.as_ref()]["data_schema"]
             .as_str()
             .map(|str| str.to_string())
     })
 }
 
-fn get_spec<'d>(device: &'d Device, key: &str) -> &'d Value {
+fn get_spec<'d>(device: &'d Device, r#as: &'d Option<Device>, key: &str) -> &'d Value {
+    let device = r#as.as_ref().unwrap_or(device);
     device.spec.get(key).unwrap_or(&Value::Null)
+}
+
+pub struct Uplink {
+    pub device_id: String,
+    pub port: String,
+    pub time: DateTime<Utc>,
+    pub is_retry: Option<bool>,
+    pub hardware_address: String,
+
+    pub payload_raw: Vec<u8>,
+    pub payload_fields: Value,
+}
+
+async fn publish_uplink(
+    sender: web::Data<DownstreamSender>,
+    auth: web::Data<DeviceAuthenticator>,
+    opts: PublishCommonOptions,
+    req: web::HttpRequest,
+    cert: Option<ClientCertificateChain>,
+    body: web::Bytes,
+    uplink: Uplink,
+) -> Result<HttpResponse, HttpEndpointError> {
+    let device_id = uplink.device_id;
+
+    let (application, device, r#as) = match auth
+        .authenticate_http(
+            opts.application,
+            opts.device,
+            req.headers().get(http::header::AUTHORIZATION),
+            cert.map(|c| c.0),
+            Some(device_id.clone()),
+        )
+        .await
+        .map_err(|err| HttpEndpointError(err.into()))?
+        .outcome
+    {
+        authn::Outcome::Fail => return Err(HttpEndpointError(EndpointError::AuthenticationError)),
+        authn::Outcome::Pass {
+            application,
+            device,
+            r#as,
+        } => (application, device, r#as),
+    };
+
+    log::info!(
+        "Application / Device / Device(as): {:?} / {:?} / {:?}",
+        application,
+        device,
+        r#as,
+    );
+
+    // eval model_id from query and function port mapping
+    let data_schema = eval_data_schema(
+        opts.data_schema.as_ref().cloned(),
+        &device,
+        &r#as,
+        &uplink.port,
+    );
+
+    let mut extensions = HashMap::new();
+    extensions.insert("lorawanport".into(), uplink.port.clone());
+    if let Some(is_retry) = uplink.is_retry {
+        extensions.insert("lorawanretry".into(), is_retry.to_string());
+    }
+    extensions.insert("hwaddr".into(), uplink.hardware_address);
+
+    log::info!("Device ID: {}, Data Schema: {:?}", device_id, data_schema);
+
+    let port = uplink.port.to_string();
+    let time = uplink.time;
+
+    let (body, content_type) = match get_spec(&device, &r#as, "ttn")["payload"]
+        .as_str()
+        .unwrap_or_default()
+    {
+        "raw" => (
+            web::Bytes::from(uplink.payload_raw),
+            Some(mime::APPLICATION_OCTET_STREAM.to_string()),
+        ),
+        "fields" => (
+            web::Bytes::from(uplink.payload_fields.to_string()),
+            Some(mime::APPLICATION_JSON.to_string()),
+        ),
+        _ => {
+            // Full payload
+            (body, None)
+        }
+    };
+
+    send_uplink(
+        sender,
+        application.metadata.name.clone(),
+        device_id,
+        port,
+        time,
+        content_type,
+        data_schema,
+        extensions,
+        body,
+    )
+    .await
+}
+
+async fn send_uplink<B>(
+    sender: web::Data<DownstreamSender>,
+    app_id: String,
+    device_id: String,
+    port: String,
+    time: DateTime<Utc>,
+    content_type: Option<String>,
+    data_schema: Option<String>,
+    extensions: HashMap<String, String>,
+    body: B,
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    B: AsRef<[u8]>,
+{
+    sender
+        .publish_http_default(
+            downstream::Publish {
+                channel: port,
+                app_id,
+                device_id,
+                options: downstream::PublishOptions {
+                    time: Some(time),
+                    content_type,
+                    data_schema,
+                    extensions,
+                    ..Default::default()
+                },
+            },
+            body,
+        )
+        .await
 }
 
 #[cfg(test)]
@@ -28,7 +174,8 @@ mod test {
 
     use super::*;
     use chrono::Utc;
-    use drogue_ttn::http::Metadata;
+    use drogue_ttn as ttn;
+    use drogue_ttn::v2::Metadata;
     use serde_json::{json, Map, Value};
 
     #[test]
@@ -43,7 +190,7 @@ mod test {
         let device = device(Some(lorawan_spec));
         let uplink = default_uplink(5);
 
-        let model_id = eval_data_schema(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &None, &uplink.port.to_string());
 
         assert_eq!(model_id, Some(String::from("mod5")));
     }
@@ -53,7 +200,7 @@ mod test {
         let device = device(None);
         let uplink = default_uplink(5);
 
-        let model_id = eval_data_schema(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &None, &uplink.port.to_string());
 
         assert_eq!(model_id, None);
     }
@@ -65,7 +212,7 @@ mod test {
         })));
         let uplink = default_uplink(5);
 
-        let model_id = eval_data_schema(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &None, &uplink.port.to_string());
 
         assert_eq!(model_id, None);
     }
@@ -77,7 +224,7 @@ mod test {
         })));
         let uplink = default_uplink(5);
 
-        let model_id = eval_data_schema(None, &device, &uplink);
+        let model_id = eval_data_schema(None, &device, &None, &uplink.port.to_string());
 
         assert_eq!(model_id, None);
     }
@@ -94,8 +241,8 @@ mod test {
         }
     }
 
-    fn default_uplink(port: u16) -> ttn::Uplink {
-        ttn::Uplink {
+    fn default_uplink(port: u16) -> ttn::v2::Uplink {
+        ttn::v2::Uplink {
             app_id: "".to_string(),
             dev_id: "".to_string(),
             hardware_serial: "".to_string(),

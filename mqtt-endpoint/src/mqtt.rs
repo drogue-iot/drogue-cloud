@@ -32,6 +32,7 @@ macro_rules! connect {
             AuthOutcome::Pass {
                 application,
                 device,
+                r#as: _,
             } => {
                 let app_id = application.metadata.name.clone();
                 let device_id = device.metadata.name.clone();

@@ -62,11 +62,12 @@ impl PostgresAuthenticationService {
 }
 
 macro_rules! pass {
-    ($application:expr, $device:expr) => {{
+    ($application:expr, $device:expr, $as_device:expr) => {{
         log::info!("app {:?}", $application);
         Outcome::Pass {
             application: $application,
             device: strip_credentials($device),
+            r#as: $as_device.map(strip_credentials),
         }
     }};
 }
@@ -134,7 +135,7 @@ impl AuthenticationService for PostgresAuthenticationService {
                                                         &request.device,
                                                         as_id
                                                     );
-                                                    pass!(application, device)
+                                                    pass!(application, device, Some(as_manage))
                                                 } else {
                                                     log::debug!("Device {:?} not allowed to publish as {:?}, gateway not listed", &request.device, as_id);
                                                     Outcome::Fail
@@ -152,11 +153,11 @@ impl AuthenticationService for PostgresAuthenticationService {
                                     }
                                 }
                             } else {
-                                pass!(application, device)
+                                pass!(application, device, None)
                             }
                         }
                         None => {
-                            pass!(application, device)
+                            pass!(application, device, None)
                         }
                     }
                 }

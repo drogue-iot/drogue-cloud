@@ -12,6 +12,8 @@ use std::fmt::Formatter;
 pub enum EndpointError {
     #[snafu(display("Invalid data format: {}", source))]
     InvalidFormat { source: Box<dyn std::error::Error> },
+    #[snafu(display("Invalid data: {}", details))]
+    InvalidRequest { details: String },
     #[snafu(display("Endpoint configuration error: {}", details))]
     ConfigurationError { details: String },
     /// The authentication process failed to evaluate an outcome.
@@ -26,6 +28,7 @@ impl EndpointError {
     pub fn name(&self) -> &str {
         match self {
             EndpointError::InvalidFormat { .. } => "InvalidFormat",
+            EndpointError::InvalidRequest { .. } => "InvalidRequest",
             EndpointError::ConfigurationError { .. } => "ConfigurationError",
             EndpointError::AuthenticationServiceError { .. } => "AuthenticationServiceError",
             EndpointError::AuthenticationError { .. } => "AuthenticationError",
@@ -61,6 +64,7 @@ impl ResponseError for HttpEndpointError {
     fn status_code(&self) -> StatusCode {
         match self.0 {
             EndpointError::InvalidFormat { .. } => StatusCode::BAD_REQUEST,
+            EndpointError::InvalidRequest { .. } => StatusCode::BAD_REQUEST,
             EndpointError::ConfigurationError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             EndpointError::AuthenticationServiceError { .. } => StatusCode::SERVICE_UNAVAILABLE,
             EndpointError::AuthenticationError { .. } => StatusCode::FORBIDDEN,

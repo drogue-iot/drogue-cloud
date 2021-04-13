@@ -9,9 +9,9 @@ use drogue_cloud_endpoint_common::{
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
-use drogue_ttn::v2;
+use drogue_ttn::v3::{Message, Payload};
 
-pub async fn publish_v2(
+pub async fn publish_v3(
     sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     web::Query(opts): web::Query<PublishCommonOptions>,
@@ -19,12 +19,19 @@ pub async fn publish_v2(
     body: web::Bytes,
     cert: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError> {
-    let uplink: v2::Uplink = serde_json::from_slice(&body).map_err(|err| {
+    let msg: Message = serde_json::from_slice(&body).map_err(|err| {
         log::info!("Failed to decode payload: {}", err);
         EndpointError::InvalidFormat {
             source: Box::new(err),
         }
     })?;
+
+    let uplink = match msg.payload {
+        Payload::Uplink(uplink) => Ok(uplink),
+        _ => Err(EndpointError::InvalidRequest {
+            details: format!("Invalid message type, expected 'Uplink'"),
+        }),
+    }?;
 
     publish_uplink(
         sender,
@@ -34,13 +41,13 @@ pub async fn publish_v2(
         cert,
         body,
         Uplink {
-            device_id: uplink.dev_id,
-            port: uplink.port.to_string(),
-            time: uplink.metadata.time,
-            is_retry: Some(uplink.is_retry),
-            hardware_address: uplink.hardware_serial,
-            payload_raw: uplink.payload_raw,
-            payload_fields: uplink.payload_fields,
+            device_id: msg.end_device_ids.device_id,
+            port: uplink.frame_port.to_string(),
+            time: uplink.received_at,
+            is_retry: None,
+            hardware_address: msg.end_device_ids.dev_addr,
+            payload_raw: uplink.frame_payload,
+            payload_fields: uplink.decoded_payload.unwrap_or_default(),
         },
     )
     .await

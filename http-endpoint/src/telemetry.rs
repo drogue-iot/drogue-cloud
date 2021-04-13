@@ -95,7 +95,7 @@ pub async fn publish(
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
-    let (application, device) = match auth
+    let (application, device, _) = match auth
         .authenticate_http(
             opts.common.application,
             opts.common.device,
@@ -111,7 +111,8 @@ pub async fn publish(
         authn::Outcome::Pass {
             application,
             device,
-        } => (application, device),
+            r#as,
+        } => (application, device, r#as),
     };
 
     // If we have an "as" parameter, we publish as another device.

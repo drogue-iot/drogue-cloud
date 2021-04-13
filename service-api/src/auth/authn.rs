@@ -52,6 +52,7 @@ pub enum Outcome {
     Pass {
         application: management::Application,
         device: management::Device,
+        r#as: Option<management::Device>,
     },
     /// The authentication request failed. The device is not authenticated, and the device's
     /// request must be rejected.
@@ -119,6 +120,7 @@ mod test {
                     },
                     ..Default::default()
                 },
+                r#as: None,
                 device: management::Device {
                     metadata: management::ScopedMetadata {
                         application: "a1".to_string(),
