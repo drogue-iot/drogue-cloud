@@ -19,22 +19,27 @@ function service_url() {
   local scheme="$1"
 
 case $CLUSTER in
-   kind)
-       DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
-       PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-       URL=${scheme:-http}://$name.$DOMAIN:$PORT
-       ;;
-   minikube)
-        test -n "$scheme" && scheme="--$scheme"
-        URL=$(eval minikube service -n "$DROGUE_NS" $scheme --url "$name")
+    kubernetes)
+        DOMAIN=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type == "ExternalIP")].address}').nip.io
+        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
+        URL=${scheme:-http}://$name.$DOMAIN:$PORT
         ;;
-   openshift)
-        URL="https://$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"
+    kind)
+        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
+        URL=${scheme:-http}://$name.$DOMAIN:$PORT
         ;;
-   *)
-        echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
-        exit 1
-        ;;
+    minikube)
+         test -n "$scheme" && scheme="--$scheme"
+         URL=$(eval minikube service -n "$DROGUE_NS" $scheme --url "$name")
+         ;;
+    openshift)
+         URL="https://$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"
+         ;;
+    *)
+         echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
+         exit 1
+         ;;
 esac;
 echo "$URL"
 }
@@ -79,6 +84,10 @@ function kservice_url() {
 URL=$(kubectl get ksvc -n $DROGUE_NS "$name" -o jsonpath='{.status.url}')
 
 case $CLUSTER in
+   kubernetes)
+       HTTP_ENDPOINT_PORT=$(kubectl get service -n kourier-system kourier -o jsonpath='{.spec.ports[?(@.name == "http2")].nodePort}')
+       URL=${URL}:${HTTP_ENDPOINT_PORT}
+        ;;
    kind)
        HTTP_ENDPOINT_PORT=$(kubectl get service -n kourier-system kourier -o jsonpath='{.spec.ports[?(@.name == "http2")].nodePort}')
        URL=${URL}:${HTTP_ENDPOINT_PORT}

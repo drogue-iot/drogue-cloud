@@ -17,15 +17,19 @@ kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative
 
 # Kourier ingress for Knative Serving
 case $CLUSTER in
+    kubernetes)
+        curl -s -L https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml | sed -e 's/LoadBalancer/NodePort/g' | kubectl apply -f -
+        INGRESS_COMMAND="kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type == \"ExternalIP\")].address}'"
+        ;;
     kind)
         curl -s -L https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml | sed -e 's/LoadBalancer/NodePort/g' | kubectl apply -f -
         INGRESS_COMMAND="kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == \"InternalIP\")].address}'"
         ;;
-   minikube)
+    minikube)
         kubectl apply -f https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml
         INGRESS_COMMAND="kubectl -n kourier-system get service kourier -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
         ;;
-   *)
+    *)
         kubectl apply -f https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml
         INGRESS_COMMAND="kubectl -n kourier-system get service kourier -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
         ;;
@@ -50,17 +54,22 @@ kubectl patch configmap/config-network \
   --patch '{"data":{"ingress.class":"kourier.ingress.networking.knative.dev"}}'
 
 case $CLUSTER in
-   kind)
+    kubernetes)
         KNATIVE_DOMAIN=$INGRESS_HOST.nip.io
         echo "The KNATIVE_DOMAIN $KNATIVE_DOMAIN"
         kubectl patch configmap -n knative-serving config-domain -p "{\"data\": {\"$KNATIVE_DOMAIN\": \"\"}}"
         ;;
-   minikube)
+    kind)
         KNATIVE_DOMAIN=$INGRESS_HOST.nip.io
         echo "The KNATIVE_DOMAIN $KNATIVE_DOMAIN"
         kubectl patch configmap -n knative-serving config-domain -p "{\"data\": {\"$KNATIVE_DOMAIN\": \"\"}}"
         ;;
-   *)
+    minikube)
+        KNATIVE_DOMAIN=$INGRESS_HOST.nip.io
+        echo "The KNATIVE_DOMAIN $KNATIVE_DOMAIN"
+        kubectl patch configmap -n knative-serving config-domain -p "{\"data\": {\"$KNATIVE_DOMAIN\": \"\"}}"
+        ;;
+    *)
         # Use magic DNS
         echo "The KNATIVE_DOMAIN is $INGRESS_HOST"
         kubectl apply --filename https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-default-domain.yaml
