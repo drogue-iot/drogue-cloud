@@ -14,6 +14,11 @@ MGMT_URL=$(service_url "registry")
 HTTP_ENDPOINT_URL=$(service_url "http-endpoint" https)
 
 case $CLUSTER in
+    kubernetes)
+       DOMAIN=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type == "ExternalIP")].address}').nip.io
+       MQTT_ENDPOINT_HOST=mqtt-endpoint.$DOMAIN
+       MQTT_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.spec.ports[0].nodePort}')
+        ;;
     kind)
        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
        MQTT_ENDPOINT_HOST=mqtt-endpoint.$DOMAIN

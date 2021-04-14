@@ -16,7 +16,7 @@ Usage: ./drogue.sh
 Deploys Drogue IoT cloud
 
   -c    The cluster type (default: $CLUSTER)
-        one of: minikube, kind, openshift
+        one of: minikube, kind, kubernetes, openshift
   -d    The base directory for the deployment scripts (default: $DEPLOYDIR)
 
 EOF
