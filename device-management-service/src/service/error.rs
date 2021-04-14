@@ -1,7 +1,7 @@
 use actix_web::{HttpResponse, ResponseError};
+use drogue_client::error::ErrorInformation;
 use drogue_cloud_database_common::{error::ServiceError, models::GenerationError};
 use drogue_cloud_registry_events::EventSenderError;
-use drogue_cloud_service_api::auth::ErrorInformation;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

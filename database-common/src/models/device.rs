@@ -7,7 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use drogue_cloud_service_api::management::{self, ScopedMetadata};
+use drogue_client::{meta, registry};
 use serde_json::Value;
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
@@ -33,10 +33,10 @@ diffable!(Device);
 generation!(Device => generation);
 default_resource!(Device);
 
-impl From<Device> for management::Device {
+impl From<Device> for registry::v1::Device {
     fn from(device: Device) -> Self {
-        management::Device {
-            metadata: ScopedMetadata {
+        registry::v1::Device {
+            metadata: meta::v1::ScopedMetadata {
                 uid: device.uid.to_string(),
                 name: device.name,
                 application: device.application,

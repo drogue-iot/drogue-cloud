@@ -1,7 +1,6 @@
-use crate::management;
-use core::fmt;
+use core::fmt::{self, Formatter};
+use drogue_client::registry;
 use serde::{Deserialize, Serialize};
-use std::fmt::Formatter;
 
 /// Authenticate a device.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -50,9 +49,9 @@ pub enum Outcome {
     /// The authentication request passed. The outcome also contains application and device
     /// details for further processing.
     Pass {
-        application: management::Application,
-        device: management::Device,
-        r#as: Option<management::Device>,
+        application: registry::v1::Application,
+        device: registry::v1::Device,
+        r#as: Option<registry::v1::Device>,
     },
     /// The authentication request failed. The device is not authenticated, and the device's
     /// request must be rejected.
@@ -78,6 +77,7 @@ impl AuthenticationResponse {
 mod test {
     use super::*;
     use chrono::{TimeZone, Utc};
+    use drogue_client::meta;
     use serde_json::json;
 
     #[test]
@@ -112,8 +112,8 @@ mod test {
     fn test_encode_pass() {
         let str = serde_json::to_string(&AuthenticationResponse {
             outcome: Outcome::Pass {
-                application: management::Application {
-                    metadata: management::NonScopedMetadata {
+                application: registry::v1::Application {
+                    metadata: meta::v1::NonScopedMetadata {
                         name: "a1".to_string(),
                         creation_timestamp: Utc.timestamp_millis(1000),
                         ..Default::default()
@@ -121,8 +121,8 @@ mod test {
                     ..Default::default()
                 },
                 r#as: None,
-                device: management::Device {
-                    metadata: management::ScopedMetadata {
+                device: registry::v1::Device {
+                    metadata: meta::v1::ScopedMetadata {
                         application: "a1".to_string(),
                         name: "d1".to_string(),
                         creation_timestamp: Utc.timestamp_millis(1234),

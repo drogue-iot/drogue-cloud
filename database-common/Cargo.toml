@@ -25,16 +25,19 @@ tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1", 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 
+drogue-client = "0.5.0-alpha.1"
+
 [dev-dependencies]
 anyhow = "1"
+
+env_logger = "0.8"
 
 criterion = { version = "0.3" } # , features = ["real_blackbox"]
 tokio = { version = "1", features = ["full"] }
 serial_test = "0.5"
 
 drogue-cloud-test-common = { path = "../test-common" }
-log = "0.4"
-env_logger = "0.8"
+
 
 [[bench]]
 name = "diff"

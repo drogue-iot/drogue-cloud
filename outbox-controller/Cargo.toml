@@ -50,4 +50,3 @@ drogue-cloud-registry-events = { path = "../registry-events" }
 deadpool = "0.7"
 deadpool-postgres = { version = "0.7", features = ["config"] }
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
-

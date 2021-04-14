@@ -6,13 +6,12 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use dotenv::dotenv;
+use drogue_client::{registry, Context, Translator};
 use drogue_cloud_endpoint_common::{
     downstream::{self, DownstreamSender},
     error::HttpEndpointError,
 };
-use drogue_cloud_service_api::management::{Command, ExternalEndpoint};
 use drogue_cloud_service_common::{
-    client::{Context, RegistryClient},
     config::ConfigFromEnv,
     defaults,
     health::{HealthServer, HealthServerConfig},
@@ -68,7 +67,7 @@ async fn command(
     web::Query(opts): web::Query<CommandOptions>,
     req: web::HttpRequest,
     body: web::Bytes,
-    registry: web::Data<RegistryClient>,
+    registry: web::Data<registry::v1::Client>,
     token: BearerAuth,
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::info!(
@@ -88,11 +87,11 @@ async fn command(
         .await;
 
     match response {
-        Ok(device) => {
-            if RegistryClient::validate_device(&device) {
-                match RegistryClient::get_command(&device) {
+        Ok(Some(device)) => {
+            if device.attribute::<registry::v1::DeviceEnabled>() {
+                match device.attribute::<registry::v1::FirstCommand>() {
                     Some(external_command) => match external_command {
-                        Command::External(endpoint) => {
+                        registry::v1::Command::External(endpoint) => {
                             let (url, payload) = map_command(opts, &body, endpoint);
                             log::debug!(
                                 "Sending {:?} to external command endpoint {:?}",
@@ -133,6 +132,7 @@ async fn command(
                 Ok(HttpResponse::NotAcceptable().finish())
             }
         }
+        Ok(None) => Ok(HttpResponse::NotAcceptable().finish()),
         Err(err) => {
             log::info!("Error {:?}", err);
             Ok(HttpResponse::NotAcceptable().finish())
@@ -143,7 +143,7 @@ async fn command(
 fn map_command(
     opts: CommandOptions,
     body: &web::Bytes,
-    endpoint: ExternalEndpoint,
+    endpoint: registry::v1::ExternalEndpoint,
 ) -> (String, serde_json::Value) {
     if Some("ttn".to_owned()) == endpoint.r#type {
         (
@@ -193,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
 
     let data = web::Data::new(WebData { authenticator });
 
-    let registry = RegistryClient::new(
+    let registry = registry::v1::Client::new(
         Default::default(),
         Url::parse(&config.registry_service_url)?,
         None,

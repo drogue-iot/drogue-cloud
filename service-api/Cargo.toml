@@ -18,3 +18,5 @@ base64-serde = "0.6"
 chrono = { version = "0.4", features = ["serde"] }
 
 url = "2"
+
+drogue-client = "0.5.0-alpha.1"

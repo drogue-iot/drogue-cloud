@@ -1279,6 +1279,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
+name = "drogue-client"
+version = "0.5.0-alpha.1"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=09535760645bcf72e2a4d2afee9f144879c252d1#09535760645bcf72e2a4d2afee9f144879c252d1"
+dependencies = [
+ "async-std",
+ "async-trait",
+ "base64 0.13.0",
+ "base64-serde",
+ "chrono",
+ "log",
+ "openid",
+ "reqwest",
+ "serde 1.0.124",
+ "serde_json",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "drogue-cloud-authentication-service"
 version = "0.4.0"
 dependencies = [
@@ -1294,6 +1313,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-registry-events",
@@ -1331,6 +1351,7 @@ dependencies = [
  "cloudevents-sdk-reqwest",
  "config",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1374,7 +1395,7 @@ dependencies = [
  "futures",
  "log",
  "mime",
- "openid 0.9.0",
+ "openid",
  "pem 0.8.3",
  "reqwest",
  "ring",
@@ -1439,6 +1460,7 @@ dependencies = [
  "criterion",
  "deadpool",
  "deadpool-postgres",
+ "drogue-client",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
@@ -1471,6 +1493,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
@@ -1481,7 +1504,7 @@ dependencies = [
  "http",
  "indexmap",
  "log",
- "openid 0.8.0",
+ "openid",
  "pem 0.8.3",
  "rand 0.7.3",
  "reqwest",
@@ -1512,6 +1535,7 @@ dependencies = [
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
+ "drogue-client",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
@@ -1523,7 +1547,7 @@ dependencies = [
  "http",
  "log",
  "mime",
- "openid 0.9.0",
+ "openid",
  "percent-encoding",
  "reqwest",
  "serde 1.0.124",
@@ -1552,6 +1576,7 @@ dependencies = [
  "cloudevents-sdk-actix-web",
  "config",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1565,7 +1590,7 @@ dependencies = [
  "jsonwebtokens",
  "log",
  "mime",
- "openid 0.8.0",
+ "openid",
  "openssl",
  "percent-encoding",
  "reqwest",
@@ -1661,7 +1686,7 @@ dependencies = [
  "ntex-mqtt",
  "ntex-rt",
  "ntex-service",
- "openid 0.9.0",
+ "openid",
  "openssl",
  "pem 0.8.3",
  "reqwest",
@@ -1742,6 +1767,7 @@ dependencies = [
  "base64 0.13.0",
  "base64-serde",
  "chrono",
+ "drogue-client",
  "indexmap",
  "log",
  "serde 1.0.124",
@@ -1765,6 +1791,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk 0.4.0",
  "config",
+ "drogue-client",
  "drogue-cloud-service-api",
  "env_logger 0.8.3",
  "envconfig",
@@ -1778,7 +1805,7 @@ dependencies = [
  "kube-derive",
  "log",
  "ntex",
- "openid 0.9.0",
+ "openid",
  "openshift-openapi",
  "pem 0.8.3",
  "reqwest",
@@ -1801,6 +1828,42 @@ dependencies = [
  "serde_json",
  "testcontainers",
  "walkdir",
+]
+
+[[package]]
+name = "drogue-cloud-ttn-operator"
+version = "0.4.0"
+dependencies = [
+ "actix-http",
+ "actix-web",
+ "actix-web-httpauth",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk-actix-web",
+ "config",
+ "dotenv",
+ "drogue-cloud-database-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "env_logger 0.7.1",
+ "futures",
+ "http",
+ "humantime 2.1.0",
+ "humantime-serde",
+ "indexmap",
+ "log",
+ "pem 0.8.3",
+ "rand 0.7.3",
+ "reqwest",
+ "rust-crypto",
+ "serde 1.0.124",
+ "serde_json",
+ "thiserror",
+ "url",
+ "x509-parser",
 ]
 
 [[package]]
@@ -3181,27 +3244,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openid"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1a8eda7e7dfeb77f45ece7a680b1744d32a38974d6d7e31000fd3717d0a4a1d"
-dependencies = [
- "base64 0.13.0",
- "biscuit",
- "chrono",
- "lazy_static",
- "reqwest",
- "serde 1.0.124",
- "serde_json",
- "thiserror",
- "url",
- "validator",
-]
-
-[[package]]
-name = "openid"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6149d8675c12a2b392f8086ce78e5d543d487c3c95fd4ed93cfa4cdf69004564"
+checksum = "9944c925d2e03d094a6affb343df270f7ac1841ecdf3ce138aa61e62faa63924"
 dependencies = [
  "base64 0.13.0",
  "biscuit",
