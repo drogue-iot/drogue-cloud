@@ -9,6 +9,7 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
+use drogue_client::{registry, Translator};
 use drogue_cloud_database_common::{
     auth::{ensure, ensure_with},
     error::ServiceError,
@@ -23,13 +24,7 @@ use drogue_cloud_database_common::{
     Client, DatabaseService,
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
-use drogue_cloud_service_api::{
-    health::{HealthCheckError, HealthChecked},
-    management::{
-        Application, ApplicationSpecTrustAnchors, Credential, Device, DeviceSpecCredentials,
-    },
-    Translator,
-};
+use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use drogue_cloud_service_common::auth::Identity;
 use serde::Deserialize;
 use serde_json::json;
@@ -44,17 +39,17 @@ pub trait ManagementService: Clone {
     async fn create_app(
         &self,
         identity: &dyn Identity,
-        data: Application,
+        data: registry::v1::Application,
     ) -> Result<(), Self::Error>;
     async fn get_app(
         &self,
         identity: &dyn Identity,
         name: &str,
-    ) -> Result<Option<Application>, Self::Error>;
+    ) -> Result<Option<registry::v1::Application>, Self::Error>;
     async fn update_app(
         &self,
         identity: &dyn Identity,
-        data: Application,
+        data: registry::v1::Application,
     ) -> Result<(), Self::Error>;
     async fn delete_app(
         &self,
@@ -66,18 +61,18 @@ pub trait ManagementService: Clone {
     async fn create_device(
         &self,
         identity: &dyn Identity,
-        device: Device,
+        device: registry::v1::Device,
     ) -> Result<(), Self::Error>;
     async fn get_device(
         &self,
         identity: &dyn Identity,
         app: &str,
         name: &str,
-    ) -> Result<Option<Device>, Self::Error>;
+    ) -> Result<Option<registry::v1::Device>, Self::Error>;
     async fn update_device(
         &self,
         identity: &dyn Identity,
-        device: Device,
+        device: registry::v1::Device,
     ) -> Result<(), Self::Error>;
     async fn delete_device(
         &self,
@@ -138,7 +133,7 @@ where
     }
 
     fn app_to_entity(
-        mut app: Application,
+        mut app: registry::v1::Application,
     ) -> Result<
         (models::app::Application, HashSet<TypedAlias>),
         PostgresManagementServiceError<S::Error>,
@@ -150,7 +145,7 @@ where
 
         // extract trust anchors
 
-        match app.section::<ApplicationSpecTrustAnchors>() {
+        match app.section::<registry::v1::ApplicationSpecTrustAnchors>() {
             Some(Ok(anchors)) => {
                 log::debug!("Anchors: {:?}", anchors);
                 let status = x509::process_anchors(anchors)?;
@@ -195,7 +190,7 @@ where
     }
 
     fn device_to_entity(
-        device: Device,
+        device: registry::v1::Device,
     ) -> Result<
         (models::device::Device, HashSet<TypedAlias>),
         PostgresManagementServiceError<S::Error>,
@@ -206,10 +201,10 @@ where
 
         aliases.insert(TypedAlias("name".into(), device.metadata.name.clone()));
 
-        if let Some(Ok(credentials)) = device.section::<DeviceSpecCredentials>() {
+        if let Some(Ok(credentials)) = device.section::<registry::v1::DeviceSpecCredentials>() {
             for credential in credentials.credentials {
                 match credential {
-                    Credential::UsernamePassword {
+                    registry::v1::Credential::UsernamePassword {
                         username, unique, ..
                     } if unique => {
                         aliases.insert(TypedAlias("username".into(), username));
@@ -399,7 +394,7 @@ where
     async fn create_app(
         &self,
         identity: &dyn Identity,
-        application: Application,
+        application: registry::v1::Application,
     ) -> Result<(), Self::Error> {
         let (mut app, aliases) = Self::app_to_entity(application)?;
 
@@ -446,7 +441,7 @@ where
         &self,
         identity: &dyn Identity,
         name: &str,
-    ) -> Result<Option<Application>, Self::Error> {
+    ) -> Result<Option<registry::v1::Application>, Self::Error> {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)
@@ -463,7 +458,7 @@ where
     async fn update_app(
         &self,
         identity: &dyn Identity,
-        application: Application,
+        application: registry::v1::Application,
     ) -> Result<(), Self::Error> {
         let expected_uid = application.metadata.uid.clone();
         let expected_resource_version = application.metadata.resource_version.clone();
@@ -582,7 +577,7 @@ where
     async fn create_device(
         &self,
         identity: &dyn Identity,
-        device: Device,
+        device: registry::v1::Device,
     ) -> Result<(), Self::Error> {
         let (mut device, aliases) = Self::device_to_entity(device)?;
 
@@ -658,7 +653,7 @@ where
         identity: &dyn Identity,
         app_id: &str,
         device_id: &str,
-    ) -> Result<Option<Device>, Self::Error> {
+    ) -> Result<Option<registry::v1::Device>, Self::Error> {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)
@@ -679,7 +674,7 @@ where
     async fn update_device(
         &self,
         identity: &dyn Identity,
-        device: Device,
+        device: registry::v1::Device,
     ) -> Result<(), Self::Error> {
         let expected_resource_version = device.metadata.resource_version.clone();
         let expected_uid = device.metadata.uid.clone();

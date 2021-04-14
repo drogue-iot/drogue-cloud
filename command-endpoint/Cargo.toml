@@ -10,11 +10,6 @@ license = "Apache-2.0"
 anyhow = "1"
 snafu = "0.6"
 
-#actix-rt = "1.1"
-#actix-service = "1"
-#actix-web = "3"
-#actix-web-httpauth = "0.5.0"
-
 actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
 actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
 actix-web-httpauth = "=0.6.0-beta.1"
@@ -44,5 +39,7 @@ cloudevents-sdk-reqwest = "0.4"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
+
+drogue-client = "0.5.0-alpha.1"
 
 jsonwebtokens = "1.0.0-alpha.13"

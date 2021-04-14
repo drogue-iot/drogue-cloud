@@ -8,7 +8,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use drogue_cloud_service_api::management::{self, NonScopedMetadata};
+use drogue_client::{meta, registry};
 use serde_json::{Map, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
@@ -57,13 +57,13 @@ fn extract_sect(mut app: Application, key: &str) -> (Application, Option<Map<Str
     (app, sect)
 }
 
-impl From<Application> for management::Application {
+impl From<Application> for registry::v1::Application {
     fn from(app: Application) -> Self {
         let (app, spec) = extract_sect(app, "spec");
         let (app, status) = extract_sect(app, "status");
 
-        management::Application {
-            metadata: NonScopedMetadata {
+        registry::v1::Application {
+            metadata: meta::v1::NonScopedMetadata {
                 uid: app.uid.to_string(),
                 name: app.name,
                 labels: app.labels,

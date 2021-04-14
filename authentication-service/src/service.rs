@@ -2,19 +2,15 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
+use drogue_client::{registry, Dialect, Translator};
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{app::*, device::*},
     DatabaseService,
 };
-use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use drogue_cloud_service_api::{
     auth::authn::{self, AuthenticationRequest, Outcome},
-    management::{
-        self, Application, ApplicationStatusTrustAnchorEntry, ApplicationStatusTrustAnchors,
-        Device, DeviceSpecCore, DeviceSpecCredentials, DeviceSpecGatewaySelector,
-    },
-    Dialect, Translator,
+    health::{HealthCheckError, HealthChecked},
 };
 use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use serde::Deserialize;
@@ -123,8 +119,10 @@ impl AuthenticationService for PostgresAuthenticationService {
                             if as_id != request.device {
                                 match accessor.lookup(&application.metadata.name, &as_id).await? {
                                     Some(as_device) => {
-                                        let as_manage: management::Device = as_device.into();
-                                        match as_manage.section::<DeviceSpecGatewaySelector>() {
+                                        let as_manage: registry::v1::Device = as_device.into();
+                                        match as_manage
+                                            .section::<registry::v1::DeviceSpecGatewaySelector>()
+                                        {
                                             Some(Ok(gateway_selector)) => {
                                                 if gateway_selector
                                                     .match_names
@@ -168,15 +166,17 @@ impl AuthenticationService for PostgresAuthenticationService {
 }
 
 /// Strip the credentials from the device information, so that we do not leak them.
-fn strip_credentials(mut device: management::Device) -> Device {
+fn strip_credentials(mut device: registry::v1::Device) -> registry::v1::Device {
     // FIXME: we need to do a better job here, maybe add a "secrets" section instead
-    device.spec.remove(DeviceSpecCredentials::key());
+    device
+        .spec
+        .remove(registry::v1::DeviceSpecCredentials::key());
     device
 }
 
 /// Validate if an application is "ok" to be used for authentication.
-fn validate_app(app: &management::Application) -> bool {
-    match app.section::<DeviceSpecCore>() {
+fn validate_app(app: &registry::v1::Application) -> bool {
+    match app.section::<registry::v1::DeviceSpecCore>() {
         // found "core", decoded successfully -> check
         Some(Ok(core)) => {
             if core.disabled {
@@ -195,8 +195,12 @@ fn validate_app(app: &management::Application) -> bool {
     true
 }
 
-fn validate_credential(app: &Application, device: &Device, cred: authn::Credential) -> bool {
-    let credentials = match device.section::<DeviceSpecCredentials>() {
+fn validate_credential(
+    app: &registry::v1::Application,
+    device: &registry::v1::Device,
+    cred: authn::Credential,
+) -> bool {
+    let credentials = match device.section::<registry::v1::DeviceSpecCredentials>() {
         Some(Ok(credentials)) => credentials.credentials,
         _ => {
             log::debug!("Missing or invalid device credentials section");
@@ -226,15 +230,15 @@ fn validate_credential(app: &Application, device: &Device, cred: authn::Credenti
 
 /// validate if a provided password matches
 fn validate_password(
-    device: &Device,
-    credentials: &[management::Credential],
+    device: &registry::v1::Device,
+    credentials: &[registry::v1::Credential],
     provided_password: &str,
 ) -> bool {
     credentials.iter().any(|c| match c {
         // match passwords
-        management::Credential::Password(stored_password) => stored_password == provided_password,
+        registry::v1::Credential::Password(stored_password) => stored_password == provided_password,
         // match passwords if the stored username is equal to the device id
-        management::Credential::UsernamePassword {
+        registry::v1::Credential::UsernamePassword {
             username: stored_username,
             password: stored_password,
             ..
@@ -246,20 +250,20 @@ fn validate_password(
 
 /// validate if a provided username/password combination matches
 fn validate_username_password(
-    device: &Device,
-    credentials: &[management::Credential],
+    device: &registry::v1::Device,
+    credentials: &[registry::v1::Credential],
     provided_username: &str,
     provided_password: &str,
 ) -> bool {
     credentials.iter().any(|c| match c {
         // match passwords if the provided username is equal to the device id
-        management::Credential::Password(stored_password)
+        registry::v1::Credential::Password(stored_password)
             if provided_username == device.metadata.name =>
         {
             stored_password == provided_password
         }
         // match username/password against username/password
-        management::Credential::UsernamePassword {
+        registry::v1::Credential::UsernamePassword {
             username: stored_username,
             password: stored_password,
             ..
@@ -271,9 +275,9 @@ fn validate_username_password(
 
 /// validate if a provided certificate chain matches
 fn validate_certificate(
-    app: &Application,
-    _device: &Device,
-    _credentials: &[management::Credential],
+    app: &registry::v1::Application,
+    _device: &registry::v1::Device,
+    _credentials: &[registry::v1::Credential],
     provided_chain: Vec<Vec<u8>>,
     now: &DateTime<Utc>,
 ) -> bool {
@@ -281,7 +285,7 @@ fn validate_certificate(
         return false;
     }
 
-    if let Some(Ok(anchors)) = app.section::<ApplicationStatusTrustAnchors>() {
+    if let Some(Ok(anchors)) = app.section::<registry::v1::ApplicationStatusTrustAnchors>() {
         // if we have some trust anchors
         let mut presented_certs = Vec::with_capacity(provided_chain.len());
         for cert in provided_chain {
@@ -300,11 +304,11 @@ fn validate_certificate(
 
 /// validate if a provided certificate chain matches the trust anchor to test
 fn validate_trust_anchor(
-    anchor: &ApplicationStatusTrustAnchorEntry,
+    anchor: &registry::v1::ApplicationStatusTrustAnchorEntry,
     now: &DateTime<Utc>,
     presented_certs: &[Certificate],
 ) -> bool {
-    if let ApplicationStatusTrustAnchorEntry::Valid {
+    if let registry::v1::ApplicationStatusTrustAnchorEntry::Valid {
         subject: _,
         certificate,
         not_before,

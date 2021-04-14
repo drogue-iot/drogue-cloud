@@ -7,3 +7,4 @@ bases:
   - registry
   - outbox
   - user-auth
+  - ttn-operator

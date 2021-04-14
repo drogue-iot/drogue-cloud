@@ -1,11 +1,7 @@
+use actix_web::{error::PayloadError, http::StatusCode, HttpResponse, ResponseError};
+use drogue_client::error::ClientError;
 use serde::{Deserialize, Serialize};
 use snafu::Snafu;
-
-use actix_web::error::PayloadError;
-use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, ResponseError};
-
-use drogue_cloud_service_api::auth::ClientError;
 use std::fmt::Formatter;
 
 #[derive(Debug, Snafu)]
@@ -36,7 +32,7 @@ impl EndpointError {
     }
 }
 
-impl<E: std::error::Error> From<ClientError<E>> for EndpointError {
+impl<E: std::error::Error + Sync + Send> From<ClientError<E>> for EndpointError {
     fn from(err: ClientError<E>) -> Self {
         Self::AuthenticationServiceError {
             source: Box::new(err),

@@ -1,8 +1,9 @@
-use crate::{client::Context, openid::OpenIdTokenProvider};
-use drogue_cloud_service_api::auth::{
-    authn::{AuthenticationRequest, AuthenticationResponse},
-    ClientError, ErrorInformation,
+use drogue_client::{
+    error::{ClientError, ErrorInformation},
+    openid::{OpenIdTokenProvider, TokenInjector},
+    Context,
 };
+use drogue_cloud_service_api::auth::authn::{AuthenticationRequest, AuthenticationResponse};
 use reqwest::{Client, Response, StatusCode};
 use url::Url;
 
@@ -29,8 +30,11 @@ impl ReqwestAuthenticatorClient {
         request: AuthenticationRequest,
         context: Context,
     ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
-        let req = self.client.post(self.auth_service_url.clone());
-        let req = super::inject_token(self.token_provider.clone(), req, context).await?;
+        let req = self
+            .client
+            .post(self.auth_service_url.clone())
+            .inject_token(&self.token_provider, context)
+            .await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
             log::warn!("Error while authenticating {:?}: {}", request, err);

@@ -4,17 +4,13 @@ use actix_web::{
     {FromRequest, HttpRequest},
 };
 use anyhow::Context;
-use drogue_cloud_service_api::{
-    auth::{
-        authn::{AuthenticationRequest, AuthenticationResponse, Credential},
-        ClientError,
-    },
-    management::{Application, Device},
+use drogue_client::error::ClientError;
+use drogue_client::registry;
+use drogue_cloud_service_api::auth::authn::{
+    AuthenticationRequest, AuthenticationResponse, Credential,
 };
 use drogue_cloud_service_common::{
-    client::ReqwestAuthenticatorClient,
-    config::ConfigFromEnv,
-    openid::{OpenIdTokenProvider, TokenConfig},
+    client::ReqwestAuthenticatorClient, config::ConfigFromEnv, openid::TokenConfig,
 };
 use envconfig::Envconfig;
 use futures::future::{err, ok, Ready};
@@ -61,7 +57,8 @@ impl DeviceAuthenticator {
 
         let token_provider = match (config.auth_disabled, token_config) {
             (false, Some(token_config)) => Some(
-                OpenIdTokenProvider::discover_from(reqwest::Client::new(), token_config)
+                token_config
+                    .discover_from(reqwest::Client::new())
                     .await
                     .context("Failed to discover OAuth2 client")?,
             ),
@@ -289,8 +286,8 @@ impl DeviceAuthenticator {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DeviceAuthDetails {
-    pub app: Application,
-    pub device: Device,
+    pub app: registry::v1::Application,
+    pub device: registry::v1::Device,
 }
 
 impl FromRequest for DeviceAuthDetails {

@@ -1,7 +1,7 @@
 [package]
-name = "drogue-cloud-device-management-service"
+name = "drogue-cloud-ttn-operator"
 version = "0.4.0"
-authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
+authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
 
 [dependencies]
@@ -11,17 +11,23 @@ async-trait = "0.1"
 
 actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
 actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
-actix-cors = "=0.6.0-beta.1"
-actix-web-httpauth = "=0.6.0-beta.1"
+actix-web-httpauth = "0.6.0-beta.1"
+
+cloudevents-sdk = "0.4"
+cloudevents-sdk-actix-web = "0.4"
 
 http = "0.2"
 url = "2"
 
 dotenv = "0.15"
+humantime = "2"
+humantime-serde = "1"
 config = "0.10"
+
+thiserror = "1"
+
 env_logger = "0.7"
 log = "0.4"
-thiserror = "1"
 
 serde = "1"
 serde_json = "1"
@@ -29,7 +35,6 @@ indexmap = { version = "1", features = ["serde"] }
 futures = "0.3"
 rust-crypto = "0.2"
 rand = "0.7"
-uuid = "0.8"
 
 chrono = { version = "0.4", features = ["serde"] }
 pem = "0.8"
@@ -40,17 +45,3 @@ drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
-
-drogue-client = "0.5.0-alpha.1"
-
-deadpool = "0.7"
-deadpool-postgres = { version = "0.7", features = ["config"] }
-tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
-
-[dev-dependencies]
-actix-rt = "2.0.0-beta.2"
-testcontainers = "0.12"
-serial_test = "0.5"
-drogue-cloud-test-common = { path = "../test-common" }
-base64 = "0.13"
-openid = "0.9"

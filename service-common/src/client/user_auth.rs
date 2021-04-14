@@ -1,12 +1,10 @@
-use crate::{
-    client::Context,
-    defaults,
-    openid::{OpenIdTokenProvider, TokenConfig},
+use crate::{defaults, openid::TokenConfig};
+use drogue_client::{
+    error::{ClientError, ErrorInformation},
+    openid::{OpenIdTokenProvider, TokenInjector},
+    Context,
 };
-use drogue_cloud_service_api::auth::{
-    authz::{AuthorizationRequest, AuthorizationResponse},
-    ClientError, ErrorInformation,
-};
+use drogue_cloud_service_api::auth::authz::{AuthorizationRequest, AuthorizationResponse};
 use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -55,7 +53,7 @@ impl UserAuthClient {
         Self::new(
             client.clone(),
             config.url,
-            Some(OpenIdTokenProvider::discover_from(client, provider_config).await?),
+            Some(provider_config.discover_from(client).await?),
         )
     }
 
@@ -64,8 +62,11 @@ impl UserAuthClient {
         request: AuthorizationRequest,
         context: Context,
     ) -> Result<AuthorizationResponse, ClientError<reqwest::Error>> {
-        let req = self.client.post(self.auth_url.clone());
-        let req = super::inject_token(self.token_provider.clone(), req, context).await?;
+        let req = self
+            .client
+            .post(self.auth_url.clone())
+            .inject_token(&self.token_provider, context)
+            .await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
             log::warn!("Error while authorizing {:?}: {}", request, err);

@@ -7,20 +7,21 @@ pub use v3::*;
 use crate::telemetry::PublishCommonOptions;
 use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
+use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     downstream::{self, DownstreamSender},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::{auth::authn, management::Device};
+use drogue_cloud_service_api::auth::authn;
 use serde_json::Value;
 use std::collections::HashMap;
 
 fn eval_data_schema<S: AsRef<str>>(
     model_id: Option<String>,
-    device: &Device,
-    r#as: &Option<Device>,
+    device: &registry::v1::Device,
+    r#as: &Option<registry::v1::Device>,
     port: S,
 ) -> Option<String> {
     model_id.or_else(|| {
@@ -30,7 +31,11 @@ fn eval_data_schema<S: AsRef<str>>(
     })
 }
 
-fn get_spec<'d>(device: &'d Device, r#as: &'d Option<Device>, key: &str) -> &'d Value {
+fn get_spec<'d>(
+    device: &'d registry::v1::Device,
+    r#as: &'d Option<registry::v1::Device>,
+    key: &str,
+) -> &'d Value {
     let device = r#as.as_ref().unwrap_or(device);
     device.spec.get(key).unwrap_or(&Value::Null)
 }
@@ -229,12 +234,12 @@ mod test {
         assert_eq!(model_id, None);
     }
 
-    fn device(lorawan_spec: Option<Value>) -> Device {
+    fn device(lorawan_spec: Option<Value>) -> registry::v1::Device {
         let mut spec = Map::new();
         if let Some(lorawan_spec) = lorawan_spec {
             spec.insert("lorawan".into(), lorawan_spec);
         }
-        Device {
+        registry::v1::Device {
             metadata: Default::default(),
             spec,
             status: Default::default(),

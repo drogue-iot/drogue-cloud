@@ -52,6 +52,8 @@ cloudevents-sdk-actix-web = "0.4"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
+
+drogue-client = "0.5.0-alpha.1"
 drogue-ttn = "0.4"
 
 dotenv = "0.15.0"
@@ -62,7 +64,7 @@ mime = "0.3"
 
 tokio = { version = "1", features = ["full"] }
 
-openid = "0.8"
+openid = "0.9"
 
 chrono = "0.4"
 

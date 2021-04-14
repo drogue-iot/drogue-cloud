@@ -40,6 +40,7 @@ ALL_IMAGES=\
 	outbox-controller \
 	user-auth-service \
 	mqtt-integration \
+	ttn-operator \
 
 
 #
