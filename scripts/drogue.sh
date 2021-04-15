@@ -77,6 +77,11 @@ fi
 
 kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/$CLUSTER/"
 
+# Patch the Keycloak database to work with
+if [ "$CLUSTER" == "kubernetes" ]; then
+    kubectl -n "$DROGUE_NS" patch deployment keycloak-postgresql -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
+fi
+
 # Remove the unnecessary and wrong host entry for keycloak ingress
 
 case $CLUSTER in
