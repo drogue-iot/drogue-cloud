@@ -95,5 +95,5 @@ curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
 
 # Create kafka cluster
-kubectl -n knative-eventing apply -k "$DEPLOYDIR/knative"
+kubectl -n knative-eventing apply -k "$DEPLOYDIR/$CLUSTER/kafka"
 kubectl -n knative-eventing wait kafka --all --for=condition=Ready --timeout=-1s
