@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
