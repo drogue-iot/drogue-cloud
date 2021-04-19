@@ -58,6 +58,10 @@ impl Identity for Context {
     fn user_id(&self) -> Option<&str> {
         Some(self.0.user_id.as_str())
     }
+
+    fn roles(&self) -> Vec<&str> {
+        self.0.roles.iter().map(AsRef::as_ref).collect()
+    }
 }
 
 #[async_trait]

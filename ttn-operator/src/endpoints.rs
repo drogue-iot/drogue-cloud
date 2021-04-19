@@ -24,22 +24,24 @@ pub async fn events(
 
     log::debug!("Registry event: {:?}", event);
 
-    if !is_relevant(&event) {
+    if let Some(app) = is_relevant(event) {
+        Ok(match data.controller.handle_event(app).await {
+            Ok(_) => HttpResponse::Ok().finish(),
+            Err(err) => HttpResponse::InternalServerError().json(json!({
+                "details": err.to_string(),
+            })),
+        })
+    } else {
         // not relevant, consider contacting admin ;-)
         return Ok(HttpResponse::Ok().finish());
     }
-
-    Ok(match data.controller.handle_event(event).await {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(err) => HttpResponse::InternalServerError().json(json!({
-            "details": err.to_string(),
-        })),
-    })
 }
 
-fn is_relevant(event: &Event) -> bool {
+fn is_relevant(event: Event) -> Option<String> {
     match event {
-        Event::Application { path, .. } => path == "." || path == ".spec.ttn",
-        _ => false,
+        Event::Application {
+            path, application, ..
+        } if path == "." || path == ".metadata" || path == ".spec.ttn" => Some(application),
+        _ => None,
     }
 }

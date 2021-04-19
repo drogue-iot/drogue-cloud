@@ -14,6 +14,11 @@ pub trait Resource {
 /// Currently, this is a rather simple approach. If the resource has an owner, the owners must match
 /// to grant access.
 pub fn authorize(resource: &dyn Resource, identity: &dyn Identity) -> Outcome {
+    // if we are "admin", grant access
+    if identity.is_admin() {
+        return Outcome::Allow;
+    }
+
     match (resource.owner(), identity.user_id()) {
         // If there is no owner -> allow access
         (None, _) => Outcome::Allow,

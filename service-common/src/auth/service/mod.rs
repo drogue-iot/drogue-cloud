@@ -4,18 +4,17 @@ pub use mock::*;
 
 use crate::{
     error::ServiceError,
-    openid::{Authenticator, AuthenticatorError},
+    openid::{Authenticator, AuthenticatorError, ExtendedClaims},
 };
 use actix_http::{Payload, PayloadStream};
-use actix_web::dev::ServiceRequest;
-use actix_web::{FromRequest, HttpMessage, HttpRequest};
+use actix_web::{dev::ServiceRequest, FromRequest, HttpMessage, HttpRequest};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use openid::StandardClaims;
+use openid::CustomClaims;
 use std::future::{ready, Ready};
 
 #[derive(Clone, Debug)]
 pub enum UserInformation {
-    Authenticated(StandardClaims),
+    Authenticated(ExtendedClaims),
     Anonymous,
 }
 
@@ -23,13 +22,34 @@ pub enum UserInformation {
 pub trait Identity: Send + Sync {
     /// The ID of the user, or [`None`] if it is an anonymous identity.
     fn user_id(&self) -> Option<&str>;
+
+    fn roles(&self) -> Vec<&str>;
+
+    fn is_admin(&self) -> bool {
+        self.roles().contains(&"drogue-admin")
+    }
 }
 
 impl Identity for UserInformation {
     fn user_id(&self) -> Option<&str> {
         match self {
             Self::Anonymous => None,
-            Self::Authenticated(claims) => Some(&claims.sub),
+            Self::Authenticated(claims) => Some(&claims.standard_claims().sub),
+        }
+    }
+
+    fn roles(&self) -> Vec<&str> {
+        match self {
+            Self::Anonymous => vec![],
+            Self::Authenticated(claims) => {
+                // TODO: This currently on works for Keycloak
+                let roles = &claims.extended_claims["resource_access"]["services"]["roles"];
+                if let Some(roles) = roles.as_array() {
+                    roles.iter().filter_map(|v| v.as_str()).collect()
+                } else {
+                    vec![]
+                }
+            }
         }
     }
 }
@@ -64,17 +84,11 @@ where
     })?;
 
     match authenticator.validate_token(token).await {
-        Ok(token) => match token.payload() {
-            Ok(payload) => {
-                req.extensions_mut()
-                    .insert(UserInformation::Authenticated(payload.clone()));
-                Ok(req)
-            }
-            Err(err) => {
-                log::debug!("Failed to extract token payload: {}", err);
-                Err(ServiceError::AuthenticationError.into())
-            }
-        },
+        Ok(payload) => {
+            req.extensions_mut()
+                .insert(UserInformation::Authenticated(payload));
+            Ok(req)
+        }
         Err(AuthenticatorError::Missing) => Err(ServiceError::InternalError {
             message: "Missing OpenID client".into(),
         }
@@ -88,4 +102,28 @@ macro_rules! openid_auth {
     ($req:ident -> $($extract:tt)* ) => {
         actix_web_httpauth::middleware::HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*))
     };
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::openid::ExtendedClaims;
+    use openid::biscuit::jws::Compact;
+    use openid::{Empty, Jws};
+
+    #[test]
+    fn test_decode() {
+        let token = r#"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJEZ2hoSVVwV2llSU5jX0Jtc0lDckhHbm1WTDNMMTMteURtVmp3N2MwUnlFIn0.eyJleHAiOjE2MTg0OTQ5MjYsImlhdCI6MTYxODQ5NDYyNiwianRpIjoiNjAzYTNhMGYtZTkzMC00ZjE1LTkwMDUtMTZjNzFiMTllNDdiIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9hay1kcm9ndWUtZGV2LmFwcHMud29uZGVyZnVsLmlvdC1wbGF5Z3JvdW5kLm9yZy9hdXRoL3JlYWxtcy9kcm9ndWUiLCJhdWQiOlsic2VydmljZXMiLCJncmFmYW5hIiwiZGl0dG8iLCJkcm9ndWUiLCJhY2NvdW50Il0sInN1YiI6ImI4ZWZjZjAwLTJmZmYtNDRlYS1hZGU5LWYzNWViMmY0ZmNlMSIsInR5cCI6IkJlYXJlciIsImF6cCI6InNlcnZpY2VzIiwiYWNyIjoiMSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiZ3JhZmFuYSI6eyJyb2xlcyI6WyJncmFmYW5hLWVkaXRvciIsImdyYWZhbmEtYWRtaW4iXX0sImRpdHRvIjp7InJvbGVzIjpbImRpdHRvLXVzZXIiLCJkaXR0by1hZG1pbiJdfSwiZHJvZ3VlIjp7InJvbGVzIjpbImRyb2d1ZS11c2VyIiwiZHJvZ3VlLWFkbWluIl19LCJzZXJ2aWNlcyI6eyJyb2xlcyI6WyJkcm9ndWUtdXNlciIsImRyb2d1ZS1hZG1pbiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJlbWFpbCBwcm9maWxlIiwiY2xpZW50SWQiOiJzZXJ2aWNlcyIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiY2xpZW50SG9zdCI6IjE5Mi4xNjguMTIuMSIsInByZWZlcnJlZF91c2VybmFtZSI6InNlcnZpY2UtYWNjb3VudC1zZXJ2aWNlcyIsImNsaWVudEFkZHJlc3MiOiIxOTIuMTY4LjEyLjEifQ.JNvytxz-IqTXXoUKF8xZMw-diS7jtkz9GP4u6MRo9iny410zTxSl5Z_O9Mhy1LofxPBMYt65JWs6tRBdKAEXa0w5bLbZdyRgdr3SJpDAxIz6CezCHqSDl1OSQPrW_rWmaS_9XLWxl8fgADwLCNjWbrZrsls_E_rDdfjqhrvcE4f2__lIV_oeG7zcfyYJzNVoZ3Ukyadxq6fwAMf8kZwU_6R6hClb0Ya6jLpNE3miy3ZgugZ1QLJT3tSTyyxzSHMy8146ncBughepequ-zKSnbzQjhgwQsARjjv7bBeZgRjRY6kF3Wr8JalaR2DZU49RopfegZ-9PWO2AEH2dxe4OfQ"#;
+        let token: Compact<ExtendedClaims, Empty> = Jws::new_encoded(token);
+
+        let payload = token.unverified_payload().unwrap();
+
+        println!("Payload: {:#?}", payload);
+        let user = UserInformation::Authenticated(payload);
+
+        let roles = user.roles();
+
+        println!("Roles: {:?}", roles);
+        assert_eq!(roles, &["drogue-user", "drogue-admin"])
+    }
 }

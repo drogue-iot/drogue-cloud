@@ -1,10 +1,15 @@
 use serde::{Deserialize, Serialize};
 
-/// Authorize a user.
+/// Authorize a request for a user.
+///
+/// NOTE: The user_id and roles information must come from a trusted source, like
+/// a validated token. The user service will not re-validate this information.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthorizationRequest {
     pub application: String,
+
     pub user_id: String,
+    pub roles: Vec<String>,
 }
 
 /// The result of an authorization request.

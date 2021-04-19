@@ -13,6 +13,17 @@ async fn test_auth_deny_non_existing() -> anyhow::Result<()> {
     test_auth!(AuthorizationRequest{
         application: "appX".into(),
         user_id: "userX".into(),
+        roles: vec![],
+    } => json!("deny"))
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_auth_deny_non_existing_but_admin() -> anyhow::Result<()> {
+    test_auth!(AuthorizationRequest{
+        application: "appX".into(),
+        user_id: "userX".into(),
+        roles: vec!["drogue-user".into(), "drogue-admin".into()],
     } => json!("deny"))
 }
 
@@ -22,6 +33,7 @@ async fn test_auth_allow_owner() -> anyhow::Result<()> {
     test_auth!(AuthorizationRequest{
         application: "app1".into(),
         user_id: "user1".into(),
+        roles: vec![],
     } => json!("allow"))
 }
 
@@ -31,5 +43,16 @@ async fn test_auth_deny_non_owner() -> anyhow::Result<()> {
     test_auth!(AuthorizationRequest{
         application: "app1".into(),
         user_id: "user2".into(),
+        roles: vec![],
     } => json!("deny"))
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_auth_allow_non_owner_but_admin() -> anyhow::Result<()> {
+    test_auth!(AuthorizationRequest{
+        application: "app1".into(),
+        user_id: "user2".into(),
+        roles: vec!["drogue-user".into(), "drogue-admin".into()],
+    } => json!("allow"))
 }

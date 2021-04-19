@@ -1280,8 +1280,8 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drogue-client"
-version = "0.5.0-alpha.1"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=09535760645bcf72e2a4d2afee9f144879c252d1#09535760645bcf72e2a4d2afee9f144879c252d1"
+version = "0.5.0-alpha.2"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=0fa76204f917dae4150df41bbc345480f015ea45#0fa76204f917dae4150df41bbc345480f015ea45"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1844,6 +1844,7 @@ dependencies = [
  "cloudevents-sdk-actix-web",
  "config",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
