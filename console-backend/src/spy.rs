@@ -4,10 +4,12 @@ use actix_http::http::header::ContentType;
 use actix_web::{get, web, web::Bytes, HttpResponse};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
 use drogue_cloud_service_api::auth::authz::AuthorizationRequest;
+use drogue_cloud_service_common::auth::{Identity, UserInformation};
 use drogue_cloud_service_common::{
     client::UserAuthClient, error::ServiceError, openid::Authenticator,
 };
 use futures::{stream::select, StreamExt};
+use openid::CustomClaims;
 use serde::Deserialize;
 use std::time::Duration;
 use tokio_stream::wrappers::IntervalStream;
@@ -25,21 +27,25 @@ pub async fn stream_events(
     config: web::Data<Config>,
     user_auth: Option<web::Data<UserAuthClient>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let user = authenticator
-        .validate_token(query.token.clone())
-        .await
-        .map_err(|_| ServiceError::AuthenticationError)?;
-
     if let Some(user_auth) = user_auth {
+        let user = authenticator
+            .validate_token(query.token.clone())
+            .await
+            .map_err(|_| ServiceError::AuthenticationError)?;
+
+        let user_id = user.standard_claims().sub.clone();
+        let roles = UserInformation::Authenticated(user)
+            .roles()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+
         user_auth
             .authorize(
                 AuthorizationRequest {
                     application: query.app.clone(),
-                    user_id: user
-                        .payload()
-                        .map_err(|_| ServiceError::TokenError)?
-                        .sub
-                        .clone(),
+                    user_id,
+                    roles,
                 },
                 Default::default(),
             )

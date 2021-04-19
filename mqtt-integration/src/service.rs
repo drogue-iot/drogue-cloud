@@ -93,7 +93,7 @@ impl App {
             }
         };
 
-        Ok(UserInformation::Authenticated(token.payload()?.clone()))
+        Ok(UserInformation::Authenticated(token))
     }
 
     pub async fn connect<Io>(&self, connect: Connect<'_, Io>) -> Result<Session, ServerError> {
@@ -192,6 +192,7 @@ impl Session {
                         AuthorizationRequest {
                             application: app.to_string(),
                             user_id: user.to_string(),
+                            roles: self.user.roles().iter().map(|s| s.to_string()).collect(),
                         },
                         Default::default(),
                     )
