@@ -8,6 +8,7 @@ pub struct AuthenticationRequest {
     pub application: String,
     pub device: String,
     pub credential: Credential,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub r#as: Option<String>,
 }
 
@@ -51,6 +52,7 @@ pub enum Outcome {
     Pass {
         application: registry::v1::Application,
         device: registry::v1::Device,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         r#as: Option<registry::v1::Device>,
     },
     /// The authentication request failed. The device is not authenticated, and the device's
