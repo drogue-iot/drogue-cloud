@@ -3,6 +3,7 @@ mod data;
 mod endpoints;
 mod error;
 mod ttn;
+mod utils;
 
 use actix_web::{
     get, middleware,

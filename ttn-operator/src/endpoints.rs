@@ -24,24 +24,39 @@ pub async fn events(
 
     log::debug!("Registry event: {:?}", event);
 
-    if let Some(app) = is_relevant(event) {
-        Ok(match data.controller.handle_event(app).await {
+    Ok(match is_relevant(event) {
+        Some((app, None)) => match data.controller.handle_app_event(app).await {
             Ok(_) => HttpResponse::Ok().finish(),
             Err(err) => HttpResponse::InternalServerError().json(json!({
                 "details": err.to_string(),
             })),
-        })
-    } else {
-        // not relevant, consider contacting admin ;-)
-        return Ok(HttpResponse::Ok().finish());
-    }
+        },
+        Some((app, Some(device))) => match data.controller.handle_device_event(app, device).await {
+            Ok(_) => HttpResponse::Ok().finish(),
+            Err(err) => HttpResponse::InternalServerError().json(json!({
+                "details": err.to_string(),
+            })),
+        },
+        _ => {
+            // not relevant, consider contacting admin ;-)
+            HttpResponse::Ok().finish()
+        }
+    })
 }
 
-fn is_relevant(event: Event) -> Option<String> {
+fn is_relevant(event: Event) -> Option<(String, Option<String>)> {
     match event {
         Event::Application {
             path, application, ..
-        } if path == "." || path == ".metadata" || path == ".spec.ttn" => Some(application),
+        } if path == "." || path == ".metadata" || path == ".spec.ttn" => Some((application, None)),
+        Event::Device {
+            path,
+            application,
+            device,
+            ..
+        } if path == "." || path == ".metadata" || path == ".spec.ttn" => {
+            Some((application, Some(device)))
+        }
         _ => None,
     }
 }
