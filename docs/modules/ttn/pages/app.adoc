@@ -1,0 +1,91 @@
+= Managing applications
+
+
+== Setting up a new application
+
+This will create a new application, and connect it with The Things Network.
+
+=== Pre-requisites
+
+You will need create an account at The Things Network. As part of that you will need to:
+
+* Remember which region you are assigned to (e.g. `eu1` for `eu1.cloud.thethings.network`).
+* Create an API key for this account with the permission to create new applications.
+* Remember the name of the user.
+
+=== Procedure
+
+Create a new application in Drogue Cloud:
+
+[source,shell]
+----
+drg create application my-ttn-app
+----
+
+Next, add the TTN specific information:
+
+[source,json]
+----
+{
+    "spec": {
+        "ttn": {
+            "api": {
+                "apiKey": "...", <1>
+                "id": "my-app-alias", <2>
+                "owner": "my-user-name", <3>
+                "region": "eu1" <4>
+            }
+        }
+    }
+}
+----
+<1> The API key, must have access to create new applications for the provided owner.
+<2> The (optional) ID of the application in the TTN system. Defaults to the name of the application in Drogue Cloud. This valid must not be changed.
+<3> The name of the user owning the application. See <<Using an organization>> for details on using an organization instead.
+<4> The name of region, or a URL to the API backend.
+
+This will enable the integration and trigger the reconciliation process.
+
+Taking a look at the TTN console, you should see the new application (`my-app-alias` in this case), and a
+webhook named `drogue-iot`.
+
+=== Using an organization
+
+You can also use an organization, for this you will need to change the owner to explicitly being an
+organization type:
+
+[source,json]
+----
+{
+    "spec": {
+        "ttn": {
+            "api": {
+                "owner": {
+                    "org": "my-org" <1>
+                },
+                "owner": {
+                    "user": "my-user" <2>
+                },
+                "owner": "my-user" <3>
+            }
+        }
+    }
+}
+----
+<1> Use an organization named "my-org"
+<2> Use a user named "my-user"
+<3> Use a user named "my-user"
+
+=== Deleting an application
+
+Deleting an application will delete all devices in Drogue Cloud and the TTN system.
+
+When all devices have been deleted, the application itself will be deleted in both Drogue Cloud and the TTN system.
+
+[NOTE]
+.Soft deletion
+====
+Applications in The Things Network are only "soft deleted". This implies that the name of the application cannot be re-used. So it is not possible to re-create or re-use the applicatio name.
+
+However you can use an alternate application ID in TTN by setting the `.spec.ttn.api.id` field to an unused value.
+====

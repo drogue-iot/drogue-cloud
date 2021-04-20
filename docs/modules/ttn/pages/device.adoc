@@ -1,0 +1,53 @@
+= Managing devices
+
+== Setting up a new device
+
+This will register a new device, and synchronized it with The Things Network.
+
+=== Pre-requisites
+
+You will need the following information for your device:
+
+* Device EUI
+* Application/Join EUI
+* Application Key
+* Supported LoRa capabilities
+
+=== Procedure
+
+Create a new device in Drogue Cloud:
+
+[source,shell]
+----
+drg create --app my-ttn-app device my-ttn-device-1
+----
+
+Next, add the TTN specific information:
+
+[source,json]
+----
+{
+    "spec": {
+        "ttn": {
+            "app_eui": "0123456789ABCDEF",
+            "app_key": "0123456789ABCDEF...",
+            "dev_eui": "0123456789ABCDEF",
+            "frequency_plan_id": "...", <1>
+            "lorawan_phy_version": "...", <2>
+            "lorawan_version": "..." <3>
+        }
+    }
+}
+----
+<1> An ID of the TTN supported frequency plans, e.g. `EU_863_870_TTN`
+<2> An ID of the TTN supported LoRa versions, e.g. `PHY_V1_0`
+<3> An ID of the TTN supported LoRa version, e.g. `MAC_V1_0`
+
+## Deleting a device
+
+When you delete a device in Drogue Cloud, it will also be deleted in the TTN system.
+
+## Disconnecting a device
+
+If you want to delete the device in TTN, but keep it in Drogue Cloud, then you can simply
+remove or rename the `.spec.ttn` section.
