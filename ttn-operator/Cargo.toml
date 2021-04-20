@@ -8,6 +8,8 @@ edition = "2018"
 anyhow = "1"
 
 async-trait = "0.1"
+lazy_static = "1"
+maplit = "1"
 
 actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
 actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1

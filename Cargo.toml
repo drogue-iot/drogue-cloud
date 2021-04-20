@@ -30,7 +30,7 @@ patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "49b7f
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "1898ac0a6af51dc3a99c9f291049e3fd993c69c6"}
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "0fa76204f917dae4150df41bbc345480f015ea45" }
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "cd70c7e8b9e62b46410060f196a90088287a8aeb" }
 #drogue-client = { path = "../drogue-client" }
 
 # required for https://github.com/ntex-rs/ntex-mqtt/pull/48
