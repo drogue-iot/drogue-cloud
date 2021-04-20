@@ -4,7 +4,7 @@ use crate::{
     controller::reconciler::Reconciler,
     data::*,
     error::ReconcileError,
-    ttn::{self, Owner},
+    ttn::{self},
     utils,
 };
 use actix_http::http::header::IntoHeaderValue;
@@ -162,12 +162,7 @@ impl<'a> ApplicationReconciler<'a> {
         match ttn_app {
             None => {
                 self.ttn
-                    .create_app(
-                        &app.metadata.name,
-                        ttn_app_id,
-                        Owner::User(spec.api.owner.clone()),
-                        &ctx,
-                    )
+                    .create_app(&app.metadata.name, ttn_app_id, spec.api.owner.clone(), &ctx)
                     .await
             }
             Some(ttn_app) => self.update_app(ttn_app_id, ttn_app, &app, &ctx).await,
