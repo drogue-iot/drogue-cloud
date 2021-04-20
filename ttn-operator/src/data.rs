@@ -1,5 +1,6 @@
 use crate::error::ReconcileError;
 use crate::ttn;
+use crate::ttn::Owner;
 use drogue_client::{dialect, Dialect, Section};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -60,8 +61,7 @@ pub struct TtnAppSpec {
 pub struct TtnAppApi {
     pub api_key: String,
     pub region: RegionOrUrl,
-    // FIXME: allow using an org as well
-    pub owner: String,
+    pub owner: Owner,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
 }
@@ -116,14 +116,56 @@ dialect!(TtnAppStatus[Section::Status => "ttn"]);
 mod test {
 
     use super::*;
+    use crate::ttn::Owner;
     use serde_json::json;
 
     #[test]
     fn test_region_str() {
         let api: TtnAppApi =
-            serde_json::from_value(json!({"api_key": "foo", "region": "bar"})).unwrap();
+            serde_json::from_value(json!({"apiKey": "foo", "region": "bar", "owner": "me"}))
+                .unwrap();
 
         assert_eq!(api.api_key, "foo");
         assert_eq!(api.region, RegionOrUrl::Region("bar".into()));
+    }
+
+    #[test]
+    fn test_owner_user() {
+        let api: TtnAppApi = serde_json::from_value(json!({
+            "apiKey": "foo",
+            "region": "bar",
+            "owner": {
+                "user": "my-user",
+            }
+        }))
+        .unwrap();
+
+        assert_eq!(api.owner, Owner::User("my-user".to_string()));
+    }
+
+    #[test]
+    fn test_owner_plain_user() {
+        let api: TtnAppApi = serde_json::from_value(json!({
+            "apiKey": "foo",
+            "region": "bar",
+            "owner": "me",
+        }))
+        .unwrap();
+
+        assert_eq!(api.owner, Owner::User("me".to_string()));
+    }
+
+    #[test]
+    fn test_owner_org() {
+        let api: TtnAppApi = serde_json::from_value(json!({
+            "apiKey": "foo",
+            "region": "bar",
+            "owner": {
+                "org": "my-org",
+            }
+        }))
+        .unwrap();
+
+        assert_eq!(api.owner, Owner::Organization("my-org".to_string()));
     }
 }

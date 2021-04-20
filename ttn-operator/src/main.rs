@@ -13,10 +13,10 @@ use actix_web::{
 use anyhow::anyhow;
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_service_common::endpoints::create_endpoint_source;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
+    endpoints::create_endpoint_source,
     health::{HealthServer, HealthServerConfig},
     openid::TokenConfig,
 };

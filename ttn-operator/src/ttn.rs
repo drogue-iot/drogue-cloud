@@ -1,9 +1,11 @@
 use crate::error::ReconcileError;
 use lazy_static::lazy_static;
 use reqwest::{RequestBuilder, Response, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::de::MapAccess;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::fmt::Formatter;
 use url::{PathSegmentsMut, Url};
 
 // NOTE: We need to amend this with every field we add
@@ -158,10 +160,57 @@ impl TokenInjector for RequestBuilder {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 pub enum Owner {
+    #[serde(rename = "user")]
     User(String),
+    #[serde(rename = "org")]
     Organization(String),
+}
+
+impl<'de> Deserialize<'de> for Owner {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(OwnerVisitor)
+    }
+}
+
+struct OwnerVisitor;
+
+impl<'de> serde::de::Visitor<'de> for OwnerVisitor {
+    type Value = Owner;
+
+    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+        formatter.write_str("An owner, by string or sub-object ('user' or 'org')")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> {
+        Ok(Owner::User(value.to_owned()))
+    }
+
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E> {
+        Ok(Owner::User(value))
+    }
+
+    fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+    where
+        V: MapAccess<'de>,
+    {
+        if let Some(key) = map.next_key::<String>()? {
+            match key.as_str() {
+                "user" => Ok(Owner::User(map.next_value()?)),
+                "org" => Ok(Owner::Organization(map.next_value()?)),
+                key => Err(serde::de::Error::unknown_field(key, &["user", "org"])),
+            }
+        } else {
+            Err(serde::de::Error::invalid_length(
+                0,
+                &"Expected exactly one field",
+            ))
+        }
+    }
 }
 
 impl Owner {

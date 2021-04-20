@@ -1,0 +1,151 @@
+= The Things Network integration
+
+Drogue IoT Cloud has can also integrate with https://www.thethingsnetwork.org/[The Things Network] (TTN).
+
+Configuring an application with the necessary API information will create a corresponding application
+in the TTN system and connect the TTN system with the Drogue Cloud instance. Devices created inside
+such an application can be annotated with TTN specific information as well, which will result on those
+devices being synchronized with the TTN system.
+
+NOTE: The integration works with V3 of the TTN API. Earlier versions are not supported.
+
+The integration current supports:
+
+* Creating applications in The Things Network.
+  ** Creating a gateway device in Drogue Cloud.
+  ** Configuring the credentials for this gateway device using a randomized password-
+  ** Creating an application instance on the TTN side.
+  ** Creating a webhook for this application, connecting the TTN side with Drogue Cloud, using the created gateway device.
+* Creating devices in The Things Network.
+  ** Authorizing the TTN gateway device in Drogue Cloud for this device
+  ** Creating the device on the TTN side
+* Cleaning up when resources get deleted
+
+[WARNING]
+.Deleting applications
+====
+Deleting an application in Drogue Cloud, or disabling the TTN integration for a Drogue Cloud application,
+will also delete the application in TTN.
+
+However, The Things Network only soft deletes applications. The name of the application is still blocked
+from further use after the deletion. This means that you cannot simply re-create an application with
+the same name. Drogue Cloud allows you to override the application name on the TTN side, however you
+should consider twice before actually trigger a delete.
+====
+
+== Setting up a new application
+
+This will create a new application, and connect it with The Things Network.
+
+=== Pre-requisites
+
+You will need create an account at The Things Network. As part of that you will need to:
+
+* Remember which region you are assigned to (e.g. `eu1` for `eu1.cloud.thethings.network`).
+* Create an API key for this account with the permission to create new applications.
+* Remember the name of the user.
+
+=== Procedure
+
+Create a new application in Drogue Cloud:
+
+[source,shell]
+----
+drg create application my-ttn-app
+----
+
+Next, add the TTN specific information:
+
+[source,json]
+----
+{
+    "spec": {
+        "ttn": {
+            "api": {
+                "apiKey": "...", <1>
+                "id": "my-app-alias", <2>
+                "owner": "my-user-name", <3>
+                "region": "eu1" <4>
+            }
+        }
+    }
+}
+----
+<1> The API key, must have access to create new applications for the provided owner.
+<2> The (optional) ID of the application in the TTN system. Defaults to the name of the application in Drogue Cloud. This valid must not be changed.
+<3> The 
+<4> The name of region, or a URL to the API backend.
+
+This will enable the integration and trigger the reconciliation process.
+
+Taking a look at the TTN console, you should see the new application (`my-app-alias` in this case), and a
+webhook named `drogue-iot`.
+
+=== Using an organization
+
+You can also use an organization, for this you will need to change the owner to explicitly being an
+organization type:
+
+[source,json]
+----
+{
+    "spec": {
+        "ttn": {
+            "api": {
+                # ...
+                # only use one of the following
+                "owner": {
+                    "org": "my-org" <1> 
+                },
+                "owner": {
+                    "user": "my-org" <2> 
+                },
+                "owner": "my-user" <3>
+            }
+        }
+    }
+}
+----
+<1> Use an organization named "my-org"
+<2> Use a user named "my-user"
+<3> Use a user named "my-user"
+
+== Setting up a new device
+
+This will register a new device, and synchronized it with The Things Network.
+
+=== Pre-requisites
+
+You will need the following information for your device:
+
+* Device EUI
+* Application/Join EUI
+* Application Key
+* Supported LoRa capabilities
+
+=== Procedure
+
+Create a new device in Drogue Cloud:
+
+[source,shell]
+----
+drg create --app my-ttn-app device my-ttn-device-1
+----
+
+Next, add the TTN specific information:
+
+[source,json,subs="verbatim"]
+----
+{
+    "spec": {
+        "ttn": {
+            "app_eui": "0123456789ABCDEF",
+            "app_key": "0123456789ABCDEF...",
+            "dev_eui": "0123456789ABCDEF",
+            "frequency_plan_id": "...", # e.g. EU_863_870_TTN
+            "lorawan_phy_version": "...", # e.g. PHY_V1_0
+            "lorawan_version": "..." # e.g. MAC_V1_0
+        }
+    }
+}
+----
