@@ -94,7 +94,6 @@ macro_rules! health_endpoint {
 macro_rules! health_app {
     ($checker:expr) => {
         App::new()
-            .wrap(Logger::default())
             .app_data($checker.clone())
             .route("/", web::get().to(index))
             .route("/readiness", web::get().to(readiness))
@@ -120,7 +119,6 @@ impl HealthServer {
 
         let checker = web::Data::new(self.checker);
         HttpServer::new(move || {
-            use actix_web::middleware::Logger;
             use actix_web::App;
             health_app!(checker)
         })
@@ -141,7 +139,6 @@ impl HealthServer {
 
         let checker = ntex::web::types::Data::new(self.checker);
         ntex::web::server(move || {
-            use ntex::web::middleware::Logger;
             use ntex::web::App;
             health_app!(checker)
         })
