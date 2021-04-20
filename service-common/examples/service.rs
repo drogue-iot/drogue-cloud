@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use chrono::Duration;
-use drogue_cloud_service_common::openid::Expires;
+use drogue_client::openid::Expires;
 use openid::{Client, Jws};
 use url::Url;
 
