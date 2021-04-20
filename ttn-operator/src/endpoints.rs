@@ -54,7 +54,11 @@ fn is_relevant(event: Event) -> Option<(String, Option<String>)> {
             application,
             device,
             ..
-        } if path == "." || path == ".metadata" || path == ".spec.ttn" => {
+        } if path == "."
+            || path == ".metadata"
+            || path == ".spec.ttn"
+            || path == ".spec.gatewaySelector" =>
+        {
             Some((application, Some(device)))
         }
         _ => None,
