@@ -1,12 +1,10 @@
 use anyhow::anyhow;
 use chrono::Duration;
-use drogue_cloud_service_common::openid::Expires;
-use openid::error::ClientError;
-use openid::{Bearer, Client, OAuth2Error, Provider};
+use drogue_client::openid::Expires;
+use openid::{error::ClientError, Bearer, Client, OAuth2Error, Provider};
 use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use serde_json::Value;
-use url::form_urlencoded::Serializer;
-use url::Url;
+use url::{form_urlencoded::Serializer, Url};
 
 /// Requests an access token using the Resource Owner Password Credentials Grant flow
 ///
