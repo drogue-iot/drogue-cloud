@@ -5,3 +5,4 @@ nav:
   - modules/ROOT/nav.adoc
   - modules/architecture/nav.adoc
   - modules/deployment/nav.adoc
+  - modules/ROOT/nav-integrations.adoc
