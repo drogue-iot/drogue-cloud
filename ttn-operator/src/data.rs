@@ -31,6 +31,24 @@ pub struct TtnReconcileStatus {
     pub reason: Option<String>,
 }
 
+impl TtnReconcileStatus {
+    pub fn failed(generation: u64, err: ReconcileError) -> Self {
+        Self {
+            observed_generation: generation,
+            state: "Failed".into(),
+            reason: Some(err.to_string()),
+        }
+    }
+
+    pub fn reconciled(generation: u64) -> Self {
+        Self {
+            observed_generation: generation,
+            state: "Reconciled".into(),
+            reason: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TtnAppSpec {
@@ -79,7 +97,7 @@ pub struct TtnDeviceSpec {
     pub supports_class_b: bool,
     #[serde(default)]
     pub supports_class_c: bool,
-    pub frequency_plan: String,
+    pub frequency_plan_id: String,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

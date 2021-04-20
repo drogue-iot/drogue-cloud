@@ -71,6 +71,8 @@ lazy_static! {
     static ref FIELD_MASK_WEBHOOK_STR: &'static str = &FIELD_MASK_WEBHOOK_STRING;
 }
 
+const FIELD_MASK_APP_STR: &str = "name,attributes";
+
 #[derive(Clone, Debug)]
 pub struct Device {
     pub ids: DeviceIds,
@@ -104,7 +106,7 @@ pub struct NsDevice {
     pub mac_settings: HashMap<String, Value>,
     pub supports_class_b: bool,
     pub supports_class_c: bool,
-    pub frequency_plan: String,
+    pub frequency_plan_id: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -193,6 +195,7 @@ impl Client {
     pub async fn create_app(
         &self,
         app_id: &str,
+        ttn_app_id: &str,
         owner: Owner,
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
@@ -205,7 +208,7 @@ impl Client {
         let create = json!({
             "application": {
                 "ids": {
-                    "application_id": app_id,
+                    "application_id": ttn_app_id,
                 },
                 "name": app_id,
                 "attributes": {
@@ -233,10 +236,52 @@ impl Client {
             match res.status() {
                 StatusCode::CONFLICT => Err(ReconcileError::permanent(format!(
                     "An application with the name '{}' already exists in the TTN system. This may be another user claiming that name, or a previously created application which is still pending final deletion. You can still choose to use a different name.",
-                    app_id
+                    ttn_app_id
                 ))),
                 _ => Self::default_error(res.status(), res).await,
             }
+        }
+    }
+
+    pub async fn update_app(
+        &self,
+        app_id: &str,
+        ttn_app_id: &str,
+        ctx: &Context,
+    ) -> Result<(), ReconcileError> {
+        let url = Self::url(&ctx, |path| {
+            path.extend(&["api", "v3", "applications", ttn_app_id]);
+        })?;
+
+        let update = json!({
+            "application": {
+                "name": app_id,
+                "attributes": {
+                    "drogue-app": app_id,
+                }
+            },
+            "field_mask": {
+                "paths": ["name", "attributes"]
+            }
+        });
+
+        log::debug!("New app: {}", update);
+
+        let res = self
+            .client
+            .put(url)
+            .inject_token(&ctx)
+            .json(&update)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            let payload = res.text().await?;
+            log::debug!("Response: {:#?}", payload);
+
+            Ok(())
+        } else {
+            Self::default_error(res.status(), res).await
         }
     }
 
@@ -250,11 +295,11 @@ impl Client {
                     code, info
                 )))
             }
-            code if code.is_server_error() => Err(ReconcileError::Permanent(format!(
+            code if code.is_server_error() => Err(ReconcileError::Temporary(format!(
                 "Request failed: {}: {}",
                 code, info
             ))),
-            code => Err(ReconcileError::Temporary(format!(
+            code => Err(ReconcileError::Permanent(format!(
                 "Request failed: {}: {}",
                 code, info
             ))),
@@ -266,9 +311,12 @@ impl Client {
         app_id: &str,
         ctx: &Context,
     ) -> Result<Option<Value>, ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let mut url = Self::url(&ctx, |path| {
             path.extend(&["api", "v3", "applications", app_id]);
         })?;
+
+        url.query_pairs_mut()
+            .append_pair("field_mask", FIELD_MASK_APP_STR);
 
         let res = self.client.get(url).inject_token(&ctx).send().await?;
 
@@ -498,17 +546,65 @@ impl Client {
         }
     }
 
+    async fn set_ns_js_as(
+        &self,
+        app_id: &str,
+        device: &Device,
+        ctx: &Context,
+    ) -> Result<(), ReconcileError> {
+        // NS
+
+        self.put_device_json(
+            "ns",
+            app_id,
+            &device.ids,
+            &device.ns_device,
+            FIELD_MASK_DEVICE_NS,
+            &ctx,
+        )
+        .await?;
+
+        // JS
+
+        self.put_device_json(
+            "js",
+            app_id,
+            &device.ids,
+            &device.js_device,
+            FIELD_MASK_DEVICE_JS,
+            &ctx,
+        )
+        .await?;
+
+        // AS
+
+        self.put_device_json(
+            "as",
+            app_id,
+            &device.ids,
+            &json!({}),
+            FIELD_MASK_DEVICE_AS,
+            &ctx,
+        )
+        .await?;
+
+        // done
+
+        Ok(())
+    }
+
     pub async fn create_device(
         &self,
         app_id: &str,
-        device_id: &str,
         device: Device,
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
+        log::debug!("Creating new device in TTN");
+
         // core
 
         let url = Self::url(&ctx, |path| {
-            path.extend(&["api", "v3", "applications", app_id, "devices", device_id]);
+            path.extend(&["api", "v3", "applications", app_id, "devices"]);
         })?;
 
         let res = self
@@ -528,35 +624,58 @@ impl Client {
             code => Self::default_error(code, res).await?,
         }
 
-        // NS
+        // set NS, JS, AS entries as well
 
-        self.put_device_json(
-            "ns",
-            app_id,
-            &device.ids,
-            &device.ns_device,
-            FIELD_MASK_DEVICE_NS,
-            &ctx,
-        )
-        .await?;
-        self.put_device_json(
-            "js",
-            app_id,
-            &device.ids,
-            &device.js_device,
-            FIELD_MASK_DEVICE_JS,
-            &ctx,
-        )
-        .await?;
-        self.put_device_json(
-            "as",
-            app_id,
-            &device.ids,
-            &json!({}),
-            FIELD_MASK_DEVICE_AS,
-            &ctx,
-        )
-        .await?;
+        self.set_ns_js_as(app_id, &device, &ctx).await?;
+
+        // done
+
+        Ok(())
+    }
+
+    pub async fn update_device(
+        &self,
+        app_id: &str,
+        device: Device,
+        ctx: &Context,
+    ) -> Result<(), ReconcileError> {
+        log::debug!("Creating new device in TTN");
+
+        // core
+
+        let url = Self::url(&ctx, |path| {
+            path.extend(&[
+                "api",
+                "v3",
+                "applications",
+                app_id,
+                "devices",
+                &device.ids.device_id,
+            ]);
+        })?;
+
+        let res = self
+            .client
+            .put(url)
+            .inject_token(&ctx)
+            .json(&Self::make_device_json(
+                &device.ids,
+                &device.end_device,
+                FIELD_MASK_DEVICE_CORE,
+            )?)
+            .send()
+            .await?;
+
+        match res.status() {
+            StatusCode::OK => {}
+            code => Self::default_error(code, res).await?,
+        }
+
+        // set NS, JS, AS entries as well
+
+        self.set_ns_js_as(app_id, &device, &ctx).await?;
+
+        // Done
 
         Ok(())
     }
