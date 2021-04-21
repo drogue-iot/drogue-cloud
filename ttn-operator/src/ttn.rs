@@ -525,14 +525,19 @@ impl Client {
         }
     }
 
-    pub async fn delete_device(
+    async fn delete_device_json(
         &self,
+        prefix: Option<&str>,
         app_id: &str,
         device_id: &str,
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
         let url = Self::url(&ctx, |path| {
-            path.extend(&["api", "v3", "applications", app_id, "devices", device_id]);
+            path.extend(&["api", "v3"]);
+            if let Some(prefix) = prefix {
+                path.push(prefix);
+            }
+            path.extend(&["applications", app_id, "devices", device_id]);
         })?;
 
         let res = self.client.delete(url).inject_token(&ctx).send().await?;
@@ -541,6 +546,24 @@ impl Client {
             StatusCode::OK | StatusCode::NOT_FOUND => Ok(()),
             code => Self::default_error(code, res).await,
         }
+    }
+
+    pub async fn delete_device(
+        &self,
+        app_id: &str,
+        device_id: &str,
+        ctx: &Context,
+    ) -> Result<(), ReconcileError> {
+        self.delete_device_json(Some("ns"), app_id, device_id, ctx)
+            .await?;
+        self.delete_device_json(Some("js"), app_id, device_id, ctx)
+            .await?;
+        self.delete_device_json(Some("as"), app_id, device_id, ctx)
+            .await?;
+        self.delete_device_json(None, app_id, device_id, ctx)
+            .await?;
+
+        Ok(())
     }
 
     fn make_device_json<T: Serialize>(
