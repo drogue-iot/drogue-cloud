@@ -8,12 +8,13 @@ license = "Apache-2.0"
 [dependencies]
 
 anyhow = "1"
-snafu = "0.6"
+thiserror = "1"
 
 actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
 actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
 actix-web-httpauth = "=0.6.0-beta.1"
 
+async-trait = "0.1"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
@@ -40,6 +41,7 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 
-drogue-client = "0.5.0-alpha.1"
+drogue-client = "0.5.0-alpha.3"
 
 jsonwebtokens = "1.0.0-alpha.13"
+base64 = "0.13"
