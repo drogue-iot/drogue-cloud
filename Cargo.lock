@@ -1280,15 +1280,16 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drogue-client"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67a604209fd5ba6aff270648bb62f6a4dba82b4426a41995d276386c5108aa1d"
+checksum = "f5dec23b1107d1d710219b1eae25ff5524a90b1cf3abdd002b668462e8ea8ab0"
 dependencies = [
  "async-std",
  "async-trait",
  "base64 0.13.0",
  "base64-serde",
  "chrono",
+ "futures",
  "log",
  "openid",
  "reqwest",
@@ -1347,6 +1348,8 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "async-trait",
+ "base64 0.13.0",
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
@@ -1365,7 +1368,7 @@ dependencies = [
  "reqwest",
  "serde 1.0.124",
  "serde_json",
- "snafu",
+ "thiserror",
  "url",
  "uuid",
 ]

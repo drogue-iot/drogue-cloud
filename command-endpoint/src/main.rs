@@ -1,3 +1,5 @@
+mod sender;
+
 use actix_web::{
     get,
     http::header,
@@ -76,8 +78,9 @@ async fn command(
         opts.application,
         opts.device
     );
+
     let response = registry
-        .get_device(
+        .get_device_and_gateways(
             &opts.application,
             &opts.device,
             Context {
@@ -87,50 +90,21 @@ async fn command(
         .await;
 
     match response {
-        Ok(Some(device)) => {
-            if device.attribute::<registry::v1::DeviceEnabled>() {
-                match device.attribute::<registry::v1::FirstCommand>() {
-                    Some(external_command) => match external_command {
-                        registry::v1::Command::External(endpoint) => {
-                            let (url, payload) = map_command(opts, &body, endpoint);
-                            log::debug!(
-                                "Sending {:?} to external command endpoint {:?}",
-                                payload,
-                                url
-                            );
-                            let resp = sender.client.post(url).json(&payload).send().await;
-
-                            match resp {
-                                Ok(r) => Ok(HttpResponse::build(r.status()).finish()),
-                                Err(_) => Ok(HttpResponse::NotAcceptable().finish()),
-                            }
-                        }
-                    },
-                    None => {
-                        sender
-                            .publish_http_default(
-                                downstream::Publish {
-                                    channel: opts.command,
-                                    app_id: opts.application,
-                                    device_id: opts.device,
-                                    options: downstream::PublishOptions {
-                                        topic: None,
-                                        content_type: req
-                                            .headers()
-                                            .get(header::CONTENT_TYPE)
-                                            .and_then(|v| v.to_str().ok())
-                                            .map(|s| s.to_string()),
-                                        ..Default::default()
-                                    },
-                                },
-                                body,
-                            )
-                            .await
-                    }
-                }
-            } else {
-                Ok(HttpResponse::NotAcceptable().finish())
-            }
+        Ok(Some(device_gateways)) => {
+            let content_type = req
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string());
+            process_command(
+                device_gateways.0,
+                device_gateways.1,
+                &sender,
+                content_type,
+                opts,
+                body,
+            )
+            .await
         }
         Ok(None) => Ok(HttpResponse::NotAcceptable().finish()),
         Err(err) => {
@@ -140,35 +114,62 @@ async fn command(
     }
 }
 
-fn map_command(
+async fn process_command(
+    device: registry::v1::Device,
+    gateways: Vec<registry::v1::Device>,
+    sender: &DownstreamSender,
+    content_type: Option<String>,
     opts: CommandOptions,
-    body: &web::Bytes,
-    endpoint: registry::v1::ExternalEndpoint,
-) -> (String, serde_json::Value) {
-    if Some("ttn".to_owned()) == endpoint.r#type {
-        (
-            endpoint.endpoint,
-            json!({
-              "dev_id": opts.device,
-              "port": 1,
-              "confirmed": false,
-              "payload_fields": {
-                "command": opts.command,
-                "command_payload": str::from_utf8(body).unwrap()
-              }
-            }),
-        )
-    } else {
-        (
-            endpoint.endpoint,
-            json!({
-                "application": opts.application,
-                "device": opts.device,
-                "command": opts.command,
-                "payload": str::from_utf8(body).unwrap()
-            }),
-        )
+    body: web::Bytes,
+) -> Result<HttpResponse, HttpEndpointError> {
+    if !device.attribute::<registry::v1::DeviceEnabled>() {
+        return Ok(HttpResponse::NotAcceptable().finish());
     }
+
+    for gateway in gateways {
+        if !gateway.attribute::<registry::v1::DeviceEnabled>() {
+            continue;
+        }
+
+        if let Some(command) = gateway.attribute::<registry::v1::Commands>().pop() {
+            return match command {
+                registry::v1::Command::External(endpoint) => {
+                    log::debug!("Sending to external command endpoint {:?}", endpoint);
+
+                    let ctx = sender::Context {
+                        device_id: device.metadata.name,
+                        client: sender.client.clone(),
+                    };
+
+                    match sender::send_to_external(ctx, endpoint, opts, body).await {
+                        Ok(_) => Ok(HttpResponse::Ok().finish()),
+                        Err(err) => {
+                            log::info!("Failed to process external command: {}", err);
+                            Ok(HttpResponse::NotAcceptable().finish())
+                        }
+                    }
+                }
+            };
+        }
+    }
+
+    // no hits so far
+
+    sender
+        .publish_http_default(
+            downstream::Publish {
+                channel: opts.command,
+                app_id: opts.application,
+                device_id: opts.device,
+                options: downstream::PublishOptions {
+                    topic: None,
+                    content_type,
+                    ..Default::default()
+                },
+            },
+            body,
+        )
+        .await
 }
 
 #[actix_web::main]

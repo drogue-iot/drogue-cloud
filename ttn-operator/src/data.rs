@@ -91,8 +91,8 @@ pub struct TtnDeviceSpec {
     pub app_eui: String,
     pub app_key: String,
 
-    pub lorawan_version: String,
-    pub lorawan_phy_version: String,
+    pub lorawan_version: Option<String>,
+    pub lorawan_phy_version: Option<String>,
     #[serde(default)]
     pub supports_class_b: bool,
     #[serde(default)]

@@ -39,7 +39,7 @@ Next, add the TTN specific information:
     }
 }
 ----
-<1> An ID of the TTN supported frequency plans, e.g. `EU_863_870_TTN`
+<1> An ID of the TTN supported frequency plans, e.g. `EU_863_870_TTN`. Also see: https://www.thethingsindustries.com/docs/reference/frequency-plans/
 <2> An ID of the TTN supported LoRa versions, e.g. `PHY_V1_0`
 <3> An ID of the TTN supported LoRa version, e.g. `MAC_V1_0`
 

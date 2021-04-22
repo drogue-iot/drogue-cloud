@@ -1,7 +1,6 @@
 use super::Controller;
-use crate::controller::reconciler::ReconcileState;
 use crate::{
-    controller::reconciler::Reconciler,
+    controller::reconciler::{ReconcileState, Reconciler},
     data::*,
     error::ReconcileError,
     ttn::{self},
@@ -13,6 +12,7 @@ use async_trait::async_trait;
 use drogue_client::{meta, registry, Translator};
 use maplit::{convert_args, hashmap};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use url::Url;
 
 const FINALIZER: &str = "ttn";
@@ -155,7 +155,9 @@ impl<'a> ApplicationReconciler<'a> {
         ttn_app_id: &str,
     ) -> Result<(), ReconcileError> {
         let ctx = spec.api.to_context()?;
-        let gw_password = self.ensure_gateway(ttn_app_id, &app.metadata).await?;
+        let gw_password = self
+            .ensure_gateway(ttn_app_id, &app.metadata, ctx.clone())
+            .await?;
 
         let ttn_app = self.ttn.get_app(ttn_app_id, &ctx).await?;
         log::debug!("TTN app: {:#?}", ttn_app);
@@ -197,6 +199,70 @@ impl<'a> ApplicationReconciler<'a> {
         Ok(())
     }
 
+    fn ensure_gateway_config(
+        &self,
+        ttn_app_id: &str,
+        gateway: &mut registry::v1::Device,
+        ctx: ttn::Context,
+    ) -> Result<String, ReconcileError> {
+        // find a current password
+
+        let password = match gateway.section::<registry::v1::DeviceSpecCredentials>() {
+            Some(Ok(creds)) => {
+                if let Some(password) = creds.credentials.iter().find_map(|cred| match cred {
+                    registry::v1::Credential::Password(pwd) => Some(pwd.clone()),
+                    _ => None,
+                }) {
+                    Some(password)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        // if we could not find a password, create one
+
+        let password = if let Some(password) = password {
+            password
+        } else {
+            let password = utils::random_password();
+            gateway.set_section(registry::v1::DeviceSpecCredentials {
+                credentials: vec![registry::v1::Credential::Password(password.clone())],
+            })?;
+            password
+        };
+
+        // sync the command endpoint
+
+        let mut headers = HashMap::with_capacity(1);
+        headers.insert(
+            "Authorization".to_string(),
+            format!("Bearer {}", ctx.api_key),
+        );
+
+        let mut downlink_url = ctx.url;
+        downlink_url
+            .path_segments_mut()
+            .map_err(|_| ReconcileError::permanent("Unable to modify path"))?
+            .extend(&["api", "v3", "as", "applications", ttn_app_id, "devices"]);
+
+        gateway.set_section(registry::v1::DeviceSpecCommands {
+            commands: vec![registry::v1::Command::External(
+                registry::v1::ExternalEndpoint {
+                    r#type: Some("ttnv3".to_string()),
+                    url: downlink_url.to_string(),
+                    headers,
+                    method: String::new(),
+                },
+            )],
+        })?;
+
+        // done
+
+        Ok(password)
+    }
+
     /// Ensure that we have a gateway device for connecting the TTN webhook to.
     ///
     /// This will return a password, which can be used as the gateway password.
@@ -204,6 +270,7 @@ impl<'a> ApplicationReconciler<'a> {
         &self,
         app_id: &str,
         metadata: &meta::v1::NonScopedMetadata,
+        ctx: ttn::Context,
     ) -> Result<String, ReconcileError> {
         let gateway = self
             .registry
@@ -224,49 +291,18 @@ impl<'a> ApplicationReconciler<'a> {
                     },
                     ..Default::default()
                 };
-                let password = utils::random_password();
-                gateway.update_section(
-                    |mut credentials: registry::v1::DeviceSpecCredentials| {
-                        credentials.credentials =
-                            vec![registry::v1::Credential::Password(password.clone())];
-                        credentials
-                    },
-                )?;
+
+                let password = self.ensure_gateway_config(app_id, &mut gateway, ctx)?;
+
                 self.registry
                     .create_device(gateway, Default::default())
                     .await
                     .map_err(ReconcileError::temporary)?;
+
                 password
             }
             Some(mut gateway) => {
-                // find a current password
-
-                let password = match gateway.section::<registry::v1::DeviceSpecCredentials>() {
-                    Some(Ok(creds)) => {
-                        if let Some(password) = creds.credentials.iter().find_map(|cred| match cred
-                        {
-                            registry::v1::Credential::Password(pwd) => Some(pwd.clone()),
-                            _ => None,
-                        }) {
-                            Some(password)
-                        } else {
-                            None
-                        }
-                    }
-                    _ => None,
-                };
-
-                // if we could not find a password, create one
-
-                let password = if let Some(password) = password {
-                    password
-                } else {
-                    let password = utils::random_password();
-                    gateway.set_section(registry::v1::DeviceSpecCredentials {
-                        credentials: vec![registry::v1::Credential::Password(password.clone())],
-                    })?;
-                    password
-                };
+                let password = self.ensure_gateway_config(app_id, &mut gateway, ctx)?;
 
                 self.registry
                     .update_device(gateway, Default::default())

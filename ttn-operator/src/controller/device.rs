@@ -232,8 +232,8 @@ impl<'a> DeviceReconciler<'a> {
             ns_device: ttn::NsDevice {
                 multicast: false,
                 supports_join: true,
-                lorawan_version: spec.lorawan_version.clone(),
-                lorawan_phy_version: spec.lorawan_phy_version.clone(),
+                lorawan_version: or_default(&spec.lorawan_version, "MAC_V1_0"),
+                lorawan_phy_version: or_default(&spec.lorawan_phy_version, "PHY_V1_0"),
                 mac_settings: convert_args!(hashmap!("supports_32_bit_f_cnt" => true)),
                 supports_class_b: spec.supports_class_b,
                 supports_class_c: spec.supports_class_b,
@@ -270,4 +270,11 @@ impl<'a> DeviceReconciler<'a> {
 
         Ok(())
     }
+}
+
+/// Return the string, or the default value if there is no string or the string is empty.
+fn or_default(s: &Option<String>, d: &str) -> String {
+    s.as_ref()
+        .filter(|s| !s.is_empty())
+        .map_or_else(|| d.to_string(), |s| s.to_string())
 }
