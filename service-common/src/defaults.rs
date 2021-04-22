@@ -59,3 +59,8 @@ pub fn user_auth_url() -> Url {
 pub fn registry_url() -> Url {
     Url::parse("http://registry.drogue-iot.svc.cluster.local.").unwrap()
 }
+
+#[inline]
+pub fn mqtts_port() -> u16 {
+    8883
+}
