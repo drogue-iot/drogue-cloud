@@ -138,7 +138,7 @@ kubectl -n "$DROGUE_NS" set env deployment/mqtt-endpoint "SSO_URL=$SSO_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/mqtt-integration "SSO_URL=$SSO_URL"
 
-kubectl -n "$DROGUE_NS" set env deployment/ttn-controller "SSO_URL=$SSO_URL" "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
+kubectl -n "$DROGUE_NS" set env deployment/ttn-operator "SSO_URL=$SSO_URL" "HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL" "GF_SERVER_ROOT_URL=$DASHBOARD_URL"
 
