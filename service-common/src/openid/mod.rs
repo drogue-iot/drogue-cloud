@@ -1,8 +1,10 @@
 mod authenticator;
 mod config;
+mod sso;
 
 pub use self::config::*;
 pub use authenticator::*;
+pub use sso::*;
 
 use openid::{CompactJson, CustomClaims, StandardClaims};
 use serde::{Deserialize, Serialize};

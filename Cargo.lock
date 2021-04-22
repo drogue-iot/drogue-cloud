@@ -1798,7 +1798,6 @@ dependencies = [
  "drogue-client",
  "drogue-cloud-service-api",
  "env_logger 0.8.3",
- "envconfig",
  "failure",
  "futures",
  "http",

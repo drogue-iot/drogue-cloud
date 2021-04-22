@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 
-envconfig = "0.9"
 log = "0.4"
 config = "0.10"
 anyhow = "1"

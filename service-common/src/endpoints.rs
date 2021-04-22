@@ -1,9 +1,10 @@
+use crate::{config::ConfigFromEnv, defaults};
 use async_trait::async_trait;
 use drogue_cloud_service_api::endpoints::*;
-use envconfig::Envconfig;
 use futures::{stream::FuturesUnordered, StreamExt};
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
+use serde::Deserialize;
 use std::fmt::Debug;
 
 const DEFAULT_REALM: &str = "drogue";
@@ -16,30 +17,34 @@ pub trait EndpointSource: Debug {
 }
 
 /// This is the endpoint configuration when using the [`EnvEndpointSource`].
-#[derive(Debug, Envconfig)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct EndpointConfig {
-    #[envconfig(from = "ISSUER_URL")]
+    #[serde(default)]
     pub issuer_url: Option<String>,
-    #[envconfig(from = "SSO_URL")]
-    pub sso_url: String,
-    #[envconfig(from = "REDIRECT_URL")]
+    #[serde(default)]
+    pub sso_url: Option<String>,
+    #[serde(default)]
     pub redirect_url: Option<String>,
-    #[envconfig(from = "HTTP_ENDPOINT_URL")]
-    pub http_url: Option<String>,
-    #[envconfig(from = "MQTT_ENDPOINT_HOST")]
-    pub mqtt_host: Option<String>,
-    #[envconfig(from = "MQTT_ENDPOINT_PORT", default = "8883")]
-    pub mqtt_port: u16,
-    #[envconfig(from = "MQTT_INTEGRATION_HOST")]
+    #[serde(default)]
+    pub http_endpoint_url: Option<String>,
+    #[serde(default)]
+    pub mqtt_endpoint_host: Option<String>,
+    #[serde(default = "defaults::mqtts_port")]
+    pub mqtt_endpoint_port: u16,
+    #[serde(default)]
     pub mqtt_integration_host: Option<String>,
-    #[envconfig(from = "MQTT_INTEGRATION_PORT", default = "8883")]
+    #[serde(default = "defaults::mqtts_port")]
     pub mqtt_integration_port: u16,
-    #[envconfig(from = "DEVICE_REGISTRY_URL")]
+    #[serde(default)]
     pub device_registry_url: Option<String>,
-    #[envconfig(from = "COMMAND_ENDPOINT_URL")]
-    pub command_url: Option<String>,
-    #[envconfig(from = "LOCAL_CERTS", default = "false")]
+    #[serde(default)]
+    pub command_endpoint_url: Option<String>,
+
+    #[serde(default)]
     pub local_certs: bool,
+
+    #[serde(default)]
+    pub demos: Option<String>,
 }
 
 pub async fn eval_endpoints() -> anyhow::Result<Endpoints> {
@@ -50,12 +55,22 @@ pub fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
     let source = std::env::var_os("ENDPOINT_SOURCE").unwrap_or_else(|| "env".into());
     match source.to_str() {
         Some("openshift") => Ok(Box::new(OpenshiftEndpointSource::new()?)),
-        Some("env") => Ok(Box::new(EnvEndpointSource(Envconfig::init_from_env()?))),
+        Some("env") => Ok(Box::new(EnvEndpointSource(amend_global_sso(
+            EndpointConfig::from_env_prefix("ENDPOINTS")?,
+        )))),
         other => Err(anyhow::anyhow!(
             "Unsupported endpoint source: '{:?}'",
             other
         )),
     }
+}
+
+/// Fill in the SSO url from the global scope, if we don't have any configuration for it.
+fn amend_global_sso(mut endpoints: EndpointConfig) -> EndpointConfig {
+    if endpoints.sso_url.is_none() {
+        endpoints.sso_url = super::openid::global_sso();
+    }
+    endpoints
 }
 
 /// Split demo entries
@@ -88,13 +103,13 @@ impl EndpointSource for EnvEndpointSource {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints> {
         let http = self
             .0
-            .http_url
+            .http_endpoint_url
             .as_ref()
             .cloned()
             .map(|url| HttpEndpoint { url });
-        let mqtt = self.0.mqtt_host.as_ref().map(|host| MqttEndpoint {
+        let mqtt = self.0.mqtt_endpoint_host.as_ref().map(|host| MqttEndpoint {
             host: host.clone(),
-            port: self.0.mqtt_port,
+            port: self.0.mqtt_endpoint_port,
         });
         let mqtt_integration = self
             .0
@@ -112,22 +127,20 @@ impl EndpointSource for EnvEndpointSource {
             .map(|url| RegistryEndpoint { url });
 
         let sso = self.0.sso_url.clone();
-        let issuer_url = self
-            .0
-            .issuer_url
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(|| crate::utils::sso_to_issuer_url(&sso, DEFAULT_REALM));
+        let issuer_url = self.0.issuer_url.as_ref().cloned().or_else(|| {
+            sso.as_ref()
+                .map(|sso| crate::utils::sso_to_issuer_url(&sso, DEFAULT_REALM))
+        });
 
         Ok(Endpoints {
             http,
             mqtt,
             mqtt_integration,
-            sso: Some(sso),
-            issuer_url: Some(issuer_url),
+            sso,
+            issuer_url,
             redirect_url: self.0.redirect_url.as_ref().cloned(),
             registry,
-            command_url: self.0.command_url.as_ref().cloned(),
+            command_url: self.0.command_endpoint_url.as_ref().cloned(),
             demos: get_demos(),
             local_certs: self.0.local_certs,
         })

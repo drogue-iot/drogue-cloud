@@ -31,9 +31,9 @@ impl TokenConfig {
     pub fn amend_with_env(mut self) -> Self {
         // try fetching global SSO url
         if self.sso_url.is_none() {
-            self.sso_url = std::env::var("SSO_URL")
-                .ok()
-                .and_then(|url| Url::parse(&url).ok());
+            self.sso_url = super::global_sso()
+                .map(|url| Url::parse(&url))
+                .and_then(|url| url.ok())
         }
 
         self
