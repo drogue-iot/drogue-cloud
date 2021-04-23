@@ -84,6 +84,11 @@ impl App {
 
                 auth.validate_token(&token.access_token).await?
             }
+            ((Some(username), None), _) => {
+                log::debug!("Authenticate with token (username only)");
+                // username but no username is treated as a token
+                auth.validate_token(&username).await?
+            }
             ((None, Some(password)), _) => {
                 log::debug!("Authenticate with token (password only)");
                 // password but no username is treated as a token
@@ -100,6 +105,8 @@ impl App {
     }
 
     pub async fn connect<Io>(&self, connect: Connect<'_, Io>) -> Result<Session, ServerError> {
+        log::debug!("Processing connect request");
+
         if !connect.clean_session() {
             return Err(ServerError::UnsupportedOperation);
         }
