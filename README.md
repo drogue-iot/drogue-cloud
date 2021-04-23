@@ -33,7 +33,7 @@ It is built on top of:
 
 ## Installation
 
-Take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/). 
+Take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/).
 
 In a nutshell you need to:
 
@@ -43,9 +43,16 @@ minikube tunnel # in a separate terminal, as it keeps running
 ./scripts/drogue.sh
 ~~~
 
+If you experience issues with ingress during deployment, try
+
+~~~
+ kubectl delete validatingwebhookconfigurations ingress-nginx-admission
+~~~
+
+as a temporary workaround.
 ## Useful Links
 
-* [Documentation](https://book.drogue.io/drogue-cloud/dev/index.html) 
+* [Documentation](https://book.drogue.io/drogue-cloud/dev/index.html)
 * [Drogue IoT Blog: Articles that talk about the design,  usecases and project updates](https://blog.drogue.io/)
 
 ## Contributing
