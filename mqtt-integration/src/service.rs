@@ -72,6 +72,7 @@ impl App {
     ) -> Result<UserInformation, anyhow::Error> {
         let token = match (connect.credentials(), &self.openid_client) {
             ((Some(username), Some(password)), Some(openid_client)) => {
+                log::debug!("Authenticate with username and password");
                 // we have a username and password, and are allowed to test this against SSO
                 let username = username.to_string();
                 let password = String::from_utf8(password.to_vec())?;
@@ -84,11 +85,13 @@ impl App {
                 auth.validate_token(&token.access_token).await?
             }
             ((None, Some(password)), _) => {
+                log::debug!("Authenticate with token (password only)");
                 // password but no username is treated as a token
                 let password = String::from_utf8(password.to_vec())?;
                 auth.validate_token(&password).await?
             }
             _ => {
+                log::debug!("Unknown authentication method");
                 anyhow::bail!("Unknown authentication scheme");
             }
         };
@@ -121,8 +124,6 @@ impl App {
             client_id,
         ))
     }
-
-    //fn start_stream(&self, app: String) -> Result<EventStream, EventStreamError> {}
 }
 
 impl Session {
