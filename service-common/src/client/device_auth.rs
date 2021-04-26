@@ -3,7 +3,9 @@ use drogue_client::{
     openid::{OpenIdTokenProvider, TokenInjector},
     Context,
 };
-use drogue_cloud_service_api::auth::authn::{AuthenticationRequest, AuthenticationResponse};
+use drogue_cloud_service_api::auth::device::authn::{
+    AuthenticationRequest, AuthenticationResponse,
+};
 use reqwest::{Client, Response, StatusCode};
 use url::Url;
 

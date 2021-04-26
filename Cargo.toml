@@ -21,6 +21,7 @@ members = [
     "integration-common",
     "mqtt-integration",
     "ttn-operator",
+    "api-key-service",
 ]
 
 [patch.crates-io]

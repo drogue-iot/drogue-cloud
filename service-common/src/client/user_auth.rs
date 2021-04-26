@@ -4,7 +4,10 @@ use drogue_client::{
     openid::{OpenIdTokenProvider, TokenInjector},
     Context,
 };
-use drogue_cloud_service_api::auth::authz::{AuthorizationRequest, AuthorizationResponse};
+use drogue_cloud_service_api::auth::user::{
+    authn::{AuthenticationRequest, AuthenticationResponse},
+    authz::{AuthorizationRequest, AuthorizationResponse},
+};
 use reqwest::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -57,11 +60,34 @@ impl UserAuthClient {
         )
     }
 
-    pub async fn authorize(
+    async fn default_error<T>(
+        code: StatusCode,
+        response: Response,
+    ) -> Result<T, ClientError<reqwest::Error>> {
+        match response.json::<ErrorInformation>().await {
+            Ok(result) => {
+                log::debug!("Service reported error ({}): {}", code, result);
+                Err(ClientError::Service(result))
+            }
+            Err(err) => {
+                log::debug!(
+                    "Service call failed ({}). Result couldn't be decoded: {:?}",
+                    code,
+                    err
+                );
+                Err(ClientError::Request(format!(
+                    "Failed to decode service error response: {}",
+                    err
+                )))
+            }
+        }
+    }
+
+    pub async fn authenticate_api_key(
         &self,
-        request: AuthorizationRequest,
+        request: AuthenticationRequest,
         context: Context,
-    ) -> Result<AuthorizationResponse, ClientError<reqwest::Error>> {
+    ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
         let req = self
             .client
             .post(self.auth_url.clone())
@@ -74,7 +100,7 @@ impl UserAuthClient {
         })?;
 
         match response.status() {
-            StatusCode::OK => match response.json::<AuthorizationResponse>().await {
+            StatusCode::OK => match response.json::<AuthenticationResponse>().await {
                 Ok(result) => {
                     log::debug!("Outcome for {:?} is {:?}", request, result);
                     Ok(result)
@@ -106,6 +132,41 @@ impl UserAuthClient {
                     )))
                 }
             },
+        }
+    }
+
+    pub async fn authorize(
+        &self,
+        request: AuthorizationRequest,
+        context: Context,
+    ) -> Result<AuthorizationResponse, ClientError<reqwest::Error>> {
+        let req = self
+            .client
+            .post(self.auth_url.clone())
+            .inject_token(&self.token_provider, context)
+            .await?;
+
+        let response: Response = req.json(&request).send().await.map_err(|err| {
+            log::warn!("Error while authorizing {:?}: {}", request, err);
+            Box::new(err)
+        })?;
+
+        match response.status() {
+            StatusCode::OK => match response.json::<AuthorizationResponse>().await {
+                Ok(result) => {
+                    log::debug!("Outcome for {:?} is {:?}", request, result);
+                    Ok(result)
+                }
+                Err(err) => {
+                    log::debug!("Authorization failed for {:?}. Result: {:?}", request, err);
+
+                    Err(ClientError::Request(format!(
+                        "Failed to decode service response: {}",
+                        err
+                    )))
+                }
+            },
+            code => Self::default_error(code, response).await,
         }
     }
 }

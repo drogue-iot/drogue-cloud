@@ -1,5 +1,8 @@
 use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
+use drogue_cloud_api_key_service::{
+    endpoints::WebData as KeycloakWebData, service::KeycloakApiKeyService,
+};
 use drogue_cloud_service_common::{
     config::ConfigFromEnv, health::HealthServer, openid::Authenticator, openid_auth,
 };
@@ -28,6 +31,10 @@ async fn main() -> anyhow::Result<()> {
         service: service::PostgresAuthorizationService::new(config.service)?,
     });
 
+    let api_key = web::Data::new(KeycloakWebData {
+        service: KeycloakApiKeyService::new(config.keycloak)?,
+    });
+
     // health server
 
     let health = HealthServer::new(config.health, vec![Box::new(data.service.clone())]);
@@ -41,7 +48,14 @@ async fn main() -> anyhow::Result<()> {
             .as_ref()
             .and_then(|data|data.authenticator.as_ref())
         });
-        drogue_cloud_user_auth_service::app!(data, max_json_payload_size, enable_auth, auth)
+        drogue_cloud_user_auth_service::app!(
+            data,
+            KeycloakApiKeyService,
+            api_key,
+            max_json_payload_size,
+            enable_auth,
+            auth
+        )
     })
     .bind(config.bind_addr)?
     .run();

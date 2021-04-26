@@ -50,3 +50,4 @@ drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }
+drogue-cloud-api-key-service = { path = "../api-key-service" }

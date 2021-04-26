@@ -6,6 +6,7 @@ use actix_web::{dev::ServiceRequest, dev::ServiceResponse, Error};
 use futures::future::{ok, Ready};
 use futures::Future;
 
+#[derive(Clone)]
 pub struct MockAuthenticator;
 
 impl<S, B> Transform<S, ServiceRequest> for MockAuthenticator
@@ -46,7 +47,7 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let fut = self.service.call(req);
 
-        Box::pin(async move { Ok(fut.await?) })
+        Box::pin(async move { fut.await })
     }
 }
 

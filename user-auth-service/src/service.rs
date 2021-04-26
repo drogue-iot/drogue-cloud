@@ -5,7 +5,7 @@ use drogue_cloud_database_common::{
     auth::authorize, error::ServiceError, models::app::*, DatabaseService,
 };
 use drogue_cloud_service_api::{
-    auth::authz::{AuthorizationRequest, Outcome},
+    auth::user::authz::{AuthorizationRequest, Outcome},
     health::{HealthCheckError, HealthChecked},
 };
 use drogue_cloud_service_common::auth::Identity;

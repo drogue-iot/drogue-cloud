@@ -15,7 +15,7 @@ pub struct AuthorizationRequest {
 /// The result of an authorization request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AuthorizationResponse {
-    /// The outcome, if the request.
+    /// The outcome, of the request.
     pub outcome: Outcome,
 }
 

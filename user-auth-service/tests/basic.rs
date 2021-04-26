@@ -1,7 +1,7 @@
 mod common;
 
 use actix_web::{test, web, App};
-use drogue_cloud_service_api::auth::authz::AuthorizationRequest;
+use drogue_cloud_service_api::auth::user::authz::AuthorizationRequest;
 use drogue_cloud_test_common::{client, db};
 use drogue_cloud_user_auth_service::{endpoints, service, WebData};
 use serde_json::json;

@@ -559,6 +559,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4521f3e3d031370679b3b140beb36dfe4801b09ac77e30c61941f97df3ef28b"
 
 [[package]]
+name = "base62"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3359fb598a801f01981dedc530abb7d86db3518f6ad0e3dd199cfeec155684a1"
+
+[[package]]
 name = "base64"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -635,8 +641,15 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4152116fd6e9dadb291ae18fc1ec3575ed6d84c29642d97890f4b4a3417297e4"
 dependencies = [
+ "block-padding",
  "generic-array",
 ]
+
+[[package]]
+name = "block-padding"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 
 [[package]]
 name = "blocking"
@@ -689,6 +702,12 @@ dependencies = [
  "regex-automata",
  "serde 1.0.124",
 ]
+
+[[package]]
+name = "build_const"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4ae4235e6dac0694637c763029ecea1a2ec9e4e06ec2729bd21ba4d9c863eb7"
 
 [[package]]
 name = "bumpalo"
@@ -957,6 +976,15 @@ name = "cpuid-bool"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8aebca1129a03dc6dc2b127edd729435bbc4a37e1d5f4d7513165089ceb02634"
+
+[[package]]
+name = "crc"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d663548de7f5cca343f1e0a48d14dcfb0e9eb4e079ec58883b7251539fa10aeb"
+dependencies = [
+ "build_const",
+]
 
 [[package]]
 name = "crc32fast"
@@ -1300,6 +1328,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-api-key-service"
+version = "0.4.0"
+dependencies = [
+ "actix-http",
+ "actix-rt",
+ "actix-service",
+ "actix-web",
+ "actix-web-httpauth",
+ "anyhow",
+ "async-trait",
+ "base62",
+ "chrono",
+ "config",
+ "crc",
+ "dotenv",
+ "drogue-cloud-database-common",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "drogue-cloud-test-common",
+ "env_logger 0.7.1",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "keycloak",
+ "log",
+ "native-tls",
+ "pem 0.8.3",
+ "rand 0.8.3",
+ "reqwest",
+ "rustls",
+ "serde 1.0.124",
+ "serde_json",
+ "serial_test",
+ "sha2",
+ "sha3",
+ "testcontainers",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "drogue-cloud-authentication-service"
 version = "0.4.0"
 dependencies = [
@@ -1389,6 +1461,7 @@ dependencies = [
  "chrono-tz",
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-rdkafka",
+ "drogue-cloud-api-key-service",
  "drogue-cloud-console-common",
  "drogue-cloud-integration-common",
  "drogue-cloud-service-api",
@@ -1888,6 +1961,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "dotenv",
+ "drogue-cloud-api-key-service",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-registry-events",
@@ -2683,6 +2757,23 @@ dependencies = [
  "serde-value",
  "serde_json",
  "url",
+]
+
+[[package]]
+name = "keccak"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
+
+[[package]]
+name = "keycloak"
+version = "12.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4fe5c911cdbca25fd3e8d7292fd5b80a8f450e641b28861b153d6e92e606e74"
+dependencies = [
+ "reqwest",
+ "serde 1.0.124",
+ "serde_json",
 ]
 
 [[package]]
@@ -4283,6 +4374,18 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpuid-bool",
  "digest",
+ "opaque-debug",
+]
+
+[[package]]
+name = "sha3"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f81199417d4e5de3f04b1e871023acea7389672c4135918f05aa9cbf2f2fa809"
+dependencies = [
+ "block-buffer",
+ "digest",
+ "keccak",
  "opaque-debug",
 ]
 

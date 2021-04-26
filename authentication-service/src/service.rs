@@ -9,7 +9,7 @@ use drogue_cloud_database_common::{
     DatabaseService,
 };
 use drogue_cloud_service_api::{
-    auth::authn::{self, AuthenticationRequest, Outcome},
+    auth::device::authn::{self, AuthenticationRequest, Outcome},
     health::{HealthCheckError, HealthChecked},
 };
 use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};

@@ -3,7 +3,9 @@ use crate::{
     WebData,
 };
 use actix_web::{post, web, HttpResponse};
-use drogue_cloud_service_api::auth::authn::{AuthenticationRequest, AuthenticationResponse};
+use drogue_cloud_service_api::auth::device::authn::{
+    AuthenticationRequest, AuthenticationResponse,
+};
 
 #[post("/auth")]
 pub async fn authenticate(
