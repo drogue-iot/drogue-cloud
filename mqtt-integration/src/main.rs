@@ -10,6 +10,8 @@ use crate::{
     service::ServiceConfig,
 };
 use dotenv::dotenv;
+use drogue_client::registry;
+use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
@@ -23,6 +25,7 @@ use std::{
     fmt::{Debug, Formatter},
     sync::Arc,
 };
+use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -36,6 +39,8 @@ pub struct Config {
     pub key_file: Option<String>,
     #[serde(default)]
     pub bind_addr_mqtt: Option<String>,
+    #[serde(default = "registry_service_url")]
+    pub registry_service_url: String,
 
     pub max_size: Option<u32>,
 
@@ -44,6 +49,10 @@ pub struct Config {
 
     #[serde(default)]
     pub health: HealthServerConfig,
+}
+
+fn registry_service_url() -> String {
+    "http://registry:8080".into()
 }
 
 #[derive(Clone)]
@@ -95,12 +104,21 @@ async fn main() -> anyhow::Result<()> {
         (None, None)
     };
 
+    let registry = registry::v1::Client::new(
+        Default::default(),
+        Url::parse(&config.registry_service_url)?,
+        None,
+    );
+    let sender = DownstreamSender::new()?;
+
     // creating the application
 
     let app = service::App {
         authenticator,
         user_auth,
         config: config.service.clone(),
+        sender,
+        registry,
     };
 
     // start building the server

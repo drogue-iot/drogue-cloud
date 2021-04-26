@@ -7,10 +7,12 @@ license = "Apache-2.0"
 
 [dependencies]
 
+async-trait = "0.1"
 log = "0.4"
 thiserror = "1"
 
 futures = "0.3"
+bytes = "1.0.1"
 
 tokio-stream = { version = "0.1", features = ["time"] }
 
@@ -21,11 +23,17 @@ serde = "1"
 serde_json = { version = "1", optional = true }
 
 owning_ref = "0.4"
+reqwest = "0.11"
+url = "2"
+base64 = "0.13"
 
 uuid = { version = "0.8", features = ["v4"] }
 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+
+drogue-client = "0.5.0-alpha.3"
 
 actix = { version = "=0.11.0-beta.3", optional = true }
 actix-http = { version = "=3.0.0-beta.4", optional = true }
