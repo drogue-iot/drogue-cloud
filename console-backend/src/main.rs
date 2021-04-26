@@ -11,6 +11,10 @@ use actix_web::{
     web::{self, Data},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use drogue_cloud_api_key_service::{
+    endpoints as keys,
+    service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
+};
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
@@ -52,6 +56,8 @@ pub struct Config {
 
     #[serde(default)]
     pub user_auth: UserAuthClientConfig,
+
+    pub keycloak: KeycloakApiKeyServiceConfig,
 
     #[serde(default)]
     pub health: HealthServerConfig,
@@ -107,6 +113,8 @@ async fn main() -> anyhow::Result<()> {
 
     let bind_addr = config.bind_addr.clone();
 
+    let keycloak_service = KeycloakApiKeyService::new(config.keycloak)?;
+
     // health server
 
     let health = HealthServer::new(config.health, vec![]);
@@ -140,12 +148,21 @@ async fn main() -> anyhow::Result<()> {
             app
         };
 
+        let app = app.app_data(keycloak_service.clone());
+
         app
             .app_data(endpoint_source.clone())
             .service(
                 web::scope("/api/v1")
-                    .wrap(Condition::new(enable_auth, auth))
+                    .wrap(Condition::new(enable_auth, auth.clone()))
                     .service(info::get_info),
+            )
+            .service(
+                web::resource("/api/keys/v1alpha1")
+                    .wrap(Condition::new(enable_auth, auth))
+                    .route(web::put().to(keys::create::<KeycloakApiKeyService>))
+                    .route(web::get().to(keys::list::<KeycloakApiKeyService>))
+                    .route(web::delete().to(keys::delete::<KeycloakApiKeyService>))
             )
             // everything from here on is unauthenticated or not using the middleware
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers

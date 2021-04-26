@@ -14,7 +14,7 @@ use drogue_cloud_endpoint_common::{
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth::authn;
+use drogue_cloud_service_api::auth::device::authn;
 use serde_json::Value;
 use std::collections::HashMap;
 

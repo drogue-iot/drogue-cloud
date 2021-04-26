@@ -61,6 +61,11 @@ pub fn registry_url() -> Url {
 }
 
 #[inline]
+pub fn keycloak_url() -> Url {
+    Url::parse("http://keycloak.drogue-iot.svc.cluster.local.").unwrap()
+}
+
+#[inline]
 pub fn mqtts_port() -> u16 {
     8883
 }

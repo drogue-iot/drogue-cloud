@@ -1,7 +1,7 @@
 //! Common authn/authz logic
 
 use crate::error::ServiceError;
-use drogue_cloud_service_api::auth::authz::Outcome;
+use drogue_cloud_service_api::auth::user::authz::Outcome;
 use drogue_cloud_service_common::auth::Identity;
 
 /// A resource that can be checked.

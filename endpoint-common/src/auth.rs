@@ -6,7 +6,7 @@ use actix_web::{
 use anyhow::Context;
 use drogue_client::error::ClientError;
 use drogue_client::registry;
-use drogue_cloud_service_api::auth::authn::{
+use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, Credential,
 };
 use drogue_cloud_service_common::{

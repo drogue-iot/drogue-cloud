@@ -20,7 +20,7 @@ use drogue_cloud_endpoint_common::{
     commands::Commands, downstream::DownstreamSender, error::EndpointError,
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth::authn::Outcome as AuthOutcome;
+use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,

@@ -1,7 +1,7 @@
 use crate::{error::ServerError, mqtt::*, OpenIdClient};
 use cloudevents::Data;
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
-use drogue_cloud_service_api::auth::authz::AuthorizationRequest;
+use drogue_cloud_service_api::auth::user::authz::AuthorizationRequest;
 use drogue_cloud_service_common::{
     auth::Identity, auth::UserInformation, client::UserAuthClient, defaults, openid::Authenticator,
 };
@@ -23,6 +23,8 @@ pub struct ServiceConfig {
     pub kafka_topic: String,
     #[serde(default)]
     pub enable_username_password_auth: bool,
+    #[serde(default)]
+    pub disable_api_keys: bool,
 }
 
 #[derive(Clone, Debug)]
