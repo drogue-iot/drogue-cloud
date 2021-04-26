@@ -43,6 +43,7 @@ pem = "0.8"
 webpki = "0.21"
 
 cloudevents-sdk = "0.4"
+url = "2"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }

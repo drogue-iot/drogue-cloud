@@ -1,12 +1,19 @@
 use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
-use drogue_client::Context;
-use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
+
+use drogue_client::{registry, Context};
+use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use drogue_cloud_integration_common::{
+    self,
+    commands::CommandOptions,
+    stream::{EventStream, EventStreamConfig},
+};
 use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, Outcome},
     authz::AuthorizationRequest,
     UserInformation,
 };
+
 use drogue_cloud_service_common::{
     client::UserAuthClient,
     defaults,
@@ -39,6 +46,8 @@ pub struct App {
     pub authenticator: Option<Authenticator>,
     pub user_auth: Option<Arc<UserAuthClient>>,
     pub config: ServiceConfig,
+    pub sender: DownstreamSender,
+    pub registry: registry::v1::Client,
 }
 
 pub struct Session {
@@ -50,6 +59,11 @@ pub struct Session {
     pub user: UserInformation,
 
     streams: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
+
+    pub sender: DownstreamSender,
+    pub registry: registry::v1::Client,
+
+    pub token: Option<String>,
 }
 
 struct Stream {
@@ -142,12 +156,23 @@ impl App {
 
         let client_id = connect.client_id().to_string();
 
+        let token = match connect.credentials().1 {
+            Some(token) => match String::from_utf8(token.to_vec()) {
+                Ok(token_string) => Some(token_string),
+                Err(_) => None,
+            },
+            None => None,
+        };
+
         Ok(Session::new(
             self.config.clone(),
             self.user_auth.clone(),
             connect.sink(),
             user,
             client_id,
+            self.sender.clone(),
+            self.registry.clone(),
+            token,
         ))
     }
 }
@@ -159,6 +184,9 @@ impl Session {
         sink: Sink,
         user: UserInformation,
         client_id: String,
+        sender: DownstreamSender,
+        registry: registry::v1::Client,
+        token: Option<String>,
     ) -> Self {
         Session {
             config,
@@ -167,6 +195,9 @@ impl Session {
             sink,
             client_id,
             streams: Arc::new(Mutex::new(HashMap::new())),
+            sender,
+            registry,
+            token,
         }
     }
 
@@ -326,9 +357,66 @@ impl Session {
         Ok(())
     }
 
-    pub async fn publish(&self, _publish: Publish<'_>) -> Result<(), ServerError> {
-        // FIXME: for now we just don't support this
-        Err(ServerError::NotAuthorized)
+    pub async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError> {
+        let topic = publish.topic().path().split('/').collect::<Vec<_>>();
+
+        if topic.len() != 4 {
+            Err(ServerError::UnsupportedOperation)
+        } else {
+            let (app, device, command) = { (topic[1], topic[2], topic[3]) };
+
+            log::info!("Sending command {:?} to {:?}/{:?}", command, app, device);
+
+            let response = self
+                .registry
+                .get_device_and_gateways(
+                    &app,
+                    &device,
+                    Context {
+                        provided_token: self.token.clone(),
+                    },
+                )
+                .await;
+
+            match response {
+                Ok(Some(device_gateways)) => {
+                    let opts = CommandOptions {
+                        application: app.to_string(),
+                        device: device.to_string(),
+                        command: command.to_string(),
+                        timeout: None,
+                    };
+
+                    match drogue_cloud_integration_common::commands::process_command(
+                        device_gateways.0,
+                        device_gateways.1,
+                        &self.sender,
+                        None,
+                        opts,
+                        publish.payload().clone(),
+                    )
+                    .await
+                    {
+                        Ok(_) => Ok(()),
+                        Err(e) => {
+                            log::info!("Error sending command {:?}", e);
+                            Err(ServerError::InternalError(format!(
+                                "Error sending command {:?}",
+                                e
+                            )))
+                        }
+                    }
+                }
+                Ok(None) => Err(ServerError::NotAuthorized),
+                Err(e) => {
+                    log::info!("Error looking up registry info {:?}", e);
+                    Err(ServerError::InternalError(format!(
+                        "Error looking up registry info {:?}",
+                        e
+                    )))
+                }
+            }
+        }
     }
 
     pub async fn closed(&self) -> Result<(), ServerError> {

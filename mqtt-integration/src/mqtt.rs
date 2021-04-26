@@ -2,6 +2,7 @@ use crate::{
     error::{MqttResponse, ServerError},
     service::{App, Session},
 };
+use ntex::router::Path;
 use ntex::util::{ByteString, Bytes};
 use ntex_mqtt::types::QoS;
 use ntex_mqtt::{
@@ -169,6 +170,22 @@ impl<'a, Io> Connect<'a, Io> {
 pub enum Publish<'a> {
     V3(&'a v3::Publish),
     V5(&'a v5::Publish),
+}
+
+impl<'a> Publish<'a> {
+    pub fn topic(&self) -> &Path<ByteString> {
+        match self {
+            Self::V3(publish) => publish.topic(),
+            Self::V5(publish) => publish.topic(),
+        }
+    }
+
+    pub fn payload(&self) -> &Bytes {
+        match self {
+            Self::V3(publish) => publish.payload(),
+            Self::V5(publish) => publish.payload(),
+        }
+    }
 }
 
 pub enum Subscribe<'a> {
