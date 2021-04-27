@@ -94,7 +94,7 @@ mod test {
 
         assert_eq!("drg_012345", key.0.prefix);
         assert_eq!("drg_012345_01234567890123456789012345678920BetF", key.0.key);
-        assert_eq!("dcdd17f2fef5b61e27a8887881c47175f3449898230defe8eb45face1d131968a6db191fca131f6fb4c26deb5a62d1b08f7768d6df3339144f1f91914a521a0f", key.1)
+        assert_eq!("d08a9d562a28816d47c875fc34223031b31e3e8a311244ba41cda71497a32315c20293e41a044b32688b2b4bcff960f38e19144001b235888d3ce039053e5962", key.1)
     }
 
     #[test]
