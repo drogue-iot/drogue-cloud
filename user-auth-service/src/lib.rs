@@ -39,21 +39,17 @@ macro_rules! app {
             .app_data($data.clone())
             .app_data($api_key.clone())
             .service(
-                web::scope("/api/v1/user")
+                web::scope("/api")
                     .wrap(actix_web::middleware::Condition::new(
                         $enable_auth,
                         $auth.clone(),
                     ))
-                    .service(endpoints::authorize),
-            )
-            .service(
-                web::resource("/api/user/v1alpha1")
-                    .wrap(actix_web::middleware::Condition::new($enable_auth, $auth))
-                    .route(
+                    .service(web::scope("/v1/user").service(endpoints::authorize))
+                    .service(web::resource("/user/v1alpha1/authn").route(
                         web::post().to(drogue_cloud_api_key_service::endpoints::authenticate::<
                             $api_key_ty,
                         >),
-                    ),
+                    )),
             )
     };
 }

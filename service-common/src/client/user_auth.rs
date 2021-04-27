@@ -16,7 +16,8 @@ use url::Url;
 #[derive(Clone, Debug)]
 pub struct UserAuthClient {
     client: reqwest::Client,
-    auth_url: Url,
+    authn_url: Url,
+    authz_url: Url,
     token_provider: Option<OpenIdTokenProvider>,
 }
 
@@ -42,7 +43,8 @@ impl UserAuthClient {
         token_provider: Option<OpenIdTokenProvider>,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            auth_url: url.join("/api/v1/user/authz")?,
+            authn_url: url.join("/api/user/v1alpha1/authn")?,
+            authz_url: url.join("/api/v1/user/authz")?,
             client,
             token_provider,
         })
@@ -90,12 +92,12 @@ impl UserAuthClient {
     ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
         let req = self
             .client
-            .post(self.auth_url.clone())
+            .post(self.authn_url.clone())
             .inject_token(&self.token_provider, context)
             .await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
-            log::warn!("Error while authorizing {:?}: {}", request, err);
+            log::warn!("Error while authenticating {:?}: {}", request, err);
             Box::new(err)
         })?;
 
@@ -114,24 +116,7 @@ impl UserAuthClient {
                     )))
                 }
             },
-            code => match response.json::<ErrorInformation>().await {
-                Ok(result) => {
-                    log::debug!("Service reported error ({}): {}", code, result);
-                    Err(ClientError::Service(result))
-                }
-                Err(err) => {
-                    log::debug!(
-                        "Service call failed ({}) for {:?}. Result couldn't be decoded: {:?}",
-                        code,
-                        request,
-                        err
-                    );
-                    Err(ClientError::Request(format!(
-                        "Failed to decode service error response: {}",
-                        err
-                    )))
-                }
-            },
+            code => Self::default_error(code, response).await,
         }
     }
 
@@ -142,7 +127,7 @@ impl UserAuthClient {
     ) -> Result<AuthorizationResponse, ClientError<reqwest::Error>> {
         let req = self
             .client
-            .post(self.auth_url.clone())
+            .post(self.authz_url.clone())
             .inject_token(&self.token_provider, context)
             .await?;
 

@@ -1747,6 +1747,7 @@ dependencies = [
  "bytestring",
  "cloudevents-sdk 0.4.0",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-integration-common",
  "drogue-cloud-service-api",
@@ -1840,11 +1841,13 @@ dependencies = [
 name = "drogue-cloud-service-api"
 version = "0.4.0"
 dependencies = [
+ "actix-web",
  "async-trait",
  "base64 0.13.0",
  "base64-serde",
  "chrono",
  "drogue-client",
+ "futures",
  "indexmap",
  "log",
  "serde 1.0.124",
@@ -1885,11 +1888,13 @@ dependencies = [
  "openshift-openapi",
  "pem 0.8.3",
  "reqwest",
+ "rustls",
  "serde 1.0.124",
  "serde_json",
  "thiserror",
  "tokio",
  "url",
+ "webpki",
 ]
 
 [[package]]

@@ -28,11 +28,55 @@ paths:
                     enum: ["true"]
                 required:
                   - success
-    post:
-      description: "Test post"
+  "/api/keys/v1alpha1":
+    get:
+      description: List API keys for this user.
       responses:
         "200":
-          description: "Default response"
+          description: All API keys for this user.
+          content:
+            "application/json":
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    created:
+                      type: string
+                      format: date-time
+                    prefix:
+                      type: string
+    post:
+      description: Create a new API key for this user.
+      responses:
+        "200":
+          description: A new API key was created.
+          content:
+            "application/json":
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  prefix:
+                    type: string
+                required:
+                  - key
+                  - prefix
+  "/api/keys/v1alpha1/{prefix}":
+    delete:
+      description: Delete an API key by prefix.
+      parameters:
+        - name: prefix
+          required: true
+          in: path
+          description: The prefix of the API key to delete.
+      responses:
+        "204":
+          description: |
+            Successfully delete API key.
+
+            If the API key didn't exists, still 204 will be returned.
 
 components:
   securitySchemes:

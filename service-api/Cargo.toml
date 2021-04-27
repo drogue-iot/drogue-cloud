@@ -20,3 +20,9 @@ chrono = { version = "0.4", features = ["serde"] }
 url = "2"
 
 drogue-client = { version = "0.5.0-alpha.1", default-features = false }
+
+actix-web = { version = "=4.0.0-beta.4", optional = true } # we need v4 as we need tokio 1
+futures = { version = "0.3", optional = true }
+
+[features]
+with_actix = ["actix-web", "futures"]

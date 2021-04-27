@@ -113,7 +113,9 @@ async fn main() -> anyhow::Result<()> {
 
     let bind_addr = config.bind_addr.clone();
 
-    let keycloak_service = KeycloakApiKeyService::new(config.keycloak)?;
+    let keycloak_service = web::Data::new(keys::WebData {
+        service: KeycloakApiKeyService::new(config.keycloak)?,
+    });
 
     // health server
 
@@ -126,7 +128,7 @@ async fn main() -> anyhow::Result<()> {
 
         let app = App::new()
             .wrap(middleware::Logger::default())
-            .wrap(Cors::permissive().supports_credentials())
+            .wrap(Cors::default().allow_any_header().allow_any_method().allow_any_origin().expose_any_header().send_wildcard())
             .data(web::JsonConfig::default().limit(4096))
             .data(app_config.clone());
 
@@ -158,11 +160,17 @@ async fn main() -> anyhow::Result<()> {
                     .service(info::get_info),
             )
             .service(
-                web::resource("/api/keys/v1alpha1")
+                web::scope("/api/keys/v1alpha1")
                     .wrap(Condition::new(enable_auth, auth))
-                    .route(web::put().to(keys::create::<KeycloakApiKeyService>))
-                    .route(web::get().to(keys::list::<KeycloakApiKeyService>))
-                    .route(web::delete().to(keys::delete::<KeycloakApiKeyService>))
+                    .service(
+                        web::resource("")
+                            .route(web::post().to(keys::create::<KeycloakApiKeyService>))
+                            .route(web::get().to(keys::list::<KeycloakApiKeyService>))
+                    )
+                    .service(
+                        web::resource("/{prefix}")
+                        .route(web::delete().to(keys::delete::<KeycloakApiKeyService>))
+                    )
             )
             // everything from here on is unauthenticated or not using the middleware
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers

@@ -24,8 +24,8 @@ use drogue_cloud_database_common::{
     Client, DatabaseService,
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
+use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
-use drogue_cloud_service_common::auth::Identity;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
@@ -38,45 +38,45 @@ pub trait ManagementService: Clone {
 
     async fn create_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         data: registry::v1::Application,
     ) -> Result<(), Self::Error>;
     async fn get_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         name: &str,
     ) -> Result<Option<registry::v1::Application>, Self::Error>;
     async fn update_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         data: registry::v1::Application,
     ) -> Result<(), Self::Error>;
     async fn delete_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         name: &str,
         params: DeleteParams,
     ) -> Result<(), Self::Error>;
 
     async fn create_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         device: registry::v1::Device,
     ) -> Result<(), Self::Error>;
     async fn get_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         app: &str,
         name: &str,
     ) -> Result<Option<registry::v1::Device>, Self::Error>;
     async fn update_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         device: registry::v1::Device,
     ) -> Result<(), Self::Error>;
     async fn delete_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         app: &str,
         name: &str,
         params: DeleteParams,
@@ -242,7 +242,7 @@ where
     async fn perform_update_app<S1, S2>(
         &self,
         t: &Transaction<'_>,
-        identity: Option<&dyn Identity>,
+        identity: Option<&UserInformation>,
         mut app: models::app::Application,
         aliases: Option<HashSet<TypedAlias>>,
         expected_uid: S1,
@@ -393,7 +393,7 @@ where
 
     async fn create_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         application: registry::v1::Application,
     ) -> Result<(), Self::Error> {
         let (mut app, aliases) = Self::app_to_entity(application)?;
@@ -439,7 +439,7 @@ where
 
     async fn get_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         name: &str,
     ) -> Result<Option<registry::v1::Application>, Self::Error> {
         let c = self.pool.get().await?;
@@ -457,7 +457,7 @@ where
 
     async fn update_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         application: registry::v1::Application,
     ) -> Result<(), Self::Error> {
         let expected_uid = application.metadata.uid.clone();
@@ -492,7 +492,7 @@ where
 
     async fn delete_app(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         id: &str,
         params: DeleteParams,
     ) -> Result<(), Self::Error> {
@@ -576,7 +576,7 @@ where
 
     async fn create_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         device: registry::v1::Device,
     ) -> Result<(), Self::Error> {
         let (mut device, aliases) = Self::device_to_entity(device)?;
@@ -650,7 +650,7 @@ where
 
     async fn get_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         app_id: &str,
         device_id: &str,
     ) -> Result<Option<registry::v1::Device>, Self::Error> {
@@ -673,7 +673,7 @@ where
 
     async fn update_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         device: registry::v1::Device,
     ) -> Result<(), Self::Error> {
         let expected_resource_version = device.metadata.resource_version.clone();
@@ -771,7 +771,7 @@ where
 
     async fn delete_device(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         application: &str,
         device: &str,
         params: DeleteParams,

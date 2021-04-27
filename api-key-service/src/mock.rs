@@ -4,7 +4,7 @@ use crate::{
 };
 use actix_web::ResponseError;
 use async_trait::async_trait;
-use drogue_cloud_service_common::auth::Identity;
+use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
 use std::fmt::Formatter;
 
 #[derive(Clone)]
@@ -27,21 +27,21 @@ impl ApiKeyService for MockApiKeyService {
 
     async fn create(
         &self,
-        _: &dyn Identity,
+        _: &UserInformation,
         _: ApiKeyCreationOptions,
     ) -> Result<ApiKeyCreated, Self::Error> {
         todo!()
     }
 
-    async fn delete(&self, _: &dyn Identity, _: String) -> Result<(), Self::Error> {
+    async fn delete(&self, _: &UserInformation, _: String) -> Result<(), Self::Error> {
         todo!()
     }
 
-    async fn list(&self, _: &dyn Identity) -> Result<Vec<ApiKey>, Self::Error> {
+    async fn list(&self, _: &UserInformation) -> Result<Vec<ApiKey>, Self::Error> {
         todo!()
     }
 
-    async fn authenticate(&self, _: &str, _: &str) -> Result<bool, Self::Error> {
+    async fn authenticate(&self, _: &str, _: &str) -> Result<Option<UserDetails>, Self::Error> {
         todo!()
     }
 }

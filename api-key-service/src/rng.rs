@@ -38,15 +38,11 @@ fn serialize_key(prefix: String, key: String) -> (ApiKeyCreated, String) {
     let crc = crc::crc32::checksum_ieee(key.as_bytes());
     let crc = base62::encode(crc);
 
+    let key = key + &crc;
+
     let hashed = hash_key(&key);
 
-    (
-        ApiKeyCreated {
-            prefix,
-            key: key + &crc,
-        },
-        hashed,
-    )
+    (ApiKeyCreated { prefix, key }, hashed)
 }
 
 /// Create a new (random) API key.
@@ -82,7 +78,7 @@ pub fn is_valid(key: &str) -> Option<&str> {
         return None;
     }
 
-    Some(&key[4..4 + PREFIX_LENGTH])
+    Some(&key[0..PREFIX_LENGTH + 4])
 }
 
 #[cfg(test)]
@@ -104,7 +100,7 @@ mod test {
     #[test]
     fn test_valid() {
         assert_eq!(
-            Some("012345"),
+            Some("drg_012345"),
             is_valid("drg_012345_01234567890123456789012345678920BetF")
         );
     }

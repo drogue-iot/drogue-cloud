@@ -4,68 +4,11 @@ pub use mock::*;
 
 use crate::{
     error::ServiceError,
-    openid::{Authenticator, AuthenticatorError, ExtendedClaims},
+    openid::{Authenticator, AuthenticatorError},
 };
-use actix_http::{Payload, PayloadStream};
-use actix_web::{dev::ServiceRequest, FromRequest, HttpMessage, HttpRequest};
+use actix_web::{dev::ServiceRequest, HttpMessage};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use openid::CustomClaims;
-use std::future::{ready, Ready};
-
-#[derive(Clone, Debug)]
-pub enum UserInformation {
-    Authenticated(ExtendedClaims),
-    Anonymous,
-}
-
-/// An identity, might also be anonymous.
-pub trait Identity: Send + Sync {
-    /// The ID of the user, or [`None`] if it is an anonymous identity.
-    fn user_id(&self) -> Option<&str>;
-
-    fn roles(&self) -> Vec<&str>;
-
-    fn is_admin(&self) -> bool {
-        self.roles().contains(&"drogue-admin")
-    }
-}
-
-impl Identity for UserInformation {
-    fn user_id(&self) -> Option<&str> {
-        match self {
-            Self::Anonymous => None,
-            Self::Authenticated(claims) => Some(&claims.standard_claims().sub),
-        }
-    }
-
-    fn roles(&self) -> Vec<&str> {
-        match self {
-            Self::Anonymous => vec![],
-            Self::Authenticated(claims) => {
-                // TODO: This currently on works for Keycloak
-                let roles = &claims.extended_claims["resource_access"]["services"]["roles"];
-                if let Some(roles) = roles.as_array() {
-                    roles.iter().filter_map(|v| v.as_str()).collect()
-                } else {
-                    vec![]
-                }
-            }
-        }
-    }
-}
-
-impl FromRequest for UserInformation {
-    type Config = ();
-    type Error = ();
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    fn from_request(req: &HttpRequest, _: &mut Payload<PayloadStream>) -> Self::Future {
-        match req.extensions().get::<UserInformation>() {
-            Some(user) => ready(Ok(user.clone())),
-            None => ready(Ok(UserInformation::Anonymous)),
-        }
-    }
-}
+use drogue_cloud_service_api::auth::user::UserInformation;
 
 pub async fn openid_validator<F>(
     req: ServiceRequest,
@@ -86,7 +29,7 @@ where
     match authenticator.validate_token(token).await {
         Ok(payload) => {
             req.extensions_mut()
-                .insert(UserInformation::Authenticated(payload));
+                .insert(UserInformation::Authenticated(payload.into()));
             Ok(req)
         }
         Err(AuthenticatorError::Missing) => Err(ServiceError::InternalError {
@@ -119,7 +62,7 @@ mod test {
         let payload = token.unverified_payload().unwrap();
 
         println!("Payload: {:#?}", payload);
-        let user = UserInformation::Authenticated(payload);
+        let user = UserInformation::Authenticated(payload.into());
 
         let roles = user.roles();
 

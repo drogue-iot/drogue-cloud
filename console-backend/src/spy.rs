@@ -3,8 +3,7 @@ use actix::clock::{interval_at, Instant};
 use actix_http::http::header::ContentType;
 use actix_web::{get, web, web::Bytes, HttpResponse};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
-use drogue_cloud_service_api::auth::user::authz::AuthorizationRequest;
-use drogue_cloud_service_common::auth::{Identity, UserInformation};
+use drogue_cloud_service_api::auth::user::{authz::AuthorizationRequest, UserInformation};
 use drogue_cloud_service_common::{
     client::UserAuthClient, error::ServiceError, openid::Authenticator,
 };
@@ -34,7 +33,7 @@ pub async fn stream_events(
             .map_err(|_| ServiceError::AuthenticationError)?;
 
         let user_id = user.standard_claims().sub.clone();
-        let roles = UserInformation::Authenticated(user)
+        let roles = UserInformation::Authenticated(user.into())
             .roles()
             .iter()
             .map(ToString::to_string)

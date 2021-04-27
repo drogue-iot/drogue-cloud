@@ -23,6 +23,9 @@ tokio = "1"
 reqwest = "0.11"
 openid = "0.9"
 
+rust_tls = { version = "0.19", package = "rustls", optional = true }
+webpki = { version = "", optional = true }
+
 failure = "0.1" # required for converting error away from failure
 url = "2"
 pem = "0.8"
@@ -51,3 +54,6 @@ drogue-client = "0.5.0-alpha.3"
 [dev-dependencies]
 env_logger = "0.8"
 tokio = { version = "1", features = ["full"] }
+
+[features]
+rustls = ["rust_tls", "webpki"]

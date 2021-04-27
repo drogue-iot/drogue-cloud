@@ -1,0 +1,12 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: console-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: endpoint
+          env:
+            - name: "KEYCLOAK__TLS_NOVERIFY"
+              value: "true"

@@ -1,8 +1,7 @@
 //! Common authn/authz logic
 
 use crate::error::ServiceError;
-use drogue_cloud_service_api::auth::user::authz::Outcome;
-use drogue_cloud_service_common::auth::Identity;
+use drogue_cloud_service_api::auth::user::{authz::Outcome, UserInformation};
 
 /// A resource that can be checked.
 pub trait Resource {
@@ -13,7 +12,7 @@ pub trait Resource {
 ///
 /// Currently, this is a rather simple approach. If the resource has an owner, the owners must match
 /// to grant access.
-pub fn authorize(resource: &dyn Resource, identity: &dyn Identity) -> Outcome {
+pub fn authorize(resource: &dyn Resource, identity: &UserInformation) -> Outcome {
     // if we are "admin", grant access
     if identity.is_admin() {
         return Outcome::Allow;
@@ -33,7 +32,7 @@ pub fn authorize(resource: &dyn Resource, identity: &dyn Identity) -> Outcome {
 ///
 /// This will call [`authorize`] and transform the result into a [`Result`]. It will return
 /// [`ServiceError::NotAuthorized`] in case of [`Outcome::Deny`].
-pub fn ensure(resource: &dyn Resource, identity: &dyn Identity) -> Result<(), ServiceError> {
+pub fn ensure(resource: &dyn Resource, identity: &UserInformation) -> Result<(), ServiceError> {
     ensure_with(resource, identity, || ServiceError::NotAuthorized)
 }
 
@@ -43,7 +42,7 @@ pub fn ensure(resource: &dyn Resource, identity: &dyn Identity) -> Result<(), Se
 /// return value of the function in case of [`Outcome::Deny`].
 pub fn ensure_with<F>(
     resource: &dyn Resource,
-    identity: &dyn Identity,
+    identity: &UserInformation,
     f: F,
 ) -> Result<(), ServiceError>
 where

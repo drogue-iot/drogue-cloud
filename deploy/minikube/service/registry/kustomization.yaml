@@ -5,4 +5,5 @@ bases:
   - ../../../base/service/registry/
 
 patchesStrategicMerge:
+  - deployment-user-auth.yaml
   - service.yaml

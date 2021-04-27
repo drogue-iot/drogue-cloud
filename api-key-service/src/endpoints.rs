@@ -3,7 +3,7 @@ use actix_web::{web, HttpResponse};
 use drogue_cloud_service_api::auth::user::authn::{
     AuthenticationRequest, AuthenticationResponse, Outcome,
 };
-use drogue_cloud_service_common::auth::UserInformation;
+use drogue_cloud_service_api::auth::user::UserInformation;
 use std::ops::Deref;
 
 pub struct WebData<S: ApiKeyService> {
@@ -58,7 +58,7 @@ where
     S: ApiKeyService + 'static,
 {
     let result = match service.delete(&user, prefix.into_inner()).await {
-        Ok(outcome) => Ok(HttpResponse::Ok().json(outcome)),
+        Ok(_) => Ok(HttpResponse::NoContent().finish()),
         Err(e) => Err(e.into()),
     };
 
@@ -74,10 +74,10 @@ where
     S: ApiKeyService + 'static,
 {
     let result = match service.authenticate(&req.user_id, &req.api_key).await {
-        Ok(true) => Ok(HttpResponse::Ok().json(AuthenticationResponse {
-            outcome: Outcome::Known,
+        Ok(Some(details)) => Ok(HttpResponse::Ok().json(AuthenticationResponse {
+            outcome: Outcome::Known(details),
         })),
-        Ok(false) => Ok(HttpResponse::Ok().json(AuthenticationResponse {
+        Ok(None) => Ok(HttpResponse::Ok().json(AuthenticationResponse {
             outcome: Outcome::Unknown,
         })),
         Err(e) => Err(e.into()),

@@ -62,7 +62,7 @@ pub fn registry_url() -> Url {
 
 #[inline]
 pub fn keycloak_url() -> Url {
-    Url::parse("http://keycloak.drogue-iot.svc.cluster.local.").unwrap()
+    Url::parse("http://keycloak.drogue-iot.svc.cluster.local.:8443").unwrap()
 }
 
 #[inline]
