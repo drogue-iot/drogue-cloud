@@ -32,7 +32,7 @@ log = "0.4"
 native-tls = "0.2"
 sha2 = "0.9"
 sha3 = "0.9"
-rustls = { version = "0.19" }
+rustls = "0.19"
 url = "2"
 reqwest = "0.11"
 keycloak = "12"
@@ -48,7 +48,7 @@ thiserror = "1"
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-common = { path = "../service-common", features = ["rustls"] }
 drogue-cloud-registry-events = { path = "../registry-events" }
 
 [dev-dependencies]

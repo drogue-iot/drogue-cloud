@@ -1,20 +1,22 @@
-use crate::data::ApiKeyCreationOptions;
 use crate::{
-    data::{ApiKey, ApiKeyCreated, ApiKeyData},
+    data::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions, ApiKeyData},
     error::Error,
 };
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
-use drogue_cloud_service_common::{auth::Identity, defaults};
+use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
+use drogue_cloud_service_common::{
+    defaults,
+    reqwest::{add_service_cert, make_insecure},
+};
 use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 use serde::Deserialize;
 use serde_json::Value;
-use std::borrow::Cow;
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 use url::Url;
 
-const ATTR_PREFIX: &str = "api_key";
+const ATTR_PREFIX: &str = "api_key_";
 
 #[async_trait]
 pub trait ApiKeyService: Clone {
@@ -22,24 +24,31 @@ pub trait ApiKeyService: Clone {
 
     async fn create(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         opts: ApiKeyCreationOptions,
     ) -> Result<ApiKeyCreated, Self::Error>;
-    async fn delete(&self, identity: &dyn Identity, prefix: String) -> Result<(), Self::Error>;
-    async fn list(&self, identity: &dyn Identity) -> Result<Vec<ApiKey>, Self::Error>;
+    async fn delete(&self, identity: &UserInformation, prefix: String) -> Result<(), Self::Error>;
+    async fn list(&self, identity: &UserInformation) -> Result<Vec<ApiKey>, Self::Error>;
 
-    async fn authenticate(&self, username: &str, password: &str) -> Result<bool, Self::Error>;
+    async fn authenticate(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> Result<Option<UserDetails>, Self::Error>;
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct KeycloakApiKeyServiceConfig {
     #[serde(default = "defaults::keycloak_url")]
-    pub keycloak_url: Url,
+    pub url: Url,
     #[serde(default = "defaults::realm")]
     pub realm: String,
 
     pub admin_username: String,
     pub admin_password: String,
+
+    #[serde(default)]
+    pub tls_noverify: bool,
 }
 
 #[derive(Clone)]
@@ -53,9 +62,17 @@ pub struct KeycloakApiKeyService {
 
 impl KeycloakApiKeyService {
     pub fn new(config: KeycloakApiKeyServiceConfig) -> anyhow::Result<Self> {
+        let mut client = reqwest::ClientBuilder::new();
+
+        if config.tls_noverify {
+            client = make_insecure(client);
+        }
+
+        client = add_service_cert(client)?;
+
         Ok(Self {
-            client: reqwest::Client::new(),
-            url: config.keycloak_url.into_string(),
+            client: client.build()?,
+            url: config.url.into_string().trim_end_matches('/').into(),
             realm: config.realm,
             admin_username: config.admin_username,
             admin_password: config.admin_password,
@@ -84,12 +101,27 @@ impl KeycloakApiKeyService {
         entry: ApiKeyData,
     ) -> Result<(), Error> {
         let key = Self::make_key(prefix);
-        attributes.insert(key, serde_json::to_value(&entry)?);
+        // although the map claims to allow any value, it actually only accepts strings.
+        attributes.insert(key, Value::String(serde_json::to_string(&entry)?));
         Ok(())
     }
 
     fn make_key(prefix: String) -> Cow<'static, str> {
-        Cow::Owned(format!("{}_{}", ATTR_PREFIX, prefix))
+        Cow::Owned(format!("{}{}", ATTR_PREFIX, prefix))
+    }
+
+    /// Decode a keycloak attribute value into an [`ApiKeyData`], if possible.
+    ///
+    /// If the attribute value is of the wrong type, empty, or fails to decide, an error is returned.
+    fn decode_data(value: Value) -> Result<ApiKeyData, Error> {
+        value
+            .as_array()
+            .and_then(|a| a.first())
+            .and_then(Value::as_str)
+            .map_or_else(
+                || Err(Error::NotAuthorized),
+                |str| Ok(serde_json::from_str::<ApiKeyData>(str)?),
+            )
     }
 }
 
@@ -99,7 +131,7 @@ impl ApiKeyService for KeycloakApiKeyService {
 
     async fn create(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         opts: ApiKeyCreationOptions,
     ) -> Result<ApiKeyCreated, Self::Error> {
         let user_id = match identity.user_id() {
@@ -128,12 +160,14 @@ impl ApiKeyService for KeycloakApiKeyService {
             user.attributes = Some(attributes);
         }
 
-        admin.realm_users_post(&self.realm, user).await?;
+        admin
+            .realm_users_with_id_put(&self.realm, user_id, user)
+            .await?;
 
         Ok(key.0)
     }
 
-    async fn delete(&self, identity: &dyn Identity, prefix: String) -> Result<(), Self::Error> {
+    async fn delete(&self, identity: &UserInformation, prefix: String) -> Result<(), Self::Error> {
         let user_id = match identity.user_id() {
             Some(user_id) => user_id,
             None => return Err(Error::NotAuthorized),
@@ -144,20 +178,22 @@ impl ApiKeyService for KeycloakApiKeyService {
         let mut user = admin.realm_users_with_id_get(&self.realm, user_id).await?;
 
         let changed = if let Some(ref mut attributes) = user.attributes {
-            let key = Cow::Owned(format!("{}_{}", ATTR_PREFIX, prefix));
+            let key = Self::make_key(prefix);
             attributes.remove(&key).is_some()
         } else {
             false
         };
 
         if changed {
-            admin.realm_users_post(&self.realm, user).await?;
+            admin
+                .realm_users_with_id_put(&self.realm, user_id, user)
+                .await?;
         }
 
         Ok(())
     }
 
-    async fn list(&self, identity: &dyn Identity) -> Result<Vec<ApiKey>, Self::Error> {
+    async fn list(&self, identity: &UserInformation) -> Result<Vec<ApiKey>, Self::Error> {
         let user_id = match identity.user_id() {
             Some(user_id) => user_id,
             None => return Err(Error::NotAuthorized),
@@ -170,13 +206,18 @@ impl ApiKeyService for KeycloakApiKeyService {
         let keys = if let Some(attributes) = user.attributes {
             let mut keys = Vec::new();
             for (key, value) in attributes {
-                if let Some(prefix) = key.strip_prefix("drg_api_key_") {
-                    if let Ok(data) = serde_json::from_value::<ApiKeyData>(value) {
-                        keys.push(ApiKey {
-                            prefix: prefix.into(),
-                            created: data.created,
-                            description: data.description,
-                        })
+                log::debug!("{}, {:?}", key, value);
+                if let Some(prefix) = key.strip_prefix(ATTR_PREFIX) {
+                    log::debug!("Matches - prefix: {}", prefix);
+                    match Self::decode_data(value) {
+                        Ok(data) => {
+                            keys.push(ApiKey {
+                                prefix: prefix.into(),
+                                created: data.created,
+                                description: data.description,
+                            });
+                        }
+                        or => log::debug!("Value: {:?}", or),
                     }
                 }
             }
@@ -188,36 +229,87 @@ impl ApiKeyService for KeycloakApiKeyService {
         Ok(keys)
     }
 
-    async fn authenticate(&self, username: &str, password: &str) -> Result<bool, Self::Error> {
+    async fn authenticate(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> Result<Option<UserDetails>, Self::Error> {
         // check if the key appears valid (format, checksum, ...)
 
         let prefix = if let Some(prefix) = crate::rng::is_valid(&password) {
             prefix
         } else {
-            return Ok(false);
+            return Ok(None);
         };
 
         // load the user
 
         let admin = self.admin().await?;
         let user = admin
-            .realm_users_with_id_get(&self.realm, &username)
-            .await?;
+            .realm_users_get(
+                &self.realm,
+                None,
+                None,
+                None,
+                Some(true),
+                Some(true),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(username),
+            )
+            .await?
+            .pop();
+
+        log::debug!("Found user: {:?}", user);
+
+        let user = match user {
+            Some(user) => user,
+            None => return Ok(None),
+        };
+
+        let user_id = match user.id {
+            Some(user_id) => user_id,
+            None => return Ok(None),
+        };
 
         // extract the entry
 
         let key = Self::make_key(prefix.to_owned());
+
+        log::debug!("Looking for attribute: {}", key);
+
         let expected_hash = match user.attributes.and_then(|mut a| a.remove(&key)) {
-            Some(attributes) => match serde_json::from_value::<ApiKeyData>(attributes) {
+            Some(value) => match Self::decode_data(value) {
                 Ok(data) => data.hashed_key,
-                Err(_) => return Ok(false),
+                Err(_) => return Ok(None),
             },
-            None => return Ok(false),
+            None => return Ok(None),
         };
 
         // verify the hash
 
-        let actual_hash = crate::rng::hash_key(&password);
-        Ok(actual_hash == expected_hash)
+        log::debug!("Password: {}", password);
+        let provided_hash = crate::rng::hash_key(&password);
+        log::debug!(
+            "Comparing hashes - expected: {}, provided: {}",
+            expected_hash,
+            provided_hash
+        );
+
+        Ok(match provided_hash == expected_hash {
+            true => {
+                let details = UserDetails {
+                    user_id: user_id.into(),
+                    roles: vec![], // FIXME: we should be able to store scopes/roles as well
+                };
+                Some(details)
+            }
+            false => None,
+        })
     }
 }

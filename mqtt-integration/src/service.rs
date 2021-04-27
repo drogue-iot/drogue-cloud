@@ -1,9 +1,16 @@
-use crate::{error::ServerError, mqtt::*, OpenIdClient};
+use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
+use drogue_client::Context;
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
-use drogue_cloud_service_api::auth::user::authz::AuthorizationRequest;
+use drogue_cloud_service_api::auth::user::{
+    authn::{AuthenticationRequest, Outcome},
+    authz::AuthorizationRequest,
+    UserInformation,
+};
 use drogue_cloud_service_common::{
-    auth::Identity, auth::UserInformation, client::UserAuthClient, defaults, openid::Authenticator,
+    client::UserAuthClient,
+    defaults,
+    openid::{Authenticator, AuthenticatorError},
 };
 use futures::StreamExt;
 use ntex::util::{ByteString, Bytes};
@@ -31,7 +38,6 @@ pub struct ServiceConfig {
 pub struct App {
     pub authenticator: Option<Authenticator>,
     pub user_auth: Option<Arc<UserAuthClient>>,
-    pub openid_client: Option<OpenIdClient>,
     pub config: ServiceConfig,
 }
 
@@ -72,30 +78,41 @@ impl App {
         connect: &Connect<'_, Io>,
         auth: &Authenticator,
     ) -> Result<UserInformation, anyhow::Error> {
-        let token = match (connect.credentials(), &self.openid_client) {
-            ((Some(username), Some(password)), Some(openid_client)) => {
+        let token = match (connect.credentials(), &self.user_auth) {
+            ((Some(username), Some(password)), Some(user_auth)) => {
                 log::debug!("Authenticate with username and password");
                 // we have a username and password, and are allowed to test this against SSO
                 let username = username.to_string();
                 let password = String::from_utf8(password.to_vec())?;
 
-                let token = openid_client
-                    .client
-                    .request_token_using_password_credentials(&username, &password, None)
-                    .await?;
-
-                auth.validate_token(&token.access_token).await?
+                match user_auth
+                    .authenticate_api_key(
+                        AuthenticationRequest {
+                            user_id: username,
+                            api_key: password,
+                        },
+                        Context::default(),
+                    )
+                    .await?
+                    .outcome
+                {
+                    Outcome::Known(details) => details,
+                    Outcome::Unknown => {
+                        log::debug!("Unknown API key");
+                        return Err(AuthenticatorError::Failed.into());
+                    }
+                }
             }
             ((Some(username), None), _) => {
                 log::debug!("Authenticate with token (username only)");
                 // username but no username is treated as a token
-                auth.validate_token(&username).await?
+                auth.validate_token(&username).await?.into()
             }
             ((None, Some(password)), _) => {
                 log::debug!("Authenticate with token (password only)");
                 // password but no username is treated as a token
                 let password = String::from_utf8(password.to_vec())?;
-                auth.validate_token(&password).await?
+                auth.validate_token(&password).await?.into()
             }
             _ => {
                 log::debug!("Unknown authentication method");

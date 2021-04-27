@@ -6,6 +6,7 @@ pub use self::config::*;
 pub use authenticator::*;
 pub use sso::*;
 
+use drogue_cloud_service_api::auth::user::UserDetails;
 use openid::{CompactJson, CustomClaims, StandardClaims};
 use serde::{Deserialize, Serialize};
 
@@ -24,3 +25,24 @@ impl CustomClaims for ExtendedClaims {
 }
 
 impl CompactJson for ExtendedClaims {}
+
+impl From<ExtendedClaims> for UserDetails {
+    fn from(claims: ExtendedClaims) -> Self {
+        // TODO: This currently on works for Keycloak
+        let roles = &claims.extended_claims["resource_access"]["services"]["roles"];
+        let roles = if let Some(roles) = roles.as_array() {
+            roles
+                .into_iter()
+                .filter_map(|v| v.as_str())
+                .map(Into::into)
+                .collect()
+        } else {
+            vec![]
+        };
+
+        Self {
+            user_id: claims.standard_claims.sub,
+            roles,
+        }
+    }
+}

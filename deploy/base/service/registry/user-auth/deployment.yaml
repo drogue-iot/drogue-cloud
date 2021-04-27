@@ -48,6 +48,10 @@ spec:
               value: 0.0.0.0:8080
             - name: HEALTH__BIND_ADDR
               value: "0.0.0.0:9090"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             - name: SERVICE__PG__HOST
               value: postgres
             - name: SERVICE__PG__DBNAME
@@ -75,6 +79,18 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
+            - name: KEYCLOAK__URL
+              value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443
+            - name: KEYCLOAK__ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_USERNAME
+                  name: credential-sso
+            - name: KEYCLOAK__ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_PASSWORD
+                  name: credential-sso
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

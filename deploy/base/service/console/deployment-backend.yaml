@@ -108,6 +108,18 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
+            - name: KEYCLOAK__URL
+              value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443
+            - name: KEYCLOAK__ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_USERNAME
+                  name: credential-sso
+            - name: KEYCLOAK__ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_PASSWORD
+                  name: credential-sso
             - name: LOCAL_CERTS
               value: "true"
           ports:

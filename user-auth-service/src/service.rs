@@ -4,11 +4,11 @@ use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     auth::authorize, error::ServiceError, models::app::*, DatabaseService,
 };
+use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
 use drogue_cloud_service_api::{
     auth::user::authz::{AuthorizationRequest, Outcome},
     health::{HealthCheckError, HealthChecked},
 };
-use drogue_cloud_service_common::auth::Identity;
 use serde::Deserialize;
 use tokio_postgres::NoTls;
 
@@ -54,13 +54,12 @@ impl PostgresAuthorizationService {
 
 struct Context(pub AuthorizationRequest);
 
-impl Identity for Context {
-    fn user_id(&self) -> Option<&str> {
-        Some(self.0.user_id.as_str())
-    }
-
-    fn roles(&self) -> Vec<&str> {
-        self.0.roles.iter().map(AsRef::as_ref).collect()
+impl From<Context> for UserInformation {
+    fn from(ctx: Context) -> Self {
+        Self::Authenticated(UserDetails {
+            user_id: ctx.0.user_id,
+            roles: ctx.0.roles,
+        })
     }
 }
 
@@ -83,7 +82,7 @@ impl AuthorizationService for PostgresAuthorizationService {
 
         log::debug!("Found application: {:?}", application.name);
 
-        let outcome = authorize(&application, &Context(request));
+        let outcome = authorize(&application, &Context(request).into());
 
         log::debug!("Authorization outcome: {:?}", outcome);
 

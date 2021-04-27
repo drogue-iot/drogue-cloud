@@ -19,7 +19,7 @@ pub fn spec(req: HttpRequest, client: web::Data<OpenIdClient>) -> anyhow::Result
 
     let url = client.client.config().authorization_endpoint.clone();
 
-    api["security"] = json!({"Drogue Cloud SSO": []});
+    api["security"] = json!([{"Drogue Cloud SSO": []}]);
     api["components"]["securitySchemes"] = json!({
         "Drogue Cloud SSO": {
             "type": "oauth2",

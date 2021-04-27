@@ -1,5 +1,5 @@
-use crate::openid::ExtendedClaims;
-use crate::{config::ConfigFromEnv, defaults};
+use crate::reqwest::add_service_cert;
+use crate::{config::ConfigFromEnv, defaults, openid::ExtendedClaims};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use failure::Fail;
@@ -7,13 +7,10 @@ use futures::{stream, StreamExt, TryStreamExt};
 use openid::{
     biscuit::jws::Compact, Claims, Client, CompactJson, Configurable, Discovered, Empty, Jws,
 };
-use reqwest::Certificate;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs::File, io::Read, path::Path};
+use std::collections::HashMap;
 use thiserror::Error;
 use url::Url;
-
-const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthenticatorConfig {
@@ -244,38 +241,6 @@ pub async fn create_client<C: ClientConfig, P: CompactJson + Claims>(
     .map_err(|err| anyhow::Error::from(err.compat()))?;
 
     log::info!("Discovered OpenID: {:#?}", client.config());
-
-    Ok(client)
-}
-
-fn add_service_cert(mut client: reqwest::ClientBuilder) -> anyhow::Result<reqwest::ClientBuilder> {
-    let cert = Path::new(SERVICE_CA_CERT);
-    if cert.exists() {
-        log::info!("Adding root certificate: {}", SERVICE_CA_CERT);
-        let mut file = File::open(cert)?;
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf)?;
-
-        let pems = pem::parse_many(buf);
-        let pems = pems
-            .into_iter()
-            .map(|pem| {
-                Certificate::from_pem(&pem::encode(&pem).into_bytes()).map_err(|err| err.into())
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
-
-        log::info!("Found {} certificates", pems.len());
-
-        for pem in pems {
-            log::info!("Adding root certificate: {:?}", pem);
-            client = client.add_root_certificate(pem);
-        }
-    } else {
-        log::info!(
-            "Service CA certificate does not exist, skipping! ({})",
-            SERVICE_CA_CERT
-        );
-    }
 
     Ok(client)
 }

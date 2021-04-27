@@ -79,20 +79,8 @@ async fn main() -> anyhow::Result<()> {
 
     // set up security
 
-    let (openid_client, authenticator, user_auth) = if enable_auth {
+    let (authenticator, user_auth) = if enable_auth {
         let client = reqwest::Client::new();
-        let openid_client = match config.service.enable_username_password_auth {
-            true => {
-                let openid_client = TokenConfig::from_env_prefix("SERVICE")?
-                    .amend_with_env()
-                    .into_client(client.clone(), None)
-                    .await?;
-                Some(OpenIdClient {
-                    client: openid_client,
-                })
-            }
-            false => None,
-        };
         let authenticator = Authenticator::new().await?;
         let user_auth = Arc::new(
             UserAuthClient::from_config(
@@ -102,9 +90,9 @@ async fn main() -> anyhow::Result<()> {
             )
             .await?,
         );
-        (openid_client, Some(authenticator), Some(user_auth))
+        (Some(authenticator), Some(user_auth))
     } else {
-        (None, None, None)
+        (None, None)
     };
 
     // creating the application
@@ -112,7 +100,6 @@ async fn main() -> anyhow::Result<()> {
     let app = service::App {
         authenticator,
         user_auth,
-        openid_client,
         config: config.service.clone(),
     };
 

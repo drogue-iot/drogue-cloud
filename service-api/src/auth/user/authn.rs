@@ -1,3 +1,4 @@
+use crate::auth::user::UserDetails;
 use serde::{Deserialize, Serialize};
 
 /// Authenticate a user using a password request.
@@ -16,6 +17,6 @@ pub struct AuthenticationResponse {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Outcome {
-    Known,
+    Known(UserDetails),
     Unknown,
 }

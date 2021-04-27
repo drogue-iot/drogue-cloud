@@ -7,7 +7,8 @@ use drogue_cloud_database_common::{
     Client,
 };
 use drogue_cloud_registry_events::Event;
-use drogue_cloud_service_common::auth::UserInformation;
+use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_common::openid::ExtendedClaims;
 use futures::TryStreamExt;
 use log::LevelFilter;
 
@@ -53,7 +54,7 @@ macro_rules! test {
                     use actix_web::dev::Service;
                     use actix_web::HttpMessage;
                     {
-                        let user : Option<&drogue_cloud_service_common::auth::UserInformation> = req.app_data();
+                        let user : Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
                         if let Some(user) = user {
                             log::warn!("Replacing user with test-user: {:?}", user);
                             req.extensions_mut().insert(user.clone());
@@ -136,7 +137,7 @@ where
 pub fn user(id: &str) -> UserInformation {
     use serde_json::json;
 
-    let claims = serde_json::from_value(json!({
+    let claims: ExtendedClaims = serde_json::from_value(json!({
         "sub": id,
         "iss": "drogue:iot:test",
         "aud": "drogue",
@@ -145,7 +146,7 @@ pub fn user(id: &str) -> UserInformation {
     }))
     .unwrap();
 
-    UserInformation::Authenticated(claims)
+    UserInformation::Authenticated(claims.into())
 }
 
 #[allow(dead_code)]

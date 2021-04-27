@@ -6,7 +6,7 @@ use crate::{
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_client::registry;
 use drogue_cloud_registry_events::EventSender;
-use drogue_cloud_service_common::auth::UserInformation;
+use drogue_cloud_service_api::auth::user::UserInformation;
 
 pub async fn create<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
