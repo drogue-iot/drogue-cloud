@@ -128,7 +128,7 @@ async fn main() -> anyhow::Result<()> {
 
         let app = App::new()
             .wrap(middleware::Logger::default())
-            .wrap(Cors::default().allow_any_header().allow_any_method().allow_any_origin().expose_any_header().send_wildcard())
+            .wrap(Cors::permissive())
             .data(web::JsonConfig::default().limit(4096))
             .data(app_config.clone());
 
