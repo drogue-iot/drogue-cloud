@@ -1,5 +1,3 @@
-mod sender;
-
 use actix_web::{
     get,
     http::header,
@@ -8,11 +6,9 @@ use actix_web::{
 };
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use dotenv::dotenv;
-use drogue_client::{registry, Context, Translator};
-use drogue_cloud_endpoint_common::{
-    downstream::{self, DownstreamSender},
-    error::HttpEndpointError,
-};
+use drogue_client::{registry, Context};
+use drogue_cloud_endpoint_common::{downstream::DownstreamSender, error::HttpEndpointError};
+use drogue_cloud_integration_common::{self, commands::CommandOptions};
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
@@ -43,15 +39,6 @@ struct Config {
 
 fn registry_service_url() -> String {
     "http://registry:8080".into()
-}
-
-#[derive(Deserialize)]
-pub struct CommandOptions {
-    pub application: String,
-    pub device: String,
-
-    pub command: String,
-    pub timeout: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -96,7 +83,7 @@ async fn command(
                 .get(header::CONTENT_TYPE)
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.to_string());
-            process_command(
+            drogue_cloud_integration_common::commands::process_command(
                 device_gateways.0,
                 device_gateways.1,
                 &sender,
@@ -112,64 +99,6 @@ async fn command(
             Ok(HttpResponse::NotAcceptable().finish())
         }
     }
-}
-
-async fn process_command(
-    device: registry::v1::Device,
-    gateways: Vec<registry::v1::Device>,
-    sender: &DownstreamSender,
-    content_type: Option<String>,
-    opts: CommandOptions,
-    body: web::Bytes,
-) -> Result<HttpResponse, HttpEndpointError> {
-    if !device.attribute::<registry::v1::DeviceEnabled>() {
-        return Ok(HttpResponse::NotAcceptable().finish());
-    }
-
-    for gateway in gateways {
-        if !gateway.attribute::<registry::v1::DeviceEnabled>() {
-            continue;
-        }
-
-        if let Some(command) = gateway.attribute::<registry::v1::Commands>().pop() {
-            return match command {
-                registry::v1::Command::External(endpoint) => {
-                    log::debug!("Sending to external command endpoint {:?}", endpoint);
-
-                    let ctx = sender::Context {
-                        device_id: device.metadata.name,
-                        client: sender.client.clone(),
-                    };
-
-                    match sender::send_to_external(ctx, endpoint, opts, body).await {
-                        Ok(_) => Ok(HttpResponse::Ok().finish()),
-                        Err(err) => {
-                            log::info!("Failed to process external command: {}", err);
-                            Ok(HttpResponse::NotAcceptable().finish())
-                        }
-                    }
-                }
-            };
-        }
-    }
-
-    // no hits so far
-
-    sender
-        .publish_http_default(
-            downstream::Publish {
-                channel: opts.command,
-                app_id: opts.application,
-                device_id: opts.device,
-                options: downstream::PublishOptions {
-                    topic: None,
-                    content_type,
-                    ..Default::default()
-                },
-            },
-            body,
-        )
-        .await
 }
 
 #[actix_web::main]

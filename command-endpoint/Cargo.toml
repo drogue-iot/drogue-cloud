@@ -38,6 +38,7 @@ cloudevents-sdk-actix-web = "0.4"
 cloudevents-sdk-reqwest = "0.4"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-integration-common = { path = "../integration-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 
