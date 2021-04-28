@@ -79,6 +79,8 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
+            - name: KEYCLOAK__URL
+              value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443
             - name: KEYCLOAK__ADMIN_USERNAME
               valueFrom:
                 secretKeyRef:
