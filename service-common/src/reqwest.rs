@@ -8,7 +8,7 @@ pub fn add_service_cert(
 ) -> anyhow::Result<reqwest::ClientBuilder> {
     let cert = Path::new(SERVICE_CA_CERT);
     if cert.exists() {
-        log::info!("Adding root certificate: {}", SERVICE_CA_CERT);
+        log::info!("Adding root certificate: {:?}", cert);
         let mut file = File::open(cert)?;
         let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;
@@ -23,14 +23,17 @@ pub fn add_service_cert(
 
         log::info!("Found {} certificates", pems.len());
 
+        // we need rustls for adding root certificates
+        client = client.use_rustls_tls();
+
         for pem in pems {
             log::info!("Adding root certificate: {:?}", pem);
             client = client.add_root_certificate(pem);
         }
     } else {
         log::info!(
-            "Service CA certificate does not exist, skipping! ({})",
-            SERVICE_CA_CERT
+            "Service CA certificate does not exist, skipping! ({:?})",
+            cert
         );
     }
 
