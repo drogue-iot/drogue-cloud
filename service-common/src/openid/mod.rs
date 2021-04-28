@@ -1,6 +1,7 @@
 mod authenticator;
 mod config;
 mod sso;
+mod validate;
 
 pub use self::config::*;
 pub use authenticator::*;

@@ -190,21 +190,17 @@ impl Authenticator {
 
         log::debug!("Using client: {}", client.client_id);
 
-        //std::panic::catch_unwind(|| {
-        // Decode_token may panic if an unsupported algorithm is used. As that maybe user input,
+        // decode_token may panic if an unsupported algorithm is used. As that maybe user input,
         // that could mean that a user could trigger a panic in this code. However, to us
         // an unsupported algorithm simply means we reject the authentication.
         client.decode_token(&mut token).map_err(|err| {
-                log::debug!("Failed to decode token: {}", err);
-                AuthenticatorError::Failed
-            })?
-        //})
-        //.map_err(|_| AuthenticatorError::Failed)??; // double '?' yes, 'catch_unwind' returns Result<Result<_>> here
-        ;
+            log::debug!("Failed to decode token: {}", err);
+            AuthenticatorError::Failed
+        })?;
 
         log::debug!("Token: {:#?}", token);
 
-        client.validate_token(&token, None, None).map_err(|err| {
+        super::validate::validate_token(&client, &token, None).map_err(|err| {
             log::info!("Validation failed: {}", err);
             AuthenticatorError::Failed
         })?;
