@@ -364,19 +364,13 @@ impl Session {
             log::info!("Invalid topic name {:?}", topic);
             Err(ServerError::UnsupportedOperation)
         } else {
-            let (app, device, command) = { (topic[1], topic[2], topic[3]) };
+            let (app, device, command) = (topic[1], topic[2], topic[3]);
 
             log::info!("Sending command {:?} to {:?}/{:?}", command, app, device);
 
             let response = self
                 .registry
-                .get_device_and_gateways(
-                    &app,
-                    &device,
-                    Context {
-                        provided_token: self.token.clone(),
-                    },
-                )
+                .get_device_and_gateways(&app, &device, Context::default())
                 .await;
 
             match response {
