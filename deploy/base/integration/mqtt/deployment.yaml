@@ -33,9 +33,6 @@ spec:
             - mountPath: /etc/client-secret
               name: client-secret
               readOnly: true
-          env:
-            - name: K_CE_OVERRIDES
-              value: ""
       containers:
         - name: service
           image: ghcr.io/drogue-iot/mqtt-integration:latest
@@ -92,8 +89,6 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
-            - name: K_CE_OVERRIDES
-              value: ""
           ports:
             - containerPort: 8883
               name: service
