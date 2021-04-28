@@ -360,7 +360,8 @@ impl Session {
     pub async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError> {
         let topic = publish.topic().path().split('/').collect::<Vec<_>>();
 
-        if topic.len() != 4 {
+        if topic.len() != 4 || !topic[0].eq_ignore_ascii_case("command") {
+            log::info!("Invalid topic name {:?}", topic);
             Err(ServerError::UnsupportedOperation)
         } else {
             let (app, device, command) = { (topic[1], topic[2], topic[3]) };
