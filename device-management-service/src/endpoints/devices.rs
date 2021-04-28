@@ -120,3 +120,29 @@ where
 
     Ok(result)
 }
+
+pub async fn list<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
+    path: web::Path<String>,
+    user: UserInformation,
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender + Clone,
+{
+    let app_id = path.into_inner();
+
+    log::debug!("Listing devices: '{}' ", app_id);
+
+    if app_id.is_empty() {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    let devices = data.service.list_devices(&user, &app_id).await?;
+
+    let result = match devices {
+        None => HttpResponse::NotFound().finish(),
+        Some(device) => HttpResponse::Ok().json(device),
+    };
+
+    Ok(result)
+}

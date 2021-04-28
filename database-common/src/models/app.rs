@@ -9,6 +9,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use drogue_client::{meta, registry};
+use futures::StreamExt;
 use serde_json::{Map, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{types::Json, Row};
@@ -90,6 +91,9 @@ pub trait ApplicationAccessor {
 
     /// Get an application
     async fn get(&self, app: &str, lock: Lock) -> Result<Option<Application>, ServiceError>;
+
+    /// Get a list of applications
+    async fn list(&self, lock: Lock) -> Result<Vec<Application>, ServiceError>;
 
     /// Create a new application
     async fn create(
@@ -239,6 +243,46 @@ FROM APPLICATIONS
             .transpose()?;
 
         Ok(result)
+    }
+
+    async fn list(&self, lock: Lock) -> Result<Vec<Application>, ServiceError> {
+        let mut stream = self
+            .client
+            .query_raw(
+                format!(
+                    r#"
+SELECT
+    NAME,
+    UID,
+    LABELS,
+    ANNOTATIONS,
+    CREATION_TIMESTAMP,
+    GENERATION,
+    RESOURCE_VERSION,
+    DELETION_TIMESTAMP,
+    FINALIZERS,
+    OWNER,
+    DATA
+FROM APPLICATIONS
+{for_update}
+"#,
+                    for_update = lock.to_string()
+                )
+                .as_str(),
+                &[""],
+            )
+            .await
+            .map_err(|err| {
+                log::debug!("Failed to get: {}", err);
+                err
+            })?;
+
+        let apps = stream.collect().await;
+
+        apps.map;
+        let apps = stream.map(Self::from_row).collect().await;
+
+        Ok(apps)
     }
 
     async fn create(
