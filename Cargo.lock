@@ -929,6 +929,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "config"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b1b9d958c2b1368a663f05538fc1b5975adce1e19f435acceae987aceeeb369"
+dependencies = [
+ "lazy_static",
+ "nom 5.1.2",
+ "rust-ini",
+ "serde 1.0.124",
+ "serde-hjson",
+ "serde_json",
+ "toml",
+ "yaml-rust",
+]
+
+[[package]]
 name = "console_error_panic_hook"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1176,7 +1192,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d126179d86aee4556e54f5f3c6bf6d9884e7cc52cef82f77ee6f90a7747616d"
 dependencies = [
  "async-trait",
- "config",
+ "config 0.10.1",
  "crossbeam-queue",
  "num_cpus",
  "serde 1.0.124",
@@ -1190,7 +1206,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5452506f60a0ceca624c4becc948f9f0ae67f35fc0ae471b9dcb841d110cf70a"
 dependencies = [
  "async-trait",
- "config",
+ "config 0.10.1",
  "deadpool",
  "futures",
  "log",
@@ -1340,7 +1356,7 @@ dependencies = [
  "async-trait",
  "base62",
  "chrono",
- "config",
+ "config 0.10.1",
  "crc",
  "dotenv",
  "drogue-cloud-database-common",
@@ -1383,7 +1399,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "config",
+ "config 0.10.1",
  "deadpool",
  "deadpool-postgres",
  "dotenv",
@@ -1425,7 +1441,7 @@ dependencies = [
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
- "config",
+ "config 0.10.1",
  "dotenv",
  "drogue-client",
  "drogue-cloud-endpoint-common",
@@ -1468,7 +1484,6 @@ dependencies = [
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
- "envconfig",
  "failure",
  "futures",
  "log",
@@ -1567,7 +1582,7 @@ dependencies = [
  "async-trait",
  "base64 0.13.0",
  "chrono",
- "config",
+ "config 0.10.1",
  "deadpool",
  "deadpool-postgres",
  "dotenv",
@@ -1613,11 +1628,11 @@ dependencies = [
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
  "cloudevents-sdk-reqwest",
+ "config 0.11.0",
  "drogue-client",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
- "envconfig",
  "futures",
  "futures-core",
  "futures-util",
@@ -1652,7 +1667,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
- "config",
+ "config 0.10.1",
  "dotenv",
  "drogue-client",
  "drogue-cloud-endpoint-common",
@@ -1660,7 +1675,6 @@ dependencies = [
  "drogue-cloud-service-common",
  "drogue-ttn",
  "env_logger 0.7.1",
- "envconfig",
  "futures",
  "futures-core",
  "futures-util",
@@ -1723,7 +1737,6 @@ dependencies = [
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
- "envconfig",
  "futures",
  "futures-core",
  "futures-util",
@@ -1798,7 +1811,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
- "config",
+ "config 0.10.1",
  "deadpool",
  "deadpool-postgres",
  "dotenv",
@@ -1879,7 +1892,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "cloudevents-sdk 0.4.0",
- "config",
+ "config 0.10.1",
  "drogue-client",
  "drogue-cloud-service-api",
  "env_logger 0.8.3",
@@ -1932,7 +1945,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
- "config",
+ "config 0.10.1",
  "dotenv",
  "drogue-client",
  "drogue-cloud-database-common",
@@ -1971,7 +1984,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "config",
+ "config 0.10.1",
  "deadpool",
  "deadpool-postgres",
  "dotenv",
@@ -2083,26 +2096,6 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
-]
-
-[[package]]
-name = "envconfig"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c0ef0470da909709515ab175d5d12f1b20932f758f731589e1ff198561ab9ca"
-dependencies = [
- "envconfig_derive",
-]
-
-[[package]]
-name = "envconfig_derive"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ca7511366e70d25663dbc2501911beae6064d51687214794efd2d8f5ad73440"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

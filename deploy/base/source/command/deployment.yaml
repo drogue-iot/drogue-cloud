@@ -58,8 +58,6 @@ spec:
               value: "0.0.0.0:8080"
             - name: HEALTH__BIND_ADDR
               value: "0.0.0.0:9090"
-            - name: REGISTRY_SERVICE_URL
-              value: http://registry:8080
             - name: INSTANCE
               valueFrom:
                 configMapKeyRef:
@@ -81,6 +79,16 @@ spec:
                   name: keycloak-client-secret-services
                   key: CLIENT_ID
             - name: OAUTH__SERVICES__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
+            - name: REGISTRY__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: REGISTRY__CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: keycloak-client-secret-services

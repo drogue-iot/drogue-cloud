@@ -23,7 +23,6 @@ use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
 };
-use envconfig::Envconfig;
 use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
@@ -57,6 +56,9 @@ struct Config {
 
     #[serde(default)]
     pub health: HealthServerConfig,
+
+    #[serde(default)]
+    pub command: CommandServerConfig,
 }
 
 #[get("/")]
@@ -148,8 +150,7 @@ async fn main() -> anyhow::Result<()> {
 
     let http_server = http_server.run();
 
-    let mut command_server =
-        CommandServer::new(CommandServerConfig::init_from_env()?, commands.clone())?;
+    let mut command_server = CommandServer::new(config.command, commands.clone())?;
 
     // health server
 

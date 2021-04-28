@@ -44,8 +44,6 @@ spec:
               value: "0.0.0.0:8080"
             - name: HEALTH__BIND_ADDR
               value: "0.0.0.0:9090"
-            - name: AUTH_SERVICE_URL
-              value: http://authentication-service:8080
             - name: DISABLE_TLS
               value: "true"
             - name: INSTANCE

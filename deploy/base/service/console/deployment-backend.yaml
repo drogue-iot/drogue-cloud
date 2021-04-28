@@ -96,8 +96,6 @@ spec:
                   fieldPath: metadata.namespace
             - name: KAFKA_TOPIC
               value: knative-messaging-kafka.$(NAMESPACE).iot-channel
-            - name: USER_AUTH__URL
-              value: http://user-auth-service.$(NAMESPACE).svc.cluster.local.
             - name: USER_AUTH__CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -108,8 +106,6 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
-            - name: KEYCLOAK__URL
-              value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443
             - name: KEYCLOAK__ADMIN_USERNAME
               valueFrom:
                 secretKeyRef:

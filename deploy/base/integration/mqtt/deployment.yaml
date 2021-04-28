@@ -48,8 +48,6 @@ spec:
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
               value: /etc/endpoint/tls.key
-            - name: AUTH_SERVICE_URL
-              value: http://authentication-service:8080
             - name: INSTANCE
               valueFrom:
                 configMapKeyRef:
@@ -81,8 +79,16 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
-            - name: USER_AUTH__URL
-              value: http://user-auth-service.$(NAMESPACE).svc.cluster.local.
+            - name: REGISTRY__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: REGISTRY__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
           ports:
             - containerPort: 8883
               name: service

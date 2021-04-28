@@ -51,18 +51,23 @@ pub fn oauth2_scopes() -> String {
 }
 
 #[inline]
+pub fn authentication_url() -> Url {
+    Url::parse("http://authentication-service").unwrap()
+}
+
+#[inline]
 pub fn user_auth_url() -> Url {
-    Url::parse("http://user-auth-service.drogue-iot.svc.cluster.local.").unwrap()
+    Url::parse("http://user-auth-service").unwrap()
 }
 
 #[inline]
 pub fn registry_url() -> Url {
-    Url::parse("http://registry.drogue-iot.svc.cluster.local.").unwrap()
+    Url::parse("http://registry").unwrap()
 }
 
 #[inline]
 pub fn keycloak_url() -> Url {
-    Url::parse("http://keycloak.drogue-iot.svc.cluster.local.:8443").unwrap()
+    Url::parse("https://keycloak:8443").unwrap()
 }
 
 #[inline]

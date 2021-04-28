@@ -9,6 +9,7 @@ use dotenv::dotenv;
 use drogue_client::{registry, Context};
 use drogue_cloud_endpoint_common::{downstream::DownstreamSender, error::HttpEndpointError};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
+use drogue_cloud_service_common::openid::TokenConfig;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
@@ -30,15 +31,26 @@ struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[serde(default = "registry_service_url")]
-    pub registry_service_url: String,
+
+    #[serde(default)]
+    pub registry: RegistryConfig,
 
     #[serde(default)]
     pub health: HealthServerConfig,
 }
 
-fn registry_service_url() -> String {
-    "http://registry:8080".into()
+#[derive(Clone, Debug, Deserialize)]
+pub struct RegistryConfig {
+    #[serde(default = "defaults::registry_url")]
+    pub url: Url,
+}
+
+impl Default for RegistryConfig {
+    fn default() -> Self {
+        Self {
+            url: defaults::registry_url(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -123,10 +135,17 @@ async fn main() -> anyhow::Result<()> {
 
     let data = web::Data::new(WebData { authenticator });
 
+    let client = reqwest::Client::new();
+
     let registry = registry::v1::Client::new(
-        Default::default(),
-        Url::parse(&config.registry_service_url)?,
-        None,
+        client.clone(),
+        config.registry.url,
+        Some(
+            TokenConfig::from_env_prefix("REGISTRY")?
+                .amend_with_env()
+                .discover_from(client)
+                .await?,
+        ),
     );
 
     // health server

@@ -39,8 +39,9 @@ pub struct Config {
     pub key_file: Option<String>,
     #[serde(default)]
     pub bind_addr_mqtt: Option<String>,
-    #[serde(default = "registry_service_url")]
-    pub registry_service_url: String,
+
+    #[serde(default)]
+    pub registry: RegistryConfig,
 
     pub max_size: Option<u32>,
 
@@ -51,8 +52,18 @@ pub struct Config {
     pub health: HealthServerConfig,
 }
 
-fn registry_service_url() -> String {
-    "http://registry:8080".into()
+#[derive(Clone, Debug, Deserialize)]
+pub struct RegistryConfig {
+    #[serde(default = "defaults::registry_url")]
+    pub url: Url,
+}
+
+impl Default for RegistryConfig {
+    fn default() -> Self {
+        Self {
+            url: defaults::registry_url(),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -104,10 +115,17 @@ async fn main() -> anyhow::Result<()> {
         (None, None)
     };
 
+    let client = reqwest::Client::new();
+
     let registry = registry::v1::Client::new(
-        Default::default(),
-        Url::parse(&config.registry_service_url)?,
-        None,
+        client.clone(),
+        config.registry.url,
+        Some(
+            TokenConfig::from_env_prefix("REGISTRY")?
+                .amend_with_env()
+                .discover_from(client)
+                .await?,
+        ),
     );
     let sender = DownstreamSender::new()?;
 

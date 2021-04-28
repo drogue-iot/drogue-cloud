@@ -40,6 +40,8 @@ spec:
           env:
             - name: RUST_LOG
               value: debug
+            - name: RUST_BACKTRACE
+              value: "1"
             - name: BIND_ADDR_MQTT
               value: "0.0.0.0:8883"
             - name: BIND_ADDR_HTTP
@@ -50,8 +52,6 @@ spec:
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE
               value: /etc/endpoint/tls.key
-            - name: AUTH_SERVICE_URL
-              value: http://authentication-service:8080
             - name: INSTANCE
               valueFrom:
                 configMapKeyRef:

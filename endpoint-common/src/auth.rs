@@ -4,15 +4,13 @@ use actix_web::{
     {FromRequest, HttpRequest},
 };
 use anyhow::Context;
-use drogue_client::error::ClientError;
-use drogue_client::registry;
+use drogue_client::{error::ClientError, registry};
 use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, Credential,
 };
 use drogue_cloud_service_common::{
-    client::ReqwestAuthenticatorClient, config::ConfigFromEnv, openid::TokenConfig,
+    client::ReqwestAuthenticatorClient, config::ConfigFromEnv, defaults, openid::TokenConfig,
 };
-use envconfig::Envconfig;
 use futures::future::{err, ok, Ready};
 use http::HeaderValue;
 use reqwest::Url;
@@ -20,15 +18,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use x509_parser::prelude::X509Certificate;
 
-#[derive(Clone, Debug, Envconfig)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct AuthConfig {
     /// Disable authenticating towards the authentication service.
-    #[envconfig(from = "AUTH_CLIENT_DISABLE_AUTH", default = "false")]
+    #[serde(default)]
     pub auth_disabled: bool,
 
     /// The URL of the authentication service.
-    #[envconfig(from = "AUTH_SERVICE_URL")]
-    pub auth_service_url: String,
+    #[serde(default = "defaults::authentication_url")]
+    pub auth_service_url: Url,
 }
 
 #[derive(Clone, Debug)]
@@ -47,11 +45,8 @@ impl DeviceAuthenticator {
         config: AuthConfig,
         token_config: Option<TokenConfig>,
     ) -> anyhow::Result<Self> {
-        let url: Url = config
+        let url = config
             .auth_service_url
-            .parse()
-            .context("Failed to parse URL for auth service")?;
-        let url = url
             .join("/api/v1/auth")
             .context("Failed to build auth URL from base URL")?;
 
@@ -78,7 +73,7 @@ impl DeviceAuthenticator {
 
     /// Create a new authentication client by using configuration from the environment.
     pub async fn new() -> anyhow::Result<Self> {
-        let config: AuthConfig = AuthConfig::init_from_env()?;
+        let config: AuthConfig = AuthConfig::from_env()?;
 
         let token_config = match config.auth_disabled {
             false => Some(TokenConfig::from_env()?),

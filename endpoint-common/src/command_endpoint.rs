@@ -1,19 +1,34 @@
 use crate::commands::{Command, Commands};
-use actix_web::dev::Server;
-use actix_web::{middleware, post, web, App, HttpResponse, HttpServer};
+use actix_web::{dev::Server, middleware, post, web, App, HttpResponse, HttpServer};
 use cloudevents_sdk_actix_web::HttpRequestExt;
-use envconfig::Envconfig;
+use drogue_cloud_service_common::defaults;
+use serde::Deserialize;
 use std::convert::TryFrom;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Envconfig, Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct CommandServerConfig {
-    #[envconfig(from = "COMMAND_BIND_ADDR", default = "0.0.0.0:8081")]
+    #[serde(default = "bind_addr")]
     pub bind_addr: String,
-    #[envconfig(from = "COMMAND_MAX_PAYLOAD_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_payload_size")]
     pub max_payload_size: usize,
-    #[envconfig(from = "COMMAND_MAX_JSON_SIZE", default = "65536")]
+    #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_size: usize,
+}
+
+impl Default for CommandServerConfig {
+    fn default() -> Self {
+        Self {
+            bind_addr: bind_addr(),
+            max_payload_size: defaults::max_payload_size(),
+            max_json_size: defaults::max_json_payload_size(),
+        }
+    }
+}
+
+#[inline]
+fn bind_addr() -> String {
+    "0.0.0.0:8081".into()
 }
 
 pub struct CommandServer {
