@@ -46,6 +46,10 @@ pub trait ManagementService: Clone {
         identity: &UserInformation,
         name: &str,
     ) -> Result<Option<registry::v1::Application>, Self::Error>;
+    async fn list_apps(
+        &self,
+        identity: &dyn Identity,
+    ) -> Result<Option<Vec<registry::v1::Application>>, Self::Error>;
     async fn update_app(
         &self,
         identity: &UserInformation,
@@ -69,6 +73,11 @@ pub trait ManagementService: Clone {
         app: &str,
         name: &str,
     ) -> Result<Option<registry::v1::Device>, Self::Error>;
+    async fn list_devices(
+        &self,
+        identity: &dyn Identity,
+        app: &str,
+    ) -> Result<Option<Vec<registry::v1::Device>>, Self::Error>;
     async fn update_device(
         &self,
         identity: &UserInformation,
@@ -455,6 +464,23 @@ where
         Ok(app.map(Into::into))
     }
 
+    async fn list_apps(
+        &self,
+        identity: &dyn Identity,
+    ) -> Result<Option<Vec<Application>>, Self::Error> {
+        let c = self.pool.get().await?;
+
+        let app = PostgresApplicationAccessor::new(&c)
+            .get(name, Lock::None)
+            .await?;
+
+        if let Some(app) = &app {
+            ensure(app, identity)?;
+        }
+
+        Ok(app.map(Into::into))
+    }
+
     async fn update_app(
         &self,
         identity: &UserInformation,
@@ -654,6 +680,28 @@ where
         app_id: &str,
         device_id: &str,
     ) -> Result<Option<registry::v1::Device>, Self::Error> {
+        let c = self.pool.get().await?;
+
+        let app = PostgresApplicationAccessor::new(&c)
+            .get(app_id, Lock::None)
+            .await?
+            .ok_or(ServiceError::NotFound)?;
+
+        // ensure we have access, but don't confirm the device if we don't
+        ensure_with(&app, identity, || ServiceError::NotFound)?;
+
+        let device = PostgresDeviceAccessor::new(&c)
+            .get(app_id, device_id, Lock::None)
+            .await?;
+
+        Ok(device.map(Into::into))
+    }
+
+    async fn list_devices(
+        &self,
+        identity: &dyn Identity,
+        app_id: &str,
+    ) -> Result<Option<Vec<Device>>, Self::Error> {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)

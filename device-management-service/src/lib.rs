@@ -33,10 +33,17 @@ macro_rules! crud {
             .service({
                 let resource = concat!($base, stringify!($name), "s");
                 log::debug!("{}", resource);
-                web::resource(resource).route(web::post().to({
-                    use $module as m;
-                    m::create::<$sender>
-                }))
+                web::resource(resource)
+                    // create resources
+                    .route(web::post().to({
+                        use $module as m;
+                        m::create::<$sender>
+                    }))
+                    // list resources
+                    .route(web::get().to({
+                        use $module as m;
+                        m::list::<$sender>
+                    }))
             })
             .service({
                 let resource = concat!($base, stringify!($name), "s/{", stringify!($name), "}");

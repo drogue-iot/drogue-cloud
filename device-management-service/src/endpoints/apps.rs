@@ -106,3 +106,20 @@ where
         Some(app) => HttpResponse::Ok().json(app),
     })
 }
+
+pub async fn list<S>(
+    data: web::Data<WebData<PostgresManagementService<S>>>,
+    user: UserInformation,
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: EventSender + Clone,
+{
+    log::debug!("Listing apps ");
+
+    let apps = data.service.list_apps(&user).await?;
+
+    Ok(match app {
+        None => HttpResponse::NotFound().finish(),
+        Some(app) => HttpResponse::Ok().json(apps),
+    })
+}
