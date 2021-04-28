@@ -1994,7 +1994,8 @@ dependencies = [
 [[package]]
 name = "drogue-ttn"
 version = "0.4.0"
-source = "git+https://github.com/drogue-iot/drogue-ttn?rev=1898ac0a6af51dc3a99c9f291049e3fd993c69c6#1898ac0a6af51dc3a99c9f291049e3fd993c69c6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55d79a665c2d2566528187cbf528547c7fdca86d4ce7b6b1f04d4ef488fe0fdb"
 dependencies = [
  "base64 0.13.0",
  "base64-serde",
