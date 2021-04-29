@@ -15,51 +15,26 @@ You will need the following information for your device:
 
 === Procedure
 
-Create a new device in Drogue Cloud:
+Create a new device in Drogue Cloud with TTN specific information:
 
 [source,shell]
 ----
-drg create --app my-ttn-app device my-ttn-device-1
-----
-
-Next, add the TTN specific information:
-
-[source,json]
-----
-{
-    "spec": {
-        "ttn": {
-            "app_eui": "0123456789ABCDEF",
-            "app_key": "0123456789ABCDEF...",
-            "dev_eui": "0123456789ABCDEF",
-            "frequency_plan_id": "...", <1>
-            "lorawan_phy_version": "...", <2>
-            "lorawan_version": "..." <3>
-        }
+drg create --app my-ttn-app device my-ttn-device-1 --spec '{
+    "ttn": {
+        "app_eui": "0123456789ABCDEF",
+        "app_key": "0123456789ABCDEF...",
+        "dev_eui": "0123456789ABCDEF",
+        "frequency_plan_id": "...", <1>
+        "lorawan_phy_version": "...", <2>
+        "lorawan_version": "..." <3>
     }
-}
+}'
 ----
 <1> An ID of the TTN supported frequency plans, e.g. `EU_863_870_TTN`. Also see: https://www.thethingsindustries.com/docs/reference/frequency-plans/
 <2> An ID of the TTN supported LoRa versions, e.g. `PHY_V1_0`
 <3> An ID of the TTN supported LoRa version, e.g. `MAC_V1_0`
 
-You can do this with `drg` by executing:
-
-[source,shell]
-----
-drg create device --app my-ttn-app my-ttn-device-1 --spec '{
-    "ttn": {
-        "app_eui": "0123456789ABCDEF",
-        "app_key": "0123456789ABCDEF...",
-        "dev_eui": "0123456789ABCDEF",
-        "frequency_plan_id": "...",
-        "lorawan_phy_version": "...",
-        "lorawan_version": "..."
-    }
-}'
-----
-
-Or, you can use `drg edit device --app my-ttn-app my-ttn-device-1` to interactively change the configuration.
+You can also use `drg edit device --app my-ttn-app my-ttn-device-1` to change the configuration of an existing device.
 
 == Deleting a device
 
