@@ -48,7 +48,7 @@ pub trait ManagementService: Clone {
     ) -> Result<Option<registry::v1::Application>, Self::Error>;
     async fn list_apps(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
     ) -> Result<Option<Vec<registry::v1::Application>>, Self::Error>;
     async fn update_app(
         &self,
@@ -75,7 +75,7 @@ pub trait ManagementService: Clone {
     ) -> Result<Option<registry::v1::Device>, Self::Error>;
     async fn list_devices(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         app: &str,
     ) -> Result<Option<Vec<registry::v1::Device>>, Self::Error>;
     async fn update_device(
@@ -466,19 +466,22 @@ where
 
     async fn list_apps(
         &self,
-        identity: &dyn Identity,
-    ) -> Result<Option<Vec<Application>>, Self::Error> {
+        identity: &UserInformation,
+    ) -> Result<Option<Vec<registry::v1::Application>>, Self::Error> {
         let c = self.pool.get().await?;
 
-        let app = PostgresApplicationAccessor::new(&c)
-            .get(name, Lock::None)
+        let apps = PostgresApplicationAccessor::new(&c)
+            .list(Lock::None)
             .await?;
 
-        if let Some(app) = &app {
-            ensure(app, identity)?;
+        let mut apps_return = Vec::new();
+        for app in apps {
+            if ensure(&app, identity).is_ok() {
+                apps_return.push(Into::into(app));
+            }
         }
 
-        Ok(app.map(Into::into))
+        Ok(Some(apps_return))
     }
 
     async fn update_app(
@@ -699,9 +702,9 @@ where
 
     async fn list_devices(
         &self,
-        identity: &dyn Identity,
+        identity: &UserInformation,
         app_id: &str,
-    ) -> Result<Option<Vec<Device>>, Self::Error> {
+    ) -> Result<Option<Vec<registry::v1::Device>>, Self::Error> {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)
@@ -712,11 +715,12 @@ where
         // ensure we have access, but don't confirm the device if we don't
         ensure_with(&app, identity, || ServiceError::NotFound)?;
 
-        let device = PostgresDeviceAccessor::new(&c)
-            .get(app_id, device_id, Lock::None)
-            .await?;
+        //todo
+        // let device = PostgresDeviceAccessor::new(&c)
+        //     .list(app_id, Lock::None)
+        //     .await?;
 
-        Ok(device.map(Into::into))
+        Ok(None)
     }
 
     async fn update_device(

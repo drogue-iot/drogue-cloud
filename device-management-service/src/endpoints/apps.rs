@@ -118,8 +118,8 @@ where
 
     let apps = data.service.list_apps(&user).await?;
 
-    Ok(match app {
+    Ok(match apps {
         None => HttpResponse::NotFound().finish(),
-        Some(app) => HttpResponse::Ok().json(apps),
+        Some(app) => HttpResponse::Ok().json(app),
     })
 }
