@@ -18,7 +18,8 @@ impl Sender for TtnV3Sender {
         let builder = super::to_builder(ctx.client, Method::POST, &endpoint, |mut url| {
             url.path_segments_mut()
                 .map_err(|_| Error::Payload("Failed to extend path".into()))?
-                .extend(&[&device_id, "down", "push"]);
+                // TODO: we should have a way to influence "push" vs "replace"
+                .extend(&[&device_id, "down", "replace"]);
             Ok(url)
         })?;
 
