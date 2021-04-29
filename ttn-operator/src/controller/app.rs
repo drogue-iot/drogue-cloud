@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use url::Url;
 
 const FINALIZER: &str = "ttn";
+const TTN_GATEWAY_NAME: &str = "ttn-gateway";
+const TTN_WEBHOOK_NAME: &str = "drogue-iot";
 
 pub struct ConstructContext {
     pub app: registry::v1::Application,
@@ -171,7 +173,7 @@ impl<'a> ApplicationReconciler<'a> {
         }?;
 
         let auth = Basic::new(
-            format!("ttn-gateway@{}", app.metadata.name),
+            format!("{}@{}", TTN_GATEWAY_NAME, app.metadata.name),
             Some(gw_password),
         )
         .try_into_value()
@@ -180,17 +182,26 @@ impl<'a> ApplicationReconciler<'a> {
             .to_str()
             .map_err(|_| ReconcileError::permanent("Failed to convert auth information"))?;
 
-        let ttn_webhook = self.ttn.get_webhook(ttn_app_id, "drogue-iot", &ctx).await?;
+        let ttn_webhook = self
+            .ttn
+            .get_webhook(ttn_app_id, TTN_WEBHOOK_NAME, &ctx)
+            .await?;
         match ttn_webhook {
             None => {
                 self.ttn
-                    .create_webhook(ttn_app_id, "drogue-iot", &self.endpoint_url, auth, &ctx)
+                    .create_webhook(ttn_app_id, TTN_WEBHOOK_NAME, &self.endpoint_url, auth, &ctx)
                     .await?;
             }
             Some(ttn_webhook) => {
                 if Self::need_webhook_update(ttn_webhook, &self.endpoint_url, auth) {
                     self.ttn
-                        .update_webhook(ttn_app_id, "drogue-iot", &self.endpoint_url, auth, &ctx)
+                        .update_webhook(
+                            ttn_app_id,
+                            TTN_WEBHOOK_NAME,
+                            &self.endpoint_url,
+                            auth,
+                            &ctx,
+                        )
                         .await?;
                 }
             }
@@ -274,7 +285,7 @@ impl<'a> ApplicationReconciler<'a> {
     ) -> Result<String, ReconcileError> {
         let gateway = self
             .registry
-            .get_device(&metadata.name, "ttn-gateway", Default::default())
+            .get_device(&metadata.name, TTN_GATEWAY_NAME, Default::default())
             .await
             .map_err(ReconcileError::temporary)?;
 
@@ -283,7 +294,7 @@ impl<'a> ApplicationReconciler<'a> {
                 let mut gateway = registry::v1::Device {
                     metadata: meta::v1::ScopedMetadata {
                         application: metadata.name.clone(),
-                        name: "ttn-gateway".into(),
+                        name: TTN_GATEWAY_NAME.into(),
                         labels: convert_args!(hashmap!(
                             "ttn/app-id" => app_id,
                         )),
