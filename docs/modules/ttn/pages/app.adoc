@@ -15,29 +15,20 @@ You will need create an account at The Things Network. As part of that you will 
 
 === Procedure
 
-Create a new application in Drogue Cloud:
+Create a new application in Drogue Cloud with the TTN-specific information:
 
 [source,shell]
 ----
-drg create application my-ttn-app
-----
-
-Next, add the TTN specific information:
-
-[source,json]
-----
-{
-    "spec": {
-        "ttn": {
-            "api": {
-                "apiKey": "...", <1>
-                "id": "my-app-alias", <2>
-                "owner": "my-user-name", <3>
-                "region": "eu1" <4>
-            }
+drg create application my-ttn-app --spec '{
+    "ttn": {
+        "api": {
+            "apiKey": "...", <1>
+            "id": "my-app-alias", <2>
+            "owner": "my-user-name", <3>
+            "region": "eu1" <4>
         }
     }
-}
+}'
 ----
 <1> The API key, must have access to create new applications for the provided owner.
 <2> The (optional) ID of the application in the TTN system. Defaults to the name of the application in Drogue Cloud. This valid must not be changed.
@@ -46,21 +37,7 @@ Next, add the TTN specific information:
 
 This will enable the integration and trigger the reconciliation process.
 
-You can do this with `drg` by executing:
-
-[source,shell]
-----
-drg create app my-ttn-app --spec '{
-    "ttn": {
-        "apiKey": "...",
-        "id": "my-app-alias",
-        "owner": "my-user-name",
-        "region": "eu1"
-    }
-}'
-----
-
-Or, you can use `drg edit app my-ttn-app` to interactively change the configuration.
+You can also use `drg edit app my-ttn-app` to change the configuration of an existing application.
 
 Taking a look at the TTN console, you should see the new application (`my-app-alias` in this case), and a
 webhook named `drogue-iot`.
