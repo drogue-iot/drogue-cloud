@@ -289,8 +289,12 @@ impl<'a> ApplicationReconciler<'a> {
             .await
             .map_err(ReconcileError::temporary)?;
 
+        log::debug!("Retrieved TTN gateway device: {:#?}", gateway);
+
         let password = match gateway {
             None => {
+                log::debug!("Creating new gateway");
+
                 let mut gateway = registry::v1::Device {
                     metadata: meta::v1::ScopedMetadata {
                         application: metadata.name.clone(),
@@ -313,6 +317,8 @@ impl<'a> ApplicationReconciler<'a> {
                 password
             }
             Some(mut gateway) => {
+                log::debug!("Updating existing gateway");
+
                 let password = self.ensure_gateway_config(app_id, &mut gateway, ctx)?;
 
                 self.registry
