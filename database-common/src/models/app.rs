@@ -277,12 +277,11 @@ FROM APPLICATIONS
                 err
             })?;
 
-        let apps = stream.collect().await;
+        //TODO coolect the stream into a vector and apply Self::from_row to it's items
+        //let apps = stream.collect().await;
+        //let apps = stream.map(Self::from_row).collect().await;
 
-        apps.map;
-        let apps = stream.map(Self::from_row).collect().await;
-
-        Ok(apps)
+        Ok(Vec::new())
     }
 
     async fn create(
