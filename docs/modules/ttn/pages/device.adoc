@@ -43,11 +43,29 @@ Next, add the TTN specific information:
 <2> An ID of the TTN supported LoRa versions, e.g. `PHY_V1_0`
 <3> An ID of the TTN supported LoRa version, e.g. `MAC_V1_0`
 
-## Deleting a device
+You can do this with `drg` by executing:
+
+[source,shell]
+----
+drg create device --app my-ttn-app my-ttn-device-1 --spec '{
+    "ttn": {
+        "app_eui": "0123456789ABCDEF",
+        "app_key": "0123456789ABCDEF...",
+        "dev_eui": "0123456789ABCDEF",
+        "frequency_plan_id": "...",
+        "lorawan_phy_version": "...",
+        "lorawan_version": "..."
+    }
+}'
+----
+
+Or, you can use `drg edit device --app my-ttn-app my-ttn-device-1` to interactively change the configuration.
+
+== Deleting a device
 
 When you delete a device in Drogue Cloud, it will also be deleted in the TTN system.
 
-## Disconnecting a device
+== Disconnecting a device
 
 If you want to delete the device in TTN, but keep it in Drogue Cloud, then you can simply
 remove or rename the `.spec.ttn` section.
