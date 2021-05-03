@@ -3,10 +3,8 @@ use crate::{
     components::placeholder::Placeholder,
     data::{SharedDataBridge, SharedDataOps},
     error::error,
-    examples::{self, Examples},
-    index::Index,
+    page::AppPage,
     preferences::Preferences,
-    spy::Spy,
 };
 use anyhow::Error;
 use chrono::{DateTime, Utc};
@@ -24,17 +22,6 @@ use yew::{
     },
     utils::window,
 };
-use yew_router::prelude::*;
-
-#[derive(Switch, Debug, Clone, PartialEq)]
-pub enum AppRoute {
-    #[to = "/spy"]
-    Spy,
-    #[to = "/examples{*:rest}"]
-    Examples(Examples),
-    #[to = "/"]
-    Index,
-}
 
 pub struct Main {
     link: ComponentLink<Self>,
@@ -301,112 +288,20 @@ impl Component for Main {
     }
 
     fn view(&self) -> Html {
-        let sidebar = match Backend::get().is_some() {
-            true => html_nested! {
-                <PageSidebar>
-                    <Nav>
-                        <NavList>
-                            <NavRouterItem<AppRoute> to=AppRoute::Index>{"Home"}</NavRouterItem<AppRoute>>
-                            <NavRouterExpandable<AppRoute> title="Getting started">
-                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Register)>{Examples::Register.title()}</NavRouterItem<AppRoute>>
-                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Consume)>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
-                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Publish)>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
-                                <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Commands)>{Examples::Commands.title()}</NavRouterItem<AppRoute>>
-                            </NavRouterExpandable<AppRoute>>
-                            <NavRouterExpandable<AppRoute> title="Tools">
-                                <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
-                            </NavRouterExpandable<AppRoute>>
-                            <NavItem to="/api" target="_blank">{"API "}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAltIcon}</span></NavItem>
-                        </NavList>
-                    </Nav>
-                </PageSidebar>
-            },
-            false => html_nested! {
-                <PageSidebar>
-                </PageSidebar>
-            },
-        };
-
-        let tools: Children = Children::new(vec![match Backend::token() {
-            Some(token) => {
-                let (name, full_name, account_url) = if let Some(userinfo) = token.userinfo.as_ref()
-                {
-                    let name = userinfo.name.clone();
-                    let full_name = userinfo.full_name.as_ref().cloned();
-                    (name, full_name, userinfo.account_url.as_ref().cloned())
-                } else {
-                    (String::new(), None, None)
-                };
-
-                let src = token
-                    .userinfo
-                    .and_then(|user| {
-                        if user.email_verified {
-                            user.email
-                        } else {
-                            None
-                        }
-                    })
-                    .map(|email| md5::compute(email.as_bytes()))
-                    .map(|hash| format!("https://www.gravatar.com/avatar/{:x}?D=mp", hash))
-                    .unwrap_or_else(|| "/images/img_avatar.svg".into());
-
-                // gather items
-
-                let mut items = Vec::new();
-
-                if let Some(account_url) = account_url {
-                    items.push(html_nested! {
-                        <DropdownItem href=account_url>{"Account"} <span class="pf-u-pl-1">{Icon::ExternalLinkAltIcon}</span></DropdownItem>
-                    });
-                }
-                items.push(html_nested!{<DropdownItem onclick=self.link.callback(|_|Msg::Logout)>{"Logout"}</DropdownItem>});
-
-                // render
-
-                html! {
-                    <Dropdown
-                        plain=true
-                        toggle_style="display: flex;"
-                        toggle=html!{<UserToggle name=full_name.unwrap_or(name) src=src />}
-                        >
-                    {items}
-                    </Dropdown>
-                }
-            }
-            None => html! {},
-        }]);
-
         return html! {
             <>
                 <ToastViewer/>
 
                 {
-                    if self.is_ready() {
+                    if let Some(ready) = self.is_ready() {
 
                         html!{
-                            <Page
-                                logo={html_nested!{
-                                    <Logo src="/images/logo.png" alt="Drogue IoT" />
-                                }}
-                                sidebar=sidebar
-                                tools=tools
-                                >
-                                    <Router<AppRoute, ()>
-                                            redirect = Router::redirect(|_|AppRoute::Index)
-                                            render = Router::render(|switch: AppRoute| {
-                                                match switch {
-                                                    AppRoute::Spy => html!{<Spy/>},
-                                                    AppRoute::Index => html!{<Index/>},
-
-                                                    AppRoute::Examples(example) => html!{
-                                                        <examples::ExamplePage example=example/>
-                                                    },
-                                                }
-                                            })
-                                        />
-                            </Page>
+                            <AppPage
+                                token=ready.1
+                                on_logout=self.link.callback(|_|Msg::Logout)
+                                />
                         }
+
                     } else if self.need_login() {
                         html!{ <Placeholder/> }
                     } else {
@@ -421,8 +316,12 @@ impl Component for Main {
 
 impl Main {
     /// Check if the app and backend are ready to show the application.
-    fn is_ready(&self) -> bool {
-        !self.app_failure && Backend::get().is_some() && Backend::access_token().is_some()
+    fn is_ready(&self) -> Option<(Backend, Token)> {
+        match (self.app_failure, Backend::get(), Backend::token()) {
+            (true, _, _) => None,
+            (false, Some(backend), Some(token)) => Some((backend, token)),
+            _ => None,
+        }
     }
 
     fn need_login(&self) -> bool {

@@ -37,12 +37,6 @@ impl Preferences {
         storage.restore::<Json<anyhow::Result<Preferences>>>(KEY).0
     }
 
-    pub fn clear() -> anyhow::Result<()> {
-        let mut storage = Self::storage()?;
-        storage.remove(KEY);
-        Ok(())
-    }
-
     /// A function to conveniently load, update, and store preferences.
     pub fn update<F>(f: F) -> anyhow::Result<()>
     where

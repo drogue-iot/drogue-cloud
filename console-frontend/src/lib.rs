@@ -7,6 +7,7 @@ mod data;
 mod error;
 mod examples;
 mod index;
+mod page;
 mod preferences;
 mod spy;
 mod utils;

@@ -16,7 +16,7 @@ drogue-cloud-service-api = { path = "../service-api" }
 
 yew = "0.17"
 yew-router = "0.14"
-patternfly-yew = "0.0.19"
+patternfly-yew = "0.0.20"
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
