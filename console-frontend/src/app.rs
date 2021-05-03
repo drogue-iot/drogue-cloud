@@ -213,6 +213,8 @@ impl Component for Main {
                 self.authenticating = false;
                 Preferences::update_or_default(|mut prefs| {
                     prefs.refresh_token = token.refresh_token.as_ref().cloned();
+                    prefs.id_token = token.id_token.clone();
+                    prefs.user_info = token.userinfo.as_ref().cloned();
                     Ok(prefs)
                 })
                 .map_err(|err| {
@@ -283,6 +285,8 @@ impl Component for Main {
             Msg::Logout => {
                 Preferences::update_or_default(|mut prefs| {
                     prefs.refresh_token = None;
+                    prefs.id_token = Default::default();
+                    prefs.user_info = None;
                     Ok(prefs)
                 })
                 .ok();
@@ -325,6 +329,15 @@ impl Component for Main {
 
         let tools: Children = Children::new(vec![match Backend::token() {
             Some(token) => {
+                let (name, full_name, account_url) = if let Some(userinfo) = token.userinfo.as_ref()
+                {
+                    let name = userinfo.name.clone();
+                    let full_name = userinfo.full_name.as_ref().cloned();
+                    (name, full_name, userinfo.account_url.as_ref().cloned())
+                } else {
+                    (String::new(), None, None)
+                };
+
                 let src = token
                     .userinfo
                     .and_then(|user| {
@@ -338,12 +351,27 @@ impl Component for Main {
                     .map(|hash| format!("https://www.gravatar.com/avatar/{:x}?D=mp", hash))
                     .unwrap_or_else(|| "/images/img_avatar.svg".into());
 
+                // gather items
+
+                let mut items = Vec::new();
+
+                if let Some(account_url) = account_url {
+                    items.push(html_nested! {
+                        <DropdownItem href=account_url>{"Account"} <span class="pf-u-pl-1">{Icon::ExternalLinkAltIcon}</span></DropdownItem>
+                    });
+                }
+                items.push(html_nested!{<DropdownItem onclick=self.link.callback(|_|Msg::Logout)>{"Logout"}</DropdownItem>});
+
+                // render
+
                 html! {
-                    <AppLauncher
-                        toggle=html!{<Avatar src=src/>}
+                    <Dropdown
+                        plain=true
+                        toggle_style="display: flex;"
+                        toggle=html!{<UserToggle name=full_name.unwrap_or(name) src=src />}
                         >
-                        <AppLauncherItem onclick=self.link.callback(|_|Msg::Logout)>{"Logout"}</AppLauncherItem>
-                    </AppLauncher>
+                    {items}
+                    </Dropdown>
                 }
             }
             None => html! {},
@@ -446,7 +474,7 @@ impl Main {
             self.link.callback(
                 |response: Response<Json<Result<serde_json::Value, Error>>>| {
                     log::info!("Response from refreshing token: {:?}", response);
-                    Self::from_response(response)
+                    Self::from_response(response, true)
                 },
             ),
         )
@@ -472,13 +500,16 @@ impl Main {
             self.link.callback(
                 |response: Response<Json<Result<serde_json::Value, Error>>>| {
                     log::info!("Code to token response: {:?}", response);
-                    Self::from_response(response)
+                    Self::from_response(response, false)
                 },
             ),
         )
     }
 
-    fn from_response(response: Response<Json<Result<serde_json::Value, Error>>>) -> Msg {
+    fn from_response(
+        response: Response<Json<Result<serde_json::Value, Error>>>,
+        is_refresh: bool,
+    ) -> Msg {
         if let (meta, Json(Ok(value))) = response.into_parts() {
             if meta.status.is_success() {
                 let access_token = value["bearer"]["access_token"]
@@ -499,13 +530,27 @@ impl Main {
                 .map(|expires| expires.with_timezone(&Utc));
 
                 let token = match (access_token, id_token) {
-                    (Some(access_token), Some(id_token)) => Some(Token {
-                        access_token,
-                        refresh_token,
-                        id_token,
-                        expires,
-                        userinfo,
-                    }),
+                    (Some(access_token), Some(id_token)) => {
+                        if !is_refresh {
+                            Some(Token {
+                                access_token,
+                                refresh_token,
+                                id_token,
+                                expires,
+                                userinfo,
+                            })
+                        } else if let Ok(prefs) = Preferences::load() {
+                            Some(Token {
+                                access_token,
+                                refresh_token,
+                                id_token: prefs.id_token,
+                                expires,
+                                userinfo: prefs.user_info,
+                            })
+                        } else {
+                            None
+                        }
+                    }
                     _ => None,
                 };
 

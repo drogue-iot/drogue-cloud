@@ -25,9 +25,9 @@ pub struct Backend {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Token {
     pub access_token: String,
+    pub expires: Option<DateTime<Utc>>,
     pub id_token: String,
     pub refresh_token: Option<String>,
-    pub expires: Option<DateTime<Utc>>,
     pub userinfo: Option<UserInfo>,
 }
 

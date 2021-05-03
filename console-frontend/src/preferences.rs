@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use drogue_cloud_console_common::UserInfo;
 use serde::{Deserialize, Serialize};
 use yew::format::Json;
 use yew::services::storage::*;
@@ -11,6 +12,11 @@ pub struct Preferences {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
+    #[serde(default)]
+    pub id_token: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_info: Option<UserInfo>,
 }
 
 impl Preferences {
@@ -29,6 +35,12 @@ impl Preferences {
     pub fn load() -> anyhow::Result<Preferences> {
         let storage = Self::storage()?;
         storage.restore::<Json<anyhow::Result<Preferences>>>(KEY).0
+    }
+
+    pub fn clear() -> anyhow::Result<()> {
+        let mut storage = Self::storage()?;
+        storage.remove(KEY);
+        Ok(())
     }
 
     /// A function to conveniently load, update, and store preferences.

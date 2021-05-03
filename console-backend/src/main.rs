@@ -61,6 +61,9 @@ pub struct Config {
 
     #[serde(default)]
     pub health: HealthServerConfig,
+
+    #[serde(default)]
+    pub disable_account_url: bool,
 }
 
 #[actix_web::main]
@@ -97,10 +100,26 @@ async fn main() -> anyhow::Result<()> {
         )
         .await?;
 
+        let account_url = match config.disable_account_url {
+            true => None,
+            false => Some({
+                // this only works with Keycloak, but you can deactivate it
+                let mut issuer = ui_client.config().issuer.clone();
+                issuer
+                    .path_segments_mut()
+                    .map_err(|_| anyhow::anyhow!("Failed to modify path"))?
+                    .push("account");
+                issuer.into_string()
+            }),
+        };
+
+        log::debug!("Account URL: {:?}", account_url);
+
         (
             Some(OpenIdClient {
                 client: ui_client,
                 scopes: config.scopes.clone(),
+                account_url,
             }),
             Some(web::Data::new(user_auth)),
             Some(web::Data::new(Authenticator::new().await?)),

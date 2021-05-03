@@ -46,7 +46,7 @@ cloudevents-sdk-rdkafka = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 
 drogue-cloud-console-common = { path = "../console-common" }
-drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-api = { path = "../service-api", features = ["with_actix"] }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }
 drogue-cloud-api-key-service = { path = "../api-key-service" }

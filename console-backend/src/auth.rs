@@ -1,15 +1,16 @@
 use actix_web::{get, http, web, HttpResponse, Responder};
+use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::UserInfo;
 use drogue_cloud_service_common::error::ErrorResponse;
-use openid::{biscuit::jws::Compact, Bearer, Configurable};
-use serde::Deserialize;
-use serde_json::json;
+use openid::{biscuit::jws::Compact, Bearer, Configurable, StandardClaims, Token};
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 #[derive(Clone)]
 pub struct OpenIdClient {
     pub client: openid::Client,
     pub scopes: String,
+    pub account_url: Option<String>,
 }
 
 #[get("/ui/login")]
@@ -55,6 +56,13 @@ pub struct LoginQuery {
     nonce: Option<String>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct TokenResponse {
+    pub bearer: Bearer,
+    pub expires: Option<DateTime<Utc>>,
+    pub userinfo: Option<UserInfo>,
+}
+
 #[get("/ui/token")]
 pub async fn code(
     login_handler: Option<web::Data<OpenIdClient>>,
@@ -73,16 +81,14 @@ pub async fn code(
 
         match response {
             Ok(token) => {
-                let userinfo = token.id_token.and_then(|t| match t {
-                    Compact::Decoded { payload, .. } => Some(UserInfo {
-                        email_verified: payload.userinfo.email_verified,
-                        email: payload.userinfo.email,
-                    }),
-                    Compact::Encoded(_) => None,
-                });
+                let userinfo = make_userinfo(&client, &token);
 
-                HttpResponse::Ok()
-                    .json(json!({ "bearer": token.bearer, "expires": token.bearer.expires, "userinfo": userinfo}))
+                let expires = token.bearer.expires;
+                HttpResponse::Ok().json(TokenResponse {
+                    bearer: token.bearer,
+                    expires,
+                    userinfo,
+                })
             }
             Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
                 error: "Unauthorized".to_string(),
@@ -93,6 +99,27 @@ pub async fn code(
         // if we are missing the authenticator, we hide ourselves
         HttpResponse::NotFound().finish()
     }
+}
+
+fn make_userinfo(client: &OpenIdClient, token: &Token<StandardClaims>) -> Option<UserInfo> {
+    token.id_token.as_ref().and_then(|t| match t {
+        Compact::Decoded { payload, .. } => {
+            log::debug!("Userinfo: {:#?}", payload.userinfo);
+            Some(UserInfo {
+                name: payload
+                    .userinfo
+                    .preferred_username
+                    .as_ref()
+                    .unwrap_or_else(|| &payload.sub)
+                    .clone(),
+                full_name: payload.userinfo.name.clone(),
+                account_url: client.account_url.clone(),
+                email_verified: payload.userinfo.email_verified,
+                email: payload.userinfo.email.clone(),
+            })
+        }
+        Compact::Encoded(_) => None,
+    })
 }
 
 #[derive(Deserialize, Debug)]
@@ -124,7 +151,12 @@ pub async fn refresh(
 
         match response {
             Ok(bearer) => {
-                HttpResponse::Ok().json(json!({ "bearer": bearer, "expires": bearer.expires, }))
+                let expires = bearer.expires;
+                HttpResponse::Ok().json(TokenResponse {
+                    bearer,
+                    expires,
+                    userinfo: None,
+                })
             }
             Err(err) => HttpResponse::Unauthorized().json(ErrorResponse {
                 error: "Unauthorized".to_string(),
