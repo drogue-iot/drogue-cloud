@@ -128,7 +128,7 @@ fn parse_value(input: &str) -> IResult<&str, &str> {
 
 fn parse_raw_value(input: &str) -> IResult<&str, &str> {
     recognize(preceded(
-        alpha1,
+        alphanumeric1,
         many0(satisfy(|c| {
             c.is_alphanum() || c == '_' || c == '-' || c == '.'
         })),
@@ -215,6 +215,14 @@ mod test {
             Err(ParserError {
                 details: "Unparsable remaining content: ',#'".into()
             })
+        );
+    }
+
+    #[test]
+    fn test_parse_valid_value_1() {
+        assert_eq!(
+            parse_from("foo=1"),
+            Ok(vec![Operation::Eq("foo".into(), "1".into())])
         );
     }
 }

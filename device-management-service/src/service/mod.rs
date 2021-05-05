@@ -86,9 +86,15 @@ pub trait ManagementService: Clone {
     ) -> Result<Option<registry::v1::Device>, Self::Error>;
     async fn list_devices(
         &self,
-        identity: &UserInformation,
+        identity: UserInformation,
         app: &str,
-    ) -> Result<Option<Vec<registry::v1::Device>>, Self::Error>;
+        labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<registry::v1::Device, Self::Error>> + Send>>,
+        Self::Error,
+    >;
     async fn update_device(
         &self,
         identity: &UserInformation,
@@ -492,6 +498,9 @@ where
                 .list(None, labels, limit, offset, Some(&identity), Lock::None)
                 .await?
                 .try_filter_map(move |app| {
+                    // Using ensure call here is just a safeguard! The list operation must only return
+                    // entries the user has access to. Otherwise the limit/offset functionality
+                    // won't work
                     let result = match ensure(&app, &identity) {
                         Ok(_) => Some(app.into()),
                         Err(_) => None,
@@ -721,9 +730,15 @@ where
 
     async fn list_devices(
         &self,
-        identity: &UserInformation,
+        identity: UserInformation,
         app_id: &str,
-    ) -> Result<Option<Vec<registry::v1::Device>>, Self::Error> {
+        labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<registry::v1::Device, Self::Error>> + Send>>,
+        Self::Error,
+    > {
         let c = self.pool.get().await?;
 
         let app = PostgresApplicationAccessor::new(&c)
@@ -732,14 +747,16 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, identity, || ServiceError::NotFound)?;
+        ensure_with(&app, &identity, || ServiceError::NotFound)?;
 
-        //todo
-        // let device = PostgresDeviceAccessor::new(&c)
-        //     .list(app_id, Lock::None)
-        //     .await?;
-
-        Ok(None)
+        Ok(Box::pin(
+            PostgresDeviceAccessor::new(&c)
+                .list(app_id, None, labels, limit, offset, Lock::None)
+                .await?
+                .map_ok(|device| device.into())
+                .map_err(|err| PostgresManagementServiceError::Service(err))
+                .into_stream(),
+        ))
     }
 
     async fn update_device(

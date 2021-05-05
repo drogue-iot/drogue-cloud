@@ -1,5 +1,8 @@
-use actix_http::{HttpMessage, Request};
-use actix_web::dev::{Service, ServiceResponse};
+use actix_http::{http::StatusCode, HttpMessage, Request};
+use actix_web::{
+    dev::{Service, ServiceResponse},
+    test::TestRequest,
+};
 use chrono::Duration;
 use drogue_cloud_database_common::{
     error::ServiceError,
@@ -11,7 +14,8 @@ use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_service_common::openid::ExtendedClaims;
 use futures::TryStreamExt;
 use log::LevelFilter;
-use serde_json::Value;
+use serde_json::{json, Value};
+use std::collections::HashMap;
 
 pub fn init() {
     let _ = env_logger::builder()
@@ -136,8 +140,6 @@ where
 
 #[allow(dead_code)]
 pub fn user<S: AsRef<str>>(id: S) -> UserInformation {
-    use serde_json::json;
-
     let claims: ExtendedClaims = serde_json::from_value(json!({
         "sub": id.as_ref(),
         "iss": "drogue:iot:test",
@@ -166,6 +168,7 @@ where
     actix_web::test::call_service(app, req).await
 }
 
+#[allow(dead_code)]
 pub fn assert_resources(result: Value, names: &[&str]) {
     let items = result.as_array().expect("Response must be an array");
     assert_eq!(items.len(), names.len());
@@ -181,6 +184,69 @@ pub fn assert_resources(result: Value, names: &[&str]) {
     names.sort();
 
     assert_eq!(actual, names);
+}
+
+#[allow(dead_code)]
+pub async fn create_app<S, B, E, S1>(
+    app: &S,
+    user: UserInformation,
+    name: S1,
+    labels: HashMap<&str, &str>,
+) -> anyhow::Result<()>
+where
+    S: Service<Request, Response = ServiceResponse<B>, Error = E>,
+    E: std::fmt::Debug,
+    S1: AsRef<str>,
+{
+    let resp = call_http(
+        app,
+        user,
+        TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+            "metadata": {
+                "name": name.as_ref(),
+                "labels": labels,
+            },
+        })),
+    )
+    .await;
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub async fn create_device<S, B, E, S1, S2>(
+    app: &S,
+    user: UserInformation,
+    app_name: S1,
+    name: S2,
+    labels: HashMap<&str, &str>,
+) -> anyhow::Result<()>
+where
+    S: Service<Request, Response = ServiceResponse<B>, Error = E>,
+    E: std::fmt::Debug,
+    S1: AsRef<str>,
+    S2: AsRef<str>,
+{
+    let resp = call_http(
+        app,
+        user,
+        TestRequest::post()
+            .uri(&format!("/api/v1/apps/{}/devices", app_name.as_ref()))
+            .set_json(&json!({
+                "metadata": {
+                    "name": name.as_ref(),
+                    "application": app_name.as_ref(),
+                    "labels": labels,
+                },
+            })),
+    )
+    .await;
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -2,14 +2,21 @@ use crate::{
     default_resource, diffable,
     error::ServiceError,
     generation,
-    models::{Lock, TypedAlias},
+    models::{
+        sql::{slice_iter, SelectBuilder},
+        Lock, TypedAlias,
+    },
     update_aliases, Client,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use drogue_client::{meta, registry};
+use drogue_cloud_service_api::labels::LabelSelector;
+use futures::{future, Stream, TryStreamExt};
 use serde_json::Value;
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
+use std::pin::Pin;
+use tokio_postgres::types::ToSql;
 use tokio_postgres::{types::Json, Row};
 use uuid::Uuid;
 
@@ -71,7 +78,20 @@ pub trait DeviceAccessor {
         app: &str,
         device: &str,
         lock: Lock,
-    ) -> Result<Option<Device>, ServiceError>;
+    ) -> Result<Option<Device>, ServiceError> {
+        Ok(self
+            .list(
+                app,
+                Some(device),
+                LabelSelector::default(),
+                Some(1),
+                None,
+                lock,
+            )
+            .await?
+            .try_next()
+            .await?)
+    }
 
     /// Create a new device.
     async fn create(
@@ -92,6 +112,17 @@ pub trait DeviceAccessor {
 
     /// Count devices remaining for an application.
     async fn count_devices(&self, app: &str) -> Result<u64, ServiceError>;
+
+    /// Get a list of applications
+    async fn list(
+        &self,
+        app: &str,
+        name: Option<&str>,
+        labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        lock: Lock,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<Device, ServiceError>> + Send>>, ServiceError>;
 }
 
 pub struct PostgresDeviceAccessor<'c, C: Client> {
@@ -201,17 +232,18 @@ WHERE
         }
     }
 
-    async fn get(
+    async fn list(
         &self,
         app: &str,
-        device: &str,
+        name: Option<&str>,
+        labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
         lock: Lock,
-    ) -> Result<Option<Device>, ServiceError> {
-        let result = self
-            .client
-            .query_opt(
-                format!(
-                    r#"
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<Device, ServiceError>> + Send>>, ServiceError>
+    {
+        let select = format!(
+            r#"
 SELECT
     UID,
     NAME,
@@ -225,20 +257,36 @@ SELECT
     FINALIZERS,
     DATA
 FROM DEVICES
-WHERE
-    APP = $1 AND NAME = $2
-{for_update}
+WHERE APP=$1
 "#,
-                    for_update = lock.to_string()
-                )
-                .as_str(),
-                &[&app, &device],
-            )
-            .await?
-            .map(Self::from_row)
-            .transpose()?;
+        );
 
-        Ok(result)
+        let mut params: Vec<&(dyn ToSql + Sync)> = Vec::new();
+        params.push(&app);
+
+        let builder = SelectBuilder::new(select, params)
+            .has_where()
+            .name(&name)
+            .labels(&labels.0)
+            .lock(lock)
+            .sort(&["NAME"])
+            .limit(limit)
+            .offset(offset);
+
+        let (select, params) = builder.build();
+
+        let stream = self
+            .client
+            .query_raw(select.as_str(), slice_iter(&params[..]))
+            .await
+            .map_err(|err| {
+                log::debug!("Failed to get: {}", err);
+                err
+            })?
+            .and_then(|row| future::ready(Self::from_row(row)))
+            .map_err(|err| ServiceError::Database(err));
+
+        Ok(Box::pin(stream))
     }
 
     async fn create(

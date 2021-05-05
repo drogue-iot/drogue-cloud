@@ -1,21 +1,16 @@
 mod common;
 
-use crate::common::{assert_events, assert_resources, call_http, init, outbox_retrieve, user};
-use actix_cors::Cors;
-use actix_http::Request;
-use actix_web::{
-    dev::{Service, ServiceResponse},
-    http::StatusCode,
-    middleware::Condition,
-    test, web, App,
+use crate::common::{
+    assert_events, assert_resources, call_http, create_app, init, outbox_retrieve, user,
 };
+use actix_cors::Cors;
+use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use drogue_cloud_device_management_service::{
     app, endpoints,
     service::{self},
     WebData,
 };
 use drogue_cloud_registry_events::{mock::MockEventSender, Event};
-use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_test_common::{client, db};
 use http::{header, HeaderValue};
 use maplit::hashmap;
@@ -682,36 +677,6 @@ async fn test_auth_app() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     })
-}
-
-async fn create_app<S, B, E, S1>(
-    app: &S,
-    user: UserInformation,
-    name: S1,
-    labels: HashMap<&str, &str>,
-) -> anyhow::Result<()>
-where
-    S: Service<Request, Response = ServiceResponse<B>, Error = E>,
-    E: std::fmt::Debug,
-    S1: AsRef<str>,
-{
-    let resp = call_http(
-        app,
-        user,
-        test::TestRequest::post()
-            .uri("/api/v1/apps")
-            .set_json(&json!({
-                "metadata": {
-                    "name": name.as_ref(),
-                    "labels": labels,
-                },
-            })),
-    )
-    .await;
-
-    assert_eq!(resp.status(), StatusCode::CREATED);
-
-    Ok(())
 }
 
 #[actix_rt::test]
