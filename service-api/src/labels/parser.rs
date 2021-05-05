@@ -20,7 +20,7 @@ impl core::fmt::Display for ParserError {
 
 #[cfg(feature = "nom")]
 pub fn parse_from(value: &str) -> Result<Vec<Operation>, ParserError> {
-    let (remain, ops) = parse(value.as_ref()).map_err(|err| ParserError {
+    let (remain, ops) = parse(value).map_err(|err| ParserError {
         details: err.to_string(),
     })?;
 
