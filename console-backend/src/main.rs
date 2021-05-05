@@ -1,3 +1,4 @@
+mod admin;
 mod api;
 mod auth;
 mod info;
@@ -180,7 +181,7 @@ async fn main() -> anyhow::Result<()> {
             )
             .service(
                 web::scope("/api/keys/v1alpha1")
-                    .wrap(Condition::new(enable_auth, auth))
+                    .wrap(Condition::new(enable_auth, auth.clone()))
                     .service(
                         web::resource("")
                             .route(web::post().to(keys::create::<KeycloakApiKeyService>))
@@ -190,6 +191,13 @@ async fn main() -> anyhow::Result<()> {
                         web::resource("/{prefix}")
                         .route(web::delete().to(keys::delete::<KeycloakApiKeyService>))
                     )
+            )
+            .service(
+                web::scope("/api/admin/v1alpha1")
+                    .wrap(Condition::new(enable_auth, auth))
+                    .service(web::resource("/user/whoami")
+                        .route(web::get().to(admin::whoami))
+                     )
             )
             // everything from here on is unauthenticated or not using the middleware
             .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
