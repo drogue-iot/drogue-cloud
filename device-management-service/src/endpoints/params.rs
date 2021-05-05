@@ -21,8 +21,14 @@ pub struct Preconditions {
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LabelSelector {
+pub struct ListParams {
     #[serde(default)]
     #[serde(skip_serializing_if = "String::is_empty")]
     pub labels: String,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<usize>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<usize>,
 }

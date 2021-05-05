@@ -11,6 +11,7 @@ use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_service_common::openid::ExtendedClaims;
 use futures::TryStreamExt;
 use log::LevelFilter;
+use serde_json::Value;
 
 pub fn init() {
     let _ = env_logger::builder()
@@ -134,11 +135,11 @@ where
 }
 
 #[allow(dead_code)]
-pub fn user(id: &str) -> UserInformation {
+pub fn user<S: AsRef<str>>(id: S) -> UserInformation {
     use serde_json::json;
 
     let claims: ExtendedClaims = serde_json::from_value(json!({
-        "sub": id,
+        "sub": id.as_ref(),
         "iss": "drogue:iot:test",
         "aud": "drogue",
         "exp": 0,
@@ -163,6 +164,23 @@ where
     req.extensions_mut().insert(user);
 
     actix_web::test::call_service(app, req).await
+}
+
+pub fn assert_resources(result: Value, names: &[&str]) {
+    let items = result.as_array().expect("Response must be an array");
+    assert_eq!(items.len(), names.len());
+
+    let mut actual: Vec<_> = items
+        .iter()
+        .filter_map(|s| s["metadata"]["name"].as_str())
+        .collect();
+
+    actual.sort();
+
+    let mut names = Vec::from(names);
+    names.sort();
+
+    assert_eq!(actual, names);
 }
 
 #[cfg(test)]
