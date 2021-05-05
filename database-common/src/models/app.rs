@@ -3,16 +3,21 @@ use crate::{
     default_resource, diffable,
     error::ServiceError,
     generation,
-    models::{Lock, TypedAlias},
+    models::{sql::SelectBuilder, Lock, TypedAlias},
     update_aliases, Client,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use core::pin::Pin;
 use drogue_client::{meta, registry};
-use futures::StreamExt;
+use drogue_cloud_service_api::labels::LabelSelector;
+use futures::{future, Stream, TryStreamExt};
 use serde_json::{Map, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
-use tokio_postgres::{types::Json, Row};
+use tokio_postgres::{
+    types::{Json, ToSql},
+    Row,
+};
 use uuid::Uuid;
 
 /// An application entity record.
@@ -90,10 +95,21 @@ pub trait ApplicationAccessor {
     async fn delete(&self, app: &str) -> Result<(), ServiceError>;
 
     /// Get an application
-    async fn get(&self, app: &str, lock: Lock) -> Result<Option<Application>, ServiceError>;
+    async fn get(&self, app: &str, lock: Lock) -> Result<Option<Application>, ServiceError> {
+        Ok(self
+            .list(Some(app), LabelSelector::default(), lock)
+            .await?
+            .try_next()
+            .await?)
+    }
 
     /// Get a list of applications
-    async fn list(&self, lock: Lock) -> Result<Vec<Application>, ServiceError>;
+    async fn list(
+        &self,
+        name: Option<&str>,
+        labels: LabelSelector,
+        lock: Lock,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>;
 
     /// Create a new application
     async fn create(
@@ -163,6 +179,8 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
     }
 }
 
+trait Param: ToSql + Sync {}
+
 #[async_trait]
 impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
     async fn lookup(&self, alias: &str) -> Result<Option<Application>, ServiceError> {
@@ -207,12 +225,15 @@ FROM
         }
     }
 
-    async fn get(&self, id: &str, lock: Lock) -> Result<Option<Application>, ServiceError> {
-        let result = self
-            .client
-            .query_opt(
-                format!(
-                    r#"
+    async fn list(
+        &self,
+        name: Option<&str>,
+        labels: LabelSelector,
+        lock: Lock,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>
+    {
+        let select = format!(
+            r#"
 SELECT
     NAME,
     UID,
@@ -226,62 +247,29 @@ SELECT
     OWNER,
     DATA
 FROM APPLICATIONS
-    WHERE NAME = $1
-{for_update}
 "#,
-                    for_update = lock.to_string()
-                )
-                .as_str(),
-                &[&id],
-            )
+        );
+
+        let builder = SelectBuilder::new(select, Vec::new())
+            .name(&name)
+            .labels(&labels.0)
+            .lock(lock);
+
+        let (select, params) = builder.build();
+
+        let stream = self
+            .client
+            .query_raw(select.as_str(), slice_iter(&params[..]))
             .await
             .map_err(|err| {
                 log::debug!("Failed to get: {}", err);
                 err
             })?
-            .map(Self::from_row)
-            .transpose()?;
+            .and_then(|row| future::ready(Self::from_row(row)))
+            .map_err(|err| ServiceError::Database(err));
 
-        Ok(result)
-    }
-
-    async fn list(&self, lock: Lock) -> Result<Vec<Application>, ServiceError> {
-        let mut stream = self
-            .client
-            .query_raw(
-                format!(
-                    r#"
-SELECT
-    NAME,
-    UID,
-    LABELS,
-    ANNOTATIONS,
-    CREATION_TIMESTAMP,
-    GENERATION,
-    RESOURCE_VERSION,
-    DELETION_TIMESTAMP,
-    FINALIZERS,
-    OWNER,
-    DATA
-FROM APPLICATIONS
-{for_update}
-"#,
-                    for_update = lock.to_string()
-                )
-                .as_str(),
-                &[""],
-            )
-            .await
-            .map_err(|err| {
-                log::debug!("Failed to get: {}", err);
-                err
-            })?;
-
-        //TODO coolect the stream into a vector and apply Self::from_row to it's items
-        //let apps = stream.collect().await;
-        //let apps = stream.map(Self::from_row).collect().await;
-
-        Ok(Vec::new())
+        Ok(Box::pin(stream))
+        //stream.try_collect().await
     }
 
     async fn create(
@@ -392,4 +380,10 @@ WHERE
             Ok(count)
         })
     }
+}
+
+fn slice_iter<'a>(
+    s: &'a [&'a (dyn ToSql + Sync)],
+) -> impl ExactSizeIterator<Item = &'a dyn ToSql> + 'a {
+    s.iter().map(|s| *s as _)
 }

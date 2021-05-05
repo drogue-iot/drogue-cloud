@@ -8,6 +8,7 @@ use crate::{
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
+use core::pin::Pin;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::{registry, Translator};
 use drogue_cloud_database_common::{
@@ -24,8 +25,12 @@ use drogue_cloud_database_common::{
     Client, DatabaseService,
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
-use drogue_cloud_service_api::auth::user::UserInformation;
-use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
+use drogue_cloud_service_api::{
+    auth::user::UserInformation,
+    health::{HealthCheckError, HealthChecked},
+    labels::LabelSelector,
+};
+use futures::{future, Stream, TryStreamExt};
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
@@ -48,8 +53,12 @@ pub trait ManagementService: Clone {
     ) -> Result<Option<registry::v1::Application>, Self::Error>;
     async fn list_apps(
         &self,
-        identity: &UserInformation,
-    ) -> Result<Option<Vec<registry::v1::Application>>, Self::Error>;
+        identity: UserInformation,
+        labels: LabelSelector,
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<registry::v1::Application, Self::Error>> + Send>>,
+        Self::Error,
+    >;
     async fn update_app(
         &self,
         identity: &UserInformation,
@@ -466,22 +475,28 @@ where
 
     async fn list_apps(
         &self,
-        identity: &UserInformation,
-    ) -> Result<Option<Vec<registry::v1::Application>>, Self::Error> {
+        identity: UserInformation,
+        labels: LabelSelector,
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<registry::v1::Application, Self::Error>> + Send>>,
+        Self::Error,
+    > {
         let c = self.pool.get().await?;
 
-        let apps = PostgresApplicationAccessor::new(&c)
-            .list(Lock::None)
-            .await?;
-
-        let mut apps_return = Vec::new();
-        for app in apps {
-            if ensure(&app, identity).is_ok() {
-                apps_return.push(Into::into(app));
-            }
-        }
-
-        Ok(Some(apps_return))
+        Ok(Box::pin(
+            PostgresApplicationAccessor::new(&c)
+                .list(None, labels, Lock::None)
+                .await?
+                .try_filter_map(move |app| {
+                    let result = match ensure(&app, &identity) {
+                        Ok(_) => Some(app.into()),
+                        Err(_) => None,
+                    };
+                    future::ready(Ok(result))
+                })
+                .map_err(|err| PostgresManagementServiceError::Service(err))
+                .into_stream(),
+        ))
     }
 
     async fn update_app(

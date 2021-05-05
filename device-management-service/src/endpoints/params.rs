@@ -18,3 +18,11 @@ pub struct Preconditions {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub resource_version: String,
 }
+
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelSelector {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub labels: String,
+}
