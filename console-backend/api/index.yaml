@@ -166,10 +166,8 @@ paths:
       tags:
         - Registry
       description: update existing app
-      parameters:
-        - $ref: '#/components/parameters/ResourceVersion'
       requestBody:
-        description: The spec section of the application to update
+        description: The data of the application to update
         required: true
         content:
           'application/json':
@@ -185,6 +183,7 @@ paths:
         - Registry
       description: Delete existing app
       parameters:
+        - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       responses:
         204:
@@ -196,6 +195,7 @@ paths:
         - Registry
       description: Patch existing app
       parameters:
+        - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       requestBody:
         description: The json patch to apply
@@ -273,8 +273,6 @@ paths:
       tags:
         - Registry
       description: update existing device
-      parameters:
-        - $ref: '#/components/parameters/ResourceVersion'
       requestBody:
         description: The data object of the device to update
         required: true
@@ -292,6 +290,7 @@ paths:
         - Registry
       description: Delete existing device
       parameters:
+        - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       responses:
         204:
@@ -303,6 +302,7 @@ paths:
         - Registry
       description: Patch existing device
       parameters:
+        - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       requestBody:
         description: The json patch to apply
@@ -405,7 +405,7 @@ paths:
         - Application administration
       description: update existing app admin object
       requestBody:
-        description: The spec section of the app to update
+        description: The data section of the app to update
         required: true
         content:
           'application/json':
@@ -554,14 +554,25 @@ components:
       schema:
         type: string
         description: A valid Kafka channel name.
+
+    Uid:
+      name: uid
+      in: query
+      required: false
+      description: The expected UID of the entry, for optimistic locking.
+      schema:
+        type: string
+        description: The expected UID of the entry.
+
     ResourceVersion:
-      name: resource-version
+      name: resourceVersion
       in: query
       required: false
       description: The resource version of the existing data, for optimistic locking.
       schema:
         type: string
-        description: A resource version identifier, usually a uuid.
+        description: A resource version identifier.
+
     Limit:
       name: limit
       in: query
@@ -621,7 +632,7 @@ components:
         id:
           type: string
         spec:
-          $ref: '#/components/schemas/ResourceSpec'
+          $ref: '#/components/schemas/ApplicationSpec'
 
     Device:
       type: object
@@ -671,10 +682,10 @@ components:
           - id: 0a111dfe-a0db-11eb-a953-d45d6455d2cc
             role: reader
 
-    ResourceSpec:
+    ApplicationSpec:
       type: object
       additionalProperties: true
-      description: A json object containing whatever data needs to be attached to an app or device.
+      description: A json object containing arbritrary data to attached to an application.
 
     CommandObject:
       type: object
