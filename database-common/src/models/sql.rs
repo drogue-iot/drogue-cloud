@@ -1,13 +1,16 @@
 use crate::models::Lock;
-use drogue_cloud_service_api::labels::Operation;
+use drogue_cloud_service_api::{auth::user::UserInformation, labels::Operation};
 use tokio_postgres::types::ToSql;
 
 pub struct SelectBuilder<'a> {
     select: String,
-    params: Vec<&'a (dyn ToSql + Sync)>,
+    params: Vec<&'a (dyn ToSql + Sync + 'a)>,
 
     have_where: bool,
+    sort: Vec<String>,
     lock: Lock,
+    limit: Option<usize>,
+    offset: Option<usize>,
 }
 
 impl<'a> SelectBuilder<'a> {
@@ -17,6 +20,9 @@ impl<'a> SelectBuilder<'a> {
             params,
             have_where: false,
             lock: Lock::None,
+            sort: Vec::new(),
+            limit: None,
+            offset: None,
         }
     }
 
@@ -24,14 +30,72 @@ impl<'a> SelectBuilder<'a> {
     fn ensure_where_or_and(&mut self) {
         if !self.have_where {
             self.have_where = true;
-            self.select.push_str(" WHERE");
+            self.select.push_str("\nWHERE");
         } else {
-            self.select.push_str(" AND");
+            self.select.push_str("\nAND");
         }
+    }
+
+    pub fn limit(mut self, limit: Option<usize>) -> Self {
+        self.limit = limit;
+        self
+    }
+
+    pub fn offset(mut self, offset: Option<usize>) -> Self {
+        self.offset = offset;
+        self
     }
 
     pub fn lock(mut self, lock: Lock) -> Self {
         self.lock = lock;
+        self
+    }
+
+    pub fn sort<I>(mut self, sort: I) -> Self
+    where
+        I: IntoIterator + Sized,
+        I::Item: ToString,
+    {
+        self.sort = sort.into_iter().map(|i| i.to_string()).collect();
+        self
+    }
+
+    /// Add restrictions to the select so that no unauthorized items get returned.
+    ///
+    /// NOTE: This must be aligned with [`crate::auth::authorize`].
+    pub fn auth(mut self, user: &'a Option<&'a UserInformation>) -> Self {
+        // check if we have user information
+        let user = match user {
+            Some(user) => user,
+            None => return self,
+        };
+
+        // check is we are admin
+        if user.is_admin() {
+            // early return if we are admin
+            return self;
+        }
+
+        // ensure we have a "where" or "and"
+
+        self.ensure_where_or_and();
+
+        // prepare the user id
+
+        match user {
+            UserInformation::Authenticated(user) => {
+                self.params.push(&user.user_id);
+            }
+            UserInformation::Anonymous => self.params.push(&""),
+        }
+        let idx = self.params.len();
+
+        // must be equal to the owner (which may be empty)
+
+        self.select.push_str(&format!(" OWNER=${}", idx));
+
+        // done
+
         self
     }
 
@@ -83,7 +147,7 @@ impl<'a> SelectBuilder<'a> {
                     self.params.push(label);
                     self.params.push(values);
                     self.select.push_str(&format!(
-                        " LABELS ->> ${} IN (${})",
+                        " LABELS ->> ${} = ANY (${})",
                         self.params.len() - 1,
                         self.params.len()
                     ));
@@ -92,7 +156,7 @@ impl<'a> SelectBuilder<'a> {
                     self.params.push(label);
                     self.params.push(values);
                     self.select.push_str(&format!(
-                        " LABELS ->> ${} NOT IN (${})",
+                        " NOT(LABELS ->> ${} = ANY (${}))",
                         self.params.len() - 1,
                         self.params.len()
                     ));
@@ -107,6 +171,19 @@ impl<'a> SelectBuilder<'a> {
 
         // append after the where
         select.push_str(self.lock.as_ref());
+
+        if !self.sort.is_empty() {
+            select.push_str("\nORDER BY ");
+            select.push_str(&self.sort.join(","));
+        }
+
+        if let Some(limit) = self.limit {
+            select.push_str(&format!("\nLIMIT {}", limit));
+        }
+
+        if let Some(offset) = self.offset {
+            select.push_str(&format!("\nOFFSET {}", offset));
+        }
 
         // return result
         (select, self.params)
@@ -144,7 +221,7 @@ mod test {
 
         let (sql, params) = builder.build();
 
-        assert_eq!(sql, "SELECT * FROM TABLE WHERE NAME=$1");
+        assert_eq!(sql, "SELECT * FROM TABLE\nWHERE NAME=$1");
         assert_eq!(
             params
                 .into_iter()
@@ -165,7 +242,9 @@ mod test {
 
         assert_eq!(
             sql,
-            r#"SELECT * FROM TABLE WHERE LABELS ? $1 AND LABELS ? $2"#
+            r#"SELECT * FROM TABLE
+WHERE LABELS ? $1
+AND LABELS ? $2"#
         );
         assert_eq!(
             params
@@ -187,7 +266,10 @@ mod test {
 
         assert_eq!(
             sql,
-            r#"SELECT * FROM TABLE WHERE (NOT LABELS ? $1) AND LABELS ->> $2 IN ($3) AND LABELS ->> $4 <> $5"#
+            r#"SELECT * FROM TABLE
+WHERE (NOT LABELS ? $1)
+AND LABELS ->> $2 = ANY ($3)
+AND LABELS ->> $4 <> $5"#
         );
         assert_eq!(
             params

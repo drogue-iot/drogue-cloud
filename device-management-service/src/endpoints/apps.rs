@@ -1,6 +1,6 @@
 use super::streamer::ArrayStreamer;
 use crate::{
-    endpoints::params::{DeleteParams, LabelSelector},
+    endpoints::params::{DeleteParams, ListParams},
     service::{ManagementService, PostgresManagementService},
     WebData,
 };
@@ -112,7 +112,7 @@ where
 
 pub async fn list<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
-    selector: web::Query<LabelSelector>,
+    params: web::Query<ListParams>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
@@ -120,13 +120,16 @@ where
 {
     log::debug!("Listing apps ");
 
-    let selector = selector
+    let selector = params
         .0
         .labels
         .try_into()
         .map_err(|err: ParserError| ServiceError::InvalidRequest(err.to_string()))?;
 
-    let apps = data.service.list_apps(user, selector).await?;
+    let apps = data
+        .service
+        .list_apps(user, selector, params.0.limit, params.0.offset)
+        .await?;
 
     Ok(HttpResponse::Ok()
         .content_type("application/json")

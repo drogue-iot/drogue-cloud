@@ -12,6 +12,8 @@ pub trait Resource {
 ///
 /// Currently, this is a rather simple approach. If the resource has an owner, the owners must match
 /// to grant access.
+///
+/// NOTE: This logic must be aligned with [`super::models::SelectBuilder`]
 pub fn authorize(resource: &dyn Resource, identity: &UserInformation) -> Outcome {
     // if we are "admin", grant access
     if identity.is_admin() {

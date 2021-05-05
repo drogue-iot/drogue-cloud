@@ -1598,6 +1598,7 @@ dependencies = [
  "http",
  "indexmap",
  "log",
+ "maplit",
  "openid",
  "pem 0.8.3",
  "pin-project",

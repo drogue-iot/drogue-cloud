@@ -55,6 +55,8 @@ pub trait ManagementService: Clone {
         &self,
         identity: UserInformation,
         labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> Result<
         Pin<Box<dyn Stream<Item = Result<registry::v1::Application, Self::Error>> + Send>>,
         Self::Error,
@@ -477,6 +479,8 @@ where
         &self,
         identity: UserInformation,
         labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> Result<
         Pin<Box<dyn Stream<Item = Result<registry::v1::Application, Self::Error>> + Send>>,
         Self::Error,
@@ -485,7 +489,7 @@ where
 
         Ok(Box::pin(
             PostgresApplicationAccessor::new(&c)
-                .list(None, labels, Lock::None)
+                .list(None, labels, limit, offset, Some(&identity), Lock::None)
                 .await?
                 .try_filter_map(move |app| {
                     let result = match ensure(&app, &identity) {

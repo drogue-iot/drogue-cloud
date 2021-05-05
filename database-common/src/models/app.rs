@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use core::pin::Pin;
 use drogue_client::{meta, registry};
+use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_service_api::labels::LabelSelector;
 use futures::{future, Stream, TryStreamExt};
 use serde_json::{Map, Value};
@@ -97,7 +98,14 @@ pub trait ApplicationAccessor {
     /// Get an application
     async fn get(&self, app: &str, lock: Lock) -> Result<Option<Application>, ServiceError> {
         Ok(self
-            .list(Some(app), LabelSelector::default(), lock)
+            .list(
+                Some(app),
+                LabelSelector::default(),
+                Some(1),
+                None,
+                None,
+                lock,
+            )
             .await?
             .try_next()
             .await?)
@@ -108,6 +116,9 @@ pub trait ApplicationAccessor {
         &self,
         name: Option<&str>,
         labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        id: Option<&UserInformation>,
         lock: Lock,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>;
 
@@ -229,6 +240,9 @@ FROM
         &self,
         name: Option<&str>,
         labels: LabelSelector,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        id: Option<&UserInformation>,
         lock: Lock,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>
     {
@@ -253,7 +267,11 @@ FROM APPLICATIONS
         let builder = SelectBuilder::new(select, Vec::new())
             .name(&name)
             .labels(&labels.0)
-            .lock(lock);
+            .auth(&id)
+            .lock(lock)
+            .sort(&["NAME"])
+            .limit(limit)
+            .offset(offset);
 
         let (select, params) = builder.build();
 
