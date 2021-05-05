@@ -334,10 +334,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  user-id:
+                  id:
                     type: string
                 required:
-                  - user-id
+                  - id
         403:
           description: In case the user is not logged in.
 
