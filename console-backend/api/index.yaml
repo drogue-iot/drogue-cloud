@@ -4,17 +4,38 @@ info:
   version: "0.5"
   contact:
     url: https://drogue.io
+
 servers:
   - url: "http://localhost:8080"
+
 externalDocs:
   description: Drogue Cloud Documentation
   url: https://book.drogue.io
+
 security:
   - api_key: []
+
+tags:
+  - name: API keys
+  - name: Registry
+    description: Manage Apps and devices in the registry.
+  - name: Application administration
+    description: Manage applications members and authorizations.
+  - name: Command & Control
+    description: Send commands to devices and check the results.
+  - name: System Information
+
 paths:
+
+#
+# Console
+#
+
   "/.well-known/drogue-version":
     get:
       description: "Get version"
+      tags:
+        - System Information
       responses:
         "200":
           description: "Version response"
@@ -28,9 +49,12 @@ paths:
                     enum: ["true"]
                 required:
                   - success
+
   "/api/keys/v1alpha1":
     get:
       description: List API keys for this user.
+      tags:
+        - API keys
       responses:
         "200":
           description: All API keys for this user.
@@ -48,6 +72,8 @@ paths:
                       type: string
     post:
       description: Create a new API key for this user.
+      tags:
+        - API keys
       responses:
         "200":
           description: A new API key was created.
@@ -66,6 +92,8 @@ paths:
   "/api/keys/v1alpha1/{prefix}":
     delete:
       description: Delete an API key by prefix.
+      tags:
+        - API keys
       parameters:
         - name: prefix
           required: true
@@ -78,7 +106,634 @@ paths:
 
             If the API key didn't exists, still 204 will be returned.
 
+
+#
+# ## Registry
+#
+
+  #
+  # ### Apps
+  #
+
+  /api/registry/v1alpha1/apps/:
+    get:
+      tags:
+        - Registry
+      description: Return all the applications the user has access to
+      parameters:
+        - $ref: '#/components/parameters/AppId'
+        - $ref: '#/components/parameters/Labels'
+      responses:
+        200:
+          description: A list of applications.
+        401:
+          description: Unauthorized.
+    post:
+      tags:
+        - Registry
+      description: create new application.
+      requestBody:
+        description: The spec section of the application to add
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/App'
+      responses:
+        201:
+          description: If the application is created
+        409:
+          description: If the application id is already used.
+
+  /api/registry/v1alpha1/apps/{appId}:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+    get:
+      tags:
+        - Registry
+      description: Return application details.
+      responses:
+        200:
+          description: The data of the application
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/App'
+        404:
+          description: If requested application do not exist or if the user has not access to it.
+    put:
+      tags:
+        - Registry
+      description: update existing app
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      requestBody:
+        description: The spec section of the application to update
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/App'
+      responses:
+        204:
+          description: If the app is updated
+        404:
+          description: If requested apps do not exits or if the user has not access to them.
+    delete:
+      tags:
+        - Registry
+      description: Delete existing app
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      responses:
+        204:
+          description: If the app is deleted
+        404:
+          description: If requested apps do not exits or if the user has not access to them.
+    patch:
+      tags:
+        - Registry
+      description: Patch existing app
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      requestBody:
+        description: The json patch to apply
+        required: true
+        content:
+          application/json :
+            example:
+              [
+                { "op": "replace", "path": "/baz", "value": "boo" },
+                { "op": "add", "path": "/hello", "value": ["world"] },
+                { "op": "remove", "path": "/foo" }
+              ]
+      responses:
+        204:
+          description: If the app is updated
+        404:
+          description: If requested apps do not exits or if the user has not access to them.
+
+
+  #
+  # ### Devices
+  #
+
+  /api/registry/v1alpha1/apps/{appId}/devices/:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+    get:
+      tags:
+        - Registry
+      description: Return all the devices of the application.
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - $ref: '#/components/parameters/Labels'
+      responses:
+        200:
+          description: A list of devices.
+        401:
+          description: Unauthorized.
+    post:
+      tags:
+        - Registry
+      description: Create a new device.
+      requestBody:
+        description: The device object to add.
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/Device'
+      responses:
+        201:
+          description: If the device is created.
+        409:
+          description: If the device id is already used.
+
+  /api/registry/v1alpha1/apps/{appId}/devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      tags:
+        - Registry
+      description: Return device details.
+      responses:
+        200:
+          description: The data of the device
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Device'
+        404:
+          description: If requested device do not exist or if the user has not access to it.
+    put:
+      tags:
+        - Registry
+      description: update existing device
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      requestBody:
+        description: The data object of the device to update
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/Device'
+      responses:
+        204:
+          description: If the device is updated
+        404:
+          description: If requested device do not exits or if the user has not access to it.
+    delete:
+      tags:
+        - Registry
+      description: Delete existing device
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      responses:
+        204:
+          description: If the device is deleted
+        404:
+          description: If requested device do not exits or if the user has not access to it.
+    patch:
+      tags:
+        - Registry
+      description: Patch existing device
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      requestBody:
+        description: The json patch to apply
+        required: true
+        content:
+          application/json:
+            example:
+              [
+                { "op": "replace", "path": "/baz", "value": "boo" },
+                { "op": "add", "path": "/hello", "value": ["world"] },
+                { "op": "remove", "path": "/foo" }
+              ]
+      responses:
+        204:
+          description: If the device is updated
+        404:
+          description: If requested device do not exits or if the user has not access to it.
+
+  #
+  # ## Admin
+  #
+
+  /api/admin/v1alpha1/user/whoami:
+    get:
+      tags:
+        - User administration
+      description: Get information about the current user.
+      responses:
+        200:
+          description: Information about the current user.
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  user-id:
+                    type: string
+                required:
+                  - user-id
+        403:
+          description: In case the user is not logged in.
+
+  /api/admin/v1alpha1/apps/{appId}/transfer-ownership:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+    put:
+      tags:
+        - Application administration
+      description: Initiate the process to transfer the ownership.
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                new-user:
+                  type: string
+              required:
+                - new-user
+      responses:
+        200:
+          description: Transfer process is initiated.
+        404:
+          description: If the requested application does not exist or if the user has no access to it.
+
+  /api/admin/v1alpha1/apps/{appId}/accept-ownership:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+    put:
+      tags:
+        - Application administration
+      description: Accept an application as new owner.
+      responses:
+        204:
+          description: Ownership is transfered.
+        404:
+          description: If the requested application does not exist or if the user has no access to it.
+
+  /api/admin/v1alpha1/apps/{appId}/members:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+    get:
+      tags:
+        - Application administration
+      description: Get curretn application members.
+      responses:
+        200:
+          description: The list of members for this application.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ApplicationMembers'
+        404:
+          description: If the requested application does not exist or if the user has no access to it.
+
+    put:
+      parameters:
+        - $ref: '#/components/parameters/ResourceVersion'
+      tags:
+        - Application administration
+      description: update existing app admin object
+      requestBody:
+        description: The spec section of the app to update
+        required: true
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ApplicationMembers'
+      responses:
+        204:
+          description: The application's member list was updated.
+        404:
+          description: If requested application does not exist or if the user has no access to it.
+
+  #
+  # ## Command & control
+  #
+
+  /api/command/v1alpha1/apps/{appId}/devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/DeviceId'
+    post:
+      tags:
+        - Command & Control
+      description: Send one way commands to devices.
+      parameters:
+        - name: command
+          required: true
+          in: query
+          schema:
+            $ref: '#/components/schemas/CommandObject'
+          description: Command to execute
+        - name: timeout
+          required: false
+          in: query
+          description: Set amount of time in seconds to wait for the command response from the device.
+          schema:
+            $ref: '#/components/schemas/Timeout'
+      requestBody:
+        description: Optional payload for the command
+        required: false
+        content:
+          'application/json':
+            example: {"set-temp": 40}
+      responses:
+        202:
+          description: |
+            Optional payload of the command response.
+            With external integration (like ttn) then it's anything the integration point returns.
+        401:
+          description: Invalid authentication.
+        404:
+          description: Device or app not found.
+        406:
+          description: Device is not found or disabled.
+
+  /api/command/v1alpha1/inbox/apps/{appId}/devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/DeviceId'
+    get:
+      tags:
+        - Command & Control
+      description: Explicitly wait for commands
+      parameters:
+        - name: timeout
+          required: false
+          in: query
+          description: Wait for commands for specified amount of time in seconds.
+          schema:
+            $ref: '#/components/schemas/Timeout'
+      responses:
+        200:
+          description: The response contain a command.
+          headers:
+            Command:
+              description: Command to be executed
+              schema:
+                type: object
+            Request:
+              required: false
+              description: Request identifier used to correlate response with.
+              schema:
+                type: string
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/CommandObject'
+        404:
+          description: No command available.
+
+  /api/command/v1alpha1/outbox/apps/{appId}/devices/{deviceId}:
+    parameters:
+      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/DeviceId'
+    post:
+      tags:
+        - Command & Control
+      description: Send a command result.
+      parameters:
+        - name: request
+          required: false
+          in: query
+          description: Request identifier used to correlate response with.
+          schema:
+            type: string
+        - name: status
+          required: true
+          in: query
+          description: Status code of commands execution.
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            example:
+              {error: light disconnected}
+        description: Optional payload for the command response
+      responses:
+        200:
+          description: Command result saved.
+
 components:
+
+  parameters:
+    AppId:
+      name: appId
+      in: path
+      required: true
+      description: The Application ID.
+      schema:
+        type: string
+        description: Must be DNS labels as defined by RFC1123
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: The device ID.
+      schema:
+        type: string
+        maxLength: 255
+        description: Must conform to UTF-8
+    Channel:
+      name: channel
+      in: path
+      required: true
+      description: The kafka channel to publish the data in.
+      schema:
+        type: string
+        description: A valid Kafka channel name.
+    ResourceVersion:
+      name: resource-version
+      in: query
+      required: false
+      description: The resource version of the existing data, for optimistic locking.
+      schema:
+        type: string
+        description: A resource version identifier, usually a uuid.
+    Labels:
+      name: labels
+      in: query
+      required: false
+      description: |
+        Labels selectors.
+
+        Labels are arbitrary \<key\>:\<value\> pairs that can be associated with a resource.
+        A selector matches labels values using equality, inequality and filtering.
+        It can check the existence of a label key, ignoring the value.<br/>
+        To summarize, there are 6 available operations and their associated symbol :
+          * equality: `=`
+          * inequality: `!=`
+          * filtering: `in`
+          * negative-filetering: `notin`
+          * existence: `<key>`
+          * non-existence: `!<key>`
+
+        For example :<br/>
+        `zone=europe` will match a label where the value for key `zone` is equal to `europe`. <br/>
+        `zone!=europe` will match all the labels where the value for key `zone` is not equal to `europe`. <br/>
+        `country in (france, germany)` will match all the labels where the value for key `country` is equal to `france` or `germany`. <br/>
+        `country notin (spain, italy)` will match all the labels where the value for key `country` is not equal to `spain` or `italy`. <br/>
+        `power` will match all the labels where the key `power` exist, regardless of the value. <br/>
+        `!power` will match all the labels where the key `power` do not exist.
+
+        Multiple selectors can be submited, separated with a coma. A coma implies a AND operation between selectors.<br/>
+        This is modeled after the [kubernetes labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
+      schema:
+        items:
+          type: string
+          description: URL encoded list of labels selectors.
+      example: |
+        zone=europe, country=spain, power in (solar-pannel,battery), manufacturer notin (nokia,sony)
+
+        URL encoded form: ?labels=zone%3Deurope,country%3Dspain,power+in+%28solar-pannel%2Cbattery%29,manufacturer+notin+%28nokia%2Csony%29
+
+#
+# Schemas
+#
+
+  schemas:
+    App:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        spec:
+          $ref: '#/components/schemas/ResourceSpec'
+
+    Device:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        spec:
+          $ref: '#/components/schemas/DeviceSpec'
+
+    ApplicationMembers:
+      type: object
+      additionalProperties: false
+      required:
+        - resourceVersion
+        - owner
+      properties:
+        resourceVersion:
+          type: string
+        owner:
+          type: string
+        members:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - user_id
+              - role
+            properties:
+              id:
+                type: string
+              role:
+                type: string
+                enum:
+                  - admin
+                  - manager
+                  - reader
+      example:
+        resourceVersion: ced63698-a0da-11eb-97e8-d45d6455d2cc
+        owner: fc74ae68-a0da-11eb-a152-d45d6455d2cc
+        members:
+          - id: d84eb308-a0da-11eb-9e90-d45d6455d2cc
+            role: admin
+          - id: 03e32c1a-a0db-11eb-9e9b-d45d6455d2cc
+            role: manager
+          - id: 0a111dfe-a0db-11eb-a953-d45d6455d2cc
+            role: reader
+
+    ResourceSpec:
+      type: object
+      additionalProperties: true
+      description: A json object containing whatever data needs to be attached to an app or device.
+
+    CommandObject:
+      type: object
+      additionalProperties: true
+      description: The command to execute.
+      example:
+        set-temp: 21
+        set-light-color: FDF4DC
+
+    Timeout:
+      type: integer
+      example: 30
+
+    TelemetryData:
+      type: object
+      additionalProperties: true
+      example:
+        temp: 19
+        luminosity: 55
+
+    DeviceSpec:
+      type: object
+      additionalProperties: true
+      description: A json object containing arbritrary data to attached to a device.
+      properties:
+        credentials:
+          $ref: '#/components/schemas/DeviceCredentials'
+
+    DeviceCredentials:
+      type: array
+      additionalProperties: false
+      items:
+        oneOf:
+          - $ref: '#/components/schemas/UserCredential'
+          - $ref: '#/components/schemas/PassCredential'
+          - $ref: '#/components/schemas/CertCredential'
+
+
+    UserCredential:
+      type: object
+      additionalProperties: false
+      description: username and password credentials.
+      properties:
+        user:
+          type: object
+          additionalProperties: false
+          properties:
+            usename:
+              type: string
+            password:
+              type: string
+
+    PassCredential:
+      type: object
+      description: password credential.
+      additionalProperties: false
+      properties:
+        pass:
+          type: string
+          example: verysecret
+
+    CertCredential:
+      type: object
+      description: The public key of the device X509 certificate.
+      additionalProperties: false
+      properties:
+        cert:
+          type: string
+
+#
+# Security schemes
+#
+
   securitySchemes:
     api_key:
       type: oauth2
