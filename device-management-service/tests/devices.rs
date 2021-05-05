@@ -1,16 +1,28 @@
 mod common;
 
-use crate::common::{assert_events, init, outbox_retrieve};
+use crate::common::{
+    assert_events, assert_resources, call_http, create_app, create_device, init, outbox_retrieve,
+    user,
+};
 use actix_cors::Cors;
-use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
+use actix_http::Request;
+use actix_web::{
+    body::MessageBody,
+    dev::{Service, ServiceResponse},
+    http::StatusCode,
+    middleware::Condition,
+    test, web, App,
+};
 use drogue_cloud_device_management_service::{
     app, endpoints,
     service::{self},
     WebData,
 };
 use drogue_cloud_registry_events::{mock::MockEventSender, Event};
+use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_test_common::{client, db};
 use http::{header, HeaderValue};
+use maplit::hashmap;
 use serde_json::json;
 use serial_test::serial;
 
@@ -757,4 +769,99 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
     })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_search_devices() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+
+        create_app(&app, user("foo"), "my-app", hashmap!(
+        )).await?;
+
+        create_device(&app, user("foo"), "my-app", "device-1", hashmap!(
+        )).await?;
+
+        create_device(&app, user("foo"), "my-app", "device-2", hashmap!(
+            "floor" => "1",
+            "room" => "101",
+        )).await?;
+
+        create_device(&app, user("foo"), "my-app", "device-3", hashmap!(
+            "floor" => "1",
+            "room" => "102",
+        )).await?;
+
+        create_device(&app, user("foo"), "my-app", "device-4", hashmap!(
+            "floor" => "1",
+            "room" => "102",
+            "important" => "",
+        )).await?;
+
+        create_device(&app, user("foo"), "my-app", "device-5", hashmap!(
+            "floor" => "2",
+            "room" => "201",
+        )).await?;
+
+        assert_devices(& app, user("foo"), "my-app", Some("floor"), None, None, &["device-2", "device-3", "device-4", "device-5"]).await?;
+        assert_devices(& app, user("foo"), "my-app", Some("!floor"), None, None, &["device-1"]).await?;
+
+        assert_devices(& app, user("foo"), "my-app", Some("floor=1"), None, None, &["device-2", "device-3", "device-4"]).await?;
+        assert_devices(& app, user("foo"), "my-app", Some("floor!=1"), None, None, &["device-5"]).await?;
+
+        assert_devices(& app, user("foo"), "my-app", Some("important"), None, None, &["device-4"]).await?;
+        assert_devices(& app, user("foo"), "my-app", Some("floor in (1,2)"), None, None, &["device-2", "device-3", "device-4", "device-5"]).await?;
+        assert_devices(& app, user("foo"), "my-app", Some("floor notin (1,2)"), None, None, &[]).await?;
+
+        assert_devices(& app, user("foo"), "my-app", Some("floor"), Some(2), None, &["device-2", "device-3"]).await?;
+        assert_devices(& app, user("foo"), "my-app", Some("floor"), Some(2), Some(1), &[ "device-3", "device-4"]).await?;
+    })
+}
+
+#[allow(dead_code)]
+pub async fn assert_devices<S, B, E, S1>(
+    app: &S,
+    user: UserInformation,
+    app_name: S1,
+    labels: Option<&str>,
+    limit: Option<usize>,
+    offset: Option<usize>,
+    outcome: &[&str],
+) -> anyhow::Result<()>
+where
+    S: Service<Request, Response = ServiceResponse<B>, Error = E>,
+    B: MessageBody + Unpin,
+    E: std::fmt::Debug,
+    S1: AsRef<str>,
+{
+    let query = {
+        let mut query = form_urlencoded::Serializer::new(String::new());
+        if let Some(labels) = labels {
+            query.append_pair("labels", labels);
+        }
+        if let Some(limit) = limit {
+            query.append_pair("limit", &limit.to_string());
+        }
+        if let Some(offset) = offset {
+            query.append_pair("offset", &offset.to_string());
+        }
+        query.finish()
+    };
+
+    let resp = call_http(
+        app,
+        user,
+        test::TestRequest::get().uri(&format!(
+            "/api/v1/apps/{}/devices?{}",
+            app_name.as_ref(),
+            query
+        )),
+    )
+    .await;
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let result: serde_json::Value = test::read_body_json(resp).await;
+    assert_resources(result, outcome);
+
+    Ok(())
 }

@@ -3,7 +3,10 @@ use crate::{
     default_resource, diffable,
     error::ServiceError,
     generation,
-    models::{sql::SelectBuilder, Lock, TypedAlias},
+    models::{
+        sql::{slice_iter, SelectBuilder},
+        Lock, TypedAlias,
+    },
     update_aliases, Client,
 };
 use async_trait::async_trait;
@@ -287,7 +290,6 @@ FROM APPLICATIONS
             .map_err(|err| ServiceError::Database(err));
 
         Ok(Box::pin(stream))
-        //stream.try_collect().await
     }
 
     async fn create(
@@ -398,10 +400,4 @@ WHERE
             Ok(count)
         })
     }
-}
-
-fn slice_iter<'a>(
-    s: &'a [&'a (dyn ToSql + Sync)],
-) -> impl ExactSizeIterator<Item = &'a dyn ToSql> + 'a {
-    s.iter().map(|s| *s as _)
 }

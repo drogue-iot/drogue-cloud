@@ -58,3 +58,4 @@ base64 = "0.13"
 openid = "0.9"
 tokio = { version = "1", features = ["full"] }
 maplit = "1"
+form_urlencoded = "1"

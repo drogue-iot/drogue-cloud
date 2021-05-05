@@ -118,7 +118,7 @@ pub async fn list<S>(
 where
     S: EventSender + Clone,
 {
-    log::debug!("Listing apps ");
+    log::debug!("Listing apps");
 
     let selector = params
         .0

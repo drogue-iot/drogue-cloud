@@ -2,6 +2,12 @@ use crate::models::Lock;
 use drogue_cloud_service_api::{auth::user::UserInformation, labels::Operation};
 use tokio_postgres::types::ToSql;
 
+pub fn slice_iter<'a>(
+    s: &'a [&'a (dyn ToSql + Sync)],
+) -> impl ExactSizeIterator<Item = &'a dyn ToSql> + 'a {
+    s.iter().map(|s| *s as _)
+}
+
 pub struct SelectBuilder<'a> {
     select: String,
     params: Vec<&'a (dyn ToSql + Sync + 'a)>,
@@ -24,6 +30,12 @@ impl<'a> SelectBuilder<'a> {
             limit: None,
             offset: None,
         }
+    }
+
+    /// Marks the select as already having a WHERE clause
+    pub fn has_where(mut self) -> Self {
+        self.have_where = true;
+        self
     }
 
     #[inline]
@@ -169,9 +181,6 @@ impl<'a> SelectBuilder<'a> {
     pub fn build(self) -> (String, Vec<&'a (dyn ToSql + Sync)>) {
         let mut select = self.select;
 
-        // append after the where
-        select.push_str(self.lock.as_ref());
-
         if !self.sort.is_empty() {
             select.push_str("\nORDER BY ");
             select.push_str(&self.sort.join(","));
@@ -184,6 +193,10 @@ impl<'a> SelectBuilder<'a> {
         if let Some(offset) = self.offset {
             select.push_str(&format!("\nOFFSET {}", offset));
         }
+
+        select.push('\n');
+        // append after the where
+        select.push_str(self.lock.as_ref());
 
         // return result
         (select, self.params)

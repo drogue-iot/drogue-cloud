@@ -1,12 +1,17 @@
 use crate::{
-    endpoints::params::DeleteParams,
+    endpoints::{
+        params::{DeleteParams, ListParams},
+        streamer::ArrayStreamer,
+    },
     service::{ManagementService, PostgresManagementService},
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_client::registry;
 use drogue_cloud_registry_events::EventSender;
-use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_api::{auth::user::UserInformation, labels::ParserError};
+use drogue_cloud_service_common::error::ServiceError;
+use std::convert::TryInto;
 
 pub async fn create<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
@@ -124,6 +129,7 @@ where
 pub async fn list<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
     path: web::Path<String>,
+    params: web::Query<ListParams>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
@@ -137,12 +143,18 @@ where
         return Ok(HttpResponse::BadRequest().finish());
     }
 
-    let devices = data.service.list_devices(&user, &app_id).await?;
+    let selector = params
+        .0
+        .labels
+        .try_into()
+        .map_err(|err: ParserError| ServiceError::InvalidRequest(err.to_string()))?;
 
-    let result = match devices {
-        None => HttpResponse::NotFound().finish(),
-        Some(device) => HttpResponse::Ok().json(device),
-    };
+    let apps = data
+        .service
+        .list_devices(user,  &app_id, selector, params.0.limit, params.0.offset)
+        .await?;
 
-    Ok(result)
+    Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .streaming(ArrayStreamer::new(apps)))
 }
