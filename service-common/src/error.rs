@@ -12,6 +12,10 @@ pub enum ServiceError {
     AuthenticationError,
     #[error("Service unavailable: {0}")]
     ServiceUnavailable(String),
+    #[error("Invalid request: {0}")]
+    InvalidRequest(String),
+    #[error("Failed to serialize data: {0}")]
+    Serializer(#[from] serde_json::Error),
 }
 
 impl ResponseError for ServiceError {
@@ -35,6 +39,18 @@ impl ResponseError for ServiceError {
                 HttpResponse::ServiceUnavailable().json(ErrorResponse {
                     error: "ServiceUnavailable".into(),
                     message: message.clone(),
+                })
+            }
+            ServiceError::InvalidRequest(message) => {
+                HttpResponse::BadRequest().json(ErrorResponse {
+                    error: "InvalidRequest".into(),
+                    message: message.clone(),
+                })
+            }
+            ServiceError::Serializer(err) => {
+                HttpResponse::InternalServerError().json(ErrorResponse {
+                    error: "Serializer".into(),
+                    message: err.to_string(),
                 })
             }
         }

@@ -3,6 +3,7 @@ pub mod device;
 pub mod diff;
 mod gen;
 pub mod outbox;
+pub mod sql;
 
 pub use gen::*;
 
@@ -79,12 +80,17 @@ pub enum Lock {
 
 impl ToString for Lock {
     fn to_string(&self) -> String {
+        self.as_ref().into()
+    }
+}
+
+impl AsRef<str> for Lock {
+    fn as_ref(&self) -> &str {
         match self {
             Self::None => "",
             Self::ForUpdate => "FOR UPDATE",
             Self::ForShare => "FOR SHARE",
         }
-        .into()
     }
 }
 

@@ -1,12 +1,15 @@
+use super::streamer::ArrayStreamer;
 use crate::{
-    endpoints::params::DeleteParams,
+    endpoints::params::{DeleteParams, LabelSelector},
     service::{ManagementService, PostgresManagementService},
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_client::registry;
 use drogue_cloud_registry_events::EventSender;
-use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_api::{auth::user::UserInformation, labels::ParserError};
+use drogue_cloud_service_common::error::ServiceError;
+use std::convert::TryInto;
 
 pub async fn create<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
@@ -109,6 +112,7 @@ where
 
 pub async fn list<S>(
     data: web::Data<WebData<PostgresManagementService<S>>>,
+    selector: web::Query<LabelSelector>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
@@ -116,10 +120,15 @@ where
 {
     log::debug!("Listing apps ");
 
-    let apps = data.service.list_apps(&user).await?;
+    let selector = selector
+        .0
+        .labels
+        .try_into()
+        .map_err(|err: ParserError| ServiceError::InvalidRequest(err.to_string()))?;
 
-    Ok(match apps {
-        None => HttpResponse::NotFound().finish(),
-        Some(app) => HttpResponse::Ok().json(app),
-    })
+    let apps = data.service.list_apps(user, selector).await?;
+
+    Ok(HttpResponse::Ok()
+        .content_type("application/json")
+        .streaming(ArrayStreamer::new(apps)))
 }
