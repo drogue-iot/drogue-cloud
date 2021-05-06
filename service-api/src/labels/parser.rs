@@ -170,7 +170,6 @@ mod test {
         assert!(parse_from("foo/bar/bar").is_err(),);
         assert!(parse_from("foo/").is_err(),);
         assert!(parse_from("/bar").is_err(),);
-        assert!(parse_from("01234").is_err(),);
         assert!(parse_from("foo-bar/baz").is_err(),);
     }
 
