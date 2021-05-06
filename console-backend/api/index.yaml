@@ -13,7 +13,7 @@ externalDocs:
   url: https://book.drogue.io
 
 security:
-  - api_key: []
+  - api_key: [ ]
 
 tags:
   - name: API keys
@@ -27,9 +27,9 @@ tags:
 
 paths:
 
-#
-# Console
-#
+  #
+  # Console
+  #
 
   "/.well-known/drogue-version":
     get:
@@ -46,7 +46,7 @@ paths:
                 properties:
                   success:
                     type: string
-                    enum: ["true"]
+                    enum: [ "true" ]
                 required:
                   - success
 
@@ -107,9 +107,9 @@ paths:
             If the API key didn't exists, still 204 will be returned.
 
 
-#
-# ## Registry
-#
+  #
+  # ## Registry
+  #
 
   #
   # ### Apps
@@ -202,11 +202,13 @@ paths:
         description: The JSON patch to apply
         required: true
         content:
-          application/json :
+          application/json:
+            schema:
+              $ref: '#/components/schema/Patch'
             example:
               [
                 { "op": "replace", "path": "/baz", "value": "boo" },
-                { "op": "add", "path": "/hello", "value": ["world"] },
+                { "op": "add", "path": "/hello", "value": [ "world" ] },
                 { "op": "remove", "path": "/foo" }
               ]
       responses:
@@ -311,10 +313,12 @@ paths:
         required: true
         content:
           application/json:
+            schema:
+              $ref: '#/components/schemas/Patch'
             example:
               [
                 { "op": "replace", "path": "/baz", "value": "boo" },
-                { "op": "add", "path": "/hello", "value": ["world"] },
+                { "op": "add", "path": "/hello", "value": [ "world" ] },
                 { "op": "remove", "path": "/foo" }
               ]
       responses:
@@ -453,7 +457,7 @@ paths:
         required: false
         content:
           'application/json':
-            example: {"set-temp": 40}
+            example: { "set-temp": 40 }
       responses:
         202:
           description: |
@@ -526,7 +530,7 @@ paths:
         content:
           'application/json':
             example:
-              {error: light disconnected}
+              { error: light disconnected }
         description: Optional payload for the command response
       responses:
         200:
@@ -634,9 +638,10 @@ components:
 
         URL encoded form: ?labels=zone%3Deurope,country%3Dspain,power+in+%28solar-pannel%2Cbattery%29,manufacturer+notin+%28nokia%2Csony%29
 
-#
-# Schemas
-#
+
+  #
+  # Schemas
+  #
 
   schemas:
     Metadata:
@@ -861,9 +866,59 @@ components:
         cert:
           type: string
 
-#
-# Security schemes
-#
+    Patch:
+      type: array
+      items:
+        oneOf:
+          - type: object
+            additionalProperties: false
+            required:
+              - path
+              - op
+              - value
+            properties:
+              path:
+                $ref: '#/components/schemas/PatchPath'
+              op:
+                type: string
+                enum: [ "add", "replace", "test" ]
+              value:
+                description: The value to apply.
+          - type: object
+            additionalProperties: false
+            required:
+              - path
+              - op
+            properties:
+              path:
+                $ref: '#/components/schemas/PatchPath'
+              op:
+                type: string
+                enum: [ "remove" ]
+          - type: object
+            additionalProperties: false
+            required:
+              - path
+              - op
+              - from
+            properties:
+              path:
+                $ref: '#/components/schemas/PatchPath'
+              op:
+                type: string
+                enum: [ "move", "copy" ]
+              from:
+                allOf:
+                  - $ref: '#/components/schemas/PatchPath'
+                  - description: A JSON path where to copy/move from.
+
+    PatchPath:
+      type: string
+      description: A JSON path
+
+  #
+  # Security schemes
+  #
 
   securitySchemes:
     api_key:
