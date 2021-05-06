@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
@@ -79,9 +77,14 @@ fi
 
 kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/$CLUSTER/"
 
+# Some time to let resources show up 
+sleep 60
+
 # Patch the Keycloak database to work with
 if [ "$CLUSTER" == "kubernetes" ]; then
     kubectl -n "$DROGUE_NS" patch deployment keycloak-postgresql -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
+    kubectl -n "$DROGUE_NS" patch deployment postgres -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
+    kubectl -n "$DROGUE_NS" patch deployment grafana -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
 fi
 
 # Remove the unnecessary and wrong host entry for keycloak ingress
