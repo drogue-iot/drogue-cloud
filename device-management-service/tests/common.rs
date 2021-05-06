@@ -201,12 +201,14 @@ where
     let resp = call_http(
         app,
         user,
-        TestRequest::post().uri("/api/v1/apps").set_json(&json!({
-            "metadata": {
-                "name": name.as_ref(),
-                "labels": labels,
-            },
-        })),
+        TestRequest::post()
+            .uri("/api/registry/v1alpha1/apps")
+            .set_json(&json!({
+                "metadata": {
+                    "name": name.as_ref(),
+                    "labels": labels,
+                },
+            })),
     )
     .await;
 
@@ -233,7 +235,10 @@ where
         app,
         user,
         TestRequest::post()
-            .uri(&format!("/api/v1/apps/{}/devices", app_name.as_ref()))
+            .uri(&format!(
+                "/api/registry/v1alpha1/apps/{}/devices",
+                app_name.as_ref()
+            ))
             .set_json(&json!({
                 "metadata": {
                     "name": name.as_ref(),
