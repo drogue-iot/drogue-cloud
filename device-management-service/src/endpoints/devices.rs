@@ -151,7 +151,7 @@ where
 
     let apps = data
         .service
-        .list_devices(user,  &app_id, selector, params.0.limit, params.0.offset)
+        .list_devices(user, &app_id, selector, params.0.limit, params.0.offset)
         .await?;
 
     Ok(HttpResponse::Ok()
