@@ -55,6 +55,18 @@ case $CLUSTER in
           URL="https://$URL"
         fi
         ;;
+   kubernetes)
+        # Workaround to use the node-port service
+        if [ "$name" == "keycloak" ]; then
+            name="$name-endpoint"
+        fi
+        DOMAIN=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type == "ExternalIP")].address}').nip.io
+        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
+        if [ -n "$DOMAIN" ]; then
+          URL="http://$name.$DOMAIN:$PORT"
+        fi
+        ;;
+
    kind)
         # Workaround to use the node-port service
         if [ "$name" == "keycloak" ]; then
