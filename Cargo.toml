@@ -27,7 +27,7 @@ members = [
 [patch.crates-io]
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "fe51e06fb2c44b1d3e3fd627cedea3fd582487ef" }
 #patternfly-yew = { path = "../patternfly-yew" }
-#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "49b7f09b1a091e2bcf0e8b280c7e980ea34ad1a5" }
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "93fe46eca5e481d547f08fb5ece52ee25661e558" }
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "1898ac0a6af51dc3a99c9f291049e3fd993c69c6"}
 

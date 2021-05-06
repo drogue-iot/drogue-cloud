@@ -53,7 +53,7 @@ impl TableRenderer for Entry {
     }
 
     fn render_details(&self) -> Vec<Span> {
-        vec![Span::max(render_details(&self.0))]
+        vec![Span::max(render_details(&self.0)).truncate()]
     }
 }
 
@@ -383,7 +383,7 @@ fn render_details(event: &Event) -> Html {
             (
                 key.to_string(),
                 html! {
-                    <pre>{ value.to_string() }</pre>
+                    <pre class="pf-c-table__text">{ value.to_string() }</pre>
                 },
             )
         })
