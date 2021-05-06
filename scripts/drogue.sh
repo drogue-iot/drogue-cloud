@@ -77,11 +77,11 @@ fi
 
 kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/$CLUSTER/"
 
-# Some time to let resources show up 
-sleep 60
-
-# Patch the Keycloak database to work with
+# Patch some of the deployments to to allow persistent volume access
 if [ "$CLUSTER" == "kubernetes" ]; then
+    # Some time to let resources show up
+    sleep 60
+
     kubectl -n "$DROGUE_NS" patch deployment keycloak-postgresql -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
     kubectl -n "$DROGUE_NS" patch deployment postgres -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
     kubectl -n "$DROGUE_NS" patch deployment grafana -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
