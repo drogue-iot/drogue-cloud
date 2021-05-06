@@ -102,7 +102,7 @@ paths:
       responses:
         "204":
           description: |
-            Successfully delete API key.
+            Successfully deleted the API key.
 
             If the API key didn't exists, still 204 will be returned.
 
@@ -135,7 +135,7 @@ paths:
         - Registry
       description: create new application.
       requestBody:
-        description: The spec section of the application to add
+        description: The data section of the application to add
         content:
           'application/json':
             schema:
@@ -161,7 +161,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/App'
         404:
-          description: If requested application do not exist or if the user has not access to it.
+          description: If the requested application does not exist or if the user has no access to it.
     put:
       tags:
         - Registry
@@ -175,30 +175,31 @@ paths:
               $ref: '#/components/schemas/App'
       responses:
         204:
-          description: If the app is updated
+          description: If the application is updated
         404:
-          description: If requested apps do not exits or if the user has not access to them.
+          description: If the requested application does not exist or if the user has no access to it.
     delete:
       tags:
         - Registry
-      description: Delete existing app
+      description: Delete existing application
       parameters:
         - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       responses:
         204:
-          description: If the app is deleted
+          description: If the application is deleted
         404:
-          description: If requested apps do not exits or if the user has not access to them.
+          description: If the requested application does not exist or if the user has not access to it.
     patch:
       tags:
         - Registry
-      description: Patch existing app
+      description: "FUTURE USE: Patch existing app"
+      deprecated: false
       parameters:
         - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       requestBody:
-        description: The json patch to apply
+        description: The JSON patch to apply
         required: true
         content:
           application/json :
@@ -268,7 +269,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Device'
         404:
-          description: If requested device do not exist or if the user has not access to it.
+          description: If requested device does not exist or if the user has no access to it.
     put:
       tags:
         - Registry
@@ -284,7 +285,7 @@ paths:
         204:
           description: If the device is updated
         404:
-          description: If requested device do not exits or if the user has not access to it.
+          description: If requested device does not exist or if the user has no access to it.
     delete:
       tags:
         - Registry
@@ -296,16 +297,17 @@ paths:
         204:
           description: If the device is deleted
         404:
-          description: If requested device do not exits or if the user has not access to it.
+          description: If requested device does not exist or if the user has no access to it.
     patch:
       tags:
         - Registry
-      description: Patch existing device
+      description: "FUTURE USE: Patch existing device"
+      deprecated: false
       parameters:
         - $ref: '#/components/parameters/Uid'
         - $ref: '#/components/parameters/ResourceVersion'
       requestBody:
-        description: The json patch to apply
+        description: The JSON patch to apply
         required: true
         content:
           application/json:
@@ -319,7 +321,7 @@ paths:
         204:
           description: If the device is updated
         404:
-          description: If requested device do not exits or if the user has not access to it.
+          description: If requested device does not exist or if the user has no access to it.
 
   #
   # ## Admin
@@ -340,6 +342,10 @@ paths:
                 properties:
                   id:
                     type: string
+                    description: |
+                      The ID of the current user.
+
+                      NOTE: This ID may be different to the name of the user.
                 required:
                   - id
         403:
@@ -403,9 +409,9 @@ paths:
         - $ref: '#/components/parameters/ResourceVersion'
       tags:
         - Application administration
-      description: update existing app admin object
+      description: Update existing application member list.
       requestBody:
-        description: The data section of the app to update
+        description: The new application member list.
         required: true
         content:
           'application/json':
@@ -578,11 +584,19 @@ components:
       in: query
       required: false
       description: The maximum number of elements to return.
+      schema:
+        type: integer
+        minimum: 0
+
     Offset:
       name: offset
       in: query
       required: false
       description: The number of elements to skip when returning. The elements will by ordered "by name".
+      schema:
+        type: integer
+        minimum: 0
+
     Labels:
       name: labels
       in: query
@@ -625,23 +639,98 @@ components:
 #
 
   schemas:
+    Metadata:
+      type: object
+      required:
+        - creationTimestamp
+        - name
+        - generation
+        - resourceVersion
+        - uid
+      properties:
+        creationTimestamp:
+          type: string
+          format: date-time
+        name:
+          type: string
+        resourceVersion:
+          type: string
+          description: |
+            An ID of the current version of this resource. This should be treated as a string and its content should
+            not be interpreted by clients in any way.
+        uid:
+          type: string
+          description: |
+            A unique ID of the resource. Deleting and re-creating a resource with the same name will still result
+            in a different unique ID.
+        generation:
+          type: integer
+        deletionTimestamp:
+          type: string
+          format: date-time
+          description: |
+            A marker for soft-deletion. When the resource is deleted, it will first be marked as deleted, by setting
+            the deletion timestamp. Once all finalizers are removed, the resource will actually be deleted.
+        finalizers:
+          type: array
+          items:
+            - type: string
+          description: |
+            A list of finalizers. As long as finalizers are present, the resource will not be deleted
+            even if the `deletionTimestamp` is set.
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+          description: Arbitrary additional information.
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Additional labels which can used for searching.
+
+            Labels are limited in size and format, similar to the Kubernetes labels.
+
+            Also see:
+              * https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+
+    ScopedMetadata:
+      allOf:
+        - $ref: '#/components/schemas/Metadata'
+        - type: object
+          required:
+            - application
+          properties:
+            application:
+              type: string
+              description: The name of the application the resource is scoped to.
+
+    NonScopedMetadata:
+      allOf:
+        - $ref: '#/components/schemas/Metadata'
+
     App:
       type: object
       additionalProperties: false
       properties:
-        id:
-          type: string
+        metadata:
+          $ref: '#/components/schemas/NonScopedMetadata'
         spec:
           $ref: '#/components/schemas/ApplicationSpec'
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
 
     Device:
       type: object
       additionalProperties: false
       properties:
-        id:
-          type: string
+        metadata:
+          $ref: '#/components/schemas/ScopedMetadata'
         spec:
           $ref: '#/components/schemas/DeviceSpec'
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
 
     ApplicationMembers:
       type: object
@@ -654,6 +743,7 @@ components:
           type: string
         owner:
           type: string
+          description: The ID of the owning user.
         members:
           type: array
           items:
@@ -665,6 +755,7 @@ components:
             properties:
               id:
                 type: string
+                description: The ID of the owning user
               role:
                 type: string
                 enum:
@@ -685,7 +776,12 @@ components:
     ApplicationSpec:
       type: object
       additionalProperties: true
-      description: A json object containing arbritrary data to attached to an application.
+      description: A JSON object containing arbritrary data attached to an application.
+
+    ApplicationStatus:
+      type: object
+      additionalProperties: true
+      description: A JSON object containing arbritrary status information attached to an application.
 
     CommandObject:
       type: object
@@ -709,10 +805,15 @@ components:
     DeviceSpec:
       type: object
       additionalProperties: true
-      description: A json object containing arbritrary data to attached to a device.
+      description: A JSON object containing arbritrary data attached to a device.
       properties:
         credentials:
           $ref: '#/components/schemas/DeviceCredentials'
+
+    DeviceStatus:
+      type: object
+      additionalProperties: true
+      description: A JSON object containing arbritrary status information attached to a device.
 
     DeviceCredentials:
       type: array
@@ -723,11 +824,12 @@ components:
           - $ref: '#/components/schemas/PassCredential'
           - $ref: '#/components/schemas/CertCredential'
 
-
     UserCredential:
       type: object
       additionalProperties: false
       description: username and password credentials.
+      required:
+        - user
       properties:
         user:
           type: object
@@ -742,6 +844,8 @@ components:
       type: object
       description: password credential.
       additionalProperties: false
+      required:
+        - pass
       properties:
         pass:
           type: string
@@ -751,6 +855,8 @@ components:
       type: object
       description: The public key of the device X509 certificate.
       additionalProperties: false
+      required:
+        - cert
       properties:
         cert:
           type: string
