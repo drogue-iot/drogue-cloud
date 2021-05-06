@@ -1324,9 +1324,9 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drogue-client"
-version = "0.5.0-alpha.3"
+version = "0.5.0-alpha.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5dec23b1107d1d710219b1eae25ff5524a90b1cf3abdd002b668462e8ea8ab0"
+checksum = "b6dce2918678b7afcb69c5df20466fcf9d8cb6693583af6684a851cdf13486e1"
 dependencies = [
  "async-std",
  "async-trait",
