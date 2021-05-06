@@ -77,14 +77,14 @@ macro_rules! app {
             .app_data($data.clone());
 
         let app = {
-            let scope = web::scope("/api/v1")
+            let scope = web::scope("/api/registry/v1alpha1")
                 .wrap(Cors::permissive())
                 .wrap(Condition::new($enable_auth, $auth));
 
             let scope = drogue_cloud_device_management_service::crud!(
                 $sender,
                 scope,
-                "/",
+                "",
                 endpoints::apps,
                 app
             );
@@ -92,7 +92,7 @@ macro_rules! app {
             let scope = drogue_cloud_device_management_service::crud!(
                 $sender,
                 scope,
-                "/apps/{app}/",
+                "apps/{app}/",
                 endpoints::devices,
                 device
             );
