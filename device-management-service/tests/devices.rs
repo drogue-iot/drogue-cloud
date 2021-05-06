@@ -852,7 +852,7 @@ where
         app,
         user,
         test::TestRequest::get().uri(&format!(
-            "/api/v1/apps/{}/devices?{}",
+            "/api/registry/v1alpha1/apps/{}/devices?{}",
             app_name.as_ref(),
             query
         )),
