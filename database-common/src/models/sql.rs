@@ -216,7 +216,7 @@ mod test {
 
         let (sql, params) = builder.build();
 
-        assert_eq!(sql, "SELECT * FROM TABLE");
+        assert_eq!(sql, "SELECT * FROM TABLE\n");
         assert_eq!(
             params
                 .into_iter()
@@ -234,7 +234,7 @@ mod test {
 
         let (sql, params) = builder.build();
 
-        assert_eq!(sql, "SELECT * FROM TABLE\nWHERE NAME=$1");
+        assert_eq!(sql, "SELECT * FROM TABLE\nWHERE NAME=$1\n");
         assert_eq!(
             params
                 .into_iter()
@@ -257,7 +257,8 @@ mod test {
             sql,
             r#"SELECT * FROM TABLE
 WHERE LABELS ? $1
-AND LABELS ? $2"#
+AND LABELS ? $2
+"#
         );
         assert_eq!(
             params
@@ -282,7 +283,8 @@ AND LABELS ? $2"#
             r#"SELECT * FROM TABLE
 WHERE (NOT LABELS ? $1)
 AND LABELS ->> $2 = ANY ($3)
-AND LABELS ->> $4 <> $5"#
+AND LABELS ->> $4 <> $5
+"#
         );
         assert_eq!(
             params
