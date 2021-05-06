@@ -25,7 +25,7 @@ tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1", 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 
-drogue-client = "0.5.0-alpha.3"
+drogue-client = "0.5.0-alpha.4"
 
 [dev-dependencies]
 anyhow = "1"
