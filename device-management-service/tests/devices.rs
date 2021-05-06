@@ -30,14 +30,14 @@ use serial_test::serial;
 #[serial]
 async fn test_create_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
         })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
-        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1")));
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/registry/v1alpha1/apps/app1")));
 
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Application {
@@ -48,7 +48,7 @@ async fn test_create_device() -> anyhow::Result<()> {
             generation: 0,
         }]);
 
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "name": "device1",
                 "application": "app1"
@@ -63,7 +63,7 @@ async fn test_create_device() -> anyhow::Result<()> {
         })).send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::CREATED);
-        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/v1/apps/app1/devices/device1")));
+        assert_eq!(resp.headers().get(header::LOCATION), Some(&HeaderValue::from_static("http://localhost:8080/api/registry/v1alpha1/apps/app1/devices/device1")));
 
         // an event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
@@ -82,7 +82,7 @@ async fn test_create_device() -> anyhow::Result<()> {
 #[serial]
 async fn test_create_device_no_app() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "name": "device1",
                 "application": "app1"
@@ -104,7 +104,7 @@ async fn test_create_device_no_app() -> anyhow::Result<()> {
 #[serial]
 async fn test_create_device_bad_request() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             }
@@ -115,7 +115,7 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
         sender.reset()?;
         outbox_retrieve(&outbox).await?;
 
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "" // empty name
@@ -133,7 +133,7 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
 #[serial]
 async fn test_create_duplicate_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             }
@@ -144,7 +144,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
         sender.reset()?;
         outbox_retrieve(&outbox).await?;
 
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -163,7 +163,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
             generation: 0,
         }]);
 
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -183,12 +183,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
         // read, must not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // create app first
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -200,12 +200,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
         outbox_retrieve(&outbox).await?;
 
         // read, must still not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // create device
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1"
@@ -233,7 +233,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }]);
 
         // read, must exist now
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -263,7 +263,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }));
 
         // update device
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&json!({
+        let resp = test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1/devices/device1").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -290,7 +290,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }]);
 
         // read, must have changed
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -322,7 +322,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }));
 
         // delete, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -337,12 +337,12 @@ async fn test_crud_device() -> anyhow::Result<()> {
         }]);
 
         // read, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // update non existing device
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&json!({
+        let resp = test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1/devices/device1").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -362,7 +362,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(sender.retrieve().unwrap(), vec![]);
 
         // delete, second time, must result in "not found"
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
@@ -377,7 +377,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
         // create tenant
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -395,7 +395,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         }]);
 
         // create device
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -415,7 +415,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         }]);
 
         // delete application, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
+        let resp = test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // one event must have been fired for the application, the device event is omitted as the
@@ -429,7 +429,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
         }]);
 
         // read device, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     })
@@ -441,7 +441,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
         // create tenant
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -459,7 +459,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // create device
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -480,7 +480,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // delete application, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1").send_request(&app).await;
+        let resp = test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // one event must have been fired, but notify about a metadata change
@@ -493,7 +493,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // the application must still exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -518,7 +518,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }));
 
         // read device, must still exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -543,7 +543,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 
         // now delete the device, must succeed, but soft deleted
 
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
@@ -559,7 +559,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }]);
 
         // read device, must still exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -584,7 +584,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         }));
 
         // update device, remove finalizer
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&json!({
+        let resp = test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1/devices/device1").set_json(&json!({
             "metadata": {
                 "application": "app1",
                 "name": "device1",
@@ -598,11 +598,11 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
         assert_eq!(sender.retrieve().unwrap(), vec![]);
 
         // read device, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
         // read app, must no longer not exist
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     })
@@ -612,7 +612,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
 #[serial]
 async fn test_lock_device_resource_version() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -620,7 +620,7 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "name": "device1",
                 "application": "app1"
@@ -638,7 +638,7 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
 
         // get current state
 
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -673,11 +673,11 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
         update1["spec"]["credentials"] = json!({});
 
         // update device once (using current version) ... must succeed
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update1).send_request(&app).await;
+        let resp = test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1/devices/device1").set_json(&update1).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // update device twice (using previous version) ... must fail
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update2).send_request(&app).await;
+        let resp = test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1/devices/device1").set_json(&update2).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
     })
@@ -687,7 +687,7 @@ async fn test_lock_device_resource_version() -> anyhow::Result<()> {
 #[serial]
 async fn test_lock_device_uid() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
-        let resp = test::TestRequest::post().uri("/api/v1/apps").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -695,7 +695,7 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::CREATED);
 
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "name": "device1",
                 "application": "app1"
@@ -713,7 +713,7 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
 
         // get current state
 
-        let resp = test::TestRequest::get().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
 
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
@@ -745,11 +745,11 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
         let update = result.clone();
 
         // delete, must succeed
-        let resp = test::TestRequest::delete().uri("/api/v1/apps/app1/devices/device1").send_request(&app).await;
+        let resp = test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1/devices/device1").send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // recreate
-        let resp = test::TestRequest::post().uri("/api/v1/apps/app1/devices").set_json(&json!({
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
             "metadata": {
                 "name": "device1",
                 "application": "app1"
@@ -765,7 +765,7 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::CREATED);
 
         // update device (using previous version) ... must fail
-        let resp = test::TestRequest::put().uri("/api/v1/apps/app1/devices/device1").set_json(&update).send_request(&app).await;
+        let resp = test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1/devices/device1").set_json(&update).send_request(&app).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
 
     })
