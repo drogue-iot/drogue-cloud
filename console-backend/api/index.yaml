@@ -115,7 +115,7 @@ paths:
   # ### Apps
   #
 
-  /api/registry/v1alpha1/apps/:
+  /api/registry/v1alpha1/apps:
     get:
       tags:
         - Registry
@@ -222,7 +222,7 @@ paths:
   # ### Devices
   #
 
-  /api/registry/v1alpha1/apps/{appId}/devices/:
+  /api/registry/v1alpha1/apps/{appId}/devices:
     parameters:
       - $ref: '#/components/parameters/AppId'
     get:
