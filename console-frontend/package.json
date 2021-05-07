@@ -26,6 +26,6 @@
   },
   "dependencies": {
     "@patternfly/patternfly": "^4.102.2",
-    "swagger-ui": "^3.46.0"
+    "swagger-ui": "^3.48.0"
   }
 }
