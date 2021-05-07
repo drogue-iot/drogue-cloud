@@ -259,6 +259,13 @@ quick: build build-images tag-images
 
 
 #
+# A shortcut for building and pushing the frontend only
+#
+frontend: host-build
+	make -C console-frontend images
+
+
+#
 # Do a local deploy
 #
 deploy: gen-deploy
@@ -282,6 +289,7 @@ endif
 .PHONY: all clean pre-check check build test push images
 .PHONY: require-container-registry
 .PHONY: deploy gen-deploy
+.PHONY: quick frontend
 
 .PHONY: build-images tag-images push-images
 .PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
