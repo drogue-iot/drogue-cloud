@@ -1,11 +1,11 @@
-use crate::{
-    data::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions, ApiKeyData},
-    error::Error,
-};
+use crate::error::Error;
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
-use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
+use drogue_cloud_service_api::{
+    api::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions, ApiKeyData},
+    auth::user::{UserDetails, UserInformation},
+};
 use drogue_cloud_service_common::{
     defaults,
     reqwest::{add_service_cert, make_insecure},

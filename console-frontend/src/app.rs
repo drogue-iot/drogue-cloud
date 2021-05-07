@@ -297,6 +297,7 @@ impl Component for Main {
 
                         html!{
                             <AppPage
+                                backend=ready.0
                                 token=ready.1
                                 on_logout=self.link.callback(|_|Msg::Logout)
                                 />

@@ -9,14 +9,82 @@ use url::Url;
 use yew::{format::Text, prelude::*, services::fetch::*, utils::window};
 
 /// Backend information
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BackendInformation {
     pub url: Url,
     #[serde(default)]
     pub login_note: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+impl BackendInformation {
+    pub fn url<S: AsRef<str>>(&self, path: S) -> Url {
+        let mut result = self.url.clone();
+        result.set_path(path.as_ref());
+        result
+    }
+
+    pub fn uri<S: AsRef<str>>(&self, path: S) -> Uri {
+        self.url(path).to_string().parse().unwrap()
+    }
+
+    pub fn url_str<S: AsRef<str>>(&self, path: S) -> String {
+        self.url(path).into_string()
+    }
+
+    pub fn request<S, IN, OUT: 'static>(
+        &self,
+        method: http::Method,
+        path: S,
+        payload: IN,
+        callback: Callback<Response<OUT>>,
+    ) -> Result<FetchTask, anyhow::Error>
+    where
+        S: AsRef<str>,
+        IN: Into<Text>,
+        OUT: From<Text>,
+    {
+        let request = http::request::Builder::new()
+            .method(method)
+            .uri(self.uri(path));
+
+        let token = match Backend::access_token() {
+            Some(token) => token,
+            None => {
+                Backend::reauthenticate().ok();
+                return Err(anyhow::anyhow!("Performing re-auth"));
+            }
+        };
+
+        let request = request.header("Authorization", format!("Bearer {}", token));
+        let request = request.body(payload).context("Failed to create request")?;
+
+        let task = FetchService::fetch_with_options(
+            request,
+            FetchOptions {
+                cache: Some(Cache::NoCache),
+                credentials: Some(Credentials::Include),
+                redirect: Some(Redirect::Follow),
+                mode: Some(Mode::Cors),
+                ..Default::default()
+            },
+            callback.reform(|response: Response<_>| {
+                log::info!("Backend response code: {}", response.status().as_u16());
+                match response.status().as_u16() {
+                    401 | 403 => {
+                        Backend::reauthenticate().ok();
+                    }
+                    _ => {}
+                };
+                response
+            }),
+        )
+        .map_err(|err| anyhow::anyhow!("Failed to fetch: {:?}", err))?;
+
+        Ok(task)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Backend {
     pub info: BackendInformation,
     token: Option<Token>,
@@ -61,19 +129,16 @@ impl Backend {
     }
 
     pub fn url<S: AsRef<str>>(path: S) -> Option<Url> {
-        Self::get().map(|backend| {
-            let mut result = backend.info.url;
-            result.set_path(path.as_ref());
-            result
-        })
+        Self::get().map(|backend| backend.info.url(path))
     }
 
+    #[allow(dead_code)]
     pub fn uri<S: AsRef<str>>(path: S) -> Option<Uri> {
-        Self::url(path).map(|url| url.to_string().parse().unwrap())
+        Self::get().map(|backend| backend.info.uri(path))
     }
 
     pub fn url_str<S: AsRef<str>>(path: S) -> Option<String> {
-        Self::url(path).map(|url| url.to_string())
+        Self::get().map(|backend| backend.info.url_str(path))
     }
 
     /// Get the access token, if it is not expired yet
@@ -123,45 +188,10 @@ impl Backend {
         IN: Into<Text>,
         OUT: From<Text>,
     {
-        let request = http::request::Builder::new().method(method);
-
-        let request =
-            request.uri(Self::uri(path).ok_or_else(|| anyhow::anyhow!("Missing backend"))?);
-
-        let token = match Backend::access_token() {
-            Some(token) => token,
-            None => {
-                Self::reauthenticate().ok();
-                return Err(anyhow::anyhow!("Performing re-auth"));
-            }
-        };
-
-        let request = request.header("Authorization", format!("Bearer {}", token));
-        let request = request.body(payload).context("Failed to create request")?;
-
-        let task = FetchService::fetch_with_options(
-            request,
-            FetchOptions {
-                cache: Some(Cache::NoCache),
-                credentials: Some(Credentials::Include),
-                redirect: Some(Redirect::Follow),
-                mode: Some(Mode::Cors),
-                ..Default::default()
-            },
-            callback.reform(|response: Response<_>| {
-                log::info!("Backend response code: {}", response.status().as_u16());
-                match response.status().as_u16() {
-                    401 | 403 => {
-                        Self::reauthenticate().ok();
-                    }
-                    _ => {}
-                };
-                response
-            }),
-        )
-        .map_err(|err| anyhow::anyhow!("Failed to fetch: {:?}", err))?;
-
-        Ok(task)
+        Self::get()
+            .ok_or_else(|| anyhow::anyhow!("Missing backend"))?
+            .info
+            .request(method, path, payload, callback)
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {

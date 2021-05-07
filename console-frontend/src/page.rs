@@ -1,7 +1,9 @@
+use crate::backend::Backend;
 use crate::{
     backend::Token,
     examples::{self, Examples},
     index::Index,
+    pages,
     spy::Spy,
 };
 use patternfly_yew::*;
@@ -14,12 +16,16 @@ pub enum AppRoute {
     Spy,
     #[to = "/examples{*:rest}"]
     Examples(Examples),
+    #[to = "/keys"]
+    ApiKeys,
+    // Index must come last
     #[to = "/"]
     Index,
 }
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
+    pub backend: Backend,
     pub token: Token,
     pub on_logout: Callback<()>,
 }
@@ -74,7 +80,10 @@ impl Component for AppPage {
                         <NavRouterExpandable<AppRoute> title="Tools">
                             <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
                         </NavRouterExpandable<AppRoute>>
-                        <NavItem to="/api" target="_blank">{"API "}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAlt}</span></NavItem>
+                        <NavRouterExpandable<AppRoute> title="API">
+                            <NavRouterItem<AppRoute> to=AppRoute::ApiKeys>{"Access keys"}</NavRouterItem<AppRoute>>
+                            <NavItem to="/api" target="_blank">{"API specification"}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAlt}</span></NavItem>
+                        </NavRouterExpandable<AppRoute>>
                     </NavList>
                 </Nav>
             </PageSidebar>
@@ -154,6 +163,8 @@ impl Component for AppPage {
             }
         }];
 
+        let backend = self.props.backend.clone();
+
         return html! {
             <Page
                 logo={html_nested!{
@@ -164,10 +175,13 @@ impl Component for AppPage {
                 >
                     <Router<AppRoute, ()>
                             redirect = Router::redirect(|_|AppRoute::Index)
-                            render = Router::render(|switch: AppRoute| {
+                            render = Router::render(move |switch: AppRoute| {
                                 match switch {
-                                    AppRoute::Spy => html!{<Spy/>},
                                     AppRoute::Index => html!{<Index/>},
+                                    AppRoute::Spy => html!{<Spy/>},
+                                    AppRoute::ApiKeys => html!{<pages::ApiKeys
+                                        backend=backend.clone()
+                                    />},
 
                                     AppRoute::Examples(example) => html!{
                                         <examples::ExamplePage example=example/>

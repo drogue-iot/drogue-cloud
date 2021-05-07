@@ -1,4 +1,4 @@
-use crate::data::ApiKeyCreated;
+use drogue_cloud_service_api::api::ApiKeyCreated;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sha3::Digest;
 

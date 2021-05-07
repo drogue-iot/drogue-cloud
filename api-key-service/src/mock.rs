@@ -1,10 +1,10 @@
-use crate::{
-    data::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions},
-    service::ApiKeyService,
-};
+use crate::service::ApiKeyService;
 use actix_web::ResponseError;
 use async_trait::async_trait;
-use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
+use drogue_cloud_service_api::{
+    api::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions},
+    auth::user::{UserDetails, UserInformation},
+};
 use std::fmt::Formatter;
 
 #[derive(Clone)]

@@ -8,6 +8,7 @@ mod error;
 mod examples;
 mod index;
 mod page;
+mod pages;
 mod preferences;
 mod spy;
 mod utils;

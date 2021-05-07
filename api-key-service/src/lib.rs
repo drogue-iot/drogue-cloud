@@ -1,4 +1,3 @@
-pub mod data;
 pub mod endpoints;
 mod error;
 pub mod mock;

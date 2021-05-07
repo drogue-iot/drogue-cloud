@@ -1,9 +1,12 @@
-use crate::{data::ApiKeyCreationOptions, service::ApiKeyService};
+use crate::service::ApiKeyService;
 use actix_web::{web, HttpResponse};
-use drogue_cloud_service_api::auth::user::authn::{
-    AuthenticationRequest, AuthenticationResponse, Outcome,
+use drogue_cloud_service_api::{
+    api::ApiKeyCreationOptions,
+    auth::user::{
+        authn::{AuthenticationRequest, AuthenticationResponse, Outcome},
+        UserInformation,
+    },
 };
-use drogue_cloud_service_api::auth::user::UserInformation;
 use std::ops::Deref;
 
 pub struct WebData<S: ApiKeyService> {
