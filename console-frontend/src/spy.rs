@@ -25,6 +25,7 @@ pub struct Spy {
 pub enum Msg {
     Start(Option<String>),
     StartPressed,
+    Stop,
     Event(Box<Event>),
     /// Failed when processing an event
     Error(String),
@@ -102,6 +103,9 @@ impl Component for Spy {
             Msg::StartPressed => {
                 self.link.send_message(Msg::Start(self.app_id_filter()));
             }
+            Msg::Stop => {
+                self.stop();
+            }
             Msg::Event(event) => {
                 // log::debug!("Pushing event: {:?}", event);
                 self.total_received += 1;
@@ -129,7 +133,8 @@ impl Component for Spy {
     }
 
     fn view(&self) -> Html {
-        let can_start = !self.running && self.app_id_filter().is_some();
+        let is_valid = self.app_id_filter().is_some();
+        let is_running = self.running;
 
         let v = |value: &str| match value {
             "" => InputState::Error,
@@ -155,11 +160,23 @@ impl Component for Spy {
                                     placeholder="Application ID to spy on"/>
                             </ToolbarItem>
                             <ToolbarItem>
-                                <Button
-                                    disabled=!can_start
-                                    label="Start" icon=Icon::Play variant=Variant::Primary
-                                    onclick=self.link.callback(|_|Msg::StartPressed)
-                                    />
+                                {if is_running {
+                                    html!{<Button
+                                            disabled=!is_valid
+                                            label="Stop"
+                                            icon=Icon::Pause
+                                            variant=Variant::Secondary
+                                            onclick=self.link.callback(|_|Msg::Stop)
+                                    />}
+                                } else {
+                                    html!{<Button
+                                            disabled=!is_valid
+                                            label="Start"
+                                            icon=Icon::Play
+                                            variant=Variant::Primary
+                                            onclick=self.link.callback(|_|Msg::StartPressed)
+                                    />}
+                                }}
                             </ToolbarItem>
                         </ToolbarGroup>
                         <ToolbarItem modifiers=vec![ToolbarElementModifier::Right.all()]>
@@ -194,7 +211,7 @@ impl Component for Spy {
     }
 
     fn destroy(&mut self) {
-        if let Some(source) = &self.source {
+        if let Some(source) = self.source.take() {
             source.close();
         }
     }
@@ -249,8 +266,15 @@ impl Spy {
 
         // store result
 
-        self.running = true; // FIXME: need a way to stop
+        self.running = true;
         self.source = Some(source);
+    }
+
+    fn stop(&mut self) {
+        if let Some(source) = self.source.take() {
+            source.close();
+        }
+        self.running = false
     }
 
     fn render_empty(&self) -> Html {
