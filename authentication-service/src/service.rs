@@ -118,7 +118,7 @@ impl AuthenticationService for PostgresAuthenticationService {
                         Some(as_id) => {
                             if as_id != request.device {
                                 match accessor.lookup(&application.metadata.name, &as_id).await? {
-                                    Some(as_device) => {
+                                    Some(as_device) if as_device.deletion_timestamp.is_none() => {
                                         let as_manage: registry::v1::Device = as_device.into();
                                         match as_manage
                                             .section::<registry::v1::DeviceSpecGatewaySelector>()
@@ -144,6 +144,10 @@ impl AuthenticationService for PostgresAuthenticationService {
                                                 Outcome::Fail
                                             }
                                         }
+                                    }
+                                    Some(_) => {
+                                        log::debug!("Device {:?} not allowed to publish as {:?}, device is being deleted", &request.device, as_id);
+                                        Outcome::Fail
                                     }
                                     None => {
                                         log::debug!("Device {:?} not allowed to publish as {:?}, device does not exist", &request.device, as_id);
@@ -176,6 +180,11 @@ fn strip_credentials(mut device: registry::v1::Device) -> registry::v1::Device {
 
 /// Validate if an application is "ok" to be used for authentication.
 fn validate_app(app: &registry::v1::Application) -> bool {
+    if app.metadata.deletion_timestamp.is_some() {
+        log::debug!("Application is about being deleted");
+        return false;
+    }
+
     match app.section::<registry::v1::DeviceSpecCore>() {
         // found "core", decoded successfully -> check
         Some(Ok(core)) => {
@@ -200,6 +209,11 @@ fn validate_credential(
     device: &registry::v1::Device,
     cred: authn::Credential,
 ) -> bool {
+    if device.metadata.deletion_timestamp.is_some() {
+        log::debug!("Device is about to being deleted");
+        return false;
+    }
+
     let credentials = match device.section::<registry::v1::DeviceSpecCredentials>() {
         Some(Ok(credentials)) => credentials.credentials,
         _ => {
