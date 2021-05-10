@@ -3,7 +3,9 @@
 set -e
 
 : "${KAFKA_NS:=kafka}"
-: "${STRIMZI_VERSION:=0.20.0}"
+: "${STRIMZI_VERSION:=0.22.1}"
+
+echo "Installing Strimzi: ${STRIMZI_VERSION}"
 
 #
 # Strimzi
@@ -12,9 +14,10 @@ if ! kubectl get ns $KAFKA_NS >/dev/null 2>&1; then
   kubectl create ns $KAFKA_NS
 fi
 if ! kubectl -n $KAFKA_NS get deploy/strimzi-cluster-operator >/dev/null 2>&1; then
+  # use "kubectl create" -> https://github.com/strimzi/strimzi-kafka-operator/issues/4589
   curl -L "https://github.com/strimzi/strimzi-kafka-operator/releases/download/${STRIMZI_VERSION}/strimzi-cluster-operator-${STRIMZI_VERSION}.yaml" \
     | sed 's/myproject/${KAFKA_NS}/' \
-    | kubectl apply -n $KAFKA_NS -f -
+    | kubectl create -n $KAFKA_NS -f -
 
   # the following is required to watch all namespaces
   kubectl -n $KAFKA_NS set env deploy/strimzi-cluster-operator STRIMZI_NAMESPACE=\*

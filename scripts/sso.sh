@@ -9,7 +9,7 @@ set -e
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source "$SCRIPTDIR/common.sh"
 
-: "${KEYCLOAK_OPERATOR_VERSION:=12.0.1}"
+: "${KEYCLOAK_OPERATOR_VERSION:=12.0.4}"
 : "${KEYCLOAK_CRDS:=true}"
 
 if [[ "$KEYCLOAK_CRDS" == true ]]; then

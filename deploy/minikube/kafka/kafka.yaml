@@ -8,19 +8,25 @@ spec:
     userOperator: {}
   kafka:
     config:
-      log.message.format.version: '2.5'
+      log.message.format.version: '2.7'
       offsets.topic.replication.factor: 1
       transaction.state.log.min.isr: 1
       transaction.state.log.replication.factor: 1
     listeners:
-      plain: {}
-      tls: {}
+      - name: plain
+        tls: false
+        port: 9092
+        type: internal
+      - name: tls
+        tls: true
+        port: 9093
+        type: internal
     replicas: 1
     storage:
       type: persistent-claim
       size: 10Gi
       deleteClaim: true
-    version: 2.5.0
+    version: 2.7.0
     template:
       pod:
         securityContext:
