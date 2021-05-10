@@ -1,6 +1,6 @@
-use crate::backend::Backend;
 use crate::{
-    backend::Token,
+    backend::{Backend, Token},
+    components::about::AboutModal,
     examples::{self, Examples},
     index::Index,
     pages,
@@ -37,6 +37,7 @@ pub struct AppPage {
 
 pub enum Msg {
     Logout,
+    About,
 }
 
 impl Component for AppPage {
@@ -52,6 +53,13 @@ impl Component for AppPage {
             Msg::Logout => {
                 self.props.on_logout.emit(());
             }
+            Msg::About => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <AboutModal
+                        backend=self.props.backend.info.clone()
+                        />
+                }),
+            }),
         }
         true
     }
@@ -153,6 +161,15 @@ impl Component for AppPage {
             // render
 
             html! {
+                <>
+                <AppLauncher
+                    position=Position::Right
+                    toggle=html!{Icon::QuestionCircle}
+                    >
+                    <AppLauncherItem external=true href="https://book.drogue.io">{"Documentation"}</AppLauncherItem>
+                    <Divider/>
+                    <AppLauncherItem onclick=self.link.callback(|_|Msg::About)>{"About"}</AppLauncherItem>
+                </AppLauncher>
                 <Dropdown
                     plain=true
                     toggle_style="display: flex;"
@@ -160,6 +177,7 @@ impl Component for AppPage {
                     >
                 {items}
                 </Dropdown>
+                </>
             }
         }];
 

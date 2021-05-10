@@ -290,6 +290,7 @@ impl Component for Main {
     fn view(&self) -> Html {
         return html! {
             <>
+                <BackdropViewer/>
                 <ToastViewer/>
 
                 {
