@@ -118,7 +118,7 @@ spec:
                 secretKeyRef:
                   key: ADMIN_PASSWORD
                   name: credential-sso
-            - name: LOCAL_CERTS
+            - name: ENDPOINTS__LOCAL_CERTS
               value: "true"
           ports:
             - containerPort: 8080
