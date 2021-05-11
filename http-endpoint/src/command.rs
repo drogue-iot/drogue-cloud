@@ -22,12 +22,11 @@ pub async fn wait_for_command(
         Some(ttd) if ttd > 0 => {
             let mut receiver = commands.subscribe(id.clone());
             match timeout(Duration::from_secs(ttd), receiver.recv()).await {
-                Ok(command) => {
+                Ok(Some(cmd)) => {
                     commands.unsubscribe(id.clone());
-                    let cmd = command.unwrap();
                     Ok(HttpResponse::Ok()
                         .insert_header((HEADER_COMMAND, cmd.command))
-                        .body(cmd.payload.unwrap()))
+                        .body(cmd.payload.unwrap_or_default()))
                 }
                 _ => {
                     commands.unsubscribe(id.clone());
