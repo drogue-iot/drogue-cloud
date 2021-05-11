@@ -37,6 +37,9 @@ echo "OK"
 
 echo -n "🪞 Deploying digital twin... "
 kubectl -n "$DROGUE_NS" apply -k "$DEPLOYDIR/digital-twin/" >/dev/null
+if [ $CLUSTER = "minikube" ] ; then
+  kubectl -n "$DROGUE_NS" apply -f "$DEPLOYDIR/digital-twin/service.yaml" >/dev/null
+fi
 echo "OK"
 
 # wait for ingress IP to appear

@@ -133,20 +133,19 @@ function sete() {
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
 
-TWIN_API=$(service_url "registry")
+if [ $CLUSTER = "minikube" ] ; then
+  TWIN_API=$(eval minikube service -n "$DROGUE_NS" --url ditto-nginx-external)
+else
+  TWIN_API=$(ingress_url "ditto")
+fi
 
 echo
 echo "=========================================================================================="
 echo " Digital Twin:"
 echo "=========================================================================================="
 echo
-
-sete DEVICE_ID="my:dev1"
-sete CHANNEL="foo"
-sete MODEL_ID="io.drogue.demo:FirstTestDevice:1.0.0"
-
+echo "Twin API: $TWIN_API"
 echo
-
 echo "------------------------------------------------------------------------------------------"
 echo "Examples"
 echo "------------------------------------------------------------------------------------------"
@@ -154,22 +153,30 @@ echo
 echo "Fetch the model:"
 echo "-------------------"
 echo
-echo "http -do FirstTestDevice.json https://vorto.eclipse.org/api/v1/generators/eclipseditto/models/$MODEL_ID/?target=thingJson"
+echo "  http -do FirstTestDevice.json https://vorto.eclipseprojects.io/api/v1/generators/eclipseditto/models/io.drogue.demo:FirstTestDevice:1.0.0/?target=thingJson"
 echo
 echo "Create a new device:"
 echo "-----------------------"
 echo
-echo "cat FirstTestDevice.json | http PUT $TWIN_API/api/2/things/$DEVICE_ID"
+echo "  drg create app app_id"
+echo "  drg create device --app app_id device_id --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  cat FirstTestDevice.json | http --auth ditto:ditto PUT $TWIN_API/api/2/things/app_id:device_id"
 echo
 echo "Publish some data:"
 echo "-----------------------"
 echo
-echo "http -v POST $TWIN_API/publish/\$DEVICE_ID/\$CHANNEL \"model_id==$MODEL_ID\" temp:=1.23"
+echo "System default certificates (or none):"
+echo
+echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
+echo
+echo "Local test certificates:"
+echo
+echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
 echo
 echo "Check the twin status:"
 echo "-----------------------"
 echo
-echo "http $TWIN_API/api/2/things/\$DEVICE_ID"
+echo "  http --auth ditto:ditto $TWIN_API/api/2/things/app_id:device_id"
 echo
 
 fi

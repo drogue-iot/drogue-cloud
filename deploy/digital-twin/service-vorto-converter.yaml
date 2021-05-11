@@ -13,7 +13,7 @@ spec:
         autoscaling.knative.dev/scaleToZeroPodRetentionPeriod: "5m"
     spec:
       containers:
-        - image: ghcr.io/drogue-iot/vorto-converter:0.1.1
+        - image: ghcr.io/drogue-iot/vorto-converter:0.2.0
           env:
             - name: QUARKUS_LOG_LEVEL
               value: DEBUG
