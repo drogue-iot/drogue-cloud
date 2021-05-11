@@ -66,3 +66,25 @@ while [ -z "$SSO_URL" ]; do
   echo "Waiting for Keycloak ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
   SSO_URL="$(ingress_url "keycloak")"
 done
+
+if [[ -z "$SILENT" ]]; then
+
+  echo
+  bold "========================================================"
+  bold "  Services"
+  bold "========================================================"
+  echo
+  echo "Console:          $CONSOLE_URL"
+  echo
+  echo "Backend:          $BACKEND_URL"
+  echo "Device Registry:  $MGMT_URL"
+  echo
+  echo "Command endpoint: $COMMAND_ENDPOINT_URL"
+  echo
+  echo "HTTP Endpoint:    $HTTP_ENDPOINT_URL"
+  echo "MQTT Endpoint:    $MQTT_ENDPOINT_HOST:$MQTT_ENDPOINT_PORT"
+  echo
+  echo "MQTT Integration: $MQTT_INTEGRATION_HOST:$MQTT_INTEGRATION_PORT"
+  echo
+
+fi

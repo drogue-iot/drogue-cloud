@@ -152,3 +152,9 @@ function wait_for_ksvc() {
     exit 1
   fi
 }
+
+function bold() {
+  tput bold || :
+  echo "$@"
+  tput sgr0 || :
+}

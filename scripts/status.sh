@@ -8,76 +8,47 @@ source "$SCRIPTDIR/common.sh"
 : "${CONSOLE:=true}"
 : "${DIGITAL_TWIN:=false}"
 
-source "${SCRIPTDIR}/endpoints.sh"
+SILENT=true source "${SCRIPTDIR}/endpoints.sh"
 
 # Dump out the dashboard URL and sample commands for http and mqtt
 
 echo
-echo "=========================================================================================="
-echo " Base:"
-echo "=========================================================================================="
+bold "=========================================================================================="
+bold " Base"
+bold "=========================================================================================="
 echo
-
-echo "SSO:"
-echo "  url:      $SSO_URL"
-echo "  user:     admin"
-echo "  password: admin123456"
+bold "Single sign-on:"
+echo "  URL:      $SSO_URL"
+echo "  User:     admin"
+echo "  Password: admin123456"
 echo
-echo "Admin user (via SSO):"
-echo "  user:     admin"
-echo "  password: admin123456"
+echo "$(bold -n Console:) $CONSOLE_URL"
 echo
-
-if [ $CONSOLE = "true" ] ; then
-  echo "Console:"
-  echo "  url:      $CONSOLE_URL"
-  echo "  user:     <via sso>"
-  echo
-fi
-
-echo "------------------------------------------------------------------------------------------"
-echo "Examples"
-echo "------------------------------------------------------------------------------------------"
+bold "------------------------------------------------------------------------------------------"
+bold "Examples"
+bold "------------------------------------------------------------------------------------------"
 echo
-echo "View the dashboard:"
-echo "---------------------"
+bold "View the example dashboard:"
+bold "----------------------------"
 echo
-echo "* Login to Grafana:"
-echo "    url:      $DASHBOARD_URL"
-echo "    user:     <via sso>"
-echo "* Try this link: $DASHBOARD_URL/d/YYGTNzdMk/"
-echo "* Or search for the 'Knative test' dashboard"
-echo "* Additional admin user:"
-echo "    username: admin"
-echo "    password: admin123456"
+echo "* Login to Grafana (using SSO): $DASHBOARD_URL"
+echo "* Search for the 'Examples' dashboard"
 echo
-echo "Login in with 'drg':"
-echo "---------------------"
+bold "Login in with 'drg':"
+bold "---------------------"
 echo
 echo "  drg login $BACKEND_URL"
 echo
-echo "Manage applications/devices:"
-echo "------------------------------"
+bold "Create an initial application and device:"
+bold "------------------------------"
 echo
-echo "URL:"
-echo "    ${MGMT_URL}"
+echo "  drg create app app_id"
+echo "  drg create device --app app_id device_id --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
 echo
-echo "Applications:"
-echo "  Create:  drg create app app_id"
-echo "  Read:    drg get app app_id"
-echo "  Edit:    drg edit app app_id"
-echo "  Delete   drg delete app app_id"
+bold "Subscribe to device data:"
+bold "---------------------------"
 echo
-echo "Devices:"
-echo "  Create:  drg create device --app app_id device_id --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
-echo "  Read:    drg get device --app app_id device_id"
-echo "  Edit:    drg edit device --app app_id device_id"
-echo "  Delete:  drg delete device --app app_id device_id"
-echo
-echo "Subscribe to device data:"
-echo "---------------------------"
-echo
-echo "Data published by devices can be received via MQTT. Possibly start this in another terminal, having the access token set as shown before."
+echo "Data published by devices can be received via MQTT. Possibly start this in another terminal."
 echo
 echo "Structured content mode (MQTT v3.1.1 and v5):"
 echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'"
@@ -85,37 +56,39 @@ echo
 echo "Binary content mode (MQTT v5 only):"
 echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'" -up content-mode=binary
 echo
-echo "Publish data:"
-echo "---------------"
+bold "Publish data:"
+bold "---------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
-echo "System default certificates (or none):"
+if test -f build/certs/endpoints/ca-bundle.pem; then
+  echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'"
+else
+  echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s -t temp -m '{\"temp\":42}'"
+fi
 echo
-echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s -t temp -m '{\"temp\":42}'"
+bold "Send commands to the device:"
+bold "------------------------------"
 echo
-echo "Local test certificates:"
+echo "Publish data from the device and specify how long will you wait for a command with 'ct' parameter (in seconds):"
 echo
-echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'"
+if test -f build/certs/endpoints/ca-bundle.pem; then
+  echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
+else
+  echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
+fi
 echo
-echo "Send commands to the device:"
-echo "------------------------------"
+echo "Or, subscribe with the MQTT device:"
 echo
-echo "After you created a device, try these commands at a shell prompt:"
+if test -f build/certs/endpoints/ca-bundle.pem; then
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile build/certs/endpoints/ca-bundle.pem -t command/inbox"
+else
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s -t command/inbox"
+fi
 echo
-echo "Publish data from the device and specify how long will you wait for a command with 'ct' parameter (in seconds)"
-echo
-echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
-echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
-echo
-echo "Or subscribe with the MQTT device"
-echo
-echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s -t command/inbox"
-echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile build/certs/endpoints/ca-bundle.pem -t command/inbox"
-echo
-echo "Send command to that device from another terminal window:"
+echo "Then, send a command to that device from another terminal window:"
 echo
 echo "  http POST $COMMAND_ENDPOINT_URL/command application==app_id device==device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg token\)\"
 echo
