@@ -8,6 +8,7 @@ use crate::{
 };
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_router::agent::RouteRequest;
 use yew_router::prelude::*;
 
 #[derive(Switch, Debug, Clone, PartialEq)]
@@ -18,6 +19,8 @@ pub enum AppRoute {
     Examples(Examples),
     #[to = "/keys"]
     ApiKeys,
+    #[to = "/token"]
+    CurrentToken,
     // Index must come last
     #[to = "/"]
     Index,
@@ -38,6 +41,7 @@ pub struct AppPage {
 pub enum Msg {
     Logout,
     About,
+    CurrentToken,
 }
 
 impl Component for AppPage {
@@ -60,6 +64,9 @@ impl Component for AppPage {
                         />
                 }),
             }),
+            Msg::CurrentToken => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
+                Route::from(AppRoute::CurrentToken),
+            )),
         }
         true
     }
@@ -148,6 +155,7 @@ impl Component for AppPage {
             // links
             items.push({
                 let mut items = Vec::new();
+                items.push(html_nested!{<DropdownItem onclick=self.link.callback(|_|Msg::CurrentToken)>{"Current Token"}</DropdownItem>});
                 if let Some(account_url) = account_url {
                     items.push(html_nested! {
                         <DropdownItem target="_blank" href=account_url>{"Account"} <span class="pf-u-pl-sm">{Icon::ExternalLinkAlt}</span></DropdownItem>
@@ -182,6 +190,7 @@ impl Component for AppPage {
         }];
 
         let backend = self.props.backend.clone();
+        let token = self.props.token.clone();
 
         return html! {
             <Page
@@ -199,6 +208,9 @@ impl Component for AppPage {
                                     AppRoute::Spy => html!{<Spy/>},
                                     AppRoute::ApiKeys => html!{<pages::ApiKeys
                                         backend=backend.clone()
+                                    />},
+                                    AppRoute::CurrentToken => html!{<pages::CurrentToken
+                                        token=token.clone()
                                     />},
 
                                     AppRoute::Examples(example) => html!{
