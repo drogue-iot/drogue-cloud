@@ -109,7 +109,7 @@ source "${SCRIPTDIR}/endpoints.sh"
 if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] || [ "$(kubectl -n "$DROGUE_NS" get secret http-endpoint-tls --ignore-not-found)" == "" ] ; then
   if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
     echo "Creating custom certificate..."
-    CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$HTTP_ENDPOINT_HOST"
+    CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$MQTT_INTEGRATION_HOST, DNS:$HTTP_ENDPOINT_HOST"
     "$SCRIPTDIR/gen-certs.sh" "$CERT_ALTNAMES"
     OUT="${SCRIPTDIR}/../build/certs/endpoints"
     MQTT_TLS_KEY=$OUT/mqtt-endpoint.key
