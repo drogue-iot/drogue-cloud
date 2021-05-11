@@ -102,7 +102,7 @@ esac;
 
 # source the endpoint information
 
-source "${SCRIPTDIR}/endpoints.sh"
+SILENT=true source "${SCRIPTDIR}/endpoints.sh"
 
 # Provide a TLS certificate for the MQTT endpoint
 
