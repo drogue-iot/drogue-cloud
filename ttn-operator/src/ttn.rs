@@ -371,6 +371,7 @@ impl Client {
 
         match res.status() {
             StatusCode::OK => Ok(Some(res.json().await?)),
+            StatusCode::FORBIDDEN => Ok(None),
             StatusCode::NOT_FOUND => Ok(None),
             code => Self::default_error(code, res).await,
         }
