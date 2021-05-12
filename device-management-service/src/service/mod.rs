@@ -565,7 +565,7 @@ where
         }?;
 
         if current.deletion_timestamp.is_some() {
-            return Err(ServiceError::NotFound.into());
+            return Ok(());
         }
 
         //
@@ -876,7 +876,7 @@ where
         }?;
 
         if current.deletion_timestamp.is_some() {
-            return Err(ServiceError::NotFound.into());
+            return Ok(());
         }
 
         // check if the user has access to the device, we can do this after some initial checks
