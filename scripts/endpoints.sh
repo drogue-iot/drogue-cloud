@@ -79,7 +79,7 @@ if [[ -z "$SILENT" ]]; then
   echo "Backend:          $BACKEND_URL"
   echo "Device Registry:  $MGMT_URL"
   echo
-  echo "Command endpoint: $COMMAND_ENDPOINT_URL"
+  echo "Command Endpoint: $COMMAND_ENDPOINT_URL"
   echo
   echo "HTTP Endpoint:    $HTTP_ENDPOINT_URL"
   echo "MQTT Endpoint:    $MQTT_ENDPOINT_HOST:$MQTT_ENDPOINT_PORT"
