@@ -106,11 +106,10 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                     observed_generation: ctx.app.metadata.generation,
                     reason: None,
                 },
-                app_id: Some(app_id),
+                app_id: Some(app_id.clone()),
             };
-            ctx.app.set_section(status)?;
-            // early return
-            return Ok(ctx.app);
+            ctx.app.set_section(status.clone())?;
+            status
         };
 
         // ensure the app configuration
