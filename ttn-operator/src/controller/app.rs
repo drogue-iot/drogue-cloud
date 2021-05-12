@@ -95,8 +95,15 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             .as_ref()
             .unwrap_or(&ctx.app.metadata.name)
             .clone();
-        let mut status = if let Some(status) = ctx.status {
-            Controller::ensure_stable_app_id(&ctx.app.metadata, &ctx.spec, &app_id)?;
+        let mut status = if let Some(mut status) = ctx.status {
+            match status.app_id {
+                Some(ref app_id) => {
+                    Controller::ensure_stable_app_id(&ctx.app.metadata, &ctx.spec, &app_id)?
+                }
+                None => {
+                    status.app_id = Some(app_id.clone());
+                }
+            }
             status
         } else {
             log::debug!("Missing status section, adding...");
@@ -110,6 +117,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             };
             ctx.app.set_section(status.clone())?;
             status
+            // FIXME: return and re-schedule here when we have the work queue
         };
 
         // ensure the app configuration
