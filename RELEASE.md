@@ -19,6 +19,8 @@ Preparing for a new version (not release, like a milestone):
   * Test the links on the command line
   * Test the links in the web console
   * Try out the example commands
+* Create a branch `release-0.x`
+  * Ensure to switch the doc version to 0.x too: `docs/antora.yml`
 
 ## Release text
 
