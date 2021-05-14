@@ -23,6 +23,9 @@ It is built on top of:
 * *Apache Kafka* – For persisting events
 * *Keycloak* - For single-sign-on
 
+You can learn more about the [architecture](https://book.drogue.io/drogue-cloud/dev/architecture/index.html) in
+our [documentation](https://book.drogue.io/).
+
 ## Protocol Endpoint Support
 
 | Protocols                  |     Endpoint    |
