@@ -37,7 +37,7 @@ spec:
               readOnly: true
       containers:
         - name: grafana
-          image: docker.io/grafana/grafana:7.4.0
+          image: docker.io/grafana/grafana:7.5.6
           imagePullPolicy: IfNotPresent
           env:
             - name: GF_SECURITY_ADMIN_PASSWORD
