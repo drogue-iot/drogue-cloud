@@ -29,9 +29,9 @@ our [documentation](https://book.drogue.io/).
 ## Protocol Endpoint Support
 
 | Protocols                  |     Endpoint    |
-| :------------------------: | :-------------: |
-| HTTP                       |        ✓       |
-| MQTT                       |        ✓       |
+| -------------------------- | :-------------: |
+| HTTP                       |        ✓        |
+| MQTT v3/v5                 |        ✓        |
 | CoAP                       |  Coming soon    |
 
 ## Installation
