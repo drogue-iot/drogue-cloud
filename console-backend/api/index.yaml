@@ -814,6 +814,12 @@ components:
       properties:
         credentials:
           $ref: '#/components/schemas/DeviceCredentials'
+        gateways:
+          type: array
+          items:
+            type: string
+            description: The device ID of the gateway.
+
 
     DeviceStatus:
       type: object
