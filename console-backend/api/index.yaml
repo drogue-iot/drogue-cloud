@@ -631,11 +631,26 @@ components:
         items:
           type: string
           description: URL encoded list of labels selectors.
-      example: |
-        zone=europe, country=spain, power in (solar-pannel,battery), manufacturer notin (nokia,sony)
-
-        URL encoded form: ?labels=zone%3Deurope,country%3Dspain,power+in+%28solar-pannel%2Cbattery%29,manufacturer+notin+%28nokia%2Csony%29
-
+      examples:
+        all:
+          value: ""
+          summary: No filter
+        hasLabel:
+          summary: Filter by label existence
+          value: "zone"
+          description: Return only resources that have a label named "zone"
+        hasValueEq:
+          summary: Filter by label value (equals)
+          value: "zone=europe"
+          description: Return only resources that have a label named "zone" with a value equals to "europe"
+        hasValueIn:
+          value: "country in (spain, france, italy)"
+          summary: Filter by label value (in set)
+          description: Return only resources that have a label named "zone" with a value of either "spain", "france", or "italy"
+        complex:
+          value: zone=europe,country=germany,!development,city notin (berlin,hamburg,kiel)
+          summary: Complex example
+          description: This will require all filters to match (and).
 
   #
   # Schemas
