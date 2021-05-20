@@ -121,7 +121,6 @@ paths:
         - Registry
       description: Return all the applications the user has access to
       parameters:
-        - $ref: '#/components/parameters/AppId'
         - $ref: '#/components/parameters/Labels'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
@@ -230,7 +229,6 @@ paths:
         - Registry
       description: Return all the devices of the application.
       parameters:
-        - $ref: '#/components/parameters/DeviceId'
         - $ref: '#/components/parameters/Labels'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
