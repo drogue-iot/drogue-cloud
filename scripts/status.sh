@@ -37,7 +37,7 @@ echo
 bold "Login in with 'drg':"
 bold "---------------------"
 echo
-echo "  drg login $BACKEND_URL"
+echo "  drg login $API_URL"
 echo
 bold "Create an initial application and device:"
 bold "------------------------------"
