@@ -19,14 +19,14 @@ tags:
   - name: API keys
     description: Manage access key to the API.
   - name: Registry
-    description: Manage Apps and devices in the registry.
+    description: Manage application and devices in the registry.
   - name: Application administration
     description: Manage applications members and authorizations.
   - name: User administration
     description: Manage users
   - name: Command & Control
     description: Send commands to devices and check the results.
-  - name: System Information
+  - name: System information
     description: Get information of the system.
 
 paths:
@@ -39,7 +39,7 @@ paths:
     get:
       description: "Get version"
       tags:
-        - System Information
+        - System information
       responses:
         "200":
           description: "Version response"
