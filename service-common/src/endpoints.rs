@@ -2,6 +2,7 @@ use crate::{config::ConfigFromEnv, defaults};
 use async_trait::async_trait;
 use drogue_cloud_service_api::endpoints::*;
 use futures::{stream::FuturesUnordered, StreamExt};
+use k8s_openapi::api::extensions::v1beta1::Ingress;
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
 use serde::Deserialize;
@@ -181,13 +182,14 @@ impl EndpointSource for OpenshiftEndpointSource {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints> {
         let client = Client::try_default().await?;
         let routes: Api<Route> = Api::namespaced(client.clone(), &self.namespace);
+        let ingress: Api<Ingress> = Api::namespaced(client.clone(), &self.namespace);
 
         let mqtt = host_from_route(&routes.get("mqtt-endpoint").await?);
         let mqtt_integration = host_from_route(&routes.get("mqtt-integration").await?);
         let http = url_from_route(&routes.get("http-endpoint").await?);
         let command = url_from_route(&routes.get("command-endpoint").await?);
         let sso = url_from_route(&routes.get("keycloak").await?);
-        let api = url_from_route(&routes.get("api").await?);
+        let api = url_from_ingress(&ingress.get("api").await?);
         let frontend = url_from_route(&routes.get("console").await?);
         let registry = url_from_route(&routes.get("registry").await?);
 
@@ -246,4 +248,18 @@ fn host_from_route(route: &Route) -> Option<String> {
 
 fn url_from_route(route: &Route) -> Option<String> {
     host_from_route(route).map(|host| format!("https://{}", host))
+}
+
+fn host_from_ingress(ingress: &Ingress) -> Option<String> {
+    ingress
+        .status
+        .as_ref()
+        .and_then(|s| s.load_balancer.as_ref())
+        .and_then(|lb| lb.ingress.as_ref())
+        .and_then(|i| i.into_iter().next())
+        .and_then(|ingress| ingress.hostname.clone())
+}
+
+fn url_from_ingress(ingress: &Ingress) -> Option<String> {
+    host_from_ingress(ingress).map(|host| format!("https://{}", host))
 }
