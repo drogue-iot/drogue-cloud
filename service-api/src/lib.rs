@@ -4,6 +4,7 @@ pub mod endpoints;
 pub mod health;
 mod id;
 pub mod labels;
+mod serde;
 pub mod version;
 
 pub use id::*;
