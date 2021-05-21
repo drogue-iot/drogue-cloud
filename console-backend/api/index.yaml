@@ -17,13 +17,17 @@ security:
 
 tags:
   - name: API keys
+    description: Manage access key to the API.
   - name: Registry
     description: Manage Apps and devices in the registry.
   - name: Application administration
     description: Manage applications members and authorizations.
+  - name: User administration
+    description: Manage users
   - name: Command & Control
     description: Send commands to devices and check the results.
   - name: System Information
+    description: Get information of the system.
 
 paths:
 
@@ -49,6 +53,19 @@ paths:
                     enum: [ "true" ]
                 required:
                   - success
+
+  "/.well-known/drogue-endpoints":
+    get:
+      description: "Get publicly known endpoints"
+      tags:
+        - System information
+      responses:
+        "200":
+          description: Public endpoints
+          content:
+            "application/json":
+              schema:
+                type: object
 
   "/api/keys/v1alpha1":
     get:

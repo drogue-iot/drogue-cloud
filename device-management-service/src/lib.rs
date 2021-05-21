@@ -78,8 +78,8 @@ macro_rules! app {
 
         let app = {
             let scope = web::scope("/api/registry/v1alpha1")
-                .wrap(Cors::permissive())
-                .wrap(Condition::new($enable_auth, $auth));
+                .wrap(Condition::new($enable_auth, $auth))
+                .wrap(Cors::permissive());
 
             let scope = drogue_cloud_device_management_service::crud!(
                 $sender,
