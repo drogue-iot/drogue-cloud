@@ -23,7 +23,7 @@ use std::collections::HashMap;
 #[serial]
 async fn test_create_app() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
-        let resp = call_http(&app, user("foo"), test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
+        let resp = call_http(&app, &user("foo"), test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -618,7 +618,11 @@ async fn test_delete_precondition() -> anyhow::Result<()> {
 #[serial]
 async fn test_auth_app() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
-        let resp = call_http(&app, user("foo"), test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
+
+        let foo = user("foo");
+        let bar = user("bar");
+
+        let resp = call_http(&app, &foo, test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
             "metadata": {
                 "name": "app1",
             },
@@ -630,7 +634,7 @@ async fn test_auth_app() -> anyhow::Result<()> {
 
         // get as user "foo"
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1")).await;
 
         // must succeed
 
@@ -638,7 +642,7 @@ async fn test_auth_app() -> anyhow::Result<()> {
 
         // get as user "bar"
 
-        let resp = call_http(&app, user("bar"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1")).await;
+        let resp = call_http(&app, &bar, test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1")).await;
 
         // must fail
 
@@ -646,7 +650,7 @@ async fn test_auth_app() -> anyhow::Result<()> {
 
         // update as user "bar"
 
-        let resp = call_http(&app, user("bar"), test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1").set_json(&json!({
+        let resp = call_http(&app, &bar, test::TestRequest::put().uri("/api/registry/v1alpha1/apps/app1").set_json(&json!({
             "metadata": {
                 "name": "app1"
             },
@@ -663,7 +667,7 @@ async fn test_auth_app() -> anyhow::Result<()> {
 
         // delete as user "bar"
 
-        let resp = call_http(&app, user("bar"), test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1")).await;
+        let resp = call_http(&app, &bar, test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1")).await;
 
         // must fail
 
@@ -671,7 +675,7 @@ async fn test_auth_app() -> anyhow::Result<()> {
 
         // delete as user "foo"
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1")).await;
 
         // must succeed
 
@@ -685,104 +689,106 @@ async fn test_auth_app() -> anyhow::Result<()> {
 async fn test_search_app() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
 
-        create_app(&app, user("foo"), "foo", hashmap!(
+        let foo = user("foo");
+
+        create_app(&app, &foo, "foo", hashmap!(
         )).await?;
 
-        create_app(&app, user("foo"), "bar", hashmap!(
+        create_app(&app, &foo, "bar", hashmap!(
             "region" => "eu1",
         )).await?;
 
-        create_app(&app, user("foo"), "baz", hashmap!(
+        create_app(&app, &foo, "baz", hashmap!(
             "region" => "us1",
         )).await?;
 
         // list -> must succeed -> return all entries
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &["foo", "bar", "baz"]);
 
         // must succeed -> return only bar and baz
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[ "bar", "baz"]);
 
         // must succeed -> return only foo
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=!region")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=!region")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[ "foo" ]);
 
         // must succeed -> return only bar
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region%3Deu1")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region%3Deu1")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[ "bar"]);
 
         // must succeed -> return only baz
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region%21%3Deu1")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region%21%3Deu1")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[ "baz"]);
 
         // must succeed -> return only baz
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region+in+(us1)")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region+in+(us1)")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[ "baz"]);
 
         // must succeed -> return only bar
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region+notin+(us1)")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region+notin+(us1)")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[ "bar" ]);
 
         // must succeed -> return none
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[]);
 
         // must succeed -> return none
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env%3Dprod")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env%3Dprod")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[]);
 
         // must succeed -> return none
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env%21%3Ddev")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env%21%3Ddev")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[]);
 
         // must succeed -> return none
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env+in+(prod,dev)")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env+in+(prod,dev)")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[]);
 
         // must succeed -> return none
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env+notin+(prod,dev)")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=env+notin+(prod,dev)")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[]);
 
         // must succeed -> return none
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region+in+(space1,space2)")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?labels=region+in+(space1,space2)")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &[]);
@@ -795,6 +801,8 @@ async fn test_search_app() -> anyhow::Result<()> {
 async fn test_search_app_limits() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
 
+        let foo = user("foo");
+
         for i in 0..10 {
             let mut labels = HashMap::new();
             if i % 2 == 0 {
@@ -802,26 +810,26 @@ async fn test_search_app_limits() -> anyhow::Result<()> {
             } else {
                 labels.insert("odd", "");
             }
-            create_app(&app, user("foo"), format!("app-{}", i), labels ).await?;
+            create_app(&app, &foo, format!("app-{}", i), labels ).await?;
         }
 
         // list -> must succeed -> return first 4 entries
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?limit=4")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?limit=4")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &["app-0", "app-1", "app-2", "app-3"]);
 
         // list -> must succeed -> return 4 entries, skipping the first
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?limit=4&offset=1")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?limit=4&offset=1")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &["app-1", "app-2", "app-3", "app-4"]);
 
         // list -> must succeed -> return 4 entries, skipping the first
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps?limit=4&offset=1&labels=even")).await;
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps?limit=4&offset=1&labels=even")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &["app-2", "app-4", "app-6", "app-8"]);
@@ -836,14 +844,14 @@ async fn test_search_app_auth() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
 
         for id in &["foo", "bar"] {
-            create_app(&app, user(id), format!("{}-app1", id), hashmap!(
+            create_app(&app, &user(id), format!("{}-app1", id), hashmap!(
             )).await?;
 
-            create_app(&app, user(id), format!("{}-app2", id), hashmap!(
+            create_app(&app, &user(id), format!("{}-app2", id), hashmap!(
                 "region" => "eu1",
             )).await?;
 
-            create_app(&app, user(id), format!("{}-app3", id), hashmap!(
+            create_app(&app, &user(id), format!("{}-app3", id), hashmap!(
                 "region" => "us1",
             )).await?;
         }
@@ -851,14 +859,14 @@ async fn test_search_app_auth() -> anyhow::Result<()> {
 
         // list -> must succeed -> return all entries for "foo"
 
-        let resp = call_http(&app, user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps")).await;
+        let resp = call_http(&app, &user("foo"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &["foo-app1", "foo-app2", "foo-app3"]);
 
         // list -> must succeed -> return all entries for "bar"
 
-        let resp = call_http(&app, user("bar"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps")).await;
+        let resp = call_http(&app, &user("bar"), test::TestRequest::get().uri("/api/registry/v1alpha1/apps")).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let result: serde_json::Value = test::read_body_json(resp).await;
         assert_resources(result, &["bar-app1", "bar-app2", "bar-app3"]);

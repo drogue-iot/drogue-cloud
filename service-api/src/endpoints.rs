@@ -20,6 +20,8 @@ pub struct RegistryEndpoint {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Endpoints {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub http: Option<HttpEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mqtt: Option<MqttEndpoint>,

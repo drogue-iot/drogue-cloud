@@ -777,52 +777,54 @@ async fn test_lock_device_uid() -> anyhow::Result<()> {
 async fn test_search_devices() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
 
-        create_app(&app, user("foo"), "my-app", hashmap!(
+        let foo = user("foo");
+
+        create_app(&app, &foo, "my-app", hashmap!(
         )).await?;
 
-        create_device(&app, user("foo"), "my-app", "device-1", hashmap!(
+        create_device(&app, &foo, "my-app", "device-1", hashmap!(
         )).await?;
 
-        create_device(&app, user("foo"), "my-app", "device-2", hashmap!(
+        create_device(&app, &foo, "my-app", "device-2", hashmap!(
             "floor" => "1",
             "room" => "101",
         )).await?;
 
-        create_device(&app, user("foo"), "my-app", "device-3", hashmap!(
+        create_device(&app, &foo, "my-app", "device-3", hashmap!(
             "floor" => "1",
             "room" => "102",
         )).await?;
 
-        create_device(&app, user("foo"), "my-app", "device-4", hashmap!(
+        create_device(&app, &foo, "my-app", "device-4", hashmap!(
             "floor" => "1",
             "room" => "102",
             "important" => "",
         )).await?;
 
-        create_device(&app, user("foo"), "my-app", "device-5", hashmap!(
+        create_device(&app, &foo, "my-app", "device-5", hashmap!(
             "floor" => "2",
             "room" => "201",
         )).await?;
 
-        assert_devices(& app, user("foo"), "my-app", Some("floor"), None, None, &["device-2", "device-3", "device-4", "device-5"]).await?;
-        assert_devices(& app, user("foo"), "my-app", Some("!floor"), None, None, &["device-1"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor"), None, None, &["device-2", "device-3", "device-4", "device-5"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("!floor"), None, None, &["device-1"]).await?;
 
-        assert_devices(& app, user("foo"), "my-app", Some("floor=1"), None, None, &["device-2", "device-3", "device-4"]).await?;
-        assert_devices(& app, user("foo"), "my-app", Some("floor!=1"), None, None, &["device-5"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor=1"), None, None, &["device-2", "device-3", "device-4"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor!=1"), None, None, &["device-5"]).await?;
 
-        assert_devices(& app, user("foo"), "my-app", Some("important"), None, None, &["device-4"]).await?;
-        assert_devices(& app, user("foo"), "my-app", Some("floor in (1,2)"), None, None, &["device-2", "device-3", "device-4", "device-5"]).await?;
-        assert_devices(& app, user("foo"), "my-app", Some("floor notin (1,2)"), None, None, &[]).await?;
+        assert_devices(&app, &foo, "my-app", Some("important"), None, None, &["device-4"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor in (1,2)"), None, None, &["device-2", "device-3", "device-4", "device-5"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor notin (1,2)"), None, None, &[]).await?;
 
-        assert_devices(& app, user("foo"), "my-app", Some("floor"), Some(2), None, &["device-2", "device-3"]).await?;
-        assert_devices(& app, user("foo"), "my-app", Some("floor"), Some(2), Some(1), &[ "device-3", "device-4"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor"), Some(2), None, &["device-2", "device-3"]).await?;
+        assert_devices(&app, &foo, "my-app", Some("floor"), Some(2), Some(1), &[ "device-3", "device-4"]).await?;
     })
 }
 
 #[allow(dead_code)]
 pub async fn assert_devices<S, B, E, S1>(
     app: &S,
-    user: UserInformation,
+    user: &UserInformation,
     app_name: S1,
     labels: Option<&str>,
     limit: Option<usize>,
@@ -851,7 +853,7 @@ where
 
     let resp = call_http(
         app,
-        user,
+        &user,
         test::TestRequest::get().uri(&format!(
             "/api/registry/v1alpha1/apps/{}/devices?{}",
             app_name.as_ref(),
