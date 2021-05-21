@@ -2,7 +2,7 @@ use crate::{config::ConfigFromEnv, defaults};
 use async_trait::async_trait;
 use drogue_cloud_service_api::endpoints::*;
 use futures::{stream::FuturesUnordered, StreamExt};
-use k8s_openapi::api::extensions::v1beta1::Ingress;
+use k8s_openapi::api::networking::v1beta1::Ingress;
 use kube::{Api, Client};
 use openshift_openapi::api::route::v1::Route;
 use serde::Deserialize;
