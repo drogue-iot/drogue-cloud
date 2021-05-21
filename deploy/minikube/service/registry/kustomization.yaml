@@ -6,4 +6,3 @@ bases:
 
 patchesStrategicMerge:
   - deployment-user-auth.yaml
-  - service.yaml
