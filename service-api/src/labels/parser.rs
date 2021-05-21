@@ -208,6 +208,18 @@ mod test {
     }
 
     #[test]
+    fn test_parse_whitespaces_1() {
+        assert_eq!(
+            parse_from("foo, foo in (bar, baz), foo notin (baz, bar)"),
+            Ok(vec![
+                Operation::Exists("foo".into()),
+                Operation::In("foo".into(), vec!["bar".into(), "baz".into()]),
+                Operation::NotIn("foo".into(), vec!["baz".into(), "bar".into()]),
+            ])
+        );
+    }
+
+    #[test]
     fn test_parse_rem() {
         assert_eq!(
             parse_from("foo,#"),
