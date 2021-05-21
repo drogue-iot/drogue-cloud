@@ -252,12 +252,11 @@ fn url_from_route(route: &Route) -> Option<String> {
 
 fn host_from_ingress(ingress: &Ingress) -> Option<String> {
     ingress
-        .status
+        .spec
         .as_ref()
-        .and_then(|s| s.load_balancer.as_ref())
-        .and_then(|lb| lb.ingress.as_ref())
-        .and_then(|i| i.into_iter().next())
-        .and_then(|ingress| ingress.hostname.clone())
+        .and_then(|s| s.rules.as_ref())
+        .and_then(|r| r.into_iter().next())
+        .and_then(|r| r.host.clone())
 }
 
 fn url_from_ingress(ingress: &Ingress) -> Option<String> {
