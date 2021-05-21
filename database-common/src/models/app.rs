@@ -384,7 +384,7 @@ SET
     RESOURCE_VERSION = $5,
     DELETION_TIMESTAMP = $6,
     FINALIZERS = $7,
-    DATA = $8,
+    DATA = $8
 WHERE
     NAME = $1
 "#,
