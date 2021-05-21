@@ -3,3 +3,6 @@ kind: Kustomization
 
 patchesStrategicMerge:
   - ingress.yaml
+
+bases:
+  - ../../base/api
