@@ -32,8 +32,6 @@ pub struct Endpoints {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub redirect_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub api: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub registry: Option<RegistryEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub command_url: Option<String>,

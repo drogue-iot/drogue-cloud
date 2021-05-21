@@ -2,6 +2,7 @@ use actix_cors::Cors;
 use actix_web::{middleware::Condition, web, App, HttpServer};
 use anyhow::Context;
 use dotenv::dotenv;
+use drogue_cloud_admin_service::apps;
 use drogue_cloud_device_management_service::{
     app, endpoints,
     service::{self, PostgresManagementServiceConfig},
@@ -36,19 +37,21 @@ async fn main() -> anyhow::Result<()> {
         config.event_url,
     );
 
+    let max_json_payload_size = 64 * 1024;
+
+    let service = service::PostgresManagementService::new(
+        PostgresManagementServiceConfig::from_env()?,
+        sender,
+    )?;
+
     let data = web::Data::new(WebData {
         authenticator,
-        service: service::PostgresManagementService::new(
-            PostgresManagementServiceConfig::from_env()?,
-            sender,
-        )?,
+        service: service.clone(),
     });
-
-    let max_json_payload_size = 64 * 1024;
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![Box::new(data.service.clone())]);
+    let health = HealthServer::new(config.health, vec![Box::new(service.clone())]);
 
     // main server
 
@@ -61,11 +64,16 @@ async fn main() -> anyhow::Result<()> {
         });
         app!(
             ReqwestEventSender,
-            data,
             enable_auth,
             max_json_payload_size,
             auth
         )
+            // for the management service
+            .app_data(data.clone())
+            // for the admin service
+            .data(apps::WebData{
+                service: service.clone()
+            })
     })
     .bind(config.bind_addr)?
     .run();

@@ -38,6 +38,8 @@ pub struct Application {
 
     /// ownership information
     pub owner: Option<String>,
+    /// transfer to new owner
+    pub transfer_owner: Option<String>,
 
     /// arbitrary payload
     pub data: Value,
@@ -132,11 +134,19 @@ pub trait ApplicationAccessor {
         aliases: HashSet<TypedAlias>,
     ) -> Result<(), ServiceError>;
 
-    /// Update an existing application
-    async fn update(
+    /// Update an existing application's data
+    async fn update_data(
         &self,
         application: Application,
         aliases: Option<HashSet<TypedAlias>>,
+    ) -> Result<u64, ServiceError>;
+
+    /// Update an existing application's owner information
+    async fn update_transfer(
+        &self,
+        app: String,
+        owner: Option<String>,
+        transfer_owner: Option<String>,
     ) -> Result<u64, ServiceError>;
 }
 
@@ -164,6 +174,7 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
             finalizers: super::row_to_vec(&row, "FINALIZERS")?,
 
             owner: row.try_get("OWNER")?,
+            transfer_owner: row.try_get("TRANSFER_OWNER")?,
 
             data: row.try_get::<_, Json<_>>("DATA")?.0,
         })
@@ -213,6 +224,7 @@ SELECT
     A2.DELETION_TIMESTAMP,
     A2.FINALIZERS,
     A2.OWNER,
+    A2.TRANSFER_OWNER,
     A2.DATA
 FROM
         APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
@@ -262,6 +274,7 @@ SELECT
     DELETION_TIMESTAMP,
     FINALIZERS,
     OWNER,
+    TRANSFER_OWNER,
     DATA
 FROM APPLICATIONS
 "#,
@@ -348,7 +361,7 @@ INSERT INTO APPLICATIONS (
         Ok(())
     }
 
-    async fn update(
+    async fn update_data(
         &self,
         application: Application,
         aliases: Option<HashSet<TypedAlias>>,
@@ -371,7 +384,7 @@ SET
     RESOURCE_VERSION = $5,
     DELETION_TIMESTAMP = $6,
     FINALIZERS = $7,
-    DATA = $8
+    DATA = $8,
 WHERE
     NAME = $1
 "#,
@@ -399,5 +412,30 @@ WHERE
 
             Ok(count)
         })
+    }
+
+    async fn update_transfer(
+        &self,
+        app: String,
+        owner: Option<String>,
+        transfer_owner: Option<String>,
+    ) -> Result<u64, ServiceError> {
+        // update application
+        let count = self
+            .client
+            .execute(
+                r#"
+UPDATE APPLICATIONS
+SET
+    OWNER = $2,
+    TRANSFER_OWNER = $3
+WHERE
+    NAME = $1
+"#,
+                &[&app, &owner, &transfer_owner],
+            )
+            .await?;
+
+        Ok(count)
     }
 }

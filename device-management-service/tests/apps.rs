@@ -5,6 +5,7 @@ use crate::common::{
 };
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
+use drogue_cloud_admin_service::apps;
 use drogue_cloud_device_management_service::{
     app, endpoints,
     service::{self},

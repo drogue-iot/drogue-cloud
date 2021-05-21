@@ -41,33 +41,41 @@ macro_rules! test {
         let c = pool.get().await?;
         let outbox = drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor::new(&c);
 
+        let auth = drogue_cloud_service_common::mock_auth!();
+
+        let service = service::PostgresManagementService::new(db.config.clone(), sender.clone()).unwrap();
+
         let data = web::Data::new(WebData {
             authenticator: None,
-            service: service::PostgresManagementService::new(db.config.clone(), sender.clone())
-                .unwrap(),
+            service: service.clone(),
         });
-
-        let auth = drogue_cloud_service_common::mock_auth!();
 
         let mut $sender = sender;
         let $outbox = outbox;
 
-        let $app =
-            actix_web::test::init_service(app!(MockEventSender, data, false, 16 * 1024, auth)
+        let $app = actix_web::test::init_service(
+            app!(MockEventSender, false, 16 * 1024, auth)
+                // for the management service
+                .app_data(data.clone())
+                // for the admin service
+                .data(apps::WebData{
+                    service: service.clone(),
+                })
                 .wrap_fn(|req, srv|{
                     log::warn!("Running test-user middleware");
                     use actix_web::dev::Service;
                     use actix_web::HttpMessage;
                     {
-                        let user : Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
+                        let user: Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
                         if let Some(user) = user {
                             log::warn!("Replacing user with test-user: {:?}", user);
                             req.extensions_mut().insert(user.clone());
                         }
                     }
                     srv.call(req)
-                }))
-                .await;
+                })
+        )
+        .await;
 
         $($code)*;
 
@@ -155,7 +163,7 @@ pub fn user<S: AsRef<str>>(id: S) -> UserInformation {
 #[allow(dead_code)]
 pub async fn call_http<S, B, E>(
     app: &S,
-    user: UserInformation,
+    user: &UserInformation,
     req: actix_web::test::TestRequest,
 ) -> S::Response
 where
@@ -163,7 +171,7 @@ where
     E: std::fmt::Debug,
 {
     let req = req.to_request();
-    req.extensions_mut().insert(user);
+    req.extensions_mut().insert(user.clone());
 
     actix_web::test::call_service(app, req).await
 }
@@ -189,7 +197,7 @@ pub fn assert_resources(result: Value, names: &[&str]) {
 #[allow(dead_code)]
 pub async fn create_app<S, B, E, S1>(
     app: &S,
-    user: UserInformation,
+    user: &UserInformation,
     name: S1,
     labels: HashMap<&str, &str>,
 ) -> anyhow::Result<()>
@@ -220,7 +228,7 @@ where
 #[allow(dead_code)]
 pub async fn create_device<S, B, E, S1, S2>(
     app: &S,
-    user: UserInformation,
+    user: &UserInformation,
     app_name: S1,
     name: S2,
     labels: HashMap<&str, &str>,

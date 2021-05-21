@@ -383,15 +383,28 @@ paths:
             schema:
               type: object
               properties:
-                new-user:
+                newUser:
                   type: string
               required:
-                - new-user
+                - newUser
       responses:
         200:
           description: Transfer process is initiated.
         404:
           description: If the requested application does not exist or if the user has no access to it.
+
+    delete:
+      tags:
+        - Application administration
+      description: Cancel an ownership transfer.
+      responses:
+        200:
+          description: The transfer was successfully canceled.
+        403:
+          description: |
+            The user has no access to the resource.
+
+            This is also the case, when the transfer was already completed successfully.
 
   /api/admin/v1alpha1/apps/{appId}/accept-ownership:
     parameters:

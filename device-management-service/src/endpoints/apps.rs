@@ -1,7 +1,7 @@
 use super::streamer::ArrayStreamer;
 use crate::{
     endpoints::params::{DeleteParams, ListParams},
-    service::{ManagementService, PostgresManagementService},
+    service::{management::ManagementService, PostgresManagementService},
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};

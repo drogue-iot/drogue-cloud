@@ -1351,6 +1351,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-admin-service"
+version = "0.5.0"
+dependencies = [
+ "actix-http",
+ "actix-web",
+ "actix-web-httpauth",
+ "anyhow",
+ "async-trait",
+ "base62",
+ "chrono",
+ "config 0.10.1",
+ "crc",
+ "dotenv",
+ "drogue-cloud-database-common",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "env_logger 0.7.1",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "keycloak",
+ "log",
+ "native-tls",
+ "rand 0.8.3",
+ "reqwest",
+ "rustls",
+ "serde 1.0.124",
+ "serde_json",
+ "sha2",
+ "sha3",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "drogue-cloud-api-key-service"
 version = "0.5.0"
 dependencies = [
@@ -1595,6 +1633,7 @@ dependencies = [
  "deadpool-postgres",
  "dotenv",
  "drogue-client",
+ "drogue-cloud-admin-service",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",

@@ -3,7 +3,7 @@ use crate::{
         params::{DeleteParams, ListParams},
         streamer::ArrayStreamer,
     },
-    service::{ManagementService, PostgresManagementService},
+    service::{management::ManagementService, PostgresManagementService},
     WebData,
 };
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};

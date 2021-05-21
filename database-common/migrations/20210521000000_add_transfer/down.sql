@@ -1,0 +1,3 @@
+ALTER TABLE applications
+    DROP COLUMN TRANSFER_OWNER
+;

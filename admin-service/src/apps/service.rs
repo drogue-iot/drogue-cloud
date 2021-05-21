@@ -1,4 +1,5 @@
 use actix_http::ResponseError;
+use async_trait::async_trait;
 use drogue_cloud_service_api::admin::TransferOwnership;
 use drogue_cloud_service_api::auth::user::UserInformation;
 
@@ -9,9 +10,10 @@ pub trait AdminService: Clone {
     async fn transfer(
         &self,
         identity: &UserInformation,
+        app_id: String,
         transfer: TransferOwnership,
     ) -> Result<(), Self::Error>;
 
-    async fn cancel(&self, identity: &UserInformation) -> Result<(), Self::Error>;
-    async fn accept(&self, identity: &UserInformation) -> Result<(), Self::Error>;
+    async fn cancel(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error>;
+    async fn accept(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error>;
 }

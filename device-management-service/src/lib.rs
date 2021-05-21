@@ -2,7 +2,7 @@ pub mod endpoints;
 pub mod service;
 pub mod utils;
 
-use crate::service::ManagementService;
+use crate::service::management::ManagementService;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
 use serde::Deserialize;
 use url::Url;
@@ -70,15 +70,14 @@ macro_rules! crud {
 
 #[macro_export]
 macro_rules! app {
-    ($sender:ty, $data:expr, $enable_auth:expr, $max_json_payload_size:expr, $auth:expr) => {{
+    ($sender:ty, $enable_auth:expr, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
             .wrap(actix_web::middleware::Logger::default())
-            .data(web::JsonConfig::default().limit($max_json_payload_size))
-            .app_data($data.clone());
+            .data(web::JsonConfig::default().limit($max_json_payload_size));
 
         let app = {
             let scope = web::scope("/api/registry/v1alpha1")
-                .wrap(Condition::new($enable_auth, $auth))
+                .wrap(Condition::new($enable_auth, $auth.clone()))
                 .wrap(Cors::permissive());
 
             let scope = drogue_cloud_device_management_service::crud!(
@@ -96,6 +95,31 @@ macro_rules! app {
                 endpoints::devices,
                 device
             );
+
+            app.service(scope)
+        };
+
+        let app = {
+            let scope = web::scope("/api/admin/v1alpha1")
+                .wrap(Condition::new($enable_auth, $auth))
+                .wrap(Cors::permissive());
+
+            let scope = scope.service(
+                web::resource("/apps/{appId}/transfer-ownership")
+                    .route(
+                        web::put()
+                            .to(apps::transfer::<service::PostgresManagementService<$sender>>),
+                    )
+                    .route(
+                        web::delete()
+                            .to(apps::cancel::<service::PostgresManagementService<$sender>>),
+                    ),
+            );
+
+            let scope =
+                scope.service(web::resource("/apps/{appId}/accept-ownership").route(
+                    web::put().to(apps::accept::<service::PostgresManagementService<$sender>>),
+                ));
 
             app.service(scope)
         };
