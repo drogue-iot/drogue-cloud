@@ -20,6 +20,8 @@ pub trait EndpointSource: Debug {
 #[derive(Clone, Debug, Deserialize)]
 pub struct EndpointConfig {
     #[serde(default)]
+    pub api_url: Option<String>,
+    #[serde(default)]
     pub issuer_url: Option<String>,
     #[serde(default)]
     pub sso_url: Option<String>,
@@ -126,6 +128,8 @@ impl EndpointSource for EnvEndpointSource {
             .cloned()
             .map(|url| RegistryEndpoint { url });
 
+        let api = self.0.api_url.clone();
+
         let sso = self.0.sso_url.clone();
         let issuer_url = self.0.issuer_url.as_ref().cloned().or_else(|| {
             sso.as_ref()
@@ -137,6 +141,7 @@ impl EndpointSource for EnvEndpointSource {
             mqtt,
             mqtt_integration,
             sso,
+            api,
             issuer_url,
             redirect_url: self.0.redirect_url.as_ref().cloned(),
             registry,
@@ -182,6 +187,7 @@ impl EndpointSource for OpenshiftEndpointSource {
         let http = url_from_route(&routes.get("http-endpoint").await?);
         let command = url_from_route(&routes.get("command-endpoint").await?);
         let sso = url_from_route(&routes.get("keycloak").await?);
+        let api = url_from_route(&routes.get("api").await?);
         let frontend = url_from_route(&routes.get("console").await?);
         let registry = url_from_route(&routes.get("registry").await?);
 
@@ -213,6 +219,7 @@ impl EndpointSource for OpenshiftEndpointSource {
                 .as_ref()
                 .map(|sso| crate::utils::sso_to_issuer_url(&sso, DEFAULT_REALM)),
             command_url: command,
+            api,
             sso,
             redirect_url: frontend,
             registry: registry.map(|url| RegistryEndpoint { url }),

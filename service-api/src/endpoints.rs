@@ -50,6 +50,7 @@ impl Endpoints {
             mqtt: None,
             mqtt_integration: None,
             sso: self.sso.clone(),
+            api: self.api.clone(),
             issuer_url: self.issuer_url.clone(),
             redirect_url: None,
             registry: self.registry.clone(),

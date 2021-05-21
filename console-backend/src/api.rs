@@ -1,18 +1,30 @@
 use crate::auth::OpenIdClient;
 use actix_web::{web, HttpRequest};
 use anyhow::Context;
+use drogue_cloud_service_api::endpoints::Endpoints;
 use serde_json::{json, Value};
+use std::borrow::Cow;
 
 const SPEC: &str = include_str!("../api/index.yaml");
 
-pub fn spec(req: HttpRequest, client: web::Data<OpenIdClient>) -> anyhow::Result<Value> {
+pub fn spec(
+    req: HttpRequest,
+    endpoints: &Endpoints,
+    client: web::Data<OpenIdClient>,
+) -> anyhow::Result<Value> {
     let mut api: Value = serde_yaml::from_str(SPEC).context("Failed to parse OpenAPI YAML")?;
 
-    let ci = req.connection_info();
+    let url = endpoints
+        .api
+        .as_ref()
+        .map(|s| Cow::from(s))
+        .unwrap_or_else(|| {
+            let ci = req.connection_info();
+            Cow::from(format!("{}://{}", ci.scheme(), ci.host()))
+        });
 
     // server
 
-    let url = format!("{}://{}", ci.scheme(), ci.host());
     api["servers"] = json!([{ "url": url, "description": "Drogue Cloud API" }]);
 
     // SSO

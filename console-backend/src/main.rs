@@ -9,18 +9,19 @@ use actix_cors::Cors;
 use actix_web::{
     get,
     middleware::{self, Condition},
-    web::{self, Data},
+    web::{self},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use drogue_cloud_api_key_service::{
     endpoints as keys,
     service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
 };
+use drogue_cloud_service_api::endpoints::Endpoints;
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
     defaults,
-    endpoints::{create_endpoint_source, EndpointSourceType},
+    endpoints::create_endpoint_source,
     health::{HealthServer, HealthServerConfig},
     openid::{Authenticator, TokenConfig},
     openid_auth,
@@ -29,8 +30,12 @@ use futures::TryFutureExt;
 use serde::Deserialize;
 
 #[get("/")]
-async fn index(req: HttpRequest, client: web::Data<OpenIdClient>) -> impl Responder {
-    match api::spec(req, client) {
+async fn index(
+    req: HttpRequest,
+    endpoints: web::Data<Endpoints>,
+    client: web::Data<OpenIdClient>,
+) -> impl Responder {
+    match api::spec(req, endpoints.get_ref(), client) {
         Ok(spec) => HttpResponse::Ok().json(spec),
         Err(err) => {
             log::warn!("Failed to generate OpenAPI spec: {}", err);
@@ -75,10 +80,8 @@ async fn main() -> anyhow::Result<()> {
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;
-    let endpoints = endpoint_source.eval_endpoints().await?;
-
     log::info!("Using endpoint source: {:?}", endpoint_source);
-    let endpoint_source: Data<EndpointSourceType> = Data::new(endpoint_source);
+    let endpoints = endpoint_source.eval_endpoints().await?;
 
     // OpenIdConnect
 
@@ -91,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
         let client = reqwest::Client::new();
         let ui_client = TokenConfig::from_env_prefix("UI")?
             .amend_with_env()
-            .into_client(client.clone(), endpoints.redirect_url)
+            .into_client(client.clone(), endpoints.redirect_url.clone())
             .await?;
 
         let user_auth = UserAuthClient::from_config(
@@ -173,7 +176,7 @@ async fn main() -> anyhow::Result<()> {
         let app = app.app_data(keycloak_service.clone());
 
         app
-            .app_data(endpoint_source.clone())
+            .data(endpoints.clone())
             .service(
                 web::scope("/api/v1")
                     .wrap(Condition::new(enable_auth, auth.clone()))

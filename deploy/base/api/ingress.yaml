@@ -1,0 +1,44 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: api
+spec:
+  rules:
+    - # we omit the host here, it needs to be set later on, based on the application domain
+      http:
+        paths:
+          - path: /.well-known/
+            pathType: Prefix
+            backend:
+              service:
+                name: console-backend
+                port:
+                  name: endpoint
+          - path: /api/keys/
+            pathType: Prefix
+            backend:
+              service:
+                name: console-backend
+                port:
+                  name: endpoint
+          - path: /api/admin/
+            pathType: Prefix
+            backend:
+              service:
+                name: console-backend
+                port:
+                  name: endpoint
+          - path: /api/registry/
+            pathType: Prefix
+            backend:
+              service:
+                name: registry
+                port:
+                  name: api
+          - path: /api/command/
+            pathType: Prefix
+            backend:
+              service:
+                name: command-endpoint
+                port:
+                  name: endpoint

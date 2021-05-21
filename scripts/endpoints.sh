@@ -25,21 +25,21 @@ case $CLUSTER in
        HTTP_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" http-endpoint -o jsonpath='{.spec.ports[0].nodePort}')
        ;;
    minikube)
-        MQTT_ENDPOINT_HOST=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
-        MQTT_ENDPOINT_PORT=$(eval minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $5}')
-        MQTT_INTEGRATION_HOST=$(eval minikube service -n "$DROGUE_NS" --url mqtt-integration | awk -F[/:] '{print $4 ".nip.io"}')
-        MQTT_INTEGRATION_PORT=$(eval minikube service -n "$DROGUE_NS" --url mqtt-integration | awk -F[/:] '{print $5}')
-        HTTP_ENDPOINT_IP=$(eval minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $4}')
+        MQTT_ENDPOINT_HOST=$(minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
+        MQTT_ENDPOINT_PORT=$(minikube service -n "$DROGUE_NS" --url mqtt-endpoint | awk -F[/:] '{print $5}')
+        MQTT_INTEGRATION_HOST=$(minikube service -n "$DROGUE_NS" --url mqtt-integration | awk -F[/:] '{print $4 ".nip.io"}')
+        MQTT_INTEGRATION_PORT=$(minikube service -n "$DROGUE_NS" --url mqtt-integration | awk -F[/:] '{print $5}')
+        HTTP_ENDPOINT_IP=$(minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $4}')
         CERT_ALTNAMES="$CERT_ALTNAMES IP:$HTTP_ENDPOINT_IP, "
-        HTTP_ENDPOINT_HOST=$(eval minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
-        HTTP_ENDPOINT_PORT=$(eval minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $5}')
+        HTTP_ENDPOINT_HOST=$(minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $4 ".nip.io"}')
+        HTTP_ENDPOINT_PORT=$(minikube service -n "$DROGUE_NS" --url http-endpoint | awk -F[/:] '{print $5}')
         ;;
    openshift)
-        MQTT_ENDPOINT_HOST=$(eval kubectl get route -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
+        MQTT_ENDPOINT_HOST=$(kubectl get route -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.status.ingress[0].host}')
         MQTT_ENDPOINT_PORT=443
-        MQTT_INTEGRATION_HOST=$(eval kubectl get route -n "$DROGUE_NS" mqtt-integration -o jsonpath='{.status.ingress[0].host}')
+        MQTT_INTEGRATION_HOST=$(kubectl get route -n "$DROGUE_NS" mqtt-integration -o jsonpath='{.status.ingress[0].host}')
         MQTT_INTEGRATION_PORT=443
-        HTTP_ENDPOINT_HOST=$(eval kubectl get route -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.ingress[0].host}')
+        HTTP_ENDPOINT_HOST=$(kubectl get route -n "$DROGUE_NS" http-endpoint -o jsonpath='{.status.ingress[0].host}')
         HTTP_ENDPOINT_PORT=443
         ;;
    *)
@@ -55,17 +55,30 @@ COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
 BACKEND_URL=$(service_url "console-backend")
 CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
-MGMT_URL=$(service_url "registry")
 
 #
 # Wait for SSO
 #
-SSO_URL="$(ingress_url "keycloak")"
+SSO_URL="$(route_url "keycloak")"
 while [ -z "$SSO_URL" ]; do
-  sleep 5
-  echo "Waiting for Keycloak ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
-  SSO_URL="$(ingress_url "keycloak")"
+    sleep 5
+    echo "Waiting for Keycloak ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
+    SSO_URL="$(route_url "keycloak")"
 done
+SSO_HOST="${SSO_URL/#http:\/\//}"
+SSO_HOST="${SSO_HOST/#https:\/\//}"
+
+#
+# Wait for API
+#
+API_URL="$(ingress_url "api")"
+while [ -z "$API_URL" ]; do
+    sleep 5
+    echo "Waiting for API ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
+    API_URL="$(ingress_url "api")"
+done
+API_HOST="${API_URL/#http:\/\//}"
+API_HOST="${API_HOST/#https:\/\//}"
 
 if [[ -z "$SILENT" ]]; then
 
@@ -75,9 +88,10 @@ if [[ -z "$SILENT" ]]; then
   bold "========================================================"
   echo
   echo "Console:          $CONSOLE_URL"
+  echo "SSO:              $SSO_URL ($SSO_HOST)"
   echo
+  echo "API:              $API_URL ($API_HOST)"
   echo "Backend:          $BACKEND_URL"
-  echo "Device Registry:  $MGMT_URL"
   echo
   echo "Command Endpoint: $COMMAND_ENDPOINT_URL"
   echo
