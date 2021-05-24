@@ -32,4 +32,4 @@ if ! drg get device --app ${APP} ${DEVICE}; then
 fi
 
 # temp
-http --auth ${DEVICE}@${APP}:${PASS} --verify build/certs/endpoints/ca-bundle.pem POST ${HTTP_ENDPOINT_URL}/v1/anything temp:=${TEMP}
+http --auth ${DEVICE}@${APP}:${PASS} --verify ${SCRIPTDIR}/../build/certs/endpoints/ca-bundle.pem POST ${HTTP_ENDPOINT_URL}/v1/anything temp:=${TEMP}
