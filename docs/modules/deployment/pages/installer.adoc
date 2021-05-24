@@ -8,7 +8,7 @@ local test cluster.
 
 == Download the installer package
 
-The installer package is part of the GitHub release record: https://github.com/drogue-iot/drogue-cloud/releases/tag/v0.3.0
+The installer package is part of the GitHub release record: https://github.com/drogue-iot/drogue-cloud/releases/latest
 
 There is one package for each type of Kubernetes cluster:
 
