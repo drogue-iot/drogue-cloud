@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: keycloak
+  name: keycloak
+  namespace: drogue-iot
+spec:
+  rules:
+  - host: keycloak.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: keycloak-endpoint
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
