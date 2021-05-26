@@ -14,7 +14,7 @@ BACKEND_URL=$(service_url "console-backend")
 HTTP_ENDPOINT_URL=$(service_url "http-endpoint" https)
 
 # login
-if ! drg token; then
+if ! drg whoami; then
   drg login $BACKEND_URL
 fi
 
