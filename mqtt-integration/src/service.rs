@@ -210,23 +210,33 @@ impl Session {
         &self,
         application: String,
         user_auth: &Arc<UserAuthClient>,
-    ) -> Result<(), v5::codec::SubscribeAckReason> {
+        permission: Permission,
+    ) -> Result<(), ()> {
+        log::debug!(
+            "Authorizing - user: {:?}, app: {}, permission: {:?}",
+            self.user,
+            application,
+            permission
+        );
+
         let response = user_auth
             .authorize(
                 AuthorizationRequest {
                     application,
-                    permission: Permission::Read,
+                    permission,
                     user_id: self.user.user_id().map(ToString::to_string),
                     roles: self.user.roles().clone(),
                 },
                 Default::default(),
             )
             .await
-            .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
+            .map_err(|_| ())?;
+
+        log::debug!("Outcome: {:?}", response);
 
         match response.outcome {
             authz::Outcome::Allow => Ok(()),
-            authz::Outcome::Deny => Err(v5::codec::SubscribeAckReason::NotAuthorized),
+            authz::Outcome::Deny => Err(()),
         }
     }
 
@@ -275,7 +285,9 @@ impl Session {
         match &self.user_auth {
             Some(user_auth) => {
                 // authenticated user
-                self.authorize(app.to_string(), user_auth).await?;
+                self.authorize(app.to_string(), user_auth, Permission::Read)
+                    .await
+                    .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
             }
             None => {
                 // authorization disabled ... nothing to do
@@ -385,7 +397,18 @@ impl Session {
         } else {
             let (app, device, command) = (topic[1], topic[2], topic[3]);
 
-            log::info!("Sending command {:?} to {:?}/{:?}", command, app, device);
+            log::info!(
+                "Request to send command {:?} to {:?}/{:?}",
+                command,
+                app,
+                device
+            );
+
+            if let Some(user_auth) = &self.user_auth {
+                self.authorize(app.to_string(), user_auth, Permission::Write)
+                    .await
+                    .map_err(|_| ServerError::NotAuthorized)?;
+            }
 
             let response = self
                 .registry
