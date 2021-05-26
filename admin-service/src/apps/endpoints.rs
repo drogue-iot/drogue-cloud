@@ -1,4 +1,4 @@
-use crate::apps::{data::TransferOwnership, service::AdminService};
+use crate::apps::{data::TransferOwnership, service::AdminService, Members};
 use actix_web::{web, HttpResponse};
 use drogue_cloud_service_api::auth::user::UserInformation;
 use std::ops::Deref;
@@ -29,7 +29,7 @@ where
         .transfer(&user, app_id.into_inner(), payload.0)
         .await
     {
-        Ok(key) => Ok(HttpResponse::Ok().json(key)),
+        Ok(key) => Ok(HttpResponse::Accepted().json(key)),
         Err(e) => Err(e.into()),
     };
 
@@ -46,7 +46,7 @@ where
     S: AdminService + 'static,
 {
     let result = match service.cancel(&user, app_id.into_inner()).await {
-        Ok(key) => Ok(HttpResponse::Ok().json(key)),
+        Ok(key) => Ok(HttpResponse::NoContent().json(key)),
         Err(e) => Err(e.into()),
     };
 
@@ -63,7 +63,45 @@ where
     S: AdminService + 'static,
 {
     let result = match service.accept(&user, app_id.into_inner()).await {
-        Ok(key) => Ok(HttpResponse::Ok().json(key)),
+        Ok(key) => Ok(HttpResponse::NoContent().json(key)),
+        Err(e) => Err(e.into()),
+    };
+
+    result
+}
+
+/// Get member list
+pub async fn get_members<S>(
+    user: UserInformation,
+    service: web::Data<WebData<S>>,
+    app_id: web::Path<String>,
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: AdminService + 'static,
+{
+    let result = match service.get_members(&user, app_id.into_inner()).await {
+        Ok(members) => Ok(HttpResponse::Ok().json(members)),
+        Err(e) => Err(e.into()),
+    };
+
+    result
+}
+
+/// Set member list
+pub async fn set_members<S>(
+    user: UserInformation,
+    service: web::Data<WebData<S>>,
+    app_id: web::Path<String>,
+    payload: web::Json<Members>,
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: AdminService + 'static,
+{
+    let result = match service
+        .set_members(&user, app_id.into_inner(), payload.0)
+        .await
+    {
+        Ok(_) => Ok(HttpResponse::NoContent().finish()),
         Err(e) => Err(e.into()),
     };
 

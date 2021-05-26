@@ -21,13 +21,20 @@ spec:
                 name: console-backend
                 port:
                   name: endpoint
-          - path: /api/admin/
+          - path: /api/admin/v1alpha1/user
             pathType: Prefix
             backend:
               service:
                 name: console-backend
                 port:
                   name: endpoint
+          - path: /api/admin/v1alpha1/apps
+            pathType: Prefix
+            backend:
+              service:
+                name: registry
+                port:
+                  name: api
           - path: /api/registry/
             pathType: Prefix
             backend:

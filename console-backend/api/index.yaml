@@ -388,7 +388,7 @@ paths:
               required:
                 - newUser
       responses:
-        200:
+        202:
           description: Transfer process is initiated.
         404:
           description: If the requested application does not exist or if the user has no access to it.
@@ -398,7 +398,7 @@ paths:
         - Application administration
       description: Cancel an ownership transfer.
       responses:
-        200:
+        204:
           description: The transfer was successfully canceled.
         403:
           description: |
@@ -437,8 +437,6 @@ paths:
           description: If the requested application does not exist or if the user has no access to it.
 
     put:
-      parameters:
-        - $ref: '#/components/parameters/ResourceVersion'
       tags:
         - Application administration
       description: Update existing application member list.
@@ -454,6 +452,10 @@ paths:
           description: The application's member list was updated.
         404:
           description: If requested application does not exist or if the user has no access to it.
+        409:
+          description: |
+            In case a resource version was provided in the update, but it did not match the
+            current version of the resource.
 
   #
   # ## Command & control
@@ -784,42 +786,42 @@ components:
       type: object
       additionalProperties: false
       required:
-        - resourceVersion
-        - owner
+        - members
       properties:
         resourceVersion:
           type: string
-        owner:
-          type: string
-          description: The ID of the owning user.
+          description: |
+            The version of the resource. When setting a new member list, this value is
+            optional. But if present, the application will only be updated if the resource
+            version matches. Otherwise it will return a "Conflict".
+
         members:
-          type: array
-          items:
-            type: object
-            additionalProperties: false
-            required:
-              - user_id
-              - role
-            properties:
-              id:
-                type: string
-                description: The ID of the owning user
-              role:
-                type: string
-                enum:
-                  - admin
-                  - manager
-                  - reader
+          type: object
+          additionalProperties:
+            items:
+              $ref: '#/components/schemas/MemberEntry'
       example:
         resourceVersion: ced63698-a0da-11eb-97e8-d45d6455d2cc
-        owner: fc74ae68-a0da-11eb-a152-d45d6455d2cc
         members:
-          - id: d84eb308-a0da-11eb-9e90-d45d6455d2cc
+          d84eb308-a0da-11eb-9e90-d45d6455d2cc:
             role: admin
-          - id: 03e32c1a-a0db-11eb-9e9b-d45d6455d2cc
+          03e32c1a-a0db-11eb-9e9b-d45d6455d2cc:
             role: manager
-          - id: 0a111dfe-a0db-11eb-a953-d45d6455d2cc
+          0a111dfe-a0db-11eb-a953-d45d6455d2cc:
             role: reader
+
+    MemberEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum:
+            - reader
+            - writer
+            - admin
 
     ApplicationSpec:
       type: object

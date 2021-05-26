@@ -103,11 +103,15 @@ impl<'a> SelectBuilder<'a> {
         let idx = self.params.len();
 
         // must be equal to the owner (which may be empty)
+        // or contain a member with one of the roles eligible for reading
 
         self.select.push_str(&format!(
             r#"
-   OWNER=${idx}
-OR MEMBERS->>${idx} IN ('reader', 'manager', 'admin')
+    (
+        OWNER=${idx}
+    OR
+        MEMBERS->${idx}->>'role' IN ('reader', 'manager', 'admin')
+    )
 "#,
             idx = idx
         ));

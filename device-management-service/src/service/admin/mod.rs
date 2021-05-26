@@ -187,7 +187,7 @@ where
 
         // set operation
 
-        Ok(accessor
+        accessor
             .set_members(
                 &app_id,
                 members
@@ -197,6 +197,12 @@ where
                     .collect(),
             )
             .await
-            .map(|_| ())?)
+            .map(|_| ())?;
+
+        // commit
+
+        t.commit().await?;
+
+        Ok(())
     }
 }

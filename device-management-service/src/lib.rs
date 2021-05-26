@@ -99,30 +99,41 @@ macro_rules! app {
             app.service(scope)
         };
 
-        let app = {
-            let scope = web::scope("/api/admin/v1alpha1")
-                .wrap(Condition::new($enable_auth, $auth))
-                .wrap(Cors::permissive());
+        let app =
+            {
+                let scope = web::scope("/api/admin/v1alpha1")
+                    .wrap(Condition::new($enable_auth, $auth))
+                    .wrap(Cors::permissive());
 
-            let scope = scope.service(
-                web::resource("/apps/{appId}/transfer-ownership")
-                    .route(
-                        web::put()
-                            .to(apps::transfer::<service::PostgresManagementService<$sender>>),
-                    )
-                    .route(
-                        web::delete()
-                            .to(apps::cancel::<service::PostgresManagementService<$sender>>),
-                    ),
-            );
+                let scope = scope.service(
+                    web::resource("/apps/{appId}/transfer-ownership")
+                        .route(
+                            web::put()
+                                .to(apps::transfer::<service::PostgresManagementService<$sender>>),
+                        )
+                        .route(
+                            web::delete()
+                                .to(apps::cancel::<service::PostgresManagementService<$sender>>),
+                        ),
+                );
 
-            let scope =
-                scope.service(web::resource("/apps/{appId}/accept-ownership").route(
+                let scope = scope.service(web::resource("/apps/{appId}/accept-ownership").route(
                     web::put().to(apps::accept::<service::PostgresManagementService<$sender>>),
                 ));
 
-            app.service(scope)
-        };
+                let scope =
+                    scope.service(
+                        web::resource("/apps/{appId}/members")
+                            .route(web::get().to(apps::get_members::<
+                                service::PostgresManagementService<$sender>,
+                            >))
+                            .route(web::put().to(apps::set_members::<
+                                service::PostgresManagementService<$sender>,
+                            >)),
+                    );
+
+                app.service(scope)
+            };
 
         app
     }};
