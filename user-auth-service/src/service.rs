@@ -59,10 +59,13 @@ struct Context(pub AuthorizationRequest);
 
 impl From<Context> for UserInformation {
     fn from(ctx: Context) -> Self {
-        Self::Authenticated(UserDetails {
-            user_id: ctx.0.user_id,
-            roles: ctx.0.roles,
-        })
+        match ctx.0.user_id {
+            Some(user_id) if !user_id.is_empty() => Self::Authenticated(UserDetails {
+                user_id,
+                roles: ctx.0.roles,
+            }),
+            _ => Self::Anonymous,
+        }
     }
 }
 
@@ -88,7 +91,11 @@ impl AuthorizationService for PostgresAuthorizationService {
             application.name,
             application.members
         );
-        log::debug!("User - ID: {}, roles: {:?}", request.user_id, request.roles);
+        log::debug!(
+            "User - ID: {:?}, roles: {:?}",
+            request.user_id,
+            request.roles
+        );
 
         let permission = request.permission;
         let outcome = authorize(&application, &Context(request).into(), permission);

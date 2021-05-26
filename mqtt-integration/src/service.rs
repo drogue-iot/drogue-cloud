@@ -1,6 +1,5 @@
 use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
-
 use drogue_client::{registry, Context};
 use drogue_cloud_endpoint_common::downstream::DownstreamSender;
 use drogue_cloud_integration_common::{
@@ -10,10 +9,9 @@ use drogue_cloud_integration_common::{
 };
 use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, Outcome},
-    authz::{AuthorizationRequest, Permission},
+    authz::{self, AuthorizationRequest, Permission},
     UserInformation,
 };
-
 use drogue_cloud_service_common::{
     client::UserAuthClient,
     defaults,
@@ -92,7 +90,7 @@ impl App {
         connect: &Connect<'_, Io>,
         auth: &Authenticator,
     ) -> Result<UserInformation, anyhow::Error> {
-        let token = match (connect.credentials(), &self.user_auth) {
+        let user = match (connect.credentials(), &self.user_auth) {
             ((Some(username), Some(password)), Some(user_auth)) => {
                 log::debug!("Authenticate with username and password");
                 // we have a username and password, and are allowed to test this against SSO
@@ -110,7 +108,7 @@ impl App {
                     .await?
                     .outcome
                 {
-                    Outcome::Known(details) => details,
+                    Outcome::Known(details) => UserInformation::Authenticated(details),
                     Outcome::Unknown => {
                         log::debug!("Unknown API key");
                         return Err(AuthenticatorError::Failed.into());
@@ -120,13 +118,20 @@ impl App {
             ((Some(username), None), _) => {
                 log::debug!("Authenticate with token (username only)");
                 // username but no username is treated as a token
-                auth.validate_token(&username).await?.into()
+                let token = auth.validate_token(&username).await?.into();
+                UserInformation::Authenticated(token)
             }
             ((None, Some(password)), _) => {
                 log::debug!("Authenticate with token (password only)");
                 // password but no username is treated as a token
                 let password = String::from_utf8(password.to_vec())?;
-                auth.validate_token(&password).await?.into()
+                let token = auth.validate_token(&password).await?.into();
+                UserInformation::Authenticated(token)
+            }
+            ((None, None), _) => {
+                // anonymous authentication, but using user auth
+                log::debug!("Anonymous auth");
+                UserInformation::Anonymous
             }
             _ => {
                 log::debug!("Unknown authentication method");
@@ -134,7 +139,7 @@ impl App {
             }
         };
 
-        Ok(UserInformation::Authenticated(token))
+        Ok(user)
     }
 
     pub async fn connect<Io>(&self, connect: Connect<'_, Io>) -> Result<Session, ServerError> {
@@ -201,6 +206,30 @@ impl Session {
         }
     }
 
+    async fn authorize(
+        &self,
+        application: String,
+        user_auth: &Arc<UserAuthClient>,
+    ) -> Result<(), v5::codec::SubscribeAckReason> {
+        let response = user_auth
+            .authorize(
+                AuthorizationRequest {
+                    application,
+                    permission: Permission::Read,
+                    user_id: self.user.user_id().map(ToString::to_string),
+                    roles: self.user.roles().clone(),
+                },
+                Default::default(),
+            )
+            .await
+            .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
+
+        match response.outcome {
+            authz::Outcome::Allow => Ok(()),
+            authz::Outcome::Deny => Err(v5::codec::SubscribeAckReason::NotAuthorized),
+        }
+    }
+
     async fn subscribe_to(
         &self,
         id: Option<NonZeroU32>,
@@ -243,25 +272,14 @@ impl Session {
 
         // authorize topic for user
 
-        match (&self.user_auth, &self.user.user_id()) {
-            (Some(user_auth), Some(user)) => {
-                user_auth
-                    .authorize(
-                        AuthorizationRequest {
-                            application: app.to_string(),
-                            permission: Permission::Read,
-                            user_id: user.to_string(),
-                            roles: self.user.roles().iter().map(|s| s.to_string()).collect(),
-                        },
-                        Default::default(),
-                    )
-                    .await
-                    .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
+        match &self.user_auth {
+            Some(user_auth) => {
+                // authenticated user
+                self.authorize(app.to_string(), user_auth).await?;
             }
-            (None, _) => {
-                // nothing to do
+            None => {
+                // authorization disabled ... nothing to do
             }
-            _ => return Err(v5::codec::SubscribeAckReason::NotAuthorized),
         }
 
         // create stream
@@ -321,11 +339,11 @@ impl Session {
         log::debug!("Content mode: {:?}", content_mode);
 
         for mut sub in subscribe {
-            log::debug!("Subscribing to: {:?}", sub.topic());
-            match self
+            let res = self
                 .subscribe_to(id, sub.topic().to_string(), content_mode)
-                .await
-            {
+                .await;
+            log::debug!("Subscribing to: {:?} -> {:?}", sub.topic(), res);
+            match res {
                 Ok(qos) => sub.confirm(qos),
                 Err(reason) => sub.fail(reason),
             }

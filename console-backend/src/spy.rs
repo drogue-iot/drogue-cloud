@@ -47,7 +47,7 @@ pub async fn stream_events(
                 AuthorizationRequest {
                     application: query.app.clone(),
                     permission: Permission::Read,
-                    user_id,
+                    user_id: Some(user_id),
                     roles,
                 },
                 Default::default(),

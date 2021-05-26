@@ -17,7 +17,7 @@ pub struct AuthorizationRequest {
     pub application: String,
     pub permission: Permission,
 
-    pub user_id: String,
+    pub user_id: Option<String>,
     pub roles: Vec<String>,
 }
 

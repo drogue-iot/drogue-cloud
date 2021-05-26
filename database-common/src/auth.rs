@@ -36,7 +36,7 @@ pub fn authorize(
     match (resource.owner(), identity.user_id()) {
         // If there is no owner -> allow access
         (None, _) => Outcome::Allow,
-        // If there is an owner, and an authenticated user and both match -> allow access
+        // If there is an owner and an authenticated user and both match -> allow access
         (Some(owner), Some(user)) if owner == user => Outcome::Allow,
         // We must be owner, but are not -> deny
         _ if permission == Permission::Owner => Outcome::Deny,

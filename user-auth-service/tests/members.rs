@@ -12,8 +12,16 @@ macro_rules! test_member {
         test_auth!(AuthorizationRequest{
             application: $app.into(),
             permission: $permission,
-            user_id: $user.into(),
+            user_id: Some($user.into()),
             roles: Vec::from([$($roles,)*]),
+        } => json!($outcome));
+    };
+        ($app:literal, $permission:expr => $outcome:literal) => {
+        test_auth!(AuthorizationRequest{
+            application: $app.into(),
+            permission: $permission,
+            user_id: None,
+            roles: vec![],
         } => json!($outcome));
     };
 }
@@ -52,4 +60,13 @@ async fn test_auth_member_anon() {
     test_member!("app-member1", "", [], Permission::Admin => "deny");
     test_member!("app-member1", "", [], Permission::Write => "deny");
     test_member!("app-member1", "", [], Permission::Read => "allow");
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_auth_member_anon_2() {
+    test_member!("app-member1", Permission::Owner => "deny");
+    test_member!("app-member1", Permission::Admin => "deny");
+    test_member!("app-member1", Permission::Write => "deny");
+    test_member!("app-member1", Permission::Read => "allow");
 }

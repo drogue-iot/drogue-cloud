@@ -13,7 +13,7 @@ async fn test_auth_deny_non_existing() {
     test_auth!(AuthorizationRequest{
         application: "appX".into(),
         permission: Permission::Owner,
-        user_id: "userX".into(),
+        user_id: Some("userX".into()),
         roles: vec![],
     } => json!("deny"));
 }
@@ -24,7 +24,7 @@ async fn test_auth_deny_non_existing_but_admin() {
     test_auth!(AuthorizationRequest{
         application: "appX".into(),
         permission: Permission::Owner,
-        user_id: "userX".into(),
+        user_id: Some("userX".into()),
         roles: vec!["drogue-user".into(), "drogue-admin".into()],
     } => json!("deny"));
 }
@@ -35,7 +35,7 @@ async fn test_auth_allow_owner() {
     test_auth!(AuthorizationRequest{
         application: "app1".into(),
         permission: Permission::Owner,
-        user_id: "user1".into(),
+        user_id: Some("user1".into()),
         roles: vec![],
     } => json!("allow"));
 }
@@ -46,7 +46,7 @@ async fn test_auth_deny_non_owner() {
     test_auth!(AuthorizationRequest{
         application: "app1".into(),
         permission: Permission::Owner,
-        user_id: "user2".into(),
+        user_id: Some("user2".into()),
         roles: vec![],
     } => json!("deny"));
 }
@@ -57,7 +57,7 @@ async fn test_auth_allow_non_owner_but_admin() {
     test_auth!(AuthorizationRequest{
         application: "app1".into(),
         permission: Permission::Owner,
-        user_id: "user2".into(),
+        user_id: Some("user2".into()),
         roles: vec!["drogue-user".into(), "drogue-admin".into()],
     } => json!("allow"));
 }
