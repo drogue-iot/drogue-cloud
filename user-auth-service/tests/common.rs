@@ -13,7 +13,7 @@ macro_rules! test {
         common::init();
 
         let cli = client();
-        let db = db(&cli, |pg| service::AuthorizationServiceConfig { pg })?;
+        let db = db(&cli, |pg| service::AuthorizationServiceConfig { pg }).expect("Init database");
 
         let data = web::Data::new(WebData {
             authenticator: None,
@@ -35,8 +35,6 @@ macro_rules! test {
         .await;
 
         $code;
-
-        Ok(())
     }};
 }
 

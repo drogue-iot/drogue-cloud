@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Permission {
+    Owner,
+    Admin,
+    Write,
+    Read,
+}
+
 /// Authorize a request for a user.
 ///
 /// NOTE: The user_id and roles information must come from a trusted source, like
@@ -7,6 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthorizationRequest {
     pub application: String,
+    pub permission: Permission,
 
     pub user_id: String,
     pub roles: Vec<String>,
@@ -19,7 +28,7 @@ pub struct AuthorizationResponse {
     pub outcome: Outcome,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum Outcome {
     Allow,

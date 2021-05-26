@@ -4,6 +4,7 @@ use crate::{
     error::ServiceError,
     generation,
     models::{
+        fix_null_default,
         sql::{slice_iter, SelectBuilder},
         Lock, TypedAlias,
     },
@@ -13,9 +14,10 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use core::pin::Pin;
 use drogue_client::{meta, registry};
-use drogue_cloud_service_api::auth::user::UserInformation;
-use drogue_cloud_service_api::labels::LabelSelector;
+use drogue_cloud_service_api::{auth::user::UserInformation, labels::LabelSelector};
 use futures::{future, Stream, TryStreamExt};
+use indexmap::map::IndexMap;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{
@@ -40,6 +42,8 @@ pub struct Application {
     pub owner: Option<String>,
     /// transfer to new owner
     pub transfer_owner: Option<String>,
+    /// members list
+    pub members: IndexMap<String, MemberEntry>,
 
     /// arbitrary payload
     pub data: Value,
@@ -53,6 +57,26 @@ impl Resource for Application {
     fn owner(&self) -> Option<&str> {
         self.owner.as_deref()
     }
+
+    fn members(&self) -> &IndexMap<String, MemberEntry> {
+        &self.members
+    }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Role {
+    /// Allow everything, including changing members
+    Admin,
+    /// Allow reading and writing, but not changing members.
+    Manager,
+    /// Allow reading only.
+    Reader,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MemberEntry {
+    pub role: Role,
 }
 
 /// Extract a section from the application data. Prevents cloning the whole struct.
@@ -110,6 +134,7 @@ pub trait ApplicationAccessor {
                 None,
                 None,
                 lock,
+                &[],
             )
             .await?
             .try_next()
@@ -125,6 +150,7 @@ pub trait ApplicationAccessor {
         offset: Option<usize>,
         id: Option<&UserInformation>,
         lock: Lock,
+        sort: &[&str],
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>;
 
     /// Create a new application
@@ -147,6 +173,13 @@ pub trait ApplicationAccessor {
         app: String,
         owner: Option<String>,
         transfer_owner: Option<String>,
+    ) -> Result<u64, ServiceError>;
+
+    /// Set the member list
+    async fn set_members(
+        &self,
+        app: &str,
+        members: IndexMap<String, MemberEntry>,
     ) -> Result<u64, ServiceError>;
 }
 
@@ -175,6 +208,10 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
 
             owner: row.try_get("OWNER")?,
             transfer_owner: row.try_get("TRANSFER_OWNER")?,
+            members: row
+                .try_get::<_, Json<IndexMap<String, MemberEntry>>>("MEMBERS")
+                .map(|json| json.0)
+                .or_else(fix_null_default)?,
 
             data: row.try_get::<_, Json<_>>("DATA")?.0,
         })
@@ -225,6 +262,7 @@ SELECT
     A2.FINALIZERS,
     A2.OWNER,
     A2.TRANSFER_OWNER,
+    A2.MEMBERS,
     A2.DATA
 FROM
         APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
@@ -259,6 +297,7 @@ FROM
         offset: Option<usize>,
         id: Option<&UserInformation>,
         lock: Lock,
+        sort: &[&str],
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>
     {
         let select = format!(
@@ -275,6 +314,7 @@ SELECT
     FINALIZERS,
     OWNER,
     TRANSFER_OWNER,
+    MEMBERS,
     DATA
 FROM APPLICATIONS
 "#,
@@ -283,9 +323,9 @@ FROM APPLICATIONS
         let builder = SelectBuilder::new(select, Vec::new())
             .name(&name)
             .labels(&labels.0)
-            .auth(&id)
+            .auth_read(&id)
             .lock(lock)
-            .sort(&["NAME"])
+            .sort(sort)
             .limit(limit)
             .offset(offset);
 
@@ -433,6 +473,29 @@ WHERE
     NAME = $1
 "#,
                 &[&app, &owner, &transfer_owner],
+            )
+            .await?;
+
+        Ok(count)
+    }
+
+    async fn set_members(
+        &self,
+        app: &str,
+        members: IndexMap<String, MemberEntry>,
+    ) -> Result<u64, ServiceError> {
+        // update application
+        let count = self
+            .client
+            .execute(
+                r#"
+UPDATE APPLICATIONS
+SET
+    MEMBERS = $2
+WHERE
+    NAME = $1
+"#,
+                &[&app, &Json(members)],
             )
             .await?;
 

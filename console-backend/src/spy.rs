@@ -3,7 +3,10 @@ use actix::clock::{interval_at, Instant};
 use actix_http::http::header::ContentType;
 use actix_web::{get, web, web::Bytes, HttpResponse};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
-use drogue_cloud_service_api::auth::user::{authz::AuthorizationRequest, UserInformation};
+use drogue_cloud_service_api::auth::user::{
+    authz::{AuthorizationRequest, Permission},
+    UserInformation,
+};
 use drogue_cloud_service_common::{
     client::UserAuthClient, error::ServiceError, openid::Authenticator,
 };
@@ -43,6 +46,7 @@ pub async fn stream_events(
             .authorize(
                 AuthorizationRequest {
                     application: query.app.clone(),
+                    permission: Permission::Read,
                     user_id,
                     roles,
                 },

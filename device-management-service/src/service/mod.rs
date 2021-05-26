@@ -22,7 +22,7 @@ use drogue_cloud_database_common::{
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
 use drogue_cloud_service_api::{
-    auth::user::UserInformation,
+    auth::user::{authz::Permission, UserInformation},
     health::{HealthCheckError, HealthChecked},
 };
 use serde::Deserialize;
@@ -124,8 +124,9 @@ where
             deletion_timestamp: None,      // will be set internally
             finalizers: app.metadata.finalizers,
 
-            owner: None,          // will be set internally
-            transfer_owner: None, // will be set internally
+            owner: None,                 // will be set internally
+            transfer_owner: None,        // will be set internally
+            members: Default::default(), // will be set internally
 
             data: json!({
                 "spec": app.spec,
@@ -210,7 +211,7 @@ where
         }?;
 
         if let Some(identity) = identity {
-            ensure(&current, identity)?;
+            ensure(&current, identity, Permission::Write)?;
         }
 
         utils::check_versions(expected_uid, expected_resource_version, &current)?;

@@ -1,6 +1,6 @@
-use crate::apps::service::AdminService;
+use crate::apps::{data::TransferOwnership, service::AdminService};
 use actix_web::{web, HttpResponse};
-use drogue_cloud_service_api::{admin::TransferOwnership, auth::user::UserInformation};
+use drogue_cloud_service_api::auth::user::UserInformation;
 use std::ops::Deref;
 
 pub struct WebData<S: AdminService> {

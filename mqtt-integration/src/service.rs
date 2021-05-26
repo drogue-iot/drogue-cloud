@@ -10,7 +10,7 @@ use drogue_cloud_integration_common::{
 };
 use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, Outcome},
-    authz::AuthorizationRequest,
+    authz::{AuthorizationRequest, Permission},
     UserInformation,
 };
 
@@ -249,6 +249,7 @@ impl Session {
                     .authorize(
                         AuthorizationRequest {
                             application: app.to_string(),
+                            permission: Permission::Read,
                             user_id: user.to_string(),
                             roles: self.user.roles().iter().map(|s| s.to_string()).collect(),
                         },

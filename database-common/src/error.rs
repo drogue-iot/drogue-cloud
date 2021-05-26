@@ -23,6 +23,8 @@ pub enum ServiceError {
     ReferenceNotFound,
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Lock failed")]
+    OptimisticLockFailed,
 }
 
 impl From<GenerationError> for ServiceError {
@@ -81,6 +83,10 @@ impl ResponseError for ServiceError {
             }),
             ServiceError::BadRequest(_) => HttpResponse::BadRequest().json(ErrorResponse {
                 error: "BadRequest".into(),
+                message: self.to_string(),
+            }),
+            ServiceError::OptimisticLockFailed => HttpResponse::Conflict().json(ErrorResponse {
+                error: "OptimisticLockFailed".into(),
                 message: self.to_string(),
             }),
         }

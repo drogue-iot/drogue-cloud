@@ -10,6 +10,7 @@ pub use gen::*;
 use std::{collections::HashMap, error::Error, fmt};
 use tokio_postgres::{
     row::RowIndex,
+    types::FromSql,
     types::{Json, WasNull},
     Row,
 };
@@ -42,13 +43,12 @@ where
 
 /// Convert an array column from a row into a set value, handling "null" values
 /// by using the default value.
-pub(crate) fn row_to_vec<I>(row: &Row, idx: I) -> Result<Vec<String>, tokio_postgres::Error>
+pub(crate) fn row_to_vec<'a, I, T>(row: &'a Row, idx: I) -> Result<Vec<T>, tokio_postgres::Error>
 where
     I: RowIndex + fmt::Display,
+    T: FromSql<'a>,
 {
-    Ok(row
-        .try_get::<_, Vec<String>>(idx)
-        .or_else(fix_null_default)?)
+    Ok(row.try_get::<_, Vec<T>>(idx).or_else(fix_null_default)?)
 }
 
 /// Fix a null error by using an alternative value.
@@ -73,8 +73,11 @@ where
 }
 
 pub enum Lock {
+    /// No lock
     None,
+    /// Write lock
     ForUpdate,
+    /// Read lock
     ForShare,
 }
 

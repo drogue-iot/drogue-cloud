@@ -72,19 +72,19 @@ impl<'a> SelectBuilder<'a> {
         self
     }
 
-    /// Add restrictions to the select so that no unauthorized items get returned.
+    /// Add restrictions to the select so that no unauthorized items get returned for the read permission.
     ///
     /// NOTE: This must be aligned with [`crate::auth::authorize`].
-    pub fn auth(mut self, user: &'a Option<&'a UserInformation>) -> Self {
-        // check if we have user information
+    pub fn auth_read(mut self, user: &'a Option<&'a UserInformation>) -> Self {
+        // check if we have authentication enabled
         let user = match user {
             Some(user) => user,
             None => return self,
         };
 
-        // check is we are admin
+        // check if we are admin
         if user.is_admin() {
-            // early return if we are admin
+            // early return as we are admin
             return self;
         }
 
@@ -104,7 +104,13 @@ impl<'a> SelectBuilder<'a> {
 
         // must be equal to the owner (which may be empty)
 
-        self.select.push_str(&format!(" OWNER=${}", idx));
+        self.select.push_str(&format!(
+            r#"
+   OWNER=${idx}
+OR MEMBERS->>${idx} IN ('reader', 'manager', 'admin')
+"#,
+            idx = idx
+        ));
 
         // done
 

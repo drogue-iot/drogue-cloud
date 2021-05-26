@@ -19,7 +19,10 @@ use drogue_cloud_database_common::{
     },
 };
 use drogue_cloud_registry_events::{Event, EventSender, SendEvent};
-use drogue_cloud_service_api::{auth::user::UserInformation, labels::LabelSelector};
+use drogue_cloud_service_api::{
+    auth::user::{authz::Permission, UserInformation},
+    labels::LabelSelector,
+};
 use futures::{future, Stream, TryStreamExt};
 use tokio_postgres::error::SqlState;
 use uuid::Uuid;
@@ -161,7 +164,7 @@ where
             .await?;
 
         if let Some(app) = &app {
-            ensure(app, identity)?;
+            ensure(app, identity, Permission::Read)?;
         }
 
         Ok(app.map(Into::into))
@@ -181,13 +184,21 @@ where
 
         Ok(Box::pin(
             PostgresApplicationAccessor::new(&c)
-                .list(None, labels, limit, offset, Some(&identity), Lock::None)
+                .list(
+                    None,
+                    labels,
+                    limit,
+                    offset,
+                    Some(&identity),
+                    Lock::None,
+                    &["NAME"],
+                )
                 .await?
                 .try_filter_map(move |app| {
                     // Using ensure call here is just a safeguard! The list operation must only return
                     // entries the user has access to. Otherwise the limit/offset functionality
                     // won't work
-                    let result = match ensure(&app, &identity) {
+                    let result = match ensure(&app, &identity, Permission::Read) {
                         Ok(_) => Some(app.into()),
                         Err(_) => None,
                     };
@@ -254,8 +265,7 @@ where
             return Ok(());
         }
 
-        //
-        ensure(&current, identity)?;
+        ensure(&current, identity, Permission::Admin)?;
 
         utils::check_preconditions(&params.preconditions, &current)?;
         // there is no need to use the provided constraints, we as locked the entry "for update"
@@ -343,7 +353,9 @@ where
         };
 
         // ensure we have access to the application, but don't confirm the device if we don't
-        ensure_with(&app, identity, || ServiceError::ReferenceNotFound)?;
+        ensure_with(&app, identity, Permission::Write, || {
+            ServiceError::ReferenceNotFound
+        })?;
 
         let name = device.name.clone();
         // assign a new UID
@@ -405,7 +417,7 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, identity, || ServiceError::NotFound)?;
+        ensure_with(&app, identity, Permission::Read, || ServiceError::NotFound)?;
 
         let device = PostgresDeviceAccessor::new(&c)
             .get(app_id, device_id, Lock::None)
@@ -433,7 +445,7 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, &identity, || ServiceError::NotFound)?;
+        ensure_with(&app, &identity, Permission::Read, || ServiceError::NotFound)?;
 
         Ok(Box::pin(
             PostgresDeviceAccessor::new(&c)
@@ -469,7 +481,9 @@ where
         }?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&current, identity, || ServiceError::NotFound)?;
+        ensure_with(&current, identity, Permission::Write, || {
+            ServiceError::NotFound
+        })?;
 
         let accessor = PostgresDeviceAccessor::new(&t);
 
@@ -575,7 +589,7 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, identity, || ServiceError::NotFound)?;
+        ensure_with(&app, identity, Permission::Write, || ServiceError::NotFound)?;
 
         // check the preconditions
         utils::check_preconditions(&params.preconditions, &current)?;

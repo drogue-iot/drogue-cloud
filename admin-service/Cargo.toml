@@ -10,35 +10,25 @@ edition = "2018"
 
 anyhow = "1"
 
-actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
-actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
-actix-web-httpauth = "=0.6.0-beta.1"
+actix-http = { version = "=3.0.0-beta.4", optional = true } # FIXME: temporary intermediate
+actix-web = { version = "=4.0.0-beta.4", optional = true } # we need v4 as we need tokio 1
+actix-web-httpauth = { version = "=0.6.0-beta.1", optional = true }
 
 tokio = { version = "1", features = ["full"] }
 
-async-trait = "0.1"
+async-trait = { version = "0.1", optional = true }
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
 
 chrono = "0.4"
+indexmap = { version = "1.6", features = ["serde-1"] }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 env_logger = "0.7"
 log = "0.4"
-
-native-tls = "0.2"
-sha2 = "0.9"
-sha3 = "0.9"
-rustls = "0.19"
-url = "2"
-reqwest = "0.11"
-keycloak = "12"
-rand = "0.8"
-crc = "1"
-base62 = "1"
 
 dotenv = "0.15"
 config = "0.10"
@@ -50,3 +40,8 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common", features = ["rustls"] }
 drogue-cloud-registry-events = { path = "../registry-events" }
+
+[features]
+default = ["service", "endpoints"]
+service = ["async-trait"]
+endpoints = ["actix-http", "actix-web", "actix-web-httpauth"]

@@ -2,7 +2,10 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
-    auth::authorize, error::ServiceError, models::app::*, DatabaseService,
+    auth::authorize,
+    error::ServiceError,
+    models::{app::*, Lock},
+    DatabaseService,
 };
 use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
 use drogue_cloud_service_api::{
@@ -73,18 +76,24 @@ impl AuthorizationService for PostgresAuthorizationService {
         // lookup the application
 
         let application = PostgresApplicationAccessor::new(&c);
-        let application = match application.lookup(&request.application).await? {
+        let application = match application.get(&request.application, Lock::None).await? {
             Some(application) => application,
             None => {
                 return Ok(Outcome::Deny);
             }
         };
 
-        log::debug!("Found application: {:?}", application.name);
+        log::debug!(
+            "Found application: {:?} - members: {:?}",
+            application.name,
+            application.members
+        );
+        log::debug!("User - ID: {}, roles: {:?}", request.user_id, request.roles);
 
-        let outcome = authorize(&application, &Context(request).into());
+        let permission = request.permission;
+        let outcome = authorize(&application, &Context(request).into(), permission);
 
-        log::debug!("Authorization outcome: {:?}", outcome);
+        log::debug!("Authorization outcome: {:?} -> {:?}", permission, outcome);
 
         Ok(outcome)
     }
