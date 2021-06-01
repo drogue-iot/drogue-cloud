@@ -7,6 +7,13 @@ spec:
     - # we omit the host here, it needs to be set later on, based on the application domain
       http:
         paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: console-backend
+                port:
+                  name: endpoint
           - path: /.well-known/
             pathType: Prefix
             backend:
