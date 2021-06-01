@@ -227,7 +227,7 @@ impl Spy {
     }
 
     fn start(&mut self, app_id: Option<String>) {
-        let mut url = Backend::url("/spy").unwrap();
+        let mut url = Backend::url("/api/console/v1alpha1/spy").unwrap();
 
         // add optional filter
 

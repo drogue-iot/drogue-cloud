@@ -6,7 +6,6 @@ mod components;
 mod data;
 mod error;
 mod examples;
-mod index;
 mod page;
 mod pages;
 mod preferences;

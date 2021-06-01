@@ -356,7 +356,7 @@ impl Main {
     }
 
     fn refresh_token(&self, refresh_token: &str) -> Result<FetchTask, anyhow::Error> {
-        let mut url = Backend::url("/ui/refresh")
+        let mut url = Backend::url("/api/console/v1alpha1/ui/refresh")
             .ok_or_else(|| anyhow::anyhow!("Missing backend information"))?;
 
         url.query_pairs_mut()
@@ -382,7 +382,7 @@ impl Main {
     }
 
     fn fetch_token<S: AsRef<str>>(&self, access_code: S) -> Result<FetchTask, anyhow::Error> {
-        let mut url = Backend::url("/ui/token")
+        let mut url = Backend::url("/api/console/v1alpha1/ui/token")
             .ok_or_else(|| anyhow::anyhow!("Missing backend information"))?;
 
         url.query_pairs_mut()

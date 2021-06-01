@@ -27,9 +27,13 @@ module.exports = (env, argv) => {
                     { from: /^(.*)\.(svg)$/, to: function(context) {
                             return context.match[0];
                     }},
+                    // translate fonts differently
+                    { from: /^(.*)(\/fonts\/.*?\.(ttf|woff?))$/, to: function(context) {
+                            return context.match[2];
+                    }},
                     // translate everything that is in a sub-directory (e.g. components/form) and contains a dot
                     // (e.g. components/form/main.js) to the root (e.g. main.js).
-                    { from: /\/.*?\/(.*\..*)$/, to: function(context) {
+                    { from: /\/.*\/(.*\..*)$/, to: function(context) {
                             return '/' + context.match[1];
                     }}
                 ],

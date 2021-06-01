@@ -195,11 +195,14 @@ impl Backend {
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {
-        Self::navigate_to("/ui/login", "Trigger re-authenticate flow")
+        Self::navigate_to(
+            "/api/console/v1alpha1/ui/login",
+            "Trigger re-authenticate flow",
+        )
     }
 
     pub fn logout() -> Result<(), anyhow::Error> {
-        Self::navigate_to("/ui/logout", "Trigger logout flow")
+        Self::navigate_to("/api/console/v1alpha1/ui/logout", "Trigger logout flow")
     }
 
     fn navigate_to<S: AsRef<str>>(path: S, op: &str) -> Result<(), anyhow::Error> {

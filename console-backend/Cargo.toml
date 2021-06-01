@@ -50,3 +50,8 @@ drogue-cloud-service-api = { path = "../service-api", features = ["with_actix"] 
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }
 drogue-cloud-api-key-service = { path = "../api-key-service" }
+
+awc = { version = "=3.0.0-beta.3", optional = true, features = ["rustls"] }
+
+[features]
+forward = ["awc"]

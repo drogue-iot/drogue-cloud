@@ -1509,6 +1509,7 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "async-trait",
+ "awc",
  "biscuit",
  "chrono",
  "chrono-tz",
@@ -1554,6 +1555,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "cloudevents-sdk 0.3.1",
+ "drogue-client",
  "drogue-cloud-console-common",
  "drogue-cloud-service-api",
  "env_logger 0.7.1",
@@ -1563,12 +1565,14 @@ dependencies = [
  "js-sys",
  "log",
  "md5",
+ "monaco",
  "once_cell",
  "patternfly-yew",
  "percent-encoding",
  "pretty-hex",
  "serde 1.0.124",
  "serde_json",
+ "serde_yaml",
  "unicode-segmentation",
  "url",
  "wasm-bindgen",
@@ -3025,6 +3029,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "monaco"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e6f76aed0ad93aadd3c40c4008a60ef941a22b8f9bf098b287c8ecdac36a6eb"
+dependencies = [
+ "js-sys",
+ "paste",
+ "wasm-bindgen",
+ "web-sys",
+ "yew",
+]
+
+[[package]]
 name = "nanorand"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3535,10 +3552,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "patternfly-yew"
-version = "0.0.22"
+name = "paste"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e712a2ad404747f5b843440ff9fa794348e2275b313b43a4dfcafe35145218b2"
+checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
+
+[[package]]
+name = "patternfly-yew"
+version = "0.0.23"
+source = "git+https://github.com/ctron/patternfly-yew?rev=bb52b8f4d8e4cf656a644bbfee4b9aa679fb9f78#bb52b8f4d8e4cf656a644bbfee4b9aa679fb9f78"
 dependencies = [
  "chrono",
  "js-sys",

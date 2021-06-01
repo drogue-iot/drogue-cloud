@@ -10,7 +10,7 @@ use yew::{
     virtual_dom::VChild,
 };
 
-pub struct Index {
+pub struct Overview {
     link: ComponentLink<Self>,
 
     ft: Option<FetchTask>,
@@ -23,7 +23,7 @@ pub enum Msg {
     OverviewUpdate(Rc<Endpoints>),
 }
 
-impl Component for Index {
+impl Component for Overview {
     type Message = Msg;
     type Properties = ();
 
@@ -70,11 +70,11 @@ impl Component for Index {
     }
 }
 
-impl Index {
+impl Overview {
     fn fetch_overview(&self) -> Result<FetchTask, Error> {
         Backend::request(
             Method::GET,
-            "/api/v1/info",
+            "/api/console/v1alpha1/info",
             Nothing,
             self.link
                 .callback(|response: Response<Json<Result<Endpoints, Error>>>| {

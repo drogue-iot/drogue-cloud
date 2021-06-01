@@ -4,6 +4,9 @@ mod auth;
 mod info;
 mod spy;
 
+#[cfg(feature = "forward")]
+mod forward;
+
 use crate::auth::OpenIdClient;
 use actix_cors::Cors;
 use actix_web::{
@@ -79,6 +82,7 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
 
     // the endpoint source we choose
+
     let endpoint_source = create_endpoint_source()?;
     log::info!("Using endpoint source: {:?}", endpoint_source);
     let endpoints = endpoint_source.eval_endpoints().await?;
@@ -144,6 +148,13 @@ async fn main() -> anyhow::Result<()> {
 
     let health = HealthServer::new(config.health, vec![]);
 
+    // upstream API url
+    #[cfg(feature = "forward")]
+    let forward_url = std::env::var("UPSTREAM_API_URL")
+        .ok()
+        .and_then(|url| url::Url::parse(&url).ok())
+        .expect("Missing 'UPSTREAM_API_URL");
+
     // main server
 
     let main = HttpServer::new(move || {
@@ -175,45 +186,53 @@ async fn main() -> anyhow::Result<()> {
 
         let app = app.app_data(keycloak_service.clone());
 
-        app
-            .data(endpoints.clone())
-            .service(
-                web::scope("/api/v1")
-                    .wrap(Condition::new(enable_auth, auth.clone()))
-                    .service(info::get_info),
-            )
+        let app = app.data(endpoints.clone())
             .service(
                 web::scope("/api/keys/v1alpha1")
                     .wrap(Condition::new(enable_auth, auth.clone()))
                     .service(
                         web::resource("")
                             .route(web::post().to(keys::create::<KeycloakApiKeyService>))
-                            .route(web::get().to(keys::list::<KeycloakApiKeyService>))
+                            .route(web::get().to(keys::list::<KeycloakApiKeyService>)),
                     )
                     .service(
                         web::resource("/{prefix}")
-                        .route(web::delete().to(keys::delete::<KeycloakApiKeyService>))
-                    )
+                            .route(web::delete().to(keys::delete::<KeycloakApiKeyService>)),
+                    ),
             )
             .service(
                 web::scope("/api/admin/v1alpha1")
-                    .wrap(Condition::new(enable_auth, auth))
-                    .service(web::resource("/user/whoami")
-                        .route(web::get().to(admin::whoami))
-                     )
+                    .wrap(Condition::new(enable_auth, auth.clone()))
+                    .service(web::resource("/user/whoami").route(web::get().to(admin::whoami))),
             )
             // everything from here on is unauthenticated or not using the middleware
-            .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
+            .service(
+                web::scope("/api/console/v1alpha1")
+                    .service(
+                        web::resource("/info")
+                            .wrap(Condition::new(enable_auth, auth.clone()))
+                            .route(web::get().to(info::get_info)),
+                    )
+                    .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
+                    .service(auth::login)
+                    .service(auth::logout)
+                    .service(auth::code)
+                    .service(auth::refresh),
+            )
             .service(index)
-            .service(auth::login)
-            .service(auth::logout)
-            .service(auth::code)
-            .service(auth::refresh)
             .service(
                 web::scope("/.well-known")
                     .service(info::get_public_endpoints)
-                    .service(info::get_drogue_version)
-            )
+                    .service(info::get_drogue_version),
+            );
+
+        #[cfg(feature = "forward")]
+        let app = app
+            .data(awc::Client::new())
+            .data(forward_url.clone())
+            .default_service(web::route().to(forward::forward));
+
+        app
 
     })
     .bind(bind_addr)?

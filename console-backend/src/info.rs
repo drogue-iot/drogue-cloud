@@ -1,7 +1,6 @@
 use actix_web::{get, web, HttpResponse, Responder};
 use drogue_cloud_service_api::{endpoints::Endpoints, version::DrogueVersion};
 
-#[get("/info")]
 pub async fn get_info(endpoints: web::Data<Endpoints>) -> impl Responder {
     HttpResponse::Ok().json(endpoints)
 }

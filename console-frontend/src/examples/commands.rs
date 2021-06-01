@@ -1,7 +1,8 @@
 use crate::{
     backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
-    examples::{data::ExampleData, note_local_certs, shell_quote, shell_single_quote, url_encode},
+    examples::{data::ExampleData, note_local_certs, shell_quote, shell_single_quote},
+    utils::url_encode,
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;

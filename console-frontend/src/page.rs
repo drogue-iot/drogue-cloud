@@ -2,28 +2,27 @@ use crate::{
     backend::{Backend, Token},
     components::about::AboutModal,
     examples::{self, Examples},
-    index::Index,
     pages,
     spy::Spy,
 };
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::agent::RouteRequest;
-use yew_router::prelude::*;
+use yew_router::{agent::RouteRequest, prelude::*};
 
-#[derive(Switch, Debug, Clone, PartialEq)]
+#[derive(Switch, Debug, Clone, PartialEq, Eq)]
 pub enum AppRoute {
     #[to = "/spy"]
     Spy,
-    #[to = "/examples{*:rest}"]
+    #[to = "/examples{*}"]
     Examples(Examples),
     #[to = "/keys"]
     ApiKeys,
     #[to = "/token"]
     CurrentToken,
-    // Index must come last
-    #[to = "/"]
-    Index,
+    #[to = "/apps{*}"]
+    Applications(pages::apps::Pages),
+    #[to = "/!"]
+    Overview,
 }
 
 #[derive(Clone, Properties, PartialEq)]
@@ -85,7 +84,10 @@ impl Component for AppPage {
             <PageSidebar>
                 <Nav>
                     <NavList>
-                        <NavRouterItem<AppRoute> to=AppRoute::Index>{"Home"}</NavRouterItem<AppRoute>>
+                        <NavRouterExpandable<AppRoute> title="Home">
+                            <NavRouterItem<AppRoute> to=AppRoute::Overview>{"Overview"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to=AppRoute::Applications(pages::apps::Pages::Index)>{"Applications"}</NavRouterItem<AppRoute>>
+                        </NavRouterExpandable<AppRoute>>
                         <NavRouterExpandable<AppRoute> title="Getting started">
                             <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Register)>{Examples::Register.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Consume)>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
@@ -201,10 +203,18 @@ impl Component for AppPage {
                 tools=Children::new(tools)
                 >
                     <Router<AppRoute, ()>
-                            redirect = Router::redirect(|_|AppRoute::Index)
+                            redirect = Router::redirect(|_|AppRoute::Overview)
                             render = Router::render(move |switch: AppRoute| {
                                 match switch {
-                                    AppRoute::Index => html!{<Index/>},
+                                    AppRoute::Overview => html!{<pages::Overview/>},
+                                    AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index
+                                        backend=backend.clone()
+                                    />},
+                                    AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
+                                        backend=backend.clone()
+                                        name=name
+                                        details=details
+                                    />},
                                     AppRoute::Spy => html!{<Spy/>},
                                     AppRoute::ApiKeys => html!{<pages::ApiKeys
                                         backend=backend.clone()

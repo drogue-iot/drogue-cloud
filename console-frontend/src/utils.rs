@@ -23,3 +23,8 @@ impl ToHtml for String {
         VNode::VRef(Node::from(ele))
     }
 }
+
+pub fn url_encode<S: AsRef<str>>(s: S) -> String {
+    percent_encoding::utf8_percent_encode(s.as_ref(), percent_encoding::NON_ALPHANUMERIC)
+        .to_string()
+}

@@ -59,11 +59,6 @@ pub fn shell_single_quote<S: ToString>(s: S) -> String {
     format!("'{}'", s)
 }
 
-pub fn url_encode<S: AsRef<str>>(s: S) -> String {
-    percent_encoding::utf8_percent_encode(s.as_ref(), percent_encoding::NON_ALPHANUMERIC)
-        .to_string()
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Properties)]
 pub struct Props {
     pub example: Examples,
@@ -169,7 +164,7 @@ impl ExamplePage {
     fn fetch_overview(&self) -> Result<FetchTask, Error> {
         Backend::request(
             Method::GET,
-            "/api/v1/info",
+            "/api/console/v1alpha1/info",
             Nothing,
             self.link
                 .callback(|response: Response<Json<Result<Endpoints, Error>>>| {

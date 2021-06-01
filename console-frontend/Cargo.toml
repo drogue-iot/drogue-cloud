@@ -13,10 +13,12 @@ anyhow = "1"
 
 drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-api = { path = "../service-api" }
+drogue-client = { version = "0.5.0", default-features = false }
 
 yew = "0.17"
 yew-router = "0.14"
-patternfly-yew = "0.0.22"
+patternfly-yew = "0.0.23"
+monaco = { version = "0.1", features = ["yew-components"] }
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
@@ -46,6 +48,7 @@ headers = "0.3"
 
 serde = "1"
 serde_json = "1"
+serde_yaml = "0.8"
 
 unicode-segmentation = "1"
 pretty-hex = "0.2"
