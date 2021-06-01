@@ -95,7 +95,7 @@ pub async fn publish(
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
-    let (application, device, _) = match auth
+    let (application, device, r#as) = match auth
         .authenticate_http(
             opts.common.application,
             opts.common.device,
@@ -116,9 +116,9 @@ pub async fn publish(
     };
 
     // If we have an "as" parameter, we publish as another device.
-    let device_id = match opts.r#as {
+    let device_id = match r#as {
         // use the "as" information as device id
-        Some(device_id) => device_id,
+        Some(device) => device.metadata.name,
         // use the original device id
         None => device.metadata.name,
     };
