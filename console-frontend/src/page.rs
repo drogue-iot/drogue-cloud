@@ -1,8 +1,9 @@
 use crate::{
     backend::{Backend, Token},
     components::about::AboutModal,
+    data::SharedDataBridge,
     examples::{self, Examples},
-    pages,
+    pages::{self, apps::ApplicationContext},
     spy::Spy,
 };
 use patternfly_yew::*;
@@ -21,6 +22,8 @@ pub enum AppRoute {
     CurrentToken,
     #[to = "/apps{*}"]
     Applications(pages::apps::Pages),
+    #[to = "/devices{*}"]
+    Devices(pages::devices::Pages),
     #[to = "/!"]
     Overview,
 }
@@ -35,12 +38,16 @@ pub struct Props {
 pub struct AppPage {
     props: Props,
     link: ComponentLink<Self>,
+
+    _app_ctx_bridge: SharedDataBridge<ApplicationContext>,
+    app_ctx: ApplicationContext,
 }
 
 pub enum Msg {
     Logout,
     About,
     CurrentToken,
+    SetAppCtx(ApplicationContext),
 }
 
 impl Component for AppPage {
@@ -48,7 +55,14 @@ impl Component for AppPage {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self { props, link }
+        let app_ctx_bridge = SharedDataBridge::from(&link, Msg::SetAppCtx);
+
+        Self {
+            props,
+            link,
+            _app_ctx_bridge: app_ctx_bridge,
+            app_ctx: Default::default(),
+        }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -66,6 +80,14 @@ impl Component for AppPage {
             Msg::CurrentToken => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
                 Route::from(AppRoute::CurrentToken),
             )),
+            Msg::SetAppCtx(ctx) => {
+                return if self.app_ctx != ctx {
+                    self.app_ctx = ctx;
+                    true
+                } else {
+                    false
+                };
+            }
         }
         true
     }
@@ -80,6 +102,7 @@ impl Component for AppPage {
     }
 
     fn view(&self) -> Html {
+        let app = self.app_ctx.clone();
         let sidebar = html_nested! {
             <PageSidebar>
                 <Nav>
@@ -87,6 +110,7 @@ impl Component for AppPage {
                         <NavRouterExpandable<AppRoute> title="Home">
                             <NavRouterItem<AppRoute> to=AppRoute::Overview>{"Overview"}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to=AppRoute::Applications(pages::apps::Pages::Index)>{"Applications"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to=AppRoute::Devices(pages::devices::Pages::Index{app})>{"Devices"}</NavRouterItem<AppRoute>>
                         </NavRouterExpandable<AppRoute>>
                         <NavRouterExpandable<AppRoute> title="Getting started">
                             <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Register)>{Examples::Register.title()}</NavRouterItem<AppRoute>>
@@ -212,6 +236,16 @@ impl Component for AppPage {
                                     />},
                                     AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
                                         backend=backend.clone()
+                                        name=name
+                                        details=details
+                                    />},
+                                    AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
+                                        app=app.to_string()
+                                        backend=backend.clone()
+                                    />},
+                                    AppRoute::Devices(pages::devices::Pages::Details{app, name, details}) => html!{<pages::devices::Details
+                                        backend=backend.clone()
+                                        app=app.to_string()
                                         name=name
                                         details=details
                                     />},

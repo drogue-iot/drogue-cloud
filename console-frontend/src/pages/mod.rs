@@ -1,5 +1,6 @@
 mod api_keys;
 pub mod apps;
+pub mod devices;
 mod overview;
 mod token;
 
