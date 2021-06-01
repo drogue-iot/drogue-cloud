@@ -38,12 +38,12 @@ async fn test_transfer_app() -> anyhow::Result<()> {
         let resp = call_http(&app, &foo, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership").set_json(&json!({
             "newUser": "bar",
         }))).await;
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), StatusCode::ACCEPTED);
 
         // accept app - must succeed
 
         let resp = call_http(&app, &bar, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/accept-ownership")).await;
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // get as user "foo" - must fail now
 
@@ -82,12 +82,12 @@ async fn test_transfer_cancel() -> anyhow::Result<()> {
         let resp = call_http(&app, &foo, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership").set_json(&json!({
             "newUser": "bar",
         }))).await;
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), StatusCode::ACCEPTED);
 
         // cancel transfer - must succeed
 
         let resp = call_http(&app, &foo, test::TestRequest::delete().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership")).await;
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // accept app - must fail
 
