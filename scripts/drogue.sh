@@ -159,7 +159,7 @@ kubectl -n "$DROGUE_NS" set env deployment/ttn-operator "SSO_URL=$SSO_URL" "ENDP
 kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL" "GF_SERVER_ROOT_URL=$DASHBOARD_URL"
 
 # we still need to "backend" URL here, since the backend can still do a few things that we don't want in the API
-kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$BACKEND_URL"
+kubectl -n "$DROGUE_NS" set env deployment/console-frontend "BACKEND_URL=$API_URL"
 
 if [ "$CLUSTER" != "openshift" ]; then
     kubectl -n "$DROGUE_NS" annotate ingress/keycloak --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'

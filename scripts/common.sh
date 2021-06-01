@@ -91,11 +91,10 @@ function ingress_url() {
 
 case $CLUSTER in
    openshift)
-        HOST="$(kubectl get ingress -n "$DROGUE_NS" "$name" -o 'jsonpath={ .status.loadBalancer.ingress[0].hostname }')"
-        if [ -n "$HOST" ]; then
-          URL="https://$HOST"
-        fi
+        DOMAIN=$(domain)
+        URL="https://${name}-${DROGUE_NS}.${DOMAIN}"
         ;;
+
    kubernetes)
         # Workaround to use the node-port service
         if [ "$name" == "keycloak" ]; then
