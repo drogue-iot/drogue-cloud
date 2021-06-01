@@ -3031,8 +3031,7 @@ dependencies = [
 [[package]]
 name = "monaco"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e6f76aed0ad93aadd3c40c4008a60ef941a22b8f9bf098b287c8ecdac36a6eb"
+source = "git+https://github.com/siku2/rust-monaco?rev=97ab5155dd0043843434982922b78bb5fea328fa#97ab5155dd0043843434982922b78bb5fea328fa"
 dependencies = [
  "js-sys",
  "paste",
@@ -3560,7 +3559,7 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 [[package]]
 name = "patternfly-yew"
 version = "0.0.23"
-source = "git+https://github.com/ctron/patternfly-yew?rev=bb52b8f4d8e4cf656a644bbfee4b9aa679fb9f78#bb52b8f4d8e4cf656a644bbfee4b9aa679fb9f78"
+source = "git+https://github.com/ctron/patternfly-yew?rev=0663f1bf1a3e0f9212ca93356aa5eaab57384345#0663f1bf1a3e0f9212ca93356aa5eaab57384345"
 dependencies = [
  "chrono",
  "js-sys",

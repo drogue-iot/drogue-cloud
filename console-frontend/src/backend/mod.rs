@@ -36,6 +36,7 @@ impl BackendInformation {
         method: http::Method,
         path: S,
         payload: IN,
+        headers: Vec<(&str, &str)>,
         callback: Callback<Response<OUT>>,
     ) -> Result<FetchTask, anyhow::Error>
     where
@@ -55,7 +56,12 @@ impl BackendInformation {
             }
         };
 
-        let request = request.header("Authorization", format!("Bearer {}", token));
+        let mut request = request.header("Authorization", format!("Bearer {}", token));
+
+        for (k, v) in headers {
+            request = request.header(k, v);
+        }
+
         let request = request.body(payload).context("Failed to create request")?;
 
         let task = FetchService::fetch_with_options(
@@ -191,7 +197,7 @@ impl Backend {
         Self::get()
             .ok_or_else(|| anyhow::anyhow!("Missing backend"))?
             .info
-            .request(method, path, payload, callback)
+            .request(method, path, payload, vec![], callback)
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {

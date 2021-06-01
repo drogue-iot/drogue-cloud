@@ -82,6 +82,7 @@ impl AboutModal {
             Method::GET,
             "/.well-known/drogue-version",
             Nothing,
+            vec![],
             self.link.callback(
                 move |response: Response<Json<Result<DrogueVersion, anyhow::Error>>>| match response
                     .into_body()

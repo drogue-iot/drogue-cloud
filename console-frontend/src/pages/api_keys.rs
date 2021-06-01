@@ -180,6 +180,7 @@ impl ApiKeys {
             Method::GET,
             "/api/keys/v1alpha1",
             Nothing,
+            vec![],
             self.link.callback(
                 move |response: Response<Json<Result<Vec<ApiKey>, anyhow::Error>>>| match response
                     .into_body()
@@ -207,6 +208,7 @@ impl ApiKeys {
             Method::DELETE,
             format!("/api/keys/v1alpha1/{}", key.prefix),
             Nothing,
+            vec![],
             self.link.callback(move |response: Response<Text>| {
                 if response.status().is_success() {
                     Msg::Deleted
@@ -225,6 +227,7 @@ impl ApiKeys {
             Method::POST,
             "/api/keys/v1alpha1",
             Nothing,
+            vec![],
             self.link.callback(
                 move |response: Response<Json<Result<ApiKeyCreated, anyhow::Error>>>| match response
                     .into_body()

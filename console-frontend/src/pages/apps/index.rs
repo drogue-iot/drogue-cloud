@@ -135,6 +135,7 @@ impl Index {
             Method::GET,
             "/api/registry/v1alpha1/apps",
             Nothing,
+            vec![],
             self.link.callback(
                 move |response: Response<Json<Result<Vec<Application>, anyhow::Error>>>| {
                     match response.into_body().0 {

@@ -28,7 +28,7 @@ module.exports = (env, argv) => {
                             return context.match[0];
                     }},
                     // translate fonts differently
-                    { from: /^(.*)(\/fonts\/.*?\.(ttf|woff?))$/, to: function(context) {
+                    { from: /^(.*)(\/fonts\/.*?\.(ttf|woff.?))$/, to: function(context) {
                             return context.match[2];
                     }},
                     // translate everything that is in a sub-directory (e.g. components/form) and contains a dot
