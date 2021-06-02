@@ -3031,7 +3031,7 @@ dependencies = [
 [[package]]
 name = "monaco"
 version = "0.1.0"
-source = "git+https://github.com/siku2/rust-monaco?rev=97ab5155dd0043843434982922b78bb5fea328fa#97ab5155dd0043843434982922b78bb5fea328fa"
+source = "git+https://github.com/ctron/rust-monaco?rev=0564f7f7c222445a238cf8a078ef90336ea4c0fe#0564f7f7c222445a238cf8a078ef90336ea4c0fe"
 dependencies = [
  "js-sys",
  "paste",

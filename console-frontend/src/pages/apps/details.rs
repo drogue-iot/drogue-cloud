@@ -231,6 +231,7 @@ impl Details {
 
     fn render_editor(&self) -> Html {
         let options = CodeEditorOptions::default()
+            .with_scroll_beyond_last_line(false)
             .with_language("yaml".to_owned())
             .with_builtin_theme(BuiltinTheme::VsDark);
 

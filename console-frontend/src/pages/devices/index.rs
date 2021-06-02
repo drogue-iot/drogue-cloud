@@ -1,15 +1,18 @@
-use crate::pages::apps::ApplicationContext;
+use crate::utils::navigate_to;
 use crate::{
     backend::Backend,
+    data::{SharedDataDispatcher, SharedDataOps},
     error::error,
     page::AppRoute,
-    pages::devices::{DetailsSection, Pages},
+    pages::{
+        apps::ApplicationContext,
+        devices::{DetailsSection, Pages},
+    },
     utils::url_encode,
 };
 use drogue_client::registry::v1::{Application, Device};
 use patternfly_yew::*;
 use yew::{format::*, prelude::*, services::fetch::*};
-use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeviceEntry {
@@ -112,15 +115,13 @@ impl Component for Index {
                 if self.app.is_empty() {
                     // if we don't have an app set yet, set the first one
                     if let Some(app) = apps.first() {
-                        self.app = app.to_string();
+                        self.link.send_message(Msg::SetApp(app.clone()));
                     }
+                } else {
+                    self.link.send_message(Msg::Load);
                 }
 
                 self.apps = apps;
-
-                if !self.app.is_empty() {
-                    self.link.send_message(Msg::Load);
-                }
             }
             Msg::SetData(keys) => {
                 self.entries = keys;
@@ -128,20 +129,19 @@ impl Component for Index {
             }
             Msg::SetApp(app) => {
                 if self.app != app {
-                    self.app = app;
-                    self.link.send_message(Msg::Load);
+                    let ctx = ApplicationContext::Single(app.clone());
+                    SharedDataDispatcher::new().set(ctx.clone());
+                    navigate_to(AppRoute::Devices(Pages::Index { app: ctx }));
                 }
             }
             Msg::Error(msg) => {
                 error("Error", msg);
             }
-            Msg::ShowOverview(name) => RouteAgentDispatcher::<()>::new().send(
-                RouteRequest::ChangeRoute(Route::from(AppRoute::Devices(Pages::Details {
-                    app: ApplicationContext::Single(self.app.clone()),
-                    name,
-                    details: DetailsSection::Overview,
-                }))),
-            ),
+            Msg::ShowOverview(name) => navigate_to(AppRoute::Devices(Pages::Details {
+                app: ApplicationContext::Single(self.app.clone()),
+                name,
+                details: DetailsSection::Overview,
+            })),
             Msg::AppSearch(value) => {
                 self.app_filter = value;
             }
@@ -149,13 +149,23 @@ impl Component for Index {
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        true
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        let changed = if self.props != props {
+            self.props = props;
+            true
+        } else {
+            false
+        };
+
+        if changed && self.app != self.props.app {
+            self.app = self.props.app.clone();
+            self.link.send_message(Msg::Load);
+        }
+
+        changed
     }
 
     fn view(&self) -> Html {
-        log::info!("Apps: {:?}", self.apps);
-        log::info!("App Filter: {:?}", self.app_filter);
         let link = self.link.clone();
         let app_filter = self.app_filter.clone();
         return html! {

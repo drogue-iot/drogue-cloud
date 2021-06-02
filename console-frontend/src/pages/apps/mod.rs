@@ -5,7 +5,6 @@ pub use details::*;
 pub use index::*;
 
 use crate::page::AppRoute;
-use crate::utils::url_encode;
 use patternfly_yew::*;
 use std::fmt::Formatter;
 use std::str::FromStr;

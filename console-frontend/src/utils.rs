@@ -1,6 +1,8 @@
 use web_sys::Node;
 use yew::prelude::*;
 use yew::virtual_dom::VNode;
+use yew_router::agent::RouteRequest;
+use yew_router::prelude::*;
 
 pub trait ToHtml {
     fn to_html(&self) -> Html;
@@ -27,4 +29,12 @@ impl ToHtml for String {
 pub fn url_encode<S: AsRef<str>>(s: S) -> String {
     percent_encoding::utf8_percent_encode(s.as_ref(), percent_encoding::NON_ALPHANUMERIC)
         .to_string()
+}
+
+/// Navigate the router to the target.
+pub fn navigate_to<SWITCH>(to: SWITCH)
+where
+    SWITCH: 'static + Switch,
+{
+    RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(to)));
 }
