@@ -72,7 +72,10 @@ impl KeycloakApiKeyService {
 
         Ok(Self {
             client: client.build()?,
-            url: config.url.into_string().trim_end_matches('/').into(),
+            url: {
+                let url: String = config.url.into();
+                url.trim_end_matches('/').into()
+            },
             realm: config.realm,
             admin_username: config.admin_username,
             admin_password: config.admin_password,

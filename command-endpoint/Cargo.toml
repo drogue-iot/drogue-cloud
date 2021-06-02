@@ -10,8 +10,8 @@ license = "Apache-2.0"
 anyhow = "1"
 thiserror = "1"
 
-actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
-actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
+actix-http = "=3.0.0-beta.5" # FIXME: temporary intermediate
+actix-web = "=4.0.0-beta.5" # we need v4 as we need tokio 1
 actix-web-httpauth = "=0.6.0-beta.1"
 
 async-trait = "0.1"

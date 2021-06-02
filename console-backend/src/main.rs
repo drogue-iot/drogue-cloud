@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
                     .path_segments_mut()
                     .map_err(|_| anyhow::anyhow!("Failed to modify path"))?
                     .push("account");
-                issuer.into_string()
+                issuer.into()
             }),
         };
 

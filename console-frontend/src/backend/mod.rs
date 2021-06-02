@@ -28,7 +28,7 @@ impl BackendInformation {
     }
 
     pub fn url_str<S: AsRef<str>>(&self, path: S) -> String {
-        self.url(path).into_string()
+        self.url(path).into()
     }
 
     pub fn request<S, IN, OUT: 'static>(

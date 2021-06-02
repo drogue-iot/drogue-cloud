@@ -31,7 +31,7 @@ where
     data.service.create_app(&user, app.0).await?;
 
     let response = HttpResponse::Created()
-        .append_header((header::LOCATION, location.into_string()))
+        .append_header((header::LOCATION, String::from(location)))
         .finish();
 
     Ok(response)

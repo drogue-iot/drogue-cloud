@@ -35,7 +35,7 @@ where
     data.service.create_device(&user, device.0).await?;
 
     let response = HttpResponse::Created()
-        .append_header((header::LOCATION, location.into_string()))
+        .append_header((header::LOCATION, location.as_str()))
         .finish();
 
     Ok(response)

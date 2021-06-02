@@ -13,11 +13,11 @@ license = "Apache-2.0"
 #actix-tls = { version = "2", optional = true }
 #reqwest = { version = "0.10", features = ["json"] }
 
-actix = "=0.11.0-beta.3"
-actix-http = "=3.0.0-beta.4" # FIXME: temporary intermediate
-actix-web = "=4.0.0-beta.4" # we need v4 as we need tokio 1
-actix-broker = "=0.4.0-beta.1"
-actix-tls = { version = "=3.0.0-beta.4", optional = true }
+actix = "0.11"
+actix-http = "=3.0.0-beta.5" # FIXME: temporary intermediate
+actix-web = "=4.0.0-beta.5" # we need v4 as we need tokio 1
+actix-broker = "0.4.0"
+actix-tls = { version = "=3.0.0-beta.5", optional = true }
 reqwest = { version = "0.11", features = ["json"] }
 
 anyhow = "1"

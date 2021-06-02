@@ -1,6 +1,6 @@
 use crate::Config;
 use actix::clock::{interval_at, Instant};
-use actix_http::http::header::ContentType;
+use actix_web::http::header::ContentType;
 use actix_web::{get, web, web::Bytes, HttpResponse};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
 use drogue_cloud_service_api::auth::user::{
