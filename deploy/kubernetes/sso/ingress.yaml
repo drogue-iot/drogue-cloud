@@ -1,19 +1,18 @@
-apiVersion: networking.k8s.io/v1
 kind: Ingress
+apiVersion: networking.k8s.io/v1
 metadata:
-  labels:
-    app: keycloak
   name: keycloak
-  namespace: drogue-iot
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-  - host: keycloak.local
-    http:
-      paths:
-      - backend:
-          service:
-            name: keycloak-endpoint
-            port:
-              number: 80
-        path: /
-        pathType: Prefix
+    - # we omit the host here, it needs to be set later on, based on the application domain
+      http:
+        paths:
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-endpoint
+                port:
+                  number: 80

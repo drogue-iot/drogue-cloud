@@ -2,12 +2,14 @@ kind: Ingress
 apiVersion: networking.k8s.io/v1
 metadata:
   name: api
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
     - # we omit the host here, it needs to be set later on, based on the application domain
       http:
         paths:
-          - path: /
+          - path: /api
             pathType: Prefix
             backend:
               service:

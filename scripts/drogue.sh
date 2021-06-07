@@ -98,6 +98,9 @@ case $CLUSTER in
         kubectl -n "$DROGUE_NS" patch ingress/api --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"$(domain)"'"}]' || true
         wait_for_resource route/keycloak
         ;;
+    kubernetes)
+        wait_for_resource ingress/keycloak
+        ;;
     *)
         wait_for_resource ingress/keycloak
         kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]' || true
@@ -177,6 +180,7 @@ case $CLUSTER in
         # The host will by applied late, based on the IP of its status section
         kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"${SSO_HOST}"'"}]' || true
         kubectl -n "$DROGUE_NS" patch ingress/api --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"${API_HOST}"'"}]' || true
+        kubectl -n "$DROGUE_NS" patch ingress/console --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"${CONSOLE_HOST}"'"}]' || true
         ;;
 esac;
 

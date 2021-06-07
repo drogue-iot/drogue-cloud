@@ -75,10 +75,21 @@ done
 API_HOST="${API_URL/#http:\/\//}"
 API_HOST="${API_HOST/#https:\/\//}"
 
+#
+# Wait for Console
+#
+CONSOLE_URL="$(ingress_url "console")"
+while [ -z "$CONSOLE_URL" ]; do
+    sleep 5
+    echo "Waiting for Console ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
+    CONSOLE_URL="$(ingress_url "console")"
+done
+CONSOLE_HOST="${CONSOLE_URL/#http:\/\//}"
+CONSOLE_HOST="${CONSOLE_HOST/#https:\/\//}"
+
 HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
 COMMAND_ENDPOINT_URL=${API_URL}
 BACKEND_URL=${API_URL}
-CONSOLE_URL=${API_URL}
 DASHBOARD_URL=$(service_url "grafana")
 
 
