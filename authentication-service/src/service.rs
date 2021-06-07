@@ -6,7 +6,7 @@ use drogue_client::{registry, Dialect, Translator};
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{app::*, device::*},
-    DatabaseService,
+    Client, DatabaseService,
 };
 use drogue_cloud_service_api::{
     auth::device::authn::{self, AuthenticationRequest, Outcome},
@@ -16,6 +16,17 @@ use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use serde::Deserialize;
 use std::io::Cursor;
 use tokio_postgres::NoTls;
+
+macro_rules! pass {
+    ($application:expr, $device:expr, $as_device:expr) => {{
+        log::info!("app {:?}", $application);
+        Outcome::Pass {
+            application: $application,
+            device: strip_credentials($device),
+            r#as: $as_device.map(strip_credentials),
+        }
+    }};
+}
 
 #[async_trait]
 pub trait AuthenticationService: Clone {
@@ -55,17 +66,68 @@ impl PostgresAuthenticationService {
             pool: config.pg.create_pool(NoTls)?,
         })
     }
-}
 
-macro_rules! pass {
-    ($application:expr, $device:expr, $as_device:expr) => {{
-        log::info!("app {:?}", $application);
-        Outcome::Pass {
-            application: $application,
-            device: strip_credentials($device),
-            r#as: $as_device.map(strip_credentials),
-        }
-    }};
+    async fn validate_gateway<'c, C>(
+        device_id: String,
+        as_id: String,
+        accessor: PostgresDeviceAccessor<'c, C>,
+        application: registry::v1::Application,
+        device: registry::v1::Device,
+    ) -> Result<Outcome, ServiceError>
+    where
+        C: Client + 'c,
+    {
+        Ok(
+            match accessor.lookup(&application.metadata.name, &as_id).await? {
+                Some(as_device) if as_device.deletion_timestamp.is_none() => {
+                    let as_manage: registry::v1::Device = as_device.into();
+                    match as_manage.section::<registry::v1::DeviceSpecGatewaySelector>() {
+                        Some(Ok(gateway_selector)) => {
+                            if gateway_selector.match_names.contains(&device_id) {
+                                log::debug!(
+                                    "Device {:?} allowed to publish as {:?}",
+                                    device_id,
+                                    as_id
+                                );
+                                pass!(application, device, Some(as_manage))
+                            } else {
+                                log::debug!(
+                                "Device {:?} not allowed to publish as {:?}, gateway not listed",
+                                device_id,
+                                as_id
+                            );
+                                Outcome::Fail
+                            }
+                        }
+                        _ => {
+                            log::debug!(
+                            "Device {:?} not allowed to publish as {:?}, no gateways configured",
+                            device_id,
+                            as_id
+                        );
+                            Outcome::Fail
+                        }
+                    }
+                }
+                Some(_) => {
+                    log::debug!(
+                        "Device {:?} not allowed to publish as {:?}, device is being deleted",
+                        device_id,
+                        as_id
+                    );
+                    Outcome::Fail
+                }
+                None => {
+                    log::debug!(
+                        "Device {:?} not allowed to publish as {:?}, device does not exist",
+                        device_id,
+                        as_id
+                    );
+                    Outcome::Fail
+                }
+            },
+        )
+    }
 }
 
 #[async_trait]
@@ -115,50 +177,17 @@ impl AuthenticationService for PostgresAuthenticationService {
                 true => {
                     // check gateway
                     match request.r#as {
-                        Some(as_id) => {
-                            if as_id != request.device {
-                                match accessor.lookup(&application.metadata.name, &as_id).await? {
-                                    Some(as_device) if as_device.deletion_timestamp.is_none() => {
-                                        let as_manage: registry::v1::Device = as_device.into();
-                                        match as_manage
-                                            .section::<registry::v1::DeviceSpecGatewaySelector>()
-                                        {
-                                            Some(Ok(gateway_selector)) => {
-                                                if gateway_selector
-                                                    .match_names
-                                                    .contains(&request.device)
-                                                {
-                                                    log::debug!(
-                                                        "Device {:?} allowed to publish as {:?}",
-                                                        &request.device,
-                                                        as_id
-                                                    );
-                                                    pass!(application, device, Some(as_manage))
-                                                } else {
-                                                    log::debug!("Device {:?} not allowed to publish as {:?}, gateway not listed", &request.device, as_id);
-                                                    Outcome::Fail
-                                                }
-                                            }
-                                            _ => {
-                                                log::debug!("Device {:?} not allowed to publish as {:?}, no gateways configured", &request.device, as_id);
-                                                Outcome::Fail
-                                            }
-                                        }
-                                    }
-                                    Some(_) => {
-                                        log::debug!("Device {:?} not allowed to publish as {:?}, device is being deleted", &request.device, as_id);
-                                        Outcome::Fail
-                                    }
-                                    None => {
-                                        log::debug!("Device {:?} not allowed to publish as {:?}, device does not exist", &request.device, as_id);
-                                        Outcome::Fail
-                                    }
-                                }
-                            } else {
-                                pass!(application, device, None)
-                            }
+                        Some(as_id) if as_id != request.device => {
+                            Self::validate_gateway(
+                                request.device,
+                                as_id,
+                                accessor,
+                                application,
+                                device,
+                            )
+                            .await?
                         }
-                        None => {
+                        _ => {
                             pass!(application, device, None)
                         }
                     }
