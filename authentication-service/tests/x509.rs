@@ -253,15 +253,15 @@ fn from_pem(pem: &str) -> anyhow::Result<Vec<Vec<u8>>> {
 /// Authorize a device using an X.509 client certificate (not full chain).
 #[actix_rt::test]
 #[serial]
-async fn test_x509_client_cert() -> anyhow::Result<()> {
+async fn test_x509_client_cert() {
     let app_id = "O=Drogue IoT, OU=Cloud, CN=Application 1";
     let device_id = "O=Drogue IoT, OU=Cloud, CN=Device 1";
     test_auth!(AuthenticationRequest{
         application: app_id.into(),
         device: device_id.into(),
-        credential: Credential::Certificate(from_pem(DEVICE1_CRT)?),
+        credential: Credential::Certificate(from_pem(DEVICE1_CRT).unwrap()),
         r#as: None
-    } => device1_json())
+    } => device1_json());
 }
 
 /// Authorize a device using an X.509 client certificate.
@@ -269,13 +269,13 @@ async fn test_x509_client_cert() -> anyhow::Result<()> {
 /// The certificate is signed by a different CA, and thus the validation must fail.
 #[actix_rt::test]
 #[serial]
-async fn test_x509_client_cert_bad() -> anyhow::Result<()> {
+async fn test_x509_client_cert_bad() {
     let app_id = "O=Drogue IoT, OU=Cloud, CN=Application 1";
     let device_id = "O=Drogue IoT, OU=Cloud, CN=Device 1";
     test_auth!(AuthenticationRequest{
         application: app_id.into(),
         device: device_id.into(),
-        credential: Credential::Certificate(from_pem(DEVICE1_CRT_BAD)?),
+        credential: Credential::Certificate(from_pem(DEVICE1_CRT_BAD).unwrap()),
         r#as: None
-    } => json!("fail"))
+    } => json!("fail"));
 }

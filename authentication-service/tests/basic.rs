@@ -58,116 +58,116 @@ fn device3_json() -> Value {
 /// Authorize a device using a password.
 #[actix_rt::test]
 #[serial]
-async fn test_auth_passes_password() -> anyhow::Result<()> {
+async fn test_auth_passes_password() {
     test_auth!(AuthenticationRequest{
         application: "app1".into(),
         device: "device1".into(),
         credential: Credential::Password("foo".into()),
         r#as: None,
-    } => device1_json())
+    } => device1_json());
 }
 
 /// Authorize a device using a username/password combination for a password-only credential
 /// that has a username matching the device ID.
 #[actix_rt::test]
 #[serial]
-async fn test_auth_passes_password_with_device_username() -> anyhow::Result<()> {
+async fn test_auth_passes_password_with_device_username() {
     test_auth!(AuthenticationRequest{
         application: "app1".into(),
         device: "device1".into(),
         credential: Credential::UsernamePassword{username: "device1".into(), password: "foo".into()},
         r#as: None,
-    } => device1_json())
+    } => device1_json());
 }
 
 /// Authorize a device using a username/password combination for a password-only credential
 /// that has a username matching the device ID.
 #[actix_rt::test]
 #[serial]
-async fn test_auth_fails_password_with_non_matching_device_username() -> anyhow::Result<()> {
+async fn test_auth_fails_password_with_non_matching_device_username() {
     test_auth!(AuthenticationRequest{
         application: "app1".into(),
         device: "device1".into(),
         credential: Credential::UsernamePassword{username: "device2".into(), password: "foo".into()},
         r#as: None,
-    } => json!("fail"))
+    } => json!("fail"));
 }
 
 #[actix_rt::test]
 #[serial]
-async fn test_auth_fails_wrong_password() -> anyhow::Result<()> {
+async fn test_auth_fails_wrong_password() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device1".into(),
             credential: Credential::Password("foo1".into()),
             r#as: None,
-    } => json!("fail"))
+    } => json!("fail"));
 }
 
 #[actix_rt::test]
 #[serial]
-async fn test_auth_fails_missing_tenant() -> anyhow::Result<()> {
+async fn test_auth_fails_missing_tenant() {
     test_auth!(AuthenticationRequest{
             application: "app2".into(),
             device: "device1".into(),
             credential: Credential::Password("foo".into()),
             r#as: None,
-    } => json!("fail"))
+    } => json!("fail"));
 }
 
 #[actix_rt::test]
 #[serial]
-async fn test_auth_fails_missing_device() -> anyhow::Result<()> {
+async fn test_auth_fails_missing_device() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device2".into(),
             credential: Credential::Password("foo".into()),
             r#as: None,
-    } => json!("fail"))
+    } => json!("fail"));
 }
 
 #[actix_rt::test]
 #[serial]
-async fn test_auth_passes_username_password() -> anyhow::Result<()> {
+async fn test_auth_passes_username_password() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
             credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()},
             r#as: None,
-    } => device3_json())
+    } => device3_json());
 }
 
 #[actix_rt::test]
 #[serial]
-async fn test_auth_passes_username_password_by_alias() -> anyhow::Result<()> {
+async fn test_auth_passes_username_password_by_alias() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "12:34:56".into(),
             credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()},
             r#as: None,
-    } => device3_json())
+    } => device3_json());
 }
 
 /// The password only variant must fail, as the username is not the device id.
 #[actix_rt::test]
 #[serial]
-async fn test_auth_fails_password_only() -> anyhow::Result<()> {
+async fn test_auth_fails_password_only() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
             credential: Credential::Password("bar".into()),
             r#as: None,
-    } => json!("fail"))
+    } => json!("fail"));
 }
 
 /// The password only variant must success, as the username is equal to the device id.
 #[actix_rt::test]
 #[serial]
-async fn test_auth_passes_password_only() -> anyhow::Result<()> {
+async fn test_auth_passes_password_only() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
             credential: Credential::Password("baz".into()),
             r#as: None,
-    }  => device3_json())
+    }  => device3_json());
 }

@@ -2,6 +2,7 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
+use drogue_client::registry::v1::Password;
 use drogue_client::{registry, Dialect, Translator};
 use drogue_cloud_database_common::{
     error::ServiceError,
@@ -14,6 +15,7 @@ use drogue_cloud_service_api::{
 };
 use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use serde::Deserialize;
+use sha_crypt::sha512_check;
 use std::io::Cursor;
 use tokio_postgres::NoTls;
 
@@ -271,6 +273,14 @@ fn validate_credential(
     }
 }
 
+fn password_matches(expected: &Password, provided: &str) -> bool {
+    match expected {
+        Password::Plain(plain) => plain == provided,
+        Password::BCrypt(hashed) => bcrypt::verify(provided, hashed).unwrap_or(false),
+        Password::Sha512(hashed) => sha512_check(provided, hashed).is_ok(),
+    }
+}
+
 /// validate if a provided password matches
 fn validate_password(
     device: &registry::v1::Device,
@@ -279,13 +289,17 @@ fn validate_password(
 ) -> bool {
     credentials.iter().any(|c| match c {
         // match passwords
-        registry::v1::Credential::Password(stored_password) => stored_password == provided_password,
+        registry::v1::Credential::Password(stored_password) => {
+            password_matches(stored_password, provided_password)
+        }
         // match passwords if the stored username is equal to the device id
         registry::v1::Credential::UsernamePassword {
             username: stored_username,
             password: stored_password,
             ..
-        } if stored_username == &device.metadata.name => stored_password == provided_password,
+        } if stored_username == &device.metadata.name => {
+            password_matches(stored_password, provided_password)
+        }
         // no match
         _ => false,
     })
@@ -303,14 +317,17 @@ fn validate_username_password(
         registry::v1::Credential::Password(stored_password)
             if provided_username == device.metadata.name =>
         {
-            stored_password == provided_password
+            password_matches(stored_password, provided_password)
         }
         // match username/password against username/password
         registry::v1::Credential::UsernamePassword {
             username: stored_username,
             password: stored_password,
             ..
-        } => stored_username == provided_username && stored_password == provided_password,
+        } => {
+            stored_username == provided_username
+                && password_matches(stored_password, provided_password)
+        }
         // no match
         _ => false,
     })

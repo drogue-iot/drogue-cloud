@@ -874,6 +874,32 @@ components:
           - $ref: '#/components/schemas/PassCredential'
           - $ref: '#/components/schemas/CertCredential'
 
+    Password:
+      description: A password, either plain or hashed.
+      oneOf:
+        - type: string
+        - type: object
+          additionalProperties: false
+          required:
+            - plain
+          properties:
+            plain:
+              type: string
+        - type: object
+          additionalProperties: false
+          required:
+            - bcrypt
+          properties:
+            bcrypt:
+              type: string
+        - type: object
+          additionalProperties: false
+          required:
+            - sha512
+          properties:
+            sha512:
+              type: string
+
     UserCredential:
       type: object
       additionalProperties: false
@@ -888,7 +914,7 @@ components:
             usename:
               type: string
             password:
-              type: string
+              $ref: '#/components/schemas/Password'
 
     PassCredential:
       type: object
@@ -898,8 +924,7 @@ components:
         - pass
       properties:
         pass:
-          type: string
-          example: verysecret
+          $ref: '#/components/schemas/Password'
 
     CertCredential:
       type: object

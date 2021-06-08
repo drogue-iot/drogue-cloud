@@ -12,7 +12,8 @@ pub struct AuthenticationRequest {
     pub r#as: Option<String>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+/// Credentials, as presented by a device.
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Credential {
     #[serde(rename = "user")]
     UsernamePassword { username: String, password: String },
@@ -91,12 +92,11 @@ mod test {
                 password: "bar".into(),
             },
         ]);
-        assert!(ser.is_ok());
         assert_eq!(
             ser.unwrap(),
             json! {[
-                {"pass": "foo"},
-                {"user": {"username": "foo", "password": "bar"}}
+                {"pass": {"plain": "foo" }},
+                {"user": {"username": "foo", "password": {"plain": "bar"}}}
             ]}
         )
     }

@@ -48,4 +48,5 @@ drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 
-drogue-client = "0.5.0"
+drogue-client = "0.6.0"
+bcrypt = "0.9"

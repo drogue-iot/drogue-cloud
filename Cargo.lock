@@ -585,6 +585,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bcrypt"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4d0faafe9e089674fc3efdb311ff5253d445c79d85d1d28bd3ace76d45e7164"
+dependencies = [
+ "base64 0.13.0",
+ "blowfish",
+ "getrandom 0.2.3",
+]
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -654,6 +665,17 @@ dependencies = [
  "fastrand",
  "futures-lite",
  "once_cell",
+]
+
+[[package]]
+name = "blowfish"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32fa6a061124e37baba002e496d203e23ba3d7b73750be82dbfbc92913048a5b"
+dependencies = [
+ "byteorder",
+ "cipher",
+ "opaque-debug",
 ]
 
 [[package]]
@@ -797,6 +819,15 @@ checksum = "2554a3155fec064362507487171dcc4edc3df60cb10f3a1fb10ed8094822b120"
 dependencies = [
  "chrono",
  "parse-zoneinfo",
+]
+
+[[package]]
+name = "cipher"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12f8e7987cbd042a63249497f41aed09f8e65add917ea6566effbc56578d6801"
+dependencies = [
+ "generic-array",
 ]
 
 [[package]]
@@ -1323,9 +1354,8 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drogue-client"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a51b0f933b5d96c7a5f56541d90beea167757caa20de50130fcbcc0475b9720"
+version = "0.6.0"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=7c7fd3a1bb0a747ef190e3495519d42a0c705363#7c7fd3a1bb0a747ef190e3495519d42a0c705363"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1426,6 +1456,7 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "async-trait",
+ "bcrypt",
  "chrono",
  "config 0.10.1",
  "deadpool",
@@ -1445,10 +1476,12 @@ dependencies = [
  "log",
  "native-tls",
  "pem",
+ "rstest",
  "rustls",
  "serde 1.0.126",
  "serde_json",
  "serial_test",
+ "sha-crypt",
  "sha2",
  "testcontainers",
  "thiserror",
@@ -1982,6 +2015,7 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "async-trait",
+ "bcrypt",
  "chrono",
  "cloudevents-sdk 0.4.0",
  "cloudevents-sdk-actix-web",
@@ -4108,6 +4142,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rstest"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "041bb0202c14f6a158bbbf086afb03d0c6e975c2dec7d4912f8061ed44f290af"
+dependencies = [
+ "cfg-if 1.0.0",
+ "proc-macro2",
+ "quote",
+ "rustc_version 0.3.3",
+ "syn",
+]
+
+[[package]]
 name = "rust-crypto"
 version = "0.2.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4430,6 +4477,17 @@ dependencies = [
  "cpufeatures",
  "digest",
  "opaque-debug",
+]
+
+[[package]]
+name = "sha-crypt"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44cf31d974395e85e11c83e62ba44fa4e43c8e03678ff69c158cf98a9f2e9a04"
+dependencies = [
+ "rand 0.8.3",
+ "sha2",
+ "subtle",
 ]
 
 [[package]]

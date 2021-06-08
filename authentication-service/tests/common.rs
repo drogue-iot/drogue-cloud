@@ -13,7 +13,7 @@ macro_rules! test {
         common::init();
 
         let cli = client();
-        let db = db(&cli, |pg| service::AuthenticationServiceConfig { pg })?;
+        let db = db(&cli, |pg| service::AuthenticationServiceConfig { pg }).unwrap();
 
         let data = web::Data::new(WebData {
             authenticator: None,
@@ -30,8 +30,6 @@ macro_rules! test {
         .await;
 
         $code;
-
-        Ok(())
     }};
 }
 

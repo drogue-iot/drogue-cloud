@@ -9,6 +9,7 @@ use crate::{
 use actix_http::http::header::IntoHeaderValue;
 use actix_web_httpauth::headers::authorization::Basic;
 use async_trait::async_trait;
+use drogue_client::registry::v1::Password;
 use drogue_client::{meta, registry, Translator};
 use maplit::{convert_args, hashmap};
 use serde_json::{json, Value};
@@ -241,12 +242,14 @@ impl<'a> ApplicationReconciler<'a> {
 
         // if we could not find a password, create one
 
-        let password = if let Some(password) = password {
+        let password = if let Some(Password::Plain(password)) = password {
             password
         } else {
             let password = utils::random_password();
             gateway.set_section(registry::v1::DeviceSpecCredentials {
-                credentials: vec![registry::v1::Credential::Password(password.clone())],
+                credentials: vec![registry::v1::Credential::Password(Password::Plain(
+                    password.clone(),
+                ))],
             })?;
             password
         };
