@@ -118,7 +118,79 @@ impl DeviceAuthenticator {
         self.authenticate(app_id, device_id, Credential::Certificate(certs), None)
             .await
     }
+    /// authenticate for a typical CoAP request
+    pub async fn authenticate_coap<T, D>(
+        &self,
+        application: Option<T>,
+        device: Option<D>,
+        auth: Option<&HeaderValue>,
+    ) -> AuthResult<AuthenticationResponse>
+    where
+        T: AsRef<str>,
+        D: AsRef<str>,
+    {
+        match (application, device, auth.map(AuthValue::from)) {
+            // POST /<channel> -> basic auth `<device>@<tenant>` / `<password>` -> Password(<password>)
+            (
+                None,
+                None,
+                Some(AuthValue::Basic {
+                    username: Username::Scoped { scope, device },
+                    password,
+                }),
+            ) => {
+                self.authenticate(&scope, &device, Credential::Password(password), None)
+                    .await
+            }
+            // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
+            (Some(scope), None, Some(AuthValue::Basic { username, password })) => {
+                self.authenticate(
+                    scope.as_ref(),
+                    username.into_string(),
+                    Credential::Password(password),
+                    None,
+                )
+                .await
+            }
+            // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
+            (Some(scope), Some(device), Some(AuthValue::Basic { username, password })) => {
+                self.authenticate(
+                    scope.as_ref(),
+                    device.as_ref(),
+                    Credential::UsernamePassword {
+                        username: username.into_string(),
+                        password,
+                    },
+                    None,
+                )
+                .await
+            }
+            // POST /<channel>?device=<device> -> basic auth `<username>@<tenant>` / `<password>` -> UsernamePassword(<username>, <password>)
+            (
+                None,
+                Some(device),
+                Some(AuthValue::Basic {
+                    username:
+                        Username::Scoped {
+                            scope,
+                            device: username,
+                        },
+                    password,
+                }),
+            ) => {
+                self.authenticate(
+                    &scope,
+                    device.as_ref(),
+                    Credential::UsernamePassword { username, password },
+                    None,
+                )
+                .await
+            }
 
+            // everything else is failed
+            _ => Ok(AuthenticationResponse::failed()),
+        }
+    }
     /// authenticate for a typical MQTT request
     pub async fn authenticate_mqtt<U, P, C>(
         &self,
