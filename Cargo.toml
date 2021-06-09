@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "endpoint-common",
+    "coap-endpoint",
     "http-endpoint",
     "mqtt-endpoint",
     "console-common",
