@@ -160,11 +160,6 @@ jobs:
         with:
           wait: 300s
           cluster_name: kind
-          config: ./.github/config/kind.yaml
-
-      - name: Install ingress controller
-        run: |
-          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/kind/deploy.yaml
 
       - name: Load images in docker
         run: docker load -i all.tar
