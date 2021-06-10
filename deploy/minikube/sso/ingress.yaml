@@ -1,0 +1,18 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: keycloak
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+    - # we omit the host here, it needs to be set later on, based on the application domain
+      http:
+        paths:
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-endpoint
+                port:
+                  number: 80
