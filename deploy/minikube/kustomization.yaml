@@ -15,3 +15,4 @@ bases:
   - service/registry
   - integration/mqtt
   - ../base/api
+  - ../base/console
