@@ -50,7 +50,6 @@ case $CLUSTER in
 esac;
 
 
-
 #
 # Wait for SSO
 #
@@ -75,13 +74,18 @@ done
 API_HOST="${API_URL/#http:\/\//}"
 API_HOST="${API_HOST/#https:\/\//}"
 
-CONSOLE_URL=${API_URL}
-CONSOLE_HOST=${API_HOST}
 HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
-COMMAND_ENDPOINT_URL=${API_URL}
-BACKEND_URL=${API_URL}
+COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
+BACKEND_URL=$(service_url "console-backend")
+CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
 
+if [ "$CLUSTER" == "kubernetes" ]; then
+    CONSOLE_URL=${API_URL}
+    CONSOLE_HOST=${API_HOST}
+    COMMAND_ENDPOINT_URL=${API_URL}
+    BACKEND_URL=${API_URL}
+fi
 
 if [[ -z "$SILENT" ]]; then
 

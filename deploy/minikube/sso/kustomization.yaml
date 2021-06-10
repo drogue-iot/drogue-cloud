@@ -6,12 +6,3 @@ bases:
 
 resources:
   - service.yaml
-  - ingress.yaml
-
-patchesJson6902:
-- target:
-    group: keycloak.org
-    version: v1alpha1
-    kind: Keycloak
-    name: sso
-  path: instance_patch.yaml
