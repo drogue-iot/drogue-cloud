@@ -3,6 +3,7 @@ kind: Kustomization
 
 bases:
   - configuration
+  - kafka
   - knative
   - sso
   - source/http

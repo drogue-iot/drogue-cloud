@@ -3,6 +3,7 @@ kind: Kustomization
 
 bases:
   - ../base/configuration
+  - ../base/kafka
   - ../base/knative
   - sso
   - source/mqtt

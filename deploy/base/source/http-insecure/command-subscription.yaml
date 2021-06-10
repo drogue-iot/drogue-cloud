@@ -1,17 +1,18 @@
-apiVersion: messaging.knative.dev/v1
-kind: Subscription
+apiVersion: sources.knative.dev/v1beta1
+kind: KafkaSource
 metadata:
   name: commands-http-insecure
   labels:
     app.kubernetes.io/part-of: endpoints
 spec:
-  channel:
-    apiVersion: messaging.knative.dev/v1alpha1
-    kind: KafkaChannel
-    name: iot-commands
-  subscriber:
+  consumerGroup: commands-http-insecure
+  bootstrapServers:
+    - drogue-iot-kafka-bootstrap:9092
+  topics:
+    - iot-commands
+  sink:
     ref:
       apiVersion: v1
       kind: Service
-      name: http-insecure-command
+      name: http-command
     uri: /command-service

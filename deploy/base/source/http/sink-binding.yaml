@@ -13,6 +13,6 @@ spec:
 
   sink:
     ref:
-      apiVersion: messaging.knative.dev/v1alpha1
-      kind: KafkaChannel
-      name: iot-channel
+      apiVersion: eventing.knative.dev/v1alpha1
+      kind: KafkaSink
+      name: iot-events

@@ -32,11 +32,23 @@ use tokio::task::JoinHandle;
 pub struct ServiceConfig {
     #[serde(default = "defaults::kafka_bootstrap_servers")]
     pub kafka_bootstrap_servers: String,
+    #[serde(default = "defaults::kafka_events_topic")]
     pub kafka_topic: String,
     #[serde(default)]
     pub enable_username_password_auth: bool,
     #[serde(default)]
     pub disable_api_keys: bool,
+}
+
+impl Default for ServiceConfig {
+    fn default() -> Self {
+        Self {
+            kafka_bootstrap_servers: defaults::kafka_bootstrap_servers(),
+            kafka_topic: defaults::kafka_events_topic(),
+            enable_username_password_auth: false,
+            disable_api_keys: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
