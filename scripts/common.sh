@@ -92,16 +92,6 @@ case $CLUSTER in
         URL="https://${name}-${DROGUE_NS}.${DOMAIN}"
         ;;
 
-   kind)
-        # Workaround to use the node-port service
-        if [ "$name" == "keycloak" ]; then
-            name="$name-endpoint"
-        fi
-        IP=$(kubectl get ingress -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')
-        if [ -n "$IP" ]; then
-          URL="http://$name-$IP.nip.io"
-        fi
-        ;;
    *)
         IP=$(kubectl get ingress -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')
         if [ -n "$IP" ]; then
