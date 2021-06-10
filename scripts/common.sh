@@ -92,6 +92,9 @@ case $CLUSTER in
         URL="https://${name}-${DROGUE_NS}.${DOMAIN}"
         ;;
 
+   kind)
+       URL="http://$name.127.0.0.1.nip.io"
+       ;;
    *)
         IP=$(kubectl get ingress -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')
         if [ -n "$IP" ]; then
