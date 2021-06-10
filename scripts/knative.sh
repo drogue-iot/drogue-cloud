@@ -5,7 +5,8 @@ set -e
 : "${KNATIVE_SERVING_VERSION:=0.22.0}"
 : "${KNATIVE_EVENTING_VERSION:=0.22.0}"
 : "${KOURIER_VERSION:=0.22.0}"
-: "${EVENTING_KAFKA_VERSION:=0.22.3}"
+: "${EVENTING_KAFKA_VERSION:=0.22.4}"
+: "${EVENTING_KAFKA_BROKER_VERSION:=0.22.4}"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 : "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../deploy")}"
@@ -75,25 +76,18 @@ case $CLUSTER in
         kubectl apply --filename https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-default-domain.yaml
 esac;
 
+# Kafka by way of Strimzi
+source "$SCRIPTDIR/strimzi.sh"
+
 # Knative Eventing
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-crds.yaml
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-core.yaml
 kubectl -n knative-eventing set env deployment/eventing-webhook SINK_BINDING_SELECTION_MODE=inclusion
-kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
 
-# Kafka by way of Strimzi
-source "$SCRIPTDIR/strimzi.sh"
+# Knative Kafka Sink and Source
+kubectl apply --filename https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/source.yaml
+kubectl apply --filename https://github.com/knative-sandbox/eventing-kafka-broker/releases/download/v${EVENTING_KAFKA_BROKER_VERSION}/eventing-kafka-controller.yaml
+kubectl apply --filename https://github.com/knative-sandbox/eventing-kafka-broker/releases/download/v${EVENTING_KAFKA_BROKER_VERSION}/eventing-kafka-sink.yaml
 
-# Knative Kafka resources
-curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/source.yaml" \
-  | sed 's/namespace: .*/namespace: knative-eventing/' \
-  | kubectl apply -f - -n knative-eventing
+# Wait for eventing deployments
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
-curl -L "https://github.com/knative-sandbox/eventing-kafka/releases/download/v${EVENTING_KAFKA_VERSION}/channel-consolidated.yaml" \
-  | sed 's/REPLACE_WITH_CLUSTER_URL/kafka-eventing-kafka-bootstrap.knative-eventing:9092/' \
-  | kubectl apply -f -
-kubectl wait deployment --all --timeout=-1s --for=condition=Available -n knative-eventing
-
-# Create kafka cluster
-kubectl -n knative-eventing apply -k "$DEPLOYDIR/$CLUSTER/kafka"
-kubectl -n knative-eventing wait kafka --all --for=condition=Ready --timeout=-1s

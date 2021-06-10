@@ -67,8 +67,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: SERVICE__KAFKA_TOPIC
-              value: knative-messaging-kafka.$(NAMESPACE).iot-channel
             - name: USER_AUTH__CLIENT_ID
               valueFrom:
                 secretKeyRef:

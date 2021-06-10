@@ -1,17 +1,18 @@
-apiVersion: messaging.knative.dev/v1
-kind: Subscription
+apiVersion: sources.knative.dev/v1beta1
+kind: KafkaSource
 metadata:
   name: influxdb
   labels:
     app.kubernetes.io/name: influxdb
     app.kubernetes.io/part-of: custom-app-1
 spec:
-  channel:
-    apiVersion: messaging.knative.dev/v1alpha1
-    kind: KafkaChannel
-    name: iot-channel
-  subscriber:
+  consumerGroup: ttn-operator
+  bootstrapServers:
+    - drogue-iot-kafka-bootstrap:9092
+  topics:
+    - iot-events
+  sink:
     ref:
-      apiVersion: serving.knative.dev/v1
+      apiVersion: v1
       kind: Service
       name: influxdb-pusher

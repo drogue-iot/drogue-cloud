@@ -1,7 +1,9 @@
-apiVersion: messaging.knative.dev/v1alpha1
-kind: KafkaChannel
+apiVersion: eventing.knative.dev/v1alpha1
+kind: KafkaSink
 metadata:
   name: registry
 spec:
-  numPartitions: 3
-  replicationFactor: 1
+  bootstrapServers:
+    - drogue-iot-kafka-bootstrap.drogue-iot.svc.cluster.local.:9092
+  contentMode: binary
+  topic: registry

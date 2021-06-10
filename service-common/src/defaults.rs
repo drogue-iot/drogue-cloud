@@ -37,12 +37,12 @@ pub fn bind_addr() -> String {
 
 #[inline]
 pub fn kafka_bootstrap_servers() -> String {
-    "kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092".into()
+    "drogue-iot-kafka-bootstrap:9092".into()
 }
 
 #[inline]
-pub fn kafka_topic() -> String {
-    "knative-messaging-kafka.drogue-iot.iot-channel".into()
+pub fn kafka_events_topic() -> String {
+    "iot-events".into()
 }
 
 #[inline]

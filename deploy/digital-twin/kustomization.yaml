@@ -6,5 +6,4 @@ resources:
   - ingress.yaml
   - service-vorto-converter.yaml
   - sequence.yaml
-  - kafka-source.yaml # drop once we can use the subscription.yaml
-#  - subscription.yaml # currently broken as there seems to be an issue with the kafka-ch-dispatcher
+  - kafka-source.yaml

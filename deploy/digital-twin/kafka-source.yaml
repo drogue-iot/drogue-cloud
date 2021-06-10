@@ -1,4 +1,4 @@
-apiVersion: sources.knative.dev/v1alpha1
+apiVersion: sources.knative.dev/v1beta1
 kind: KafkaSource
 metadata:
   name: digital-twin-kafka-source
@@ -7,9 +7,9 @@ metadata:
 spec:
   consumerGroup: digital-twin
   bootstrapServers:
-    - kafka-eventing-kafka-bootstrap.knative-eventing.svc:9092
+    - drogue-iot-kafka-bootstrap:9092
   topics:
-    - knative-messaging-kafka.drogue-iot.iot-channel
+    - iot-events
   sink:
     ref:
       apiVersion: flows.knative.dev/v1

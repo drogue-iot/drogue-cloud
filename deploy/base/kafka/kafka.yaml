@@ -1,7 +1,7 @@
 kind: Kafka
 apiVersion: kafka.strimzi.io/v1beta1
 metadata:
-  name: kafka-eventing
+  name: drogue-iot
 spec:
   entityOperator:
     topicOperator: {}

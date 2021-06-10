@@ -45,6 +45,7 @@ pub struct Config {
 
     pub max_size: Option<u32>,
 
+    #[serde(default)]
     pub service: ServiceConfig,
     pub user_auth: UserAuthClientConfig,
 

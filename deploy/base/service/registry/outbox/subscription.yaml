@@ -1,16 +1,17 @@
-apiVersion: messaging.knative.dev/v1
-kind: Subscription
+apiVersion: sources.knative.dev/v1beta1
+kind: KafkaSource
 metadata:
   name: outbox-controller
   labels:
     app.kubernetes.io/name: outbox-controller
     app.kubernetes.io/part-of: device-registry
 spec:
-  channel:
-    apiVersion: messaging.knative.dev/v1alpha1
-    kind: KafkaChannel
-    name: registry
-  subscriber:
+  consumerGroup: outbox-controller
+  bootstrapServers:
+    - drogue-iot-kafka-bootstrap:9092
+  topics:
+    - registry
+  sink:
     ref:
       apiVersion: v1
       kind: Service
