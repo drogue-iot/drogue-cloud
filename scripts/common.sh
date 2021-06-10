@@ -41,7 +41,7 @@ function service_url() {
 
 case $CLUSTER in
     kubernetes)
-        DOMAIN=$(kubectl get service -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')
+        DOMAIN=$(kubectl get service -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }').nip.io
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].port}')
         URL=${scheme:-http}://$name.$DOMAIN:$PORT
         ;;
