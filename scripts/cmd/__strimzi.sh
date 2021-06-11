@@ -16,7 +16,7 @@ if ! kubectl get ns $KAFKA_NS >/dev/null 2>&1; then
     progress "done!"
 fi
 if ! kubectl -n $KAFKA_NS get deploy/strimzi-cluster-operator >/dev/null 2>&1; then
-    progress -n "  🏗 Deploy operator ... "
+    progress -n "  🏗 Deploying operator ... "
     # use "kubectl create" -> https://github.com/strimzi/strimzi-kafka-operator/issues/4589
     curl -sL "https://github.com/strimzi/strimzi-kafka-operator/releases/download/${STRIMZI_VERSION}/strimzi-cluster-operator-${STRIMZI_VERSION}.yaml" |
         sed 's/myproject/${KAFKA_NS}/' |

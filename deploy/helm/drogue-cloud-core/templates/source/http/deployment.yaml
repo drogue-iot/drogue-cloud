@@ -70,6 +70,8 @@ spec:
               value: /etc/endpoint/tls.crt
             - name: KEY_FILE # TLS
               value: /etc/endpoint/tls.key
+            - name: SSO_URL
+              value: {{ include "drogue-cloud-core.sso.url" . }}
           {{ end }}
 
           ports:

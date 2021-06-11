@@ -77,6 +77,28 @@ NodePort
 {{- else }}
 LoadBalancer
 {{- end }}
-{{- end /* if explicity value */ }}
+{{- end }}
 
-{{- end /*define*/ }}
+{{- end }}
+
+{{/*
+Ingress Host name
+*/}}
+{{- define "drogue-cloud-core.ingress.hostname" -}}
+{{- .Name }}.{{- .Context.Values.domain }}
+{{- end }}
+
+{{/*
+SSO Host name
+*/}}
+{{- define "drogue-cloud-core.sso.hostname" -}}
+{{ include "drogue-cloud-core.ingress.hostname" (dict "Context" . "Name" "keycloak" ) }}
+{{- end }}
+
+{{/*
+SSO URL
+*/}}
+{{- define "drogue-cloud-core.sso.url" -}}
+{{- if eq .Values.cluster "openshift" }}https://{{- else }}http://{{- end }}
+{{- include "drogue-cloud-core.sso.hostname" . }}
+{{- end }}

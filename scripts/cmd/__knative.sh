@@ -10,7 +10,7 @@ set -e
 
 # Knative Serving
 
-progress -n "  🏗 Deploy Knative serving ... "
+progress -n "  🏗 Deploying Knative serving ... "
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml
 progress "done!"
@@ -94,7 +94,7 @@ esac
 
 # Knative Eventing
 
-progress -n "  🏗 Deploy Knative eventing ... "
+progress -n "  🏗 Deploying Knative eventing ... "
 
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-crds.yaml
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-core.yaml

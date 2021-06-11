@@ -91,9 +91,12 @@ spec:
                 secretKeyRef:
                   key: ADMIN_PASSWORD
                   name: credential-sso
-            # FIXME: openshift, TLS
+            {{ if ne .Values.cluster "openshift" }}
             - name: "KEYCLOAK__TLS_NOVERIFY"
               value: "true"
+            {{- end }}
+            - name: SSO_URL
+              value: {{ include "drogue-cloud-core.sso.url" . }}
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

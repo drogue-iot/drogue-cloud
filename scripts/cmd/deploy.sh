@@ -109,7 +109,7 @@ fi
 # gather Helm arguments
 
 HELM_ARGS="$HELM_ARGS --set cluster=$CLUSTER"
-HELM_ARGS="$HELM_ARGS --set domain=$(domain)"
+HELM_ARGS="$HELM_ARGS --set domain=$(detect_domain)"
 
 # install Drogue IoT
 
@@ -125,6 +125,8 @@ progress "done!"
 
 # Patch some of the deployments to to allow persistent volume access
 if [ "$CLUSTER" == "kubernetes" ]; then
+    # FIXME: this should be customized by the Helm chart now
+
     # Wait for the resources to show up
     wait_for_resource deployment/keycloak-postgresql
     wait_for_resource deployment/postgres
@@ -139,21 +141,13 @@ fi
 
 case $CLUSTER in
     openshift)
-        # we must set the hostname on openshift before calling the "endpoints.sh" script
-        kubectl -n "$DROGUE_NS" patch ingress/api --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"$(domain)"'"}]' || true
-        progress -n "👀 Waiting for keycloak Router ..."
+        progress -n "👀 Waiting for keycloak Route resource ..."
         wait_for_resource route/keycloak
-        progress "done!"
-        ;;
-    kubernetes)
-        progress -n "👀 Waiting for keycloak Ingress resource ... "
-        wait_for_resource ingress/keycloak
         progress "done!"
         ;;
     *)
         progress -n "👀 Waiting for keycloak Ingress resource ... "
         wait_for_resource ingress/keycloak
-        kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]' || true
         progress "done!"
         ;;
 esac
@@ -198,24 +192,10 @@ kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__HTTP_ENDP
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST" "ENDPOINTS__MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__MQTT_INTEGRATION_HOST=$MQTT_INTEGRATION_HOST" "ENDPOINTS__MQTT_INTEGRATION_PORT=$MQTT_INTEGRATION_PORT"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__DEVICE_REGISTRY_URL=$API_URL" "ENDPOINTS__COMMAND_ENDPOINT_URL=$COMMAND_ENDPOINT_URL"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "SSO_URL=$SSO_URL" "ENDPOINTS__REDIRECT_URL=$CONSOLE_URL"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__REDIRECT_URL=$CONSOLE_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"
 
-kubectl -n "$DROGUE_NS" set env deployment/device-management-service "SSO_URL=$SSO_URL"
-kubectl -n "$DROGUE_NS" set env deployment/authentication-service "SSO_URL=$SSO_URL"
-kubectl -n "$DROGUE_NS" set env deployment/user-auth-service "SSO_URL=$SSO_URL"
-kubectl -n "$DROGUE_NS" set env deployment/command-endpoint "SSO_URL=$SSO_URL"
-kubectl -n "$DROGUE_NS" set env deployment/http-endpoint "SSO_URL=$SSO_URL"
-if [ "$(kubectl -n drogue-iot get deployment http-insecure-endpoint --ignore-not-found)" != "" ]; then
-    kubectl -n "$DROGUE_NS" set env deployment/http-insecure-endpoint "SSO_URL=$SSO_URL"
-fi
-kubectl -n "$DROGUE_NS" set env deployment/mqtt-endpoint "SSO_URL=$SSO_URL"
-
-kubectl -n "$DROGUE_NS" set env deployment/mqtt-integration "SSO_URL=$SSO_URL"
-
-kubectl -n "$DROGUE_NS" set env deployment/ttn-operator "SSO_URL=$SSO_URL" "ENDPOINTS__HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
-
-kubectl -n "$DROGUE_NS" set env deployment/grafana "SSO_URL=$SSO_URL" "GF_SERVER_ROOT_URL=$DASHBOARD_URL"
+kubectl -n "$DROGUE_NS" set env deployment/ttn-operator "ENDPOINTS__HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 
 # we still need to "backend" URL here, since the backend can still do a few things that we don't want in the API
 kubectl -n "$DROGUE_NS" set env deployment/console-frontend "API_URL=$API_URL"
@@ -225,19 +205,6 @@ if [ "$CLUSTER" != "openshift" ]; then
 fi
 kubectl -n "$DROGUE_NS" patch keycloakclient/client --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris\",\"value\": [\"${CONSOLE_URL}\", \"${CONSOLE_URL}/*\", \"http://localhost:*\"]}]"
 kubectl -n "$DROGUE_NS" patch keycloakclient/client-grafana --type json --patch "[{\"op\": \"replace\",\"path\": \"/spec/client/redirectUris/0\",\"value\": \"$DASHBOARD_URL/login/generic_oauth\"}]"
-
-# set the host names in the ingresses
-
-case $CLUSTER in
-openshift)
-    # nothing to do here
-    ;;
-*)
-    # The host will by applied late, based on the IP of its status section
-    kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"${SSO_HOST}"'"}]' || true
-    kubectl -n "$DROGUE_NS" patch ingress/api --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"${API_HOST}"'"}]' || true
-    ;;
-esac
 
 # wait for other Knative services
 

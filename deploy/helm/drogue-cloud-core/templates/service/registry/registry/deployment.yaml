@@ -105,6 +105,8 @@ spec:
                 configMapKeyRef:
                   name: configuration
                   key: instance
+            - name: SSO_URL
+              value: {{ include "drogue-cloud-core.sso.url" . }}
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1
