@@ -75,6 +75,8 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
+            - name: SSO_URL
+              value: {{ include "drogue-cloud-core.sso.url" . }}
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

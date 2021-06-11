@@ -93,6 +93,8 @@ spec:
                 secretKeyRef:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
+            - name: SSO_URL
+              value: {{ include "drogue-cloud-core.sso.url" . }}
           ports:
             - containerPort: 8080
               name: endpoint

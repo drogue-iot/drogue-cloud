@@ -8,4 +8,4 @@ spec:
   instances: 1
   externalAccess:
     enabled: true
-    host: sso-{{ .Values.domain }}
+    host: {{ include "drogue-cloud-core.sso.hostname" . }}

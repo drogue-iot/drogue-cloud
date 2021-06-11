@@ -116,11 +116,14 @@ spec:
                 secretKeyRef:
                   key: ADMIN_PASSWORD
                   name: credential-sso
+            {{ if ne .Values.cluster "openshift" }}
             - name: ENDPOINTS__LOCAL_CERTS
               value: "true"
-            # FIXME: openshift, TLS
             - name: "KEYCLOAK__TLS_NOVERIFY"
               value: "true"
+            {{- end }}
+            - name: SSO_URL
+              value: {{ include "drogue-cloud-core.sso.url" . }}
           ports:
             - containerPort: 8080
               name: endpoint

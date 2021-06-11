@@ -1,7 +1,7 @@
 kind: Ingress
 apiVersion: networking.k8s.io/v1
 metadata:
-  name: console
+  name: grafana
   annotations:
     {{ if eq .Values.cluster "openshift" }}
     route.openshift.io/termination: "edge"
@@ -10,7 +10,7 @@ metadata:
     {{- end }}
 spec:
   rules:
-    - host: grafana-{{ .Values.domain }}
+    - host: {{ include "drogue-cloud-examples.ingress.hostname" (dict "Context" . "Name" "grafana" ) }}
       http:
         paths:
           - path: /

@@ -30,7 +30,7 @@ function service_url() {
 
     case $CLUSTER in
     kubernetes)
-        DOMAIN=$(kubectl get service -n "$DROGUE_NS" "$name"  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }').nip.io
+        DOMAIN=$(kubectl get service -n "$DROGUE_NS" "$name" -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }').nip.io
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].port}')
         URL=${scheme:-http}://$name.$DOMAIN:$PORT
         ;;
@@ -74,29 +74,45 @@ function ingress_url() {
     local name="$1"
     shift
 
+    local DOMAIN
+    local URL
+    local HOST
+    local PROTO
+
     case $CLUSTER in
     openshift)
-        DOMAIN=$(domain)
-        URL="https://${name}-${DROGUE_NS}.${DOMAIN}"
-        ;;
-
-    kind)
-        # Workaround to use the node-port service
-        if [ "$name" == "keycloak" ]; then
-            name="$name-endpoint"
-        fi
-        DOMAIN=$(domain)
-        PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-        if [ -n "$DOMAIN" ]; then
-            URL="http://$name.$DOMAIN:$PORT"
-        fi
+        PROTO=https
         ;;
     *)
-        IP=$(kubectl get ingress -n "$DROGUE_NS" "$name" -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }')
-        if [ -n "$IP" ]; then
-            URL="http://$name-$IP.nip.io"
-        fi
+        PROTO=http
         ;;
     esac
+
+    HOST=$(kubectl get ingress -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.rules[0].host }')
+    if [ -n "$HOST" ]; then
+        URL="${PROTO}://${HOST}"
+    fi
+    echo "$URL"
+}
+
+function ingress_url_wait() {
+    local name
+    name=$1
+    shift
+
+    local URL
+    URL="$(ingress_url "$name")"
+    while [ -z "$URL" ]; do
+
+        if [[ "$CLUSTER" == "minikube" ]]; then
+            progress "🔌 Waiting for ingress ($name) to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
+        else
+            progress "🔌 Waiting for ingress ($name) to get ready!"
+        fi
+
+        sleep 5
+        URL="$(ingress_url "$name")"
+    done
+
     echo "$URL"
 }

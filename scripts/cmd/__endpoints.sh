@@ -46,41 +46,13 @@ case $CLUSTER in
         ;;
 esac;
 
-
-HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
-
-COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
-CONSOLE_URL=$(ingress_url "console")
-DASHBOARD_URL=$(ingress_url "grafana")
-
-#
-# Wait for SSO
-#
-SSO_URL="$(route_url "keycloak")"
-while [ -z "$SSO_URL" ]; do
-    sleep 5
-    echo "Waiting for Keycloak ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
-    SSO_URL="$(route_url "keycloak")"
-done
-SSO_HOST="${SSO_URL/#http:\/\//}"
-SSO_HOST="${SSO_HOST/#https:\/\//}"
-
-#
-# Wait for API
-#
-API_URL="$(ingress_url "api")"
-while [ -z "$API_URL" ]; do
-    sleep 5
-    echo "Waiting for API ingress to get ready! If you're running minikube, run 'minikube tunnel' in another shell and ensure that you have the ingress addon enabled."
-    API_URL="$(ingress_url "api")"
-done
-API_HOST="${API_URL/#http:\/\//}"
-API_HOST="${API_HOST/#https:\/\//}"
-
 HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
 COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
-CONSOLE_URL=$(service_url "console")
-DASHBOARD_URL=$(service_url "grafana")
+CONSOLE_URL=$(ingress_url_wait "console")
+SSO_URL="$(ingress_url_wait "keycloak")"
+API_URL="$(ingress_url_wait "api")"
+
+DASHBOARD_URL=$(ingress_url_wait "grafana")
 
 if [[ -z "$SILENT" ]]; then
 
@@ -90,8 +62,8 @@ if [[ -z "$SILENT" ]]; then
   bold "========================================================"
   echo
   echo "Console:          $CONSOLE_URL"
-  echo "SSO:              $SSO_URL ($SSO_HOST)"
-  echo "API:              $API_URL ($API_HOST)"
+  echo "SSO:              $SSO_URL"
+  echo "API:              $API_URL"
   echo
   echo "Command Endpoint: $COMMAND_ENDPOINT_URL"
   echo

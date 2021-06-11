@@ -11,7 +11,7 @@ set -e
 
 if [[ "$KEYCLOAK_CRDS" == true ]]; then
 
-    progress -n "  🗂 Deploy CRDs ... "
+    progress -n "  🗂 Deploying CRDs ... "
     kubectl apply \
         -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/crds/keycloak.org_keycloakbackups_crd.yaml" \
         -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/crds/keycloak.org_keycloakclients_crd.yaml" \
@@ -22,7 +22,7 @@ if [[ "$KEYCLOAK_CRDS" == true ]]; then
 
 fi
 
-progress -n "  🏗 Deploy operator ... "
+progress -n "  🏗 Deploying operator ... "
 kubectl -n "$DROGUE_NS" apply \
     -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/service_account.yaml" \
     -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/role.yaml" \
