@@ -47,6 +47,12 @@ case $CLUSTER in
 esac;
 
 
+HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
+
+COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
+CONSOLE_URL=$(ingress_url "console")
+DASHBOARD_URL=$(ingress_url "grafana")
+
 #
 # Wait for SSO
 #
@@ -76,12 +82,6 @@ COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
 CONSOLE_URL=$(service_url "console")
 DASHBOARD_URL=$(service_url "grafana")
 
-if [ "$CLUSTER" == "kubernetes" ]; then
-    CONSOLE_URL=${API_URL}
-    CONSOLE_HOST=${API_HOST}
-    COMMAND_ENDPOINT_URL=${API_URL}
-fi
-
 if [[ -z "$SILENT" ]]; then
 
   echo
@@ -99,6 +99,12 @@ if [[ -z "$SILENT" ]]; then
   echo "MQTT Endpoint:    $MQTT_ENDPOINT_HOST:$MQTT_ENDPOINT_PORT"
   echo
   echo "MQTT Integration: $MQTT_INTEGRATION_HOST:$MQTT_INTEGRATION_PORT"
+  echo
+  bold "========================================================"
+  bold "  Examples"
+  bold "========================================================"
+  echo
+  echo "Grafana:          $DASHBOARD_URL"
   echo
 
 fi

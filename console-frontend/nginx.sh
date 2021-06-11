@@ -4,11 +4,11 @@ set -e
 set -x
 set -o pipefail
 
-: "${BACKEND_URL:=http://localhost:8011}"
+: "${API_URL:=http://localhost:8011}"
 
 echo "Setting backend endpoint:"
 
-echo '{}' | jq --arg url "$BACKEND_URL" '. + {url: $url}' | tee /endpoints/backend.json
+echo '{}' | jq --arg url "$API_URL" '. + {url: $url}' | tee /endpoints/backend.json
 
 LOGIN_NOTE=/etc/config/login/note.html
 if [ -f "$LOGIN_NOTE" ]; then
