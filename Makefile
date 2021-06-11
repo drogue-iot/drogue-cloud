@@ -220,7 +220,7 @@ tag-image($(IMAGES)): require-container-registry
 #
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && ./scripts/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && ./scripts/bin/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
@@ -268,14 +268,8 @@ frontend: host-build
 #
 # Do a local deploy
 #
-deploy: gen-deploy
-	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drogue.sh -d build/deploy
-
-gen-deploy: require-container-registry
-	rm -Rf build/deploy
-	mkdir -p build/deploy
-	./scripts/replace-images.py latest Always deploy "$(CONTAINER_REGISTRY)" build/deploy
-
+deploy: require-container-registry
+	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy -s defaults.images.repository=$(CONTAINER_REGISTRY)
 
 #
 # Check if we have a container registry set.

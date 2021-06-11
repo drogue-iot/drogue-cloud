@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "required": [
+    "domain",
+    "cluster"
+  ],
+  "properties": {
+    "cluster": {
+      "type": "string",
+      "enum": [
+        "kubernetes",
+        "openshift",
+        "kind",
+        "minikube"
+      ]
+    },
+    "domain": {
+      "type": "string",
+      "description": "The base DNS domain"
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "http": {
+          "type": "object",
+          "properties": {
+            "insecure": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

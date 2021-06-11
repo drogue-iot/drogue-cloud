@@ -1,0 +1,8 @@
+cluster: kubernetes
+domain: my-cluster.dns
+
+defaults:
+  images:
+    repository: ghcr.io/drogue-iot
+    pullPolicy: Always
+    tag: "latest"

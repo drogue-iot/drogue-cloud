@@ -1,9 +1,0 @@
-kind: Service
-apiVersion: v1
-metadata:
- labels:
-   app.kubernetes.io/name: registry
-   app.kubernetes.io/part-of: device-registry
- name: registry
-spec:
-  type: NodePort

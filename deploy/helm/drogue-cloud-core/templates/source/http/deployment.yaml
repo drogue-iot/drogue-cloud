@@ -1,0 +1,116 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: http-endpoint
+  labels:
+    app.kubernetes.io/name: http-endpoint
+    app.kubernetes.io/part-of: endpoints
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: http-endpoint
+      app.kubernetes.io/part-of: endpoints
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: http-endpoint
+        app.kubernetes.io/part-of: endpoints
+    spec:
+      initContainers:
+        - name: wait-for-client-secret
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret
+              readOnly: true
+      containers:
+        - name: endpoint
+          image: ghcr.io/drogue-iot/http-endpoint:latest
+          imagePullPolicy: Always
+          env:
+            - name: RUST_LOG
+              value: debug
+            - name: RUST_BACKTRACE
+              value: "1"
+            - name: BIND_ADDR
+              value: "0.0.0.0:{{ if .Values.endpoints.http.insecure }}8080{{ else }}8443{{ end }}"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
+            - name: INSTANCE
+              valueFrom:
+                configMapKeyRef:
+                  name: configuration
+                  key: instance
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
+
+            {{ if .Values.endpoints.http.insecure }}
+            - name: DISABLE_TLS
+              value: "true"
+            {{ else }}
+            - name: CERT_BUNDLE_FILE # TLS
+              value: /etc/endpoint/tls.crt
+            - name: KEY_FILE # TLS
+              value: /etc/endpoint/tls.key
+          {{ end }}
+
+          ports:
+            - containerPort: {{ if .Values.endpoints.http.insecure }}8080{{ else }}8443{{ end }}
+              name: endpoint
+              protocol: TCP
+            - containerPort: 8081
+              name: command
+              protocol: TCP
+
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
+
+          {{ if not .Values.endpoints.http.insecure }}
+          volumeMounts:
+            - mountPath: /etc/endpoint
+              name: endpoint-tls
+          {{ end }}
+
+      volumes:
+
+        {{ if not .Values.endpoints.http.insecure }}
+        - name: endpoint-tls
+          secret:
+            secretName: http-endpoint-tls
+        {{ end }}
+
+        - name: client-secret
+          secret:
+            secretName: keycloak-client-secret-services
