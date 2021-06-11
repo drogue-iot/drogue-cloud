@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: authentication-service
+  labels:
+    app.kubernetes.io/name: authentication-service
+    app.kubernetes.io/part-of: device-registry
+spec:
+  ports:
+    - name: api
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: authentication-service
+    app.kubernetes.io/part-of: device-registry
+  type: ClusterIP

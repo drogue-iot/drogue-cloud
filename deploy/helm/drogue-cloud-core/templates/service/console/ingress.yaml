@@ -1,0 +1,22 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: console
+  annotations:
+    {{ if eq .Values.cluster "openshift" }}
+    route.openshift.io/termination: "edge"
+    {{- else }}
+    kubernetes.io/ingress.class: "nginx"
+    {{- end }}
+spec:
+  rules:
+    - host: console-{{ .Values.domain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: console-frontend
+                port:
+                  name: endpoint

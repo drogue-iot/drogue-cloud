@@ -1,0 +1,15 @@
+
+cluster: kubernetes
+domain: my-cluster.dns
+
+endpoints:
+  http:
+    insecure: false
+
+defaults:
+  images:
+    repository: ghcr.io/drogue-iot
+    pullPolicy: Always
+    tag: "latest"
+
+  passthrough: {}

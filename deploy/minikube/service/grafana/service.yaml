@@ -1,8 +1,0 @@
-kind: Service
-apiVersion: v1
-metadata:
- labels:
-   app: grafana
- name: grafana
-spec:
-  type: NodePort

@@ -32,12 +32,12 @@ drogue-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(she
 	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/common.sh
 	sed -i 's/CLUSTER:=minikube/CLUSTER:=$*/' $(OUTDIR)/stage/$(INSTALLER)/scripts/common.sh
 	# FIXME: remove release related script for now, reconsider mixing scripts
-	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/replace-images.py
+	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/bin/replace-images.py
 	cp -pr $(BASEDIR)/deploy/base/* $(OUTDIR)/stage/$(INSTALLER)/deploy/base
 	cp -pr $(BASEDIR)/deploy/$*/* $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
 	cp -pr $(BASEDIR)/deploy/digital-twin/* $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
 	@echo "::group::Process YAML and zip"
-	cd build/stage/ && $(BASEDIR)/scripts/replace-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
+	cd build/stage/ && $(BASEDIR)/scripts/bin/replace-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
 	@echo "::endgroup::"
 
 

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -e
+set -o pipefail
+
+SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$SCRIPTDIR/lib/mod.sh"
+
+if [[ -z "$1" ]]; then
+    cat << EOF
+Usage: drgadm <command>
+Drogue IoT cloud admin tool
+
+Commands:
+    deploy     Deploy Drogue IoT to your cluster
+    examples   Show some examples to try
+
+EOF
+    exit 1
+fi
+
+# Remember and eat up first argument
+cmd=$1
+shift
+
+# Test if this is a valid command
+test -x "$SCRIPTDIR/cmd/${cmd}.sh" || die "Unknown command: $cmd"
+
+# set up logging
+LOG=$(mktemp /tmp/drgadm-XXXXXXX.log)
+
+#
+# Called when we are exiting
+#
+function on_exit() {
+    rv=$?
+    if [[ $rv != 0 && ( ! "$DEBUG" ) && -s "$LOG" ]]; then
+        # if there was a failure, dump the full log
+        echo "Command failed:" 1>&2
+        echo "----------------------" 1>&2
+        cat "$LOG" 1>&2
+        echo "----------------------" 1>&2
+    fi
+    # clean up the log
+    rm "$LOG"
+    # return with the original return code
+    exit $rv
+}
+
+# catch when we exit
+trap on_exit EXIT
+
+# run the actual command
+if [[ "$DEBUG" ]]; then
+    source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1
+else
+    source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1 &> "$LOG"
+fi

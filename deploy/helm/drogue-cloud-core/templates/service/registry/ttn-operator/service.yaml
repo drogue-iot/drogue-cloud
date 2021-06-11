@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ttn-operator
+  labels:
+    app.kubernetes.io/name: ttn-operator
+    app.kubernetes.io/part-of: device-registry
+spec:
+  selector:
+    app.kubernetes.io/name: ttn-operator
+    app.kubernetes.io/part-of: device-registry
+  ports:
+    - name: api
+      port: 80
+      protocol: TCP
+      targetPort: api
+  type: ClusterIP

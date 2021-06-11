@@ -1,0 +1,153 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: console-backend
+  labels:
+    app: console-backend
+    app.kubernetes.io/part-of: console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: console-backend
+  template:
+    metadata:
+      labels:
+        app: console-backend
+    spec:
+      serviceAccountName: console-backend
+      initContainers:
+        - name: wait-for-client-secret-drogue
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret-drogue
+              readOnly: true
+        - name: wait-for-client-secret-services
+          image: registry.access.redhat.com/ubi8-minimal
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              echo "Waiting for client secret to be populated (/etc/client-secret/CLIENT_SECRET)..."
+              while test -z "$(cat /etc/client-secret/CLIENT_SECRET)"; do
+                sleep 1
+              done
+          volumeMounts:
+            - mountPath: /etc/client-secret
+              name: client-secret-services
+              readOnly: true
+      containers:
+        - name: endpoint
+          image: ghcr.io/drogue-iot/console-backend:latest
+          imagePullPolicy: Always
+          env:
+            - name: RUST_LOG
+              value: debug
+            - name: BIND_ADDR
+              value: "0.0.0.0:8080"
+            - name: HEALTH__BIND_ADDR
+              value: "0.0.0.0:9090"
+            - name: ENABLE_AUTH
+              value: "true"
+            - name: UI__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_ID
+            - name: UI__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_SECRET
+            - name: OAUTH__DROGUE__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_ID
+            - name: OAUTH__DROGUE__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-drogue
+                  key: CLIENT_SECRET
+            - name: OAUTH__SERVICES__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: OAUTH__SERVICES__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: USER_AUTH__CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_ID
+            - name: USER_AUTH__CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-client-secret-services
+                  key: CLIENT_SECRET
+            - name: KEYCLOAK__URL
+              value: https://keycloak.$(NAMESPACE).svc.cluster.local.:8443
+            - name: KEYCLOAK__ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_USERNAME
+                  name: credential-sso
+            - name: KEYCLOAK__ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: ADMIN_PASSWORD
+                  name: credential-sso
+            - name: ENDPOINTS__LOCAL_CERTS
+              value: "true"
+            # FIXME: openshift, TLS
+            - name: "KEYCLOAK__TLS_NOVERIFY"
+              value: "true"
+          ports:
+            - containerPort: 8080
+              name: endpoint
+              protocol: TCP
+          resources:
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /readiness
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 3
+            httpGet:
+              port: 9090
+              path: /liveness
+      volumes:
+        - name: client-secret-drogue
+          secret:
+            secretName: keycloak-client-secret-drogue
+        - name: client-secret-services
+          secret:
+            secretName: keycloak-client-secret-services

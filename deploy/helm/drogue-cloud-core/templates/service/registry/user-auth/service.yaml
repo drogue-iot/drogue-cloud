@@ -1,0 +1,17 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: user-auth-service
+  labels:
+    app.kubernetes.io/name: user-auth-service
+    app.kubernetes.io/part-of: device-registry
+spec:
+  ports:
+    - name: api
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: user-auth-service
+    app.kubernetes.io/part-of: device-registry
+  type: ClusterIP

@@ -1,8 +1,0 @@
-kind: Service
-apiVersion: v1
-metadata:
-  name: command-endpoint
-  labels:
-    app: command-endpoint
-spec:
-  type: NodePort

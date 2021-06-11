@@ -1,0 +1,18 @@
+apiVersion: sources.knative.dev/v1beta1
+kind: KafkaSource
+metadata:
+  name: commands-http
+  labels:
+    app.kubernetes.io/part-of: endpoints
+spec:
+  consumerGroup: commands-http
+  bootstrapServers:
+    - drogue-iot-kafka-bootstrap.{{ .Release.Namespace }}.svc.cluster.local.:9092
+  topics:
+    - iot-commands
+  sink:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: http-command
+    uri: /command-service
