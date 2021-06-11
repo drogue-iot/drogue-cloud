@@ -7,13 +7,14 @@ CERT_ALTNAMES=""
 
 case $CLUSTER in
    kubernetes)
-       DOMAIN=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type == "ExternalIP")].address}').nip.io
-       MQTT_ENDPOINT_HOST=mqtt-endpoint.$DOMAIN
-       MQTT_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.spec.ports[0].nodePort}')
-       MQTT_INTEGRATION_HOST=mqtt-integration.$DOMAIN
-       MQTT_INTEGRATION_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-integration -o jsonpath='{.spec.ports[0].nodePort}')
-       HTTP_ENDPOINT_HOST=http-endpoint.$DOMAIN
-       HTTP_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" http-endpoint -o jsonpath='{.spec.ports[0].nodePort}')
+       MQTT_ENDPOINT_HOST=mqtt-endpoint.$(kubectl get service -n "$DROGUE_NS" mqtt-endpoint  -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }').nip.io
+       MQTT_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-endpoint -o jsonpath='{.spec.ports[0].port}')
+
+       MQTT_INTEGRATION_HOST=mqtt-integration.$(kubectl get service -n "$DROGUE_NS" mqtt-integration -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }').nip.io
+       MQTT_INTEGRATION_PORT=$(kubectl get service -n "$DROGUE_NS" mqtt-integration -o jsonpath='{.spec.ports[0].port}')
+
+       HTTP_ENDPOINT_HOST=http-endpoint.$(kubectl get service -n "$DROGUE_NS" http-endpoint -o 'jsonpath={ .status.loadBalancer.ingress[0].ip }').nip.io
+       HTTP_ENDPOINT_PORT=$(kubectl get service -n "$DROGUE_NS" http-endpoint -o jsonpath='{.spec.ports[0].port}')
        ;;
    kind)
        DOMAIN=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
@@ -49,13 +50,6 @@ case $CLUSTER in
 esac;
 
 
-HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
-
-COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
-BACKEND_URL=$(service_url "console-backend")
-CONSOLE_URL=$(service_url "console")
-DASHBOARD_URL=$(service_url "grafana")
-
 #
 # Wait for SSO
 #
@@ -79,6 +73,19 @@ while [ -z "$API_URL" ]; do
 done
 API_HOST="${API_URL/#http:\/\//}"
 API_HOST="${API_HOST/#https:\/\//}"
+
+HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
+COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
+BACKEND_URL=$(service_url "console-backend")
+CONSOLE_URL=$(service_url "console")
+DASHBOARD_URL=$(service_url "grafana")
+
+if [ "$CLUSTER" == "kubernetes" ]; then
+    CONSOLE_URL=${API_URL}
+    CONSOLE_HOST=${API_HOST}
+    COMMAND_ENDPOINT_URL=${API_URL}
+    BACKEND_URL=${API_URL}
+fi
 
 if [[ -z "$SILENT" ]]; then
 

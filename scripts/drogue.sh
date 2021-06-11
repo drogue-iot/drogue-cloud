@@ -98,6 +98,9 @@ case $CLUSTER in
         kubectl -n "$DROGUE_NS" patch ingress/api --type json --patch '[{"op": "add", "path": "/spec/rules/0/host", "value": "'"$(domain)"'"}]' || true
         wait_for_resource route/keycloak
         ;;
+    kubernetes)
+        wait_for_resource ingress/keycloak
+        ;;
     *)
         wait_for_resource ingress/keycloak
         kubectl -n "$DROGUE_NS" patch ingress/keycloak --type json --patch '[{"op": "remove", "path": "/spec/rules/0/host"}]' || true
