@@ -19,12 +19,12 @@ Additionally, you will need to:
 
 == Deploy standard images
 
-Installing Drogue Cloud, using the standard images, can be done by calling the "installation" script (`drogue.sh`)
-directly from the repsitory:
+Installing Drogue Cloud, using the standard images, can be done by calling the "installation" script (`drgadm`)
+directly from the repository:
 
-[source,shell]
+[source,bash]
 ----
-./script/drogue.sh
+./script/drgadm deploy
 ----
 
 TIP: This is the same script as from the installer packages explained before. Thus is accepts the same variables/options.
@@ -33,14 +33,14 @@ TIP: This is the same script as from the installer packages explained before. Th
 
 If you built custom images, and pushed them to a container repository:
 
-[source,shell]
+[source,bash]
 ----
 make CONTAINER_REGISTRY=quay.io/my-repo build images
 ----
 
 You can install them using:
 
-[source,shell]
+[source,bash]
 ----
 make CONTAINER_REGISTRY=quay.io/my-repo deploy
 ----
