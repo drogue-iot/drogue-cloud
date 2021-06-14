@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft-07/schema#",
   "required": [
     "domain",
-    "cluster"
+    "cluster",
+    "instance"
   ],
   "properties": {
     "cluster": {
@@ -17,6 +18,11 @@
     "domain": {
       "type": "string",
       "description": "The base DNS domain"
+    },
+    "instance": {
+      "type": "string",
+      "description": "The instance ID",
+      "default": "drogue"
     },
     "endpoints": {
       "type": "object",

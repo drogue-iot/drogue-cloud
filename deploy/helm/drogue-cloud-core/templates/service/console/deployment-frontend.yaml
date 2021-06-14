@@ -17,12 +17,11 @@ spec:
     spec:
       containers:
         - name: endpoint
-          image: ghcr.io/drogue-iot/console-frontend:latest
-          imagePullPolicy: Always
+          image: {{ include "drogue-cloud-core.image-repo" . }}console-frontend:{{ .Values.defaults.images.tag }}
+          imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
-# Needs to be set, is done by 'drogue.sh'
-#            - name: BACKEND_URL
-#              value: https://console-backend-$(NAMESPACE).$(CLUSTER_DOMAIN)
+            - name: API_URL
+              value: {{ include "drogue-cloud-common.api.url" . }}
           ports:
             - containerPort: 8080
               name: endpoint

@@ -35,8 +35,8 @@ spec:
               readOnly: true
       containers:
         - name: endpoint
-          image: ghcr.io/drogue-iot/http-endpoint:latest
-          imagePullPolicy: Always
+          image: {{ include "drogue-cloud-core.image-repo" . }}http-endpoint:{{ .Values.defaults.images.tag }}
+          imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: RUST_LOG
               value: debug
@@ -71,7 +71,7 @@ spec:
             - name: KEY_FILE # TLS
               value: /etc/endpoint/tls.key
             - name: SSO_URL
-              value: {{ include "drogue-cloud-core.sso.url" . }}
+              value: {{ include "drogue-cloud-common.sso.url" . }}
           {{ end }}
 
           ports:

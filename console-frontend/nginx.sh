@@ -24,7 +24,7 @@ echo "---"
 cat /endpoints/backend.json
 echo "---"
 
-jq --arg url "$BACKEND_URL" '. + {url: $url}' < /ui-config.template.json | tee /endpoints/ui-config.json
+jq --arg url "$API_URL" '. + {url: $url}' < /ui-config.template.json | tee /endpoints/ui-config.json
 
 echo "Final Swagger UI config:"
 echo "---"

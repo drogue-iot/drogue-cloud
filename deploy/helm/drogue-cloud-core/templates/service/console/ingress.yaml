@@ -10,7 +10,7 @@ metadata:
     {{- end }}
 spec:
   rules:
-    - host: {{ include "drogue-cloud-core.ingress.hostname" (dict "Context" . "Name" "console" ) }}
+    - host: {{ include "drogue-cloud-common.ingress.hostname" (list . "console" ) }}
       http:
         paths:
           - path: /

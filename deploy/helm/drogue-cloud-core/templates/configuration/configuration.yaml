@@ -4,4 +4,4 @@ kind: ConfigMap
 metadata:
   name: configuration
 data:
-  instance: drogue
+  instance: {{ .Values.instance }}

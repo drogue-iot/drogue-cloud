@@ -114,11 +114,13 @@ HELM_ARGS="$HELM_ARGS --set domain=$(detect_domain)"
 # install Drogue IoT
 
 progress -n "🔨 Deploying Drogue IoT Core ... "
+helm dependency update "$SCRIPTDIR/../deploy/helm/drogue-cloud-core"
 # shellcheck disable=SC2086
 helm -n "$DROGUE_NS" upgrade drogue-iot "$SCRIPTDIR/../deploy/helm/drogue-cloud-core" --install $HELM_ARGS
 progress "done!"
 
 progress -n "🔨 Deploying Drogue IoT Examples ... "
+helm dependency update "$SCRIPTDIR/../deploy/helm/drogue-cloud-examples"
 # shellcheck disable=SC2086
 helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$SCRIPTDIR/../deploy/helm/drogue-cloud-examples" --install $HELM_ARGS
 progress "done!"
@@ -187,18 +189,16 @@ fi
 
 # Update the console endpoints
 
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__API_URL=$API_URL"
+kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__REDIRECT_URL=$CONSOLE_URL"
+
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST" "ENDPOINTS__MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__MQTT_INTEGRATION_HOST=$MQTT_INTEGRATION_HOST" "ENDPOINTS__MQTT_INTEGRATION_PORT=$MQTT_INTEGRATION_PORT"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__DEVICE_REGISTRY_URL=$API_URL" "ENDPOINTS__COMMAND_ENDPOINT_URL=$COMMAND_ENDPOINT_URL"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__REDIRECT_URL=$CONSOLE_URL"
+
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"
 
 kubectl -n "$DROGUE_NS" set env deployment/ttn-operator "ENDPOINTS__HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
-
-# we still need to "backend" URL here, since the backend can still do a few things that we don't want in the API
-kubectl -n "$DROGUE_NS" set env deployment/console-frontend "API_URL=$API_URL"
 
 if [ "$CLUSTER" != "openshift" ]; then
     kubectl -n "$DROGUE_NS" annotate ingress/keycloak --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'
@@ -233,7 +233,7 @@ progress "      Password: admin123456"
 progress
 progress "  * Execute: "
 if is_default_cluster; then
-progress "      $SCRIPTDIR/drgadm status"
+progress "      $SCRIPTDIR/drgadm examples"
 else
 progress "      env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm status"
 fi
