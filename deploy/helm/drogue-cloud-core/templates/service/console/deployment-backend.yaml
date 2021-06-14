@@ -49,8 +49,8 @@ spec:
               readOnly: true
       containers:
         - name: endpoint
-          image: ghcr.io/drogue-iot/console-backend:latest
-          imagePullPolicy: Always
+          image: {{ include "drogue-cloud-core.image-repo" . }}console-backend:{{ .Values.defaults.images.tag }}
+          imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: RUST_LOG
               value: debug
@@ -123,7 +123,11 @@ spec:
               value: "true"
             {{- end }}
             - name: SSO_URL
-              value: {{ include "drogue-cloud-core.sso.url" . }}
+              value: {{ include "drogue-cloud-common.sso.url" . }}
+            - name: ENDPOINTS__API_URL
+              value: {{ include "drogue-cloud-common.api.url" . }}
+            - name: ENDPOINTS__CONSOLE_URL
+              value: {{ include "drogue-cloud-common.ingress.proto" . -}}{{- include "drogue-cloud-common.ingress.hostname" (list . "console" ) }}
           ports:
             - containerPort: 8080
               name: endpoint

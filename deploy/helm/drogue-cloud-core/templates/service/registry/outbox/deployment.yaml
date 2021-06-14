@@ -21,8 +21,8 @@ spec:
     spec:
       containers:
         - name: service
-          image: ghcr.io/drogue-iot/outbox-controller:latest
-          imagePullPolicy: Always
+          image: {{ include "drogue-cloud-core.image-repo" . }}outbox-controller:{{ .Values.defaults.images.tag }}
+          imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: RUST_LOG
               value: debug

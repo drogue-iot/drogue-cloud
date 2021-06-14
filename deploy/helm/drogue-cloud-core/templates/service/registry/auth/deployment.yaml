@@ -39,8 +39,8 @@ spec:
               readOnly: true
       containers:
         - name: service
-          image: ghcr.io/drogue-iot/authentication-service:latest
-          imagePullPolicy: Always
+          image: {{ include "drogue-cloud-core.image-repo" . }}authentication-service:{{ .Values.defaults.images.tag }}
+          imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: RUST_LOG
               value: debug
@@ -76,7 +76,7 @@ spec:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
             - name: SSO_URL
-              value: {{ include "drogue-cloud-core.sso.url" . }}
+              value: {{ include "drogue-cloud-common.sso.url" . }}
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

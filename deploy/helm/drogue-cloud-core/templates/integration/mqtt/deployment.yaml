@@ -88,7 +88,7 @@ spec:
                   name: keycloak-client-secret-services
                   key: CLIENT_SECRET
             - name: SSO_URL
-              value: {{ include "drogue-cloud-core.sso.url" . }}
+              value: {{ include "drogue-cloud-common.sso.url" . }}
           ports:
             - containerPort: 8883
               name: service
