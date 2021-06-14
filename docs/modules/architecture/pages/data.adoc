@@ -72,7 +72,7 @@ This might be an MQTT server, which publishes messages to the consumer once it s
 
 == Authentication & authorization
 
-Authentication (authn) and authorization (authz) happens in two different realmsfootnote:[The term "realm" doesn't refer to an HTTP or Keycloak "relam" here] of the system. On the
+Authentication (authn) and authorization (authz) happens in two different realmsfootnote:[The term "realm" doesn't refer to an HTTP or Keycloak "realm" here] of the system. On the
 device facing side and on the user/application facing side. And while it may be technically incorrect, in the
 next few paragraphs "authentication" implies authentication and authorization, unless noted otherwise.
 
