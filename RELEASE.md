@@ -30,7 +30,7 @@ The text that goes into the final GitHub release record:
 
 ## Installation
 
-Download one of the installers, extract and run the installer script `scripts/drogue.sh` from the main directory of
+Download one of the installers, extract and run the installer script `scripts/drgadm` from the main directory of
 the archive.
 
 You will need:
@@ -38,6 +38,7 @@ You will need:
   * Bash
   * `kubectl`
   * `curl`
+  * `helm`
   * Podman or docker
   * A Kubernetes cluster (also see below)
 
@@ -45,7 +46,7 @@ By default, the cluster type will be aligned with the downloaded installer. Howe
 the `CLUSTER` variable:
 
 ~~~shell
-env CLUSTER=kind ./scripts/drogue.sh
+env CLUSTER=kind ./scripts/drgadm deploy
 ~~~
 
 ### Minikube
@@ -55,7 +56,7 @@ env CLUSTER=kind ./scripts/drogue.sh
 ~~~shell
 minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
 minikube tunnel # in a separate terminal, as it keeps running
-./scripts/drogue.sh
+./scripts/drgadm deploy
 ~~~
 
 ### Kind
@@ -64,7 +65,7 @@ minikube tunnel # in a separate terminal, as it keeps running
 
 ~~~shell
 kind create cluster
-./scripts/drogue.sh
+./scripts/drgadm deploy
 ~~~
 
 
