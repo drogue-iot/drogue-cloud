@@ -57,3 +57,10 @@ gather "keycloaks"
 gather "keycloakrealms"
 gather "keycloakclients"
 gather "keycloakusers"
+
+gather "sinkbindings"
+gather "kafkasources"
+gather "kafkasinks"
+
+gather "kafkas"
+gather "kafkatopics"
