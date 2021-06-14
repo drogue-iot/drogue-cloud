@@ -22,7 +22,7 @@ if [[ "$KEYCLOAK_CRDS" == true ]]; then
 
 fi
 
-progress -n "  🏗 Deploying operator ... "
+progress -n "  🏗 Deploying the operator ... "
 kubectl -n "$DROGUE_NS" apply \
     -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/service_account.yaml" \
     -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/role.yaml" \
@@ -30,6 +30,6 @@ kubectl -n "$DROGUE_NS" apply \
     -f "https://raw.githubusercontent.com/keycloak/keycloak-operator/${KEYCLOAK_OPERATOR_VERSION}/deploy/operator.yaml"
 progress "done!"
 
-progress -n "  ⏳ Waiting for operator to become ready ... "
+progress -n "  ⏳ Waiting for the operator to become ready ... "
 kubectl -n "$DROGUE_NS" wait deployment keycloak-operator --for=condition=Available --timeout=-1s
 progress "done!"
