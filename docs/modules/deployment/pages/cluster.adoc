@@ -4,7 +4,7 @@ First we need to prepare the cluster.
 
 == Minikube
 
-[source,shell]
+[source,bash]
 ----
 minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
 ----
@@ -12,19 +12,44 @@ minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
 Once the cluster is up and running, you need the start the load balancer tunnel in a new terminal,
 as this command must be running until you shut down your cluster, or the tunnel.
 
-[source,shell]
+[source,bash]
 ----
 minikube tunnel
 ----
 
 == Kind
 
-Creating a new cluster with Kind only requires to execute the following command:
+Creating a new cluster with Kind requires to execute the following command:
 
-[source,shell]
+[source,bash]
 ----
-kind create cluster
+cat <<EOF | kind create cluster --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+EOF
 ----
+
+[NOTE]
+.Ingress controller required
+====
+The deployment requires a Kubernetes ingress controller to be deployed. When using Kind, the deployment script will
+automatically deploy the NGINX Ingress Controller, but you still need to export the ports as shown above.
+====
 
 == Other
 
