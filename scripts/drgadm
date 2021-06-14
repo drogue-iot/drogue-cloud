@@ -7,7 +7,7 @@ SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "$SCRIPTDIR/lib/mod.sh"
 
 if [[ -z "$1" ]]; then
-    cat << EOF
+    cat <<EOF
 Usage: drgadm <command>
 Drogue IoT cloud admin tool
 
@@ -29,23 +29,47 @@ test -x "$SCRIPTDIR/cmd/${cmd}.sh" || die "Unknown command: $cmd"
 # set up logging
 LOG=$(mktemp /tmp/drgadm-XXXXXXX.log)
 
-#
-# Called when we are exiting
-#
-function on_exit() {
-    rv=$?
-    if [[ $rv != 0 && ( ! "$DEBUG" ) && -s "$LOG" ]]; then
-        # if there was a failure, dump the full log
-        echo "Command failed:" 1>&2
-        echo "----------------------" 1>&2
-        cat "$LOG" 1>&2
-        echo "----------------------" 1>&2
-    fi
-    # clean up the log
-    rm "$LOG"
-    # return with the original return code
-    exit $rv
-}
+if [[ ${BASH_VERSION} == 4.* || ${BASH_VERSION} == 5.0* ]]; then
+
+    #
+    # Called when we are exiting
+    #
+    function on_exit() {
+        rv=$?
+        if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
+            # if there was a failure, dump the full log
+            echo "Command failed:" 1>&3
+            echo "----------------------" 1>&3
+            cat "$LOG" 1>&3
+            echo "----------------------" 1>&3
+        fi
+        # clean up the log
+        rm "$LOG"
+        # return with the original return code
+        exit $rv
+    }
+
+else
+
+    #
+    # Called when we are exiting
+    #
+    function on_exit() {
+        rv=$?
+        if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
+            # if there was a failure, dump the full log
+            echo "Command failed:" 1>&2
+            echo "----------------------" 1>&2
+            cat "$LOG" 1>&2
+            echo "----------------------" 1>&2
+        fi
+        # clean up the log
+        rm "$LOG"
+        # return with the original return code
+        exit $rv
+    }
+
+fi
 
 # catch when we exit
 trap on_exit EXIT
@@ -54,5 +78,5 @@ trap on_exit EXIT
 if [[ "$DEBUG" ]]; then
     source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1
 else
-    source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1 &> "$LOG"
+    source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1 &>"$LOG"
 fi
