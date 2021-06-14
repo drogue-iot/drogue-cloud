@@ -79,6 +79,18 @@ set -e
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
 
+case $CLUSTER in
+    kind)
+        : "${INSTALL_NGINX_INGRESS:=${INSTALL_DEPS}}"
+        # test for the ingress controller node flag
+        if [[ -z "$(kubectl get node kind-control-plane -o jsonpath="{.metadata.labels['ingress-ready']}")" ]]; then
+            die "Kind node 'kind-control-plane' is missing 'ingress-ready' annotation. Please ensure that you properly set up Kind for ingress: https://kind.sigs.k8s.io/docs/user/ingress#create-cluster"
+        fi
+        ;;
+    *)
+        ;;
+esac
+
 # Check for our standard tools
 
 check_std_tools
@@ -98,6 +110,10 @@ fi
 
 # install pre-reqs
 
+if [[ "$INSTALL_NGINX_INGRESS" == true ]]; then
+    progress "📦 Deploying pre-requisites (NGINX Ingress Controller) ... "
+    source "$SCRIPTDIR/cmd/__nginx.sh"
+fi
 if [[ "$INSTALL_STRIMZI" == true ]]; then
     progress "📦 Deploying pre-requisites (Strimzi) ... "
     source "$SCRIPTDIR/cmd/__strimzi.sh"
