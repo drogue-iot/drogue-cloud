@@ -150,6 +150,12 @@ jobs:
 
       - uses: actions/checkout@v2
 
+      - name: Fetch Helm binary
+        run: |
+          curl -sL https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz -o helm.tar.gz
+          tar xzf helm.tar.gz
+          mv linux-amd64/helm /usr/local/bin
+
       - name: Fetch container images
         uses: actions/download-artifact@v2
         with:
