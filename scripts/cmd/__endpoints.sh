@@ -41,8 +41,7 @@ case $CLUSTER in
         HTTP_ENDPOINT_PORT=443
         ;;
    *)
-        echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
-        exit 1
+        die "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
         ;;
 esac;
 

@@ -24,6 +24,11 @@ EOF
 }
 
 opts=$(getopt "hpc:n:d:s:" "$*")
+# shellcheck disable=SC2181
+[ $? -eq 0 ] || {
+    help >&3
+    exit 0
+}
 eval set --$opts
 
 while [[ $# -gt 0 ]]; do
@@ -49,7 +54,7 @@ while [[ $# -gt 0 ]]; do
         shift 2
         ;;
     -h)
-        help
+        help >&3
         exit 0
         ;;
     --)
@@ -57,8 +62,8 @@ while [[ $# -gt 0 ]]; do
         break
         ;;
     *)
-        help
-        exit 1
+        help >&3
+        exit 0
         ;;
     esac
 done

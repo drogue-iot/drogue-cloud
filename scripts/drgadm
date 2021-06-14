@@ -29,47 +29,23 @@ test -x "$SCRIPTDIR/cmd/${cmd}.sh" || die "Unknown command: $cmd"
 # set up logging
 LOG=$(mktemp /tmp/drgadm-XXXXXXX.log)
 
-if [[ ${BASH_VERSION} == 4.* || ${BASH_VERSION} == 5.0* ]]; then
-
-    #
-    # Called when we are exiting
-    #
-    function on_exit() {
-        rv=$?
-        if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
-            # if there was a failure, dump the full log
-            echo "Command failed:" 1>&3
-            echo "----------------------" 1>&3
-            cat "$LOG" 1>&3
-            echo "----------------------" 1>&3
-        fi
-        # clean up the log
-        rm "$LOG"
-        # return with the original return code
-        exit $rv
-    }
-
-else
-
-    #
-    # Called when we are exiting
-    #
-    function on_exit() {
-        rv=$?
-        if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
-            # if there was a failure, dump the full log
-            echo "Command failed:" 1>&2
-            echo "----------------------" 1>&2
-            cat "$LOG" 1>&2
-            echo "----------------------" 1>&2
-        fi
-        # clean up the log
-        rm "$LOG"
-        # return with the original return code
-        exit $rv
-    }
-
-fi
+#
+# Called when we are exiting
+#
+function on_exit() {
+    rv=$?
+    if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
+        # if there was a failure, dump the full log
+        echo "Command failed:" 1>&2
+        echo "----------------------" 1>&2
+        cat "$LOG" 1>&2
+        echo "----------------------" 1>&2
+    fi
+    # clean up the log
+    rm "$LOG"
+    # return with the original return code
+    exit $rv
+}
 
 # catch when we exit
 trap on_exit EXIT
