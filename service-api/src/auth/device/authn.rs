@@ -95,8 +95,8 @@ mod test {
         assert_eq!(
             ser.unwrap(),
             json! {[
-                {"pass": {"plain": "foo" }},
-                {"user": {"username": "foo", "password": {"plain": "bar"}}}
+                {"pass": "foo"},
+                {"user": {"username": "foo", "password": "bar"}}
             ]}
         )
     }
