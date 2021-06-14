@@ -150,7 +150,7 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      - name: Install Helm binrary
+      - name: Install Helm binary
         run: |
           mkdir -p "$HOME/.local/bin"
           curl -sL https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz -o helm.tar.gz
@@ -168,6 +168,7 @@ jobs:
         with:
           wait: 300s
           cluster_name: kind
+          config: deploy/kind/cluster-config.yaml
 
       - name: Load images in docker
         run: docker load -i all.tar
