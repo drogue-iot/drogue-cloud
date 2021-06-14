@@ -27,3 +27,7 @@ that gets written to `fd3`, is always displayed to the user. A function named `p
 like `echo`) directly writes to `fd3`.
 
 You can set the environment variable `DEBUG` to any non-empty string to directly see the output on the console.
+
+NOTE: One downside of this is, that inner scripts must not exit with using `exit`, but by "failing" a call (e.g.
+running `false` with `set -e` active). This is required because otherwise the exit trap will run with the
+output redirection enabled. Using `die` will already take care of this.

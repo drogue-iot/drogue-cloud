@@ -4,9 +4,8 @@ set -ex
 
 : "${CLUSTER:="minikube"}"
 
-
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source "$SCRIPTDIR/../common.sh"
+source "$SCRIPTDIR/../lib/mod.sh"
 
 CERT_DIR=$SCRIPTDIR/../../device-management-service/tests/certs
 
@@ -33,8 +32,7 @@ case $CLUSTER in
         MQTT_ENDPOINT_PORT=443
         ;;
    *)
-        echo "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
-        exit 1
+        die "Unknown Kubernetes platform: $CLUSTER ... unable to extract endpoints"
         ;;
 esac;
 

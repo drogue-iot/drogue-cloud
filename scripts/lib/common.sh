@@ -16,7 +16,7 @@
 
 die() {
     echo "$*" 1>&2
-    exit 1
+    false # exit to outer shell
 }
 
 bold() {
