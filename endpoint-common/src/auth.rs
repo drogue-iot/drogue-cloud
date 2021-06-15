@@ -6,7 +6,9 @@ use actix_web::{
 use anyhow::Context;
 use drogue_client::{error::ClientError, registry};
 use drogue_cloud_service_api::auth::device::authn::{
-    AuthenticationRequest, AuthenticationResponse, Credential,
+    AuthenticationRequest,
+    AuthenticationResponse,
+    Credential, //Outcome
 };
 use drogue_cloud_service_common::{
     client::ReqwestAuthenticatorClient, config::ConfigFromEnv, defaults, openid::TokenConfig,
@@ -15,6 +17,7 @@ use futures::future::{err, ok, Ready};
 use http::HeaderValue;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+//use tokio::fs::read;
 use std::fmt::Debug;
 use x509_parser::prelude::X509Certificate;
 
@@ -107,6 +110,48 @@ impl DeviceAuthenticator {
             .await
     }
 
+    // TODO: temp auth func. REMOVE BEFORE PUSHING
+    pub async fn authenticate_temp<A, D>(
+        &self,
+        _application: A,
+        _device: D,
+        _credential: Credential,
+        r#_as: Option<String>,
+    ) -> AuthResult<AuthenticationResponse>
+    where
+        A: ToString,
+        D: ToString,
+    {
+        Ok(AuthenticationResponse {
+            outcome: serde_json::from_str(
+                r#"
+                {
+                    "pass":{
+                        "application": {
+                            "metadata": {
+                                "name": "app1",
+                                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d210",
+                                "creationTimestamp": "2020-01-01T00:00:00Z",
+                                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                                "generation": 0,
+                            },
+                        },
+                        "device": {
+                            "metadata": {
+                                "application": "app1",
+                                "name": "device1",
+                                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d211",
+                                "creationTimestamp": "2020-01-01T00:00:00Z",
+                                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                                "generation": 0,
+                            },
+                        }
+                    }
+                }"#,
+            )?,
+        })
+    }
+
     /// Authenticate a device from a client cert only.
     ///
     /// This will take the issuerDn as application id, and the subjectDn as device id.
@@ -139,7 +184,7 @@ impl DeviceAuthenticator {
                     password,
                 }),
             ) => {
-                self.authenticate(&scope, &device, Credential::Password(password), None)
+                self.authenticate_temp(&scope, &device, Credential::Password(password), None)
                     .await
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
