@@ -10,8 +10,8 @@ endpoints:
 defaults:
   images:
     repository: ghcr.io/drogue-iot
-    pullPolicy: Always
-    tag: "latest"
+    pullPolicy: IfNotPresent
+    # tag: latest
 
   passthrough: {}
 

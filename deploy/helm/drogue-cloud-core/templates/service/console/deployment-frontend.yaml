@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: endpoint
-          image: {{ include "drogue-cloud-core.image-repo" . }}console-frontend:{{ .Values.defaults.images.tag }}
+          image: {{ include "drogue-cloud-core.image-repo" . }}console-frontend:{{ include "drogue-cloud-core.image-tag" . }}
           imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: API_URL

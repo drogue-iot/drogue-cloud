@@ -35,7 +35,7 @@ spec:
               readOnly: true
       containers:
         - name: service
-          image: {{ include "drogue-cloud-core.image-repo" . }}mqtt-integration:{{ .Values.defaults.images.tag }}
+          image: {{ include "drogue-cloud-core.image-repo" . }}mqtt-integration:{{ include "drogue-cloud-core.image-tag" . }}
           imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: RUST_LOG

@@ -23,22 +23,17 @@ build: prepare $(patsubst %, drogue-install-%-$(VERSION).zip, $(VARIANTS))
 INSTALLER=$(basename $(notdir $@))
 drogue-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(shell find $(TOPDIR)/../scripts -type f)
 	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/scripts
-	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/base
-	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/knative
-	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
-	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
+	mkdir -p $(OUTDIR)/stage/$(INSTALLER)/deploy
+	# copy scripts folder
 	cp -pr $(BASEDIR)/scripts/* $(OUTDIR)/stage/$(INSTALLER)/scripts
 	# inject release version to cert script
-	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/common.sh
-	sed -i 's/CLUSTER:=minikube/CLUSTER:=$*/' $(OUTDIR)/stage/$(INSTALLER)/scripts/common.sh
-	# FIXME: remove release related script for now, reconsider mixing scripts
-	rm $(OUTDIR)/stage/$(INSTALLER)/scripts/bin/replace-images.py
-	cp -pr $(BASEDIR)/deploy/base/* $(OUTDIR)/stage/$(INSTALLER)/deploy/base
-	cp -pr $(BASEDIR)/deploy/$*/* $(OUTDIR)/stage/$(INSTALLER)/deploy/$*
-	cp -pr $(BASEDIR)/deploy/digital-twin/* $(OUTDIR)/stage/$(INSTALLER)/deploy/digital-twin
-	@echo "::group::Process YAML and zip"
-	cd build/stage/ && $(BASEDIR)/scripts/bin/replace-images.py $(VERSION) IfNotPresent $(OUTDIR)/stage/$(INSTALLER)/deploy/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
+	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
+	sed -i 's/CLUSTER:=minikube/CLUSTER:=$*/' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
+	# copy deploy folder
+	cp -pr $(BASEDIR)/deploy/* $(OUTDIR)/stage/$(INSTALLER)/deploy
+	@echo "::group::Create archives"
+	cd build/stage/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
+	cd build/stage/ && tar cvzf $(OUTDIR)/$(basename $@).tar.gz $(INSTALLER)
 	@echo "::endgroup::"
-
 
 .PHONY: all clean prepare build
