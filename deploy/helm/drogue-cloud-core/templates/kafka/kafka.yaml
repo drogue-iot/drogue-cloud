@@ -33,6 +33,8 @@ spec:
       pod:
         {{- if .Values.kafka.podSecurityContext.enabled }}
         securityContext: {{- omit .Values.kafka.podSecurityContext "enabled" | toYaml | nindent 10 }}
+        {{- else }}
+        {}
         {{- end }}
   zookeeper:
     replicas: 1
@@ -44,4 +46,6 @@ spec:
       pod:
         {{- if .Values.kafka.podSecurityContext.enabled }}
         securityContext: {{- omit .Values.kafka.podSecurityContext "enabled" | toYaml | nindent 10 }}
+        {{- else }}
+        {}
         {{- end }}

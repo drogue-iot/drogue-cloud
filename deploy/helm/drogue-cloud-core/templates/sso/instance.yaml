@@ -9,3 +9,7 @@ spec:
   externalAccess:
     enabled: true
     host: {{ include "drogue-cloud-common.sso.hostname" . }}
+  {{- if ne .Values.keycloak.postgres.mode "operator" }}
+  externalDatabase:
+    enabled: true
+  {{- end }}

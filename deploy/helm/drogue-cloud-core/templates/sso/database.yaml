@@ -1,0 +1,24 @@
+{{- if ne .Values.keycloak.postgres.mode "operator" }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-db-secret
+data:
+  {{- if eq .Values.keycloak.postgres.mode "drogue" }}
+  POSTGRES_DATABASE: {{ .Values.postgres.databaseName | b64enc | quote }}
+  POSTGRES_EXTERNAL_ADDRESS: {{ "postgres" | b64enc | quote }}
+  POSTGRES_EXTERNAL_PORT: {{ "5432" | b64enc | quote }}
+  POSTGRES_USERNAME: {{ .Values.postgres.username | b64enc | quote }}
+  POSTGRES_PASSWORD: {{ .Values.postgres.password | b64enc | quote }}
+  {{- else if eq .Values.keycloak.postgres.mode "external" }}
+  {{- if .Values.keycloak.postgres.url }}
+  POSTGRES_DATABASE: {{ .Values.postgres.databaseName | b64enc | quote }}
+  {{- else }}
+  POSTGRES_DATABASE: {{ .Values.postgres.databaseName | b64enc | quote }}
+  POSTGRES_HOST: {{ "postgres" | b64enc | quote }}
+  POSTGRES_PORT: {{ .Values.postgres.port | default "5432" | b64enc | quote }}
+  {{- end }}
+  POSTGRES_USERNAME: {{ .Values.keycloak.postgres.username | b64enc | quote }}
+  POSTGRES_PASSWORD: {{ .Values.keycloak.postgres.password | b64enc | quote }}
+  {{- end }}
+{{- end}}

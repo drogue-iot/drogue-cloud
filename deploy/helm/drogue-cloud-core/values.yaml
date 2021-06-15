@@ -15,7 +15,26 @@ defaults:
 
   passthrough: {}
 
+keycloak:
+  postgres:
+    # The way postgres gets configured. This can be:
+    #  - drogue: Re-use the Drogue Cloud postgres instance
+    #  - operator: Let the keycloak operate manage one
+    #  - external: Use an external instance
+    mode: drogue # reuse drogue instance
+    # username: foo
+    # password: bar
+    # you can provider either:
+    #   url: jdbc:postgresql://foo/bar
+    # or:
+    #   host: postgres
+    #   port: 5678
+    #   databaseName: keycloak
+
 postgres:
+  databaseName: registry
+  username: admin
+  password: admin123456
   podSecurityContext:
     enabled: false
 
