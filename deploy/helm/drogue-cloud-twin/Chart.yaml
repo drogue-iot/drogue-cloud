@@ -27,6 +27,3 @@ dependencies:
   - name: drogue-cloud-common
     version: 0.1.0
     repository: file://../drogue-cloud-common
-  - name: mongodb
-    version: 9
-    repository: https://charts.bitnami.com/bitnami
