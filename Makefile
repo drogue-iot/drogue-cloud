@@ -269,7 +269,10 @@ frontend: host-build
 # Do a local deploy
 #
 deploy: require-container-registry
-	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy -s defaults.images.repository=$(CONTAINER_REGISTRY)
+	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy \
+		-s defaults.images.repository=$(CONTAINER_REGISTRY) \
+		-s defaults.images.pullPolicy=Always
+
 
 #
 # Check if we have a container registry set.
