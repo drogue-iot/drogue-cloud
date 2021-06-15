@@ -1,3 +1,11 @@
+
+# check cluster connectivity
+function check_cluster_connection() {
+    progress -n "🌱 Checking cluster connectivity ... "
+    kubectl version &>/dev/null || die "Unable to connect to the cluster: 'kubectl' must be able to connect to your cluster."
+    progress "done!"
+}
+
 # Get the application domain
 function detect_domain() {
     if [[ -n "$DOMAIN" ]]; then
