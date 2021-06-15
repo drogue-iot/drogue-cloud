@@ -78,7 +78,6 @@ set -e
 : "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 : "${INSTALL_MONGODB:=${INSTALL_DEPS}}"
 
-
 # Check for our standard tools
 
 check_std_tools
@@ -94,12 +93,10 @@ HELMARGS_MONGODB="--set auth.rootPassword=admin123456 --set auth.enabled=false"
 
 case $CLUSTER in
 openshift)
-  HELMARGS_DITTO="$HELMARGS_DITTO --set openshift.enabled=true"
-  HELMARGS_MONGODB="$HELMARGS_MONGODB --set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false"
-  ;;
-*)
-  ;;
-
+    HELMARGS_DITTO="$HELMARGS_DITTO --set openshift.enabled=true"
+    HELMARGS_MONGODB="$HELMARGS_MONGODB --set podSecurityContext.enabled=false --set containerSecurityContext.enabled=false"
+    ;;
+*) ;;
 esac
 
 # install pre-reqs
@@ -110,7 +107,7 @@ if [[ "$INSTALL_DITTO_OPERATOR" == true ]]; then
     helm upgrade --install --wait --timeout 30m --repo https://ctron.github.io/helm-charts ditto-operator ditto-operator --version "^0.1.10" -n "$DROGUE_NS" $HELMARGS_DITTO >/dev/null
 fi
 
-if [[ "INSTALL_MONGODB" == true ]]; then
+if [[ "$INSTALL_MONGODB" == true ]]; then
     progress "📦 Deploying pre-requisites (MongoDB) ... "
     # shellcheck disable=SC2086
     helm upgrade --install --wait --timeout 30m --repo https://charts.bitnami.com/bitnami mongodb mongodb --version 9 -n "$DROGUE_NS" $HELMARGS_MONGODB >/dev/null
