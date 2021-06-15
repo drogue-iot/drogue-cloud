@@ -57,10 +57,10 @@ impl DeviceAuthenticator {
                     .await
                     .context("Failed to discover OAuth2 client")?,
             ),
-            (false, None) => None,
-            (true, None) => {
+            (false, None) => {
                 anyhow::bail!("Requested OAuth2 authentication without providing a configuration")
             }
+            (true, None) => None,
             (true, Some(_)) => {
                 anyhow::bail!("Provided an OAuth2 configuration without requesting authentication")
             }
