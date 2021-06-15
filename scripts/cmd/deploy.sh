@@ -161,16 +161,6 @@ helm dependency update "$SCRIPTDIR/../deploy/helm/drogue-cloud-examples"
 helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$SCRIPTDIR/../deploy/helm/drogue-cloud-examples" --install $HELM_ARGS
 progress "done!"
 
-# Patch some of the deployments to to allow persistent volume access
-if [ "$CLUSTER" == "kubernetes" ]; then
-    # FIXME: this should be customized by the Helm chart now
-
-    # Wait for the resources to show up
-    wait_for_resource deployment/keycloak-postgresql
-
-    kubectl -n "$DROGUE_NS" patch deployment keycloak-postgresql -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
-fi
-
 # Remove the wrong host entry for keycloak ingress
 
 case $CLUSTER in
@@ -256,7 +246,7 @@ progress "📒 Adding cover sheet to TPS report ... done!"
 progress "🥳 Deployment ready!"
 
 progress
-progress "To get started you can:"
+progress "To get started, you can:"
 progress
 progress "  * Navigate to the web console:"
 progress "      URL:      ${CONSOLE_URL}"
