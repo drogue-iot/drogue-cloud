@@ -167,8 +167,6 @@ if [ "$CLUSTER" == "kubernetes" ]; then
 
     # Wait for the resources to show up
     wait_for_resource deployment/keycloak-postgresql
-    wait_for_resource deployment/postgres
-    wait_for_resource deployment/grafana
 
     kubectl -n "$DROGUE_NS" patch deployment keycloak-postgresql -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
 fi

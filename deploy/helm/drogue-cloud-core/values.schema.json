@@ -77,6 +77,27 @@
           }
         }
       }
+    },
+    "keycloak": {
+      "type": "object",
+      "properties": {
+        "postgres": {
+          "type": "object",
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "drogue",
+                "operator",
+                "external"
+              ]
+            }
+          }
+        }
+      }
     }
   }
 }
