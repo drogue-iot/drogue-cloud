@@ -101,7 +101,7 @@ check_std_tools
 
 # Check if we can connect to the cluster
 
-kubectl version &>/dev/null || die "Unable to connect to the cluster: 'kubectl' must be able to connect to your cluster."
+check_cluster_connection
 
 # Create the namespace first
 
