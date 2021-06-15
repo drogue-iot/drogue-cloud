@@ -24,7 +24,7 @@ Options:
 EOF
 }
 
-opts=$(getopt "mhpc:n:d:s:" "$*")
+opts=$(getopt "mhp:c:n:d:s:" "$*")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
@@ -59,8 +59,8 @@ while [[ $# -gt 0 ]]; do
         shift
         ;;
     -p)
-        HELM_PROFILE="$1"
-        shift
+        HELM_PROFILE="$2"
+        shift 2
         ;;
     -h)
         help >&3
