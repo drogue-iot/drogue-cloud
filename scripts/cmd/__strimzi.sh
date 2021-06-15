@@ -38,6 +38,10 @@ if ! kubectl -n $KAFKA_NS get deploy/strimzi-cluster-operator >/dev/null 2>&1; t
     progress "done!"
 fi
 
+if [[ "$MINIMIZE" == true ]]; then
+    kubectl -n "$KAFKA_NS" set resources deployment strimzi-cluster-operator --requests=cpu=0
+fi
+
 progress -n "  ⏳ Waiting for the operator to become ready ... "
-kubectl wait deployment --all --timeout=-1s --for=condition=Available -n $KAFKA_NS
+kubectl wait deployment --all --timeout=-1s --for=condition=Available -n "$KAFKA_NS"
 progress "done!"

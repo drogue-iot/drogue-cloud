@@ -23,7 +23,7 @@ Options:
 EOF
 }
 
-opts=$(getopt "hpc:n:d:s:" "$*")
+opts=$(getopt "mhpc:n:d:s:" "$*")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
@@ -52,6 +52,10 @@ while [[ $# -gt 0 ]]; do
     -d)
         DOMAIN="$2"
         shift 2
+        ;;
+    -m)
+        MINIMIZE=true
+        shift
         ;;
     -h)
         help >&3
