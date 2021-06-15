@@ -6,7 +6,8 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - http:
+    - host: {{- include "drogue-cloud-common.ingress.hostname" (list . "ditto" ) }}
+      http:
         paths:
           - path: /
             pathType: Prefix
