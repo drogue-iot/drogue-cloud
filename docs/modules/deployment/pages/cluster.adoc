@@ -40,5 +40,6 @@ For any other cluster:
 
 * You need to have a working context for `kubectl` (e.g. `oc login`).
 * You will need to be able to create new namespaces, being _admin_ helps.
+* You need a working Ingress Controller.  For OpenShift, you can use `Routes`.
 * You need some kind of `LoadBalancer` support. For OpenShift, you can use `Routes`.
 * You must have `PersistentVolumes` available to bind to.
