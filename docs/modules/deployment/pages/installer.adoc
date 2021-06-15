@@ -39,7 +39,7 @@ If you want to install those dependencies manually, for example using OLM, you c
 
 == Running the installer
 
-Run the installer script `./script/drogue.sh`, adding the options appropriate for your setup.
+Run the installer script `./script/drgadm deploy`, adding the options appropriate for your setup.
 
 You can use the environment variable `CLUSTER` to define which cluster type you have.
 
@@ -51,19 +51,29 @@ value will be changed to the installer type you downloaded. You can still overri
 
 [source,shell]
 ----
-env CLUSTER=kind ./script/drogue.sh
+env CLUSTER=kind ./script/drgadm deploy
 ----
 
 ====
 
 == Additional installer options
 
-Most options are controlled by using environment variables. You can set them by prefixing the
-call to the installation script, using `env` and the variable assignment:
+The `deploy` command of `drgadm` supports the following argument
+
+`-k` or `INSTALL_DEPS`:: Don't install any dependency by default.
+`-s <key=value>`:: Set additional Helm values. May be repeated multiple times.
+`-m`:: Minimize: Reduces the default resource requests to allow deploying on more constrained environments.
+`-d` or `DOMAIN`:: Manually provide the application DNS domain.
+`-c` or  `CLUSTER`:: Specify the cluster type (any of `minikube`, `kind`, `openshift`, `kubernetes`).
+`-p <profile>`:: Adds an additional Helm value file, named `deploy/helm/profiles/<profile>.yaml`.
+`-n <namespace>` or `DROGUE_NS`:: Changes the target Drogue IoT namespace.
+
+The installer has a few additional options which are controlled by using environment variables.
+You can set them by prefixing the call to the installation script, using `env` and the variable assignment:
 
 [source,shell]
 ----
-env CLUSTER=kind INSTALL_DEPS=false ./script/drogue.sh
+env CLUSTER=kind INSTALL_DEPS=false ./script/drgadm deploy
 ----
 
 === Skip the dependency installation
