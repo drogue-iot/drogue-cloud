@@ -39,6 +39,10 @@ minikube)
     ;;
 esac
 
+if [[ "$MINIMIZE" == true ]]; then
+    kubectl -n knative-serving set resources deployment activator autoscaler controller webhook --requests=cpu=0
+fi
+
 # Wait for deployment to finish
 progress -n "  ⏳ Waiting for Knative serving and Kourier to become ready ... "
 kubectl wait deployment --all --timeout=-1s --for=condition=Available -n kourier-system

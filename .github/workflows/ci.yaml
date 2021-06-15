@@ -191,6 +191,7 @@ jobs:
           TEST_CERTS_IMAGE: "dev.local/test-cert-generator:${{ github.sha }}"
         run: |
           ./scripts/drgadm deploy \
+            -m \
             -s defaults.images.repository=dev.local \
             -s defaults.images.tag=${{ github.sha }} \
             -s defaults.images.pullPolicy=Never
