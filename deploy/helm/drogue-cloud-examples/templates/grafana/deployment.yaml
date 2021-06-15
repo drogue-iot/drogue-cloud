@@ -1,3 +1,4 @@
+# kubectl -n "$DROGUE_NS" patch deployment grafana -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -132,6 +133,9 @@ spec:
               name: grafana-dashboard-providers
             - mountPath: /var/lib/grafana/dashboards
               name: grafana-dashboards
+      {{- if .Values.grafana.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.grafana.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
       volumes:
         - name: grafana-storage
           persistentVolumeClaim:

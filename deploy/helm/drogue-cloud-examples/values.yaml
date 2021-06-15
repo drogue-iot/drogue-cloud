@@ -6,3 +6,7 @@ defaults:
     repository: ghcr.io/drogue-iot
     pullPolicy: Always
     tag: "latest"
+
+grafana:
+  podSecurityContext:
+    enabled: false

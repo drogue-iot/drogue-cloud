@@ -64,6 +64,19 @@
           "type": "object"
         }
       }
+    },
+    "postgres": {
+      "type": "object",
+      "properties": {
+        "podSecurityContext": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
     }
   }
 }

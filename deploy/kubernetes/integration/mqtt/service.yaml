@@ -1,8 +1,0 @@
-kind: Service
-apiVersion: v1
-metadata:
-  name: mqtt-integration
-  labels:
-    app: mqtt-integration
-spec:
-  type: LoadBalancer
