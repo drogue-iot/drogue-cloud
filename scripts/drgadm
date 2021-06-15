@@ -37,6 +37,7 @@ function on_exit() {
     rv=$?
     if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
         # if there was a failure, dump the full log
+        echo
         echo "Command failed:" 1>&2
         echo "----------------------" 1>&2
         cat "$LOG" 1>&2
