@@ -14,3 +14,11 @@ defaults:
     tag: "latest"
 
   passthrough: {}
+
+postgres:
+  podSecurityContext:
+    enabled: false
+
+kafka:
+  podSecurityContext:
+    enabled: false

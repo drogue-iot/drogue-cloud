@@ -31,7 +31,9 @@ spec:
     version: 2.7.0
     template:
       pod:
-        securityContext: {}
+        {{- if .Values.kafka.podSecurityContext.enabled }}
+        securityContext: {{- omit .Values.kafka.podSecurityContext "enabled" | toYaml | nindent 10 }}
+        {{- end }}
   zookeeper:
     replicas: 1
     storage:
@@ -40,4 +42,6 @@ spec:
       deleteClaim: true
     template:
       pod:
-        securityContext: {}
+        {{- if .Values.kafka.podSecurityContext.enabled }}
+        securityContext: {{- omit .Values.kafka.podSecurityContext "enabled" | toYaml | nindent 10 }}
+        {{- end }}

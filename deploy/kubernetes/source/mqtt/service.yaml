@@ -1,8 +1,0 @@
-kind: Service
-apiVersion: v1
-metadata:
-  name: mqtt-endpoint
-  labels:
-    app: mqtt-endpoint
-spec:
-  type: LoadBalancer

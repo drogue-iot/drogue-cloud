@@ -17,7 +17,8 @@ Options:
   -n <namespace>     The namespace to install to (default: $DROGUE_NS)
   -s <key>=<value>   Set a Helm option, can be repeated:
                        -s foo=bar -s bar=baz -s foo.bar=baz
-  -p                 Don't install dependencies
+  -k                 Don't install dependencies
+  -p <profile>       Enable Helm profile (adds 'deploy/helm/profiles/<profile>.yaml')
   -h                 Show this help
 
 EOF
@@ -37,7 +38,7 @@ while [[ $# -gt 0 ]]; do
         CLUSTER="$2"
         shift 2
         ;;
-    -p)
+    -k)
         INSTALL_DEPS=false
         shift
         ;;
@@ -55,6 +56,10 @@ while [[ $# -gt 0 ]]; do
         ;;
     -m)
         MINIMIZE=true
+        shift
+        ;;
+    -p)
+        HELM_PROFILE="$1"
         shift
         ;;
     -h)
@@ -133,6 +138,12 @@ fi
 
 # gather Helm arguments
 
+if [[ "$HELM_PROFILE" ]]; then
+    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/helm/profiles/${HELM_PROFILE}.yaml"
+fi
+if [[ -f $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml ]]; then
+    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml"
+fi
 HELM_ARGS="$HELM_ARGS --set cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set domain=$(detect_domain)"
 
@@ -160,8 +171,6 @@ if [ "$CLUSTER" == "kubernetes" ]; then
     wait_for_resource deployment/grafana
 
     kubectl -n "$DROGUE_NS" patch deployment keycloak-postgresql -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
-    kubectl -n "$DROGUE_NS" patch deployment postgres -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
-    kubectl -n "$DROGUE_NS" patch deployment grafana -p '{"spec":{"template":{"spec":{"securityContext":{"fsGroup": 2000, "runAsNonRoot": true, "runAsUser": 1000}}}}}'
 fi
 
 # Remove the wrong host entry for keycloak ingress

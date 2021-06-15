@@ -66,6 +66,9 @@ spec:
           volumeMounts:
             - mountPath: /bitnami/postgresql
               name: storage
+      {{- if .Values.postgres.podSecurityContext.enabled }}
+      securityContext: {{- omit .Values.postgres.podSecurityContext "enabled" | toYaml | nindent 8 }}
+      {{- end }}
       volumes:
         - name: storage
           persistentVolumeClaim:
