@@ -46,21 +46,34 @@ function gather() {
   done
 }
 
-gather "ksvcs"
+# Kubernetes
+
 gather "nodes"
 gather "services"
 gather "deployments"
 gather "secrets"
 gather "configmaps"
 
+# Keycloak
+
 gather "keycloaks"
 gather "keycloakrealms"
 gather "keycloakclients"
 gather "keycloakusers"
 
-gather "sinkbindings"
-gather "kafkasources"
-gather "kafkasinks"
+# Kafka
 
 gather "kafkas"
 gather "kafkatopics"
+
+# Knative serving
+
+gather "ksvc"
+gather "revisions"
+gather "cfg"
+
+# Knative eventing
+
+gather "sinkbindings"
+gather "kafkasources"
+gather "kafkasinks"
