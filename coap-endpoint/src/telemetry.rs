@@ -135,18 +135,20 @@ pub async fn publish(
         .await
     {
         // TODO finish after command
-        /* ok, and accepted
+        // ok, and accepted
         Ok(PublishResponse {
             outcome: Outcome::Accepted,
-        }) => {
+        }) => Ok(req.response.and_then(|mut v| {
+            v.set_status(ResponseType::Changed);
+            Some(v)
+        })),
+            /*{
             wait_for_command(
                 commands,
                 Id::new(application.metadata.name, device_id),
                 opts.ct,
             )
-            .await
-        }
-        */
+            .await*/
         // ok, but rejected
         Ok(PublishResponse {
             outcome: Outcome::Rejected,
@@ -154,12 +156,12 @@ pub async fn publish(
             v.set_status(ResponseType::NotAcceptable);
             Some(v)
         })),
-
         // internal error
-        Err(err) => Ok(req.response.and_then(|mut v| {
+        Err(err) => Err(CoapEndpointError(EndpointError::ConfigurationError{details: err.to_string()}))
+            /*req.response.and_then(|mut v| {
             v.set_status(ResponseType::InternalServerError);
             Some(v)
-        })),
+        }))*/,
         // Ok(HttpResponse::InternalServerError().json(ErrorInformation {
         //     error: "InternalError".into(),
         //     message: err.to_string(),
