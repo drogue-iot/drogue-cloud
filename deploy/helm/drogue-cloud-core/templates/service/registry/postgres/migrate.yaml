@@ -15,7 +15,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: diesel-migrate
-          image: ghcr.io/drogue-iot/database-migration:latest
+          image: {{ include "drogue-cloud-core.image-repo" . }}/database-migration:{{ include "drogue-cloud-core.image-tag" . }}
           imagePullPolicy: Always
           env:
             - name: POSTGRES_DB

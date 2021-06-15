@@ -49,7 +49,7 @@ spec:
               readOnly: true
       containers:
         - name: endpoint
-          image: {{ include "drogue-cloud-core.image-repo" . }}command-endpoint:{{ .Values.defaults.images.tag }}
+          image: {{ include "drogue-cloud-core.image-repo" . }}command-endpoint:{{ include "drogue-cloud-core.image-tag" . }}
           imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
           env:
             - name: RUST_LOG
