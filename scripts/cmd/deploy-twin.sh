@@ -102,15 +102,17 @@ esac
 # install pre-reqs
 
 if [[ "$INSTALL_DITTO_OPERATOR" == true ]]; then
-    progress "📦 Deploying pre-requisites (Ditto operator) ... "
+    progress -n "📦 Deploying pre-requisites (Ditto operator) ... "
     # shellcheck disable=SC2086
     helm upgrade --install --wait --timeout 30m --repo https://ctron.github.io/helm-charts ditto-operator ditto-operator --version "^0.1.10" -n "$DROGUE_NS" $HELMARGS_DITTO >/dev/null
+    progress "done!"
 fi
 
 if [[ "$INSTALL_MONGODB" == true ]]; then
-    progress "📦 Deploying pre-requisites (MongoDB) ... "
+    progress -n "📦 Deploying pre-requisites (MongoDB) ... "
     # shellcheck disable=SC2086
     helm upgrade --install --wait --timeout 30m --repo https://charts.bitnami.com/bitnami mongodb mongodb --version 9 -n "$DROGUE_NS" $HELMARGS_MONGODB >/dev/null
+    progress "done!"
 fi
 
 # Install twin feature
