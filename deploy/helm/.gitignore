@@ -1,5 +1,2 @@
-# Materialized dependencies
-charts/*.tgz
-
 # Template chart
 template/
