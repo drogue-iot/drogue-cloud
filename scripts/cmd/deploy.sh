@@ -190,7 +190,7 @@ if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)
         echo "  Output: $OUT"
 
         progress -n "📝 Creating custom certificate ... "
-        env CONTAINER="$CONTAINER" OUT="$OUT" "$SCRIPTDIR/bin/__gen-certs.sh" "$CERT_ALTNAMES"
+        env TEST_CERTS_IMAGE="${TEST_CERTS_IMAGE}" CONTAINER="$CONTAINER" OUT="$OUT" "$SCRIPTDIR/bin/__gen-certs.sh" "$CERT_ALTNAMES"
         progress "done!"
 
         MQTT_TLS_KEY=$OUT/mqtt-endpoint.key
