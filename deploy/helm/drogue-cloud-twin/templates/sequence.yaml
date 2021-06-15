@@ -7,11 +7,8 @@ metadata:
     app.kubernetes.io/part-of: digital-twin
 spec:
   channelTemplate:
-    apiVersion: messaging.knative.dev/v1alpha1
-    kind: KafkaChannel
-    spec:
-      numPartitions: 1
-      replicationFactor: 1
+    apiVersion: messaging.knative.dev/v1
+    kind: InMemoryChannel
   steps:
     - ref:
         apiVersion: serving.knative.dev/v1

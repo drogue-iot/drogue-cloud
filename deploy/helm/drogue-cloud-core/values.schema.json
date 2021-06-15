@@ -3,7 +3,8 @@
   "required": [
     "domain",
     "cluster",
-    "instance"
+    "instance",
+    "defaults"
   ],
   "properties": {
     "cluster": {
@@ -34,6 +35,33 @@
               "type": "boolean"
             }
           }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "images": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ]
+            }
+          }
+        },
+        "passthrough": {
+          "type": "object"
         }
       }
     }

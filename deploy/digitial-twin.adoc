@@ -58,10 +58,13 @@ kubectl create secret generic vorto-api --from-literal=token=<my-token>
 Deploy all components using:
 
 ----
-# plain Kubernetes
-./scripts/digital-twin.sh
+# Minikube
+env CLUSTER=minikube ./scripts/drgadm deploy-twin
 
-# OpenShift, with routes
+# Kind
+env CLUSTER=kind ./scripts/drgadm deploy-twin
+
+# OpenShift
 env CLUSTER=openshift ./scripts/digital-twin.sh
 ----
 
