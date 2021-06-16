@@ -24,7 +24,7 @@ Options:
 EOF
 }
 
-opts=$(getopt "mhkp:c:n:d:s:" -- "$@")
+opts=$(getopt -o "mhkp:c:n:d:s:" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
@@ -80,6 +80,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 set -e
+
+echo "Minimize: $MINIMIZE"
 
 #
 # deploy defaults
