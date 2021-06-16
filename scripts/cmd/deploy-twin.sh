@@ -23,14 +23,14 @@ Options:
 EOF
 }
 
-opts=$(getopt "hpc:n:d:s:" "$*")
+opts=$(getopt "hpc:n:d:s:" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
     # we don't "fail" but exit here, since we don't want any more output
     exit 1
 }
-eval set --$opts
+eval set -- "$opts"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
