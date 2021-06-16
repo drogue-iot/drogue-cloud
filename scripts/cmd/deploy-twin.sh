@@ -17,13 +17,13 @@ Options:
   -n <namespace>     The namespace to install to (default: $DROGUE_NS)
   -s <key>=<value>   Set a Helm option, can be repeated:
                        -s foo=bar -s bar=baz -s foo.bar=baz
-  -p                 Don't install dependencies
+  -k                 Don't install dependencies
   -h                 Show this help
 
 EOF
 }
 
-opts=$(getopt "hpc:n:d:s:" -- "$@")
+opts=$(getopt "hkc:n:d:s:" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
