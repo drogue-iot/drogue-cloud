@@ -28,7 +28,8 @@ opts=$(getopt "mhp:c:n:d:s:" "$*")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
-    exit 0
+    # we don't "fail" but exit here, since we don't want any more output
+    exit 1
 }
 eval set --$opts
 
@@ -72,7 +73,8 @@ while [[ $# -gt 0 ]]; do
         ;;
     *)
         help >&3
-        exit 0
+        # we don't "fail" but exit here, since we don't want any more output
+        exit 1
         ;;
     esac
 done
