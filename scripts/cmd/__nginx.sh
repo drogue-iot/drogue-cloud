@@ -15,5 +15,5 @@ if [[ "$MINIMIZE" == true ]]; then
 fi
 
 progress -n "  ⏳ Waiting for the operator to become ready ... "
-kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller
+kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=-1s
 progress "done!"
