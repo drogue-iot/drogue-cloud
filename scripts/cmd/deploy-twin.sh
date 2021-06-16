@@ -23,7 +23,7 @@ Options:
 EOF
 }
 
-opts=$(getopt "hkc:n:d:s:" -- "$@")
+opts=$(getopt -o "hkc:n:d:s:" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
