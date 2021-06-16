@@ -19,7 +19,7 @@ spec:
     serviceAccountsEnabled: false
     fullScopeAllowed: true
     redirectUris:
-      - "http://not-yet-set"
+      - {{ include "drogue-cloud-common.ingress.proto" . -}}{{ include "drogue-cloud-common.ingress.hostname" ( list . "grafana" ) }}/login/generic_oauth
     defaultRoles:
       - "grafana-admin"
       - "grafana-editor"
