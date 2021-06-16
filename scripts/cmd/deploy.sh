@@ -81,8 +81,6 @@ done
 
 set -e
 
-false
-
 #
 # deploy defaults
 #
