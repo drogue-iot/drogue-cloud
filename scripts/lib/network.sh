@@ -36,19 +36,22 @@ function service_url() {
     shift
     local scheme="$1"
 
+    local DOMAIN
+
     case $CLUSTER in
     kubernetes)
-        local DOMAIN=$(domain)
+        DOMAIN=$(detect_domain)
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].port}')
         URL=${scheme:-http}://$name.$DOMAIN:$PORT
         ;;
     kind)
-        local DOMAIN=$(domain)
+        DOMAIN=$(detect_domain)
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
         URL=${scheme:-http}://$name.$DOMAIN:$PORT
         ;;
     minikube)
         test -n "$scheme" && scheme="--$scheme"
+        # shellcheck disable=SC2086
         URL=$(eval minikube service -n "$DROGUE_NS" $scheme --url "$name")
         ;;
     openshift)
