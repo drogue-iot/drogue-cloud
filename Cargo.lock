@@ -1493,6 +1493,7 @@ dependencies = [
 name = "drogue-cloud-command-endpoint"
 version = "0.5.0"
 dependencies = [
+ "actix-cors",
  "actix-http",
  "actix-web",
  "actix-web-httpauth",

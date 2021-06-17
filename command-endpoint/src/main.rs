@@ -1,5 +1,6 @@
 mod v1alpha1;
 
+use actix_cors::Cors;
 use actix_web::{
     get,
     middleware::{self, Condition},
@@ -117,9 +118,13 @@ async fn main() -> anyhow::Result<()> {
             .data(registry.clone())
             .service(index)
             .service(
-                web::resource("/api/command/v1alpha1/apps/{appId}/devices/{deviceId}")
+                web::scope("/api/command/v1alpha1")
                     .wrap(Condition::new(enable_auth, auth))
-                    .route(web::post().to(v1alpha1::command)),
+                    .wrap(Cors::permissive())
+                    .service(
+                        web::resource("/apps/{appId}/devices/{deviceId}")
+                            .route(web::post().to(v1alpha1::command)),
+                    ),
             )
     })
     .bind(config.bind_addr)?
