@@ -13,7 +13,7 @@ use http::HeaderValue;
 use serde::Deserialize;
 use std::net::SocketAddr;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct PublishCommonOptions {
     pub application: Option<String>,
     pub device: Option<String>,
@@ -21,7 +21,17 @@ pub struct PublishCommonOptions {
     pub data_schema: Option<String>,
 }
 
-#[derive(Deserialize)]
+impl Default for PublishCommonOptions {
+    fn default() -> Self {
+        PublishCommonOptions {
+            application: None,
+            device: None,
+            data_schema: None,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PublishOptions {
     #[serde(flatten)]
     pub common: PublishCommonOptions,
@@ -30,6 +40,16 @@ pub struct PublishOptions {
 
     #[serde(alias = "commandTimeout")]
     pub ct: Option<u64>,
+}
+
+impl Default for PublishOptions {
+    fn default() -> Self {
+        PublishOptions {
+            common: PublishCommonOptions::default(),
+            r#as: None,
+            ct: None,
+        }
+    }
 }
 
 pub async fn publish_plain(
@@ -102,7 +122,6 @@ pub async fn publish(
             r#as,
         } => (application, device, r#as),
     };
-
     // If we have an "as" parameter, we publish as another device.
     let device_id = match opts.r#as {
         // use the "as" information as device id
@@ -142,13 +161,13 @@ pub async fn publish(
             v.set_status(ResponseType::Changed);
             Some(v)
         })),
-            /*{
-            wait_for_command(
-                commands,
-                Id::new(application.metadata.name, device_id),
-                opts.ct,
-            )
-            .await*/
+        /*{
+        wait_for_command(
+            commands,
+            Id::new(application.metadata.name, device_id),
+            opts.ct,
+        )
+        .await*/
         // ok, but rejected
         Ok(PublishResponse {
             outcome: Outcome::Rejected,
@@ -157,14 +176,8 @@ pub async fn publish(
             Some(v)
         })),
         // internal error
-        Err(err) => Err(CoapEndpointError(EndpointError::ConfigurationError{details: err.to_string()}))
-            /*req.response.and_then(|mut v| {
-            v.set_status(ResponseType::InternalServerError);
-            Some(v)
-        }))*/,
-        // Ok(HttpResponse::InternalServerError().json(ErrorInformation {
-        //     error: "InternalError".into(),
-        //     message: err.to_string(),
-        // })),
+        Err(err) => Err(CoapEndpointError(EndpointError::ConfigurationError {
+            details: err.to_string(),
+        })),
     }
 }

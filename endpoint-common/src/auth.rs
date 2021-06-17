@@ -126,15 +126,15 @@ impl DeviceAuthenticator {
             outcome: serde_json::from_str(
                 r#"
                 {
-                    "pass":{
+                    "pass": {
                         "application": {
                             "metadata": {
                                 "name": "app1",
                                 "uid": "4e185ea6-7c26-11eb-a319-d45d6455d210",
                                 "creationTimestamp": "2020-01-01T00:00:00Z",
                                 "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                                "generation": 0,
-                            },
+                                "generation": 0
+                            }
                         },
                         "device": {
                             "metadata": {
@@ -143,8 +143,8 @@ impl DeviceAuthenticator {
                                 "uid": "4e185ea6-7c26-11eb-a319-d45d6455d211",
                                 "creationTimestamp": "2020-01-01T00:00:00Z",
                                 "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                                "generation": 0,
-                            },
+                                "generation": 0
+                            }
                         }
                     }
                 }"#,
@@ -189,7 +189,7 @@ impl DeviceAuthenticator {
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
             (Some(scope), None, Some(AuthValue::Basic { username, password })) => {
-                self.authenticate(
+                self.authenticate_temp(
                     scope.as_ref(),
                     username.into_string(),
                     Credential::Password(password),
@@ -199,7 +199,7 @@ impl DeviceAuthenticator {
             }
             // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
             (Some(scope), Some(device), Some(AuthValue::Basic { username, password })) => {
-                self.authenticate(
+                self.authenticate_temp(
                     scope.as_ref(),
                     device.as_ref(),
                     Credential::UsernamePassword {
@@ -223,7 +223,7 @@ impl DeviceAuthenticator {
                     password,
                 }),
             ) => {
-                self.authenticate(
+                self.authenticate_temp(
                     &scope,
                     device.as_ref(),
                     Credential::UsernamePassword { username, password },

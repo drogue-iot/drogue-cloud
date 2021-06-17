@@ -15,11 +15,7 @@ use telemetry::PublishOptions;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{downstream::DownstreamSender, error::EndpointError};
 //use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
-use drogue_cloud_service_common::{
-    config::ConfigFromEnv,
-    defaults,
-    health::{HealthServer, HealthServerConfig},
-};
+use drogue_cloud_service_common::{config::ConfigFromEnv, defaults, health::HealthServerConfig};
 use futures;
 //use http::HeaderValue;
 //use log;
@@ -131,7 +127,6 @@ fn uri_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
 fn params(
     request: &CoapRequest<SocketAddr>,
 ) -> Result<(Vec<String>, Option<&Vec<u8>>, &Vec<u8>), anyhow::Error> {
-    //let mut request = req.clone();
     let path_segments = request
         .message
         .get_option(CoapOption::UriPath)
@@ -157,25 +152,31 @@ async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Opti
     let queries: Option<&Vec<u8>>;
     let auth: &Vec<u8>;
 
+    println!("test");
+
     if let Ok((p, q, a)) = params(&request) {
         path_segments = p;
         queries = q;
         auth = a;
     } else {
-        return Err(CoapEndpointError(EndpointError::InvalidRequest {
+        let ret = Err(CoapEndpointError(EndpointError::InvalidRequest {
             details: "Invalid Path".to_string(),
         }))
         .respond_to(&mut request);
+        return ret;
     }
+
+    let options = queries
+        .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
+        .flatten()
+        .unwrap_or_default();
 
     match path_segments.len() {
         1 => telemetry::publish_plain(
             app.downstream,
             app.authenticator,
             path_segments[0].clone(),
-            queries
-                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
-                .flatten()?,
+            options,
             request.clone(),
             auth,
         )
@@ -231,8 +232,8 @@ async fn main() -> anyhow::Result<()> {
             .map_err(anyhow::Error::from)
     });
 
-    let health = HealthServer::new(config.health, vec![]);
+    //let health = HealthServer::new(config.health, vec![]);
 
-    futures::try_join!(health.run_ntex(), async { device_to_endpoint.await? },)?;
+    futures::try_join!(/*health.run_ntex(),*/ async { device_to_endpoint.await? },)?;
     Ok(())
 }
