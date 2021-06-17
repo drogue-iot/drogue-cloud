@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
             .data(registry.clone())
             .service(index)
             .service(
-                web::resource("/api/command/v1alpha1/{appId}/devices/{deviceId}")
+                web::resource("/api/command/v1alpha1/apps/{appId}/devices/{deviceId}")
                     .wrap(Condition::new(enable_auth, auth))
                     .route(web::post().to(v1alpha1::command)),
             )
