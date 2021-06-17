@@ -257,6 +257,6 @@ progress "  * Execute: "
 if is_default_cluster; then
 progress "      $SCRIPTDIR/drgadm examples"
 else
-progress "      env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm status"
+progress "      env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm examples"
 fi
 progress
