@@ -94,17 +94,6 @@ echo
 echo "  http POST $API_URL/api/command/v1alpha1/apps/app_id/devices/device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg token\)\"
 echo
 
-#
-# Expects "VAR=value" as an argument, which gets printed and executed.
-#
-# This is used to show an env-var command to the user, and make the same value available in the script later on.
-#
-function sete() {
-  echo "$@"
-  # shellcheck disable=SC2163
-  export "$@"
-}
-
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
 
 if [[ "$CLUSTER" = "minikube" ]] ; then
