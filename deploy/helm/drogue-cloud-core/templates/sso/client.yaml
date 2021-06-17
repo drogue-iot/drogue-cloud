@@ -21,6 +21,8 @@ spec:
     fullScopeAllowed: false
     redirectUris:
       # used for the CLI
+      - {{ include "drogue-cloud-common.ingress.proto" . -}}{{- include "drogue-cloud-common.ingress.hostname" (list . "console" ) }}
+      - {{ include "drogue-cloud-common.ingress.proto" . -}}{{- include "drogue-cloud-common.ingress.hostname" (list . "console" ) }}/*
       - "http://localhost:*"
     defaultRoles:
       - "drogue-user"
