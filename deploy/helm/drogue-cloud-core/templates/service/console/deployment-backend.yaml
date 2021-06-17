@@ -132,6 +132,8 @@ spec:
               value: {{ include "drogue-cloud-common.ingress.proto" . -}}{{- include "drogue-cloud-common.ingress.hostname" (list . "console" ) }}
             - name: ENDPOINTS__DEVICE_REGISTRY_URL
               value: {{ include "drogue-cloud-common.api.url" . }}
+            - name: ENDPOINTS__COMMAND_ENDPOINT_URL
+              value: {{ include "drogue-cloud-common.api.url" . }}
           ports:
             - containerPort: 8080
               name: endpoint
