@@ -56,7 +56,7 @@ ClusterIP
 NodePort
 {{- else if eq .Values.cluster "kind" -}}
 NodePort
-{{- else }}
+{{- else -}}
 LoadBalancer
 {{- end }}
 {{- end }}
