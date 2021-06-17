@@ -149,9 +149,9 @@ echo
 echo "You can view this information again by executing the following command:"
 echo
 if is_default_cluster; then
-echo "    $SCRIPTDIR/drgadm status"
+echo "    $SCRIPTDIR/drgadm examples"
 else
-echo "    env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm status"
+echo "    env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm examples"
 fi
 
 echo
