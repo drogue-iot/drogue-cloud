@@ -91,7 +91,7 @@ fi
 echo
 echo "Then, send a command to that device from another terminal window:"
 echo
-echo "  http POST $COMMAND_ENDPOINT_URL/command application==app_id device==device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg token\)\"
+echo "  http POST $COMMAND_ENDPOINT_URL/api/command/v1alpha1/apps/app_id/devices/device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg token\)\"
 echo
 
 #

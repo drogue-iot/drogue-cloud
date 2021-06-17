@@ -176,11 +176,11 @@ impl Component for CommandAndControl {
                 false => self.props.token.access_token.as_str(),
             };
             let send_command_cmd = format!(
-                r#"echo {payload} | http POST {url}/command application=={app} device=={device} command=={cmd} "Authorization:Bearer {token}""#,
+                r#"echo {payload} | http POST {url}/api/v1alpha1/command/apps/{app}/devices/{device} command=={cmd} "Authorization:Bearer {token}""#,
                 payload = shell_single_quote(&self.props.data.cmd_payload),
                 url = cmd,
-                app = shell_quote(&self.props.data.app_id),
-                device = shell_quote(&self.props.data.device_id),
+                app = url_encode(&self.props.data.app_id),
+                device = url_encode(&self.props.data.device_id),
                 token = token,
                 cmd = shell_quote(&self.props.data.cmd_name),
             );

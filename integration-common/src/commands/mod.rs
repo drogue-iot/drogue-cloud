@@ -15,7 +15,6 @@ pub struct CommandOptions {
     pub device: String,
 
     pub command: String,
-    pub timeout: Option<u64>,
 }
 
 pub async fn process_command(

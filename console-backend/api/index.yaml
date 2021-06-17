@@ -474,29 +474,26 @@ paths:
           required: true
           in: query
           schema:
-            $ref: '#/components/schemas/CommandObject'
+            $ref: '#/components/schemas/CommandName'
           description: Command to execute
-        - name: timeout
-          required: false
-          in: query
-          description: Set amount of time in seconds to wait for the command response from the device.
-          schema:
-            $ref: '#/components/schemas/Timeout'
       requestBody:
         description: Optional payload for the command
         required: false
         content:
           'application/json':
-            example: { "set-temp": 40 }
+            schema:
+              $ref: '#/components/schemas/CommandObject'
       responses:
         202:
           description: |
-            Optional payload of the command response.
-            With external integration (like ttn) then it's anything the integration point returns.
+            The command was accepted for processing, but there is no further information if or when the command will
+            be sent to the device.
+
+            As commands are considered short-lived, command which cannot be sent in the near future will get discarded.
         401:
           description: Invalid authentication.
         404:
-          description: Device or app not found.
+          description: Device or application not found.
         406:
           description: Device is not found or disabled.
 
@@ -833,16 +830,22 @@ components:
       additionalProperties: true
       description: A JSON object containing arbritrary status information attached to an application.
 
+    CommandName:
+      type: string
+      description: The name of the command.
+      example: set-value
+
     CommandObject:
       type: object
       additionalProperties: true
-      description: The command to execute.
+      description: Additional command payload.
       example:
         set-temp: 21
         set-light-color: FDF4DC
 
     Timeout:
       type: integer
+      minimum: 0
       example: 30
 
     TelemetryData:

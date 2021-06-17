@@ -433,7 +433,6 @@ impl Session {
                         application: app.to_string(),
                         device: device.to_string(),
                         command: command.to_string(),
-                        timeout: None,
                     };
 
                     match drogue_cloud_integration_common::commands::process_command(
