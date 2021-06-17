@@ -20,22 +20,30 @@ module.exports = (env, argv) => {
                 // should be aligned with nginx.conf
                 rewrites: [
                     // don't translate endpoints
-                    { from: /endpoints\/.*/, to: function(context) {
+                    {
+                        from: /endpoints\/.*/, to: function (context) {
                             return context.match[0];
-                    }},
+                        }
+                    },
                     // don't translate *.svg
-                    { from: /^(.*)\.(svg)$/, to: function(context) {
+                    {
+                        from: /^(.*)\.(svg)$/, to: function (context) {
                             return context.match[0];
-                    }},
+                        }
+                    },
                     // translate fonts differently
-                    { from: /^(.*)(\/fonts\/.*?\.(ttf|woff.?))$/, to: function(context) {
+                    {
+                        from: /^(.*)(\/fonts\/.*?\.(ttf|woff.?))$/, to: function (context) {
                             return context.match[2];
-                    }},
+                        }
+                    },
                     // translate everything that is in a sub-directory (e.g. components/form) and contains a dot
                     // (e.g. components/form/main.js) to the root (e.g. main.js).
-                    { from: /\/.*\/(.*\..*)$/, to: function(context) {
+                    {
+                        from: /\/.*\/(.*\..*)$/, to: function (context) {
                             return '/' + context.match[1];
-                    }}
+                        }
+                    }
                 ],
                 verbose: true,
             },
@@ -145,15 +153,15 @@ module.exports = (env, argv) => {
                 {
                     test: /\.yaml$/,
                     use: [
-                        { loader: 'json-loader' },
-                        { loader: 'yaml-loader' }
+                        {loader: 'json-loader'},
+                        {loader: 'yaml-loader'}
                     ]
                 },
                 {
                     test: /\.css$/,
                     use: [
-                        { loader: 'style-loader' },
-                        { loader: 'css-loader' },
+                        {loader: 'style-loader'},
+                        {loader: 'css-loader'},
                     ]
                 }
             ],
@@ -161,18 +169,28 @@ module.exports = (env, argv) => {
         performance: {
             hints: false
         },
+        experiments: {
+            syncWebAssembly: true
+        },
         plugins: [
-            new CopyWebpackPlugin([
-                { from: './static', to: distPath },
-                // copy over images
-                { from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'), to: path.resolve(distPath, "images") },
+            new CopyWebpackPlugin(
                 {
-                    // Copy the Swagger OAuth2 redirect file to the project root;
-                    // that file handles the OAuth2 redirect after authenticating the end-user.
-                    from: 'node_modules/swagger-ui/dist/oauth2-redirect.html',
-                    to: './'
-                }
-            ]),
+                    patterns:
+                        [
+                            {from: './static', to: distPath},
+                            // copy over images
+                            {
+                                from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'),
+                                to: path.resolve(distPath, "images")
+                            },
+                            {
+                                // Copy the Swagger OAuth2 redirect file to the project root;
+                                // that file handles the OAuth2 redirect after authenticating the end-user.
+                                from: 'node_modules/swagger-ui/dist/oauth2-redirect.html',
+                                to: './'
+                            }
+                        ]
+                }),
             new WasmPackPlugin({
                 crateDirectory: ".",
                 extraArgs: "--no-typescript --mode=no-install",
