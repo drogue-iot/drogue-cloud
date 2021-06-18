@@ -8,7 +8,7 @@ use actix_web::{
 };
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::downstream::{DownstreamSender, KafkaSink};
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting Command service endpoint");
 
-    let sender = DownstreamSender::new()?;
+    let sender = DownstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
 
     let config = Config::from_env()?;
     let max_json_payload_size = config.max_json_payload_size;
@@ -92,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
         Some(
             TokenConfig::from_env_prefix("REGISTRY")?
                 .amend_with_env()
-                .discover_from(client)
+                .discover_from(client.clone())
                 .await?,
         ),
     );
@@ -116,6 +116,7 @@ async fn main() -> anyhow::Result<()> {
             .data(web::JsonConfig::default().limit(max_json_payload_size))
             .data(sender.clone())
             .data(registry.clone())
+            .data(client.clone())
             .service(index)
             .service(
                 web::scope("/api/command/v1alpha1")
@@ -123,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
                     .wrap(Cors::permissive())
                     .service(
                         web::resource("/apps/{appId}/devices/{deviceId}")
-                            .route(web::post().to(v1alpha1::command)),
+                            .route(web::post().to(v1alpha1::command::<KafkaSink>)),
                     ),
             )
     })

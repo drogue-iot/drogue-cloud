@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{self, DownstreamSender},
+    downstream::{self, DownstreamSender, DownstreamSink},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
@@ -51,15 +51,18 @@ pub struct Uplink {
     pub payload_fields: Value,
 }
 
-async fn publish_uplink(
-    sender: web::Data<DownstreamSender>,
+async fn publish_uplink<S>(
+    sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     opts: PublishCommonOptions,
     req: web::HttpRequest,
     cert: Option<ClientCertificateChain>,
     body: web::Bytes,
     uplink: Uplink,
-) -> Result<HttpResponse, HttpEndpointError> {
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    S: DownstreamSink,
+{
     let device_id = uplink.device_id;
 
     let (application, device, r#as) = match auth
@@ -141,8 +144,8 @@ async fn publish_uplink(
     .await
 }
 
-async fn send_uplink<B>(
-    sender: web::Data<DownstreamSender>,
+async fn send_uplink<B, S>(
+    sender: web::Data<DownstreamSender<S>>,
     app_id: String,
     device_id: String,
     port: String,
@@ -154,6 +157,7 @@ async fn send_uplink<B>(
 ) -> Result<HttpResponse, HttpEndpointError>
 where
     B: AsRef<[u8]>,
+    S: DownstreamSink,
 {
     sender
         .publish_http_default(

@@ -1,12 +1,11 @@
 mod sender;
 
+use actix_web::HttpResponse;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
-    downstream::{self, DownstreamSender},
+    downstream::{self, DownstreamSender, DownstreamSink},
     error::HttpEndpointError,
 };
-
-use actix_web::HttpResponse;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -17,14 +16,18 @@ pub struct CommandOptions {
     pub command: String,
 }
 
-pub async fn process_command(
+pub async fn process_command<S>(
     device: registry::v1::Device,
     gateways: Vec<registry::v1::Device>,
-    sender: &DownstreamSender,
+    sender: &DownstreamSender<S>,
+    client: reqwest::Client,
     content_type: Option<String>,
     opts: CommandOptions,
     body: bytes::Bytes,
-) -> Result<HttpResponse, HttpEndpointError> {
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    S: DownstreamSink,
+{
     if !device.attribute::<registry::v1::DeviceEnabled>() {
         return Ok(HttpResponse::NotAcceptable().finish());
     }
@@ -41,7 +44,7 @@ pub async fn process_command(
 
                     let ctx = sender::Context {
                         device_id: device.metadata.name,
-                        client: sender.client.clone(),
+                        client,
                     };
 
                     match sender::send_to_external(ctx, endpoint, opts, body).await {

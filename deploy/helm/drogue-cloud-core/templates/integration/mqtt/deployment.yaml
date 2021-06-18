@@ -89,6 +89,8 @@ spec:
                   key: CLIENT_SECRET
             - name: SSO_URL
               value: {{ include "drogue-cloud-common.sso.url" . }}
+            - name: COMMAND_KAFKA_SINK__TOPIC
+              value: iot-commands
           ports:
             - containerPort: 8883
               name: service

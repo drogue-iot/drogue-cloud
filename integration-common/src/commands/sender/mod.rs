@@ -3,12 +3,11 @@ mod ttnv2;
 mod ttnv3;
 
 use crate::commands::CommandOptions;
-use actix_web::web;
-use actix_web::HttpResponse;
+use actix_web::{web, HttpResponse};
 use async_trait::async_trait;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
-    downstream::{self, DownstreamSender},
+    downstream::{self, DownstreamSender, DownstreamSink},
     error::HttpEndpointError,
 };
 use reqwest::{
@@ -34,15 +33,20 @@ pub trait Sender {
         body: web::Bytes,
     ) -> Result<(), Error>;
 
-    async fn process(
+    async fn process<S>(
         &self,
         device: registry::v1::Device,
         gateways: Vec<registry::v1::Device>,
-        sender: &DownstreamSender,
+        sender: &DownstreamSender<S>,
+        client: reqwest::Client,
         content_type: Option<String>,
         opts: CommandOptions,
         body: web::Bytes,
-    ) -> Result<HttpResponse, HttpEndpointError> {
+    ) -> Result<HttpResponse, HttpEndpointError>
+    where
+        S: DownstreamSink + Send + Sync,
+        <S as DownstreamSink>::Error: Send,
+    {
         if !device.attribute::<registry::v1::DeviceEnabled>() {
             return Ok(HttpResponse::NotAcceptable().finish());
         }
@@ -59,7 +63,7 @@ pub trait Sender {
 
                         let ctx = Context {
                             device_id: device.metadata.name,
-                            client: sender.client.clone(),
+                            client,
                         };
 
                         match send_to_external(ctx, endpoint, opts, body).await {

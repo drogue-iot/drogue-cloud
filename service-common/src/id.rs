@@ -11,10 +11,10 @@ pub struct Id {
 
 impl Id {
     /// Create a new scoped device ID.
-    pub fn new<A: ToString, D: ToString>(app_id: A, device_id: D) -> Self {
+    pub fn new<A: Into<String>, D: Into<String>>(app_id: A, device_id: D) -> Self {
         Self {
-            app_id: app_id.to_string(),
-            device_id: device_id.to_string(),
+            app_id: app_id.into(),
+            device_id: device_id.into(),
         }
     }
 

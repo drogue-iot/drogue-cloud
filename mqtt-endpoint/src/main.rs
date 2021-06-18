@@ -16,8 +16,11 @@ use crate::{
 use bytes::Bytes;
 use bytestring::ByteString;
 use dotenv::dotenv;
+use drogue_cloud_endpoint_common::downstream::DownstreamSink;
 use drogue_cloud_endpoint_common::{
-    commands::Commands, downstream::DownstreamSender, error::EndpointError,
+    commands::Commands,
+    downstream::{DownstreamSender, KafkaSink},
+    error::EndpointError,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
@@ -48,13 +51,19 @@ pub struct Config {
 }
 
 #[derive(Clone, Debug)]
-pub struct App {
-    pub downstream: DownstreamSender,
+pub struct App<S>
+where
+    S: DownstreamSink,
+{
+    pub downstream: DownstreamSender<S>,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
 }
 
-impl App {
+impl<S> App<S>
+where
+    S: DownstreamSink,
+{
     /// authenticate a client
     async fn authenticate(
         &self,
@@ -95,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
     let commands = Commands::new();
 
     let app = App {
-        downstream: DownstreamSender::new()?,
+        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),
@@ -122,9 +131,9 @@ async fn main() -> anyhow::Result<()> {
     // web server
 
     let web_server = web::server(move || {
-        web::App::new()
-            .data(web_app.clone())
-            .service(command_service)
+        web::App::new().data(web_app.clone()).service(
+            web::resource("/command-service").route(web::post().to(command_service::<KafkaSink>)),
+        )
     })
     .bind(config.bind_addr_http)?
     .run();

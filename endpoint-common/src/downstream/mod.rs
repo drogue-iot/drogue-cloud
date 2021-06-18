@@ -1,8 +1,15 @@
+mod http;
+mod kafka;
+
+pub use self::http::HttpSink;
+pub use kafka::*;
+
 use crate::error::HttpEndpointError;
 use actix_web::HttpResponse;
 use anyhow::Context;
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use cloudevents::{event::Data, EventBuilder, EventBuilderV10};
+use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
 use drogue_cloud_service_api::EXT_INSTANCE;
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
@@ -10,8 +17,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::future::Future;
+use thiserror::Error;
 
 const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
+
+const EXT_PARTITIONKEY: &str = "partitionkey";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Publish {
@@ -31,36 +41,57 @@ pub struct PublishOptions {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum Outcome {
+pub enum PublishOutcome {
+    /// Message accepted
     Accepted,
+    /// Invalid message format
     Rejected,
+    /// Input queue full
+    QueueFull,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PublishResponse {
-    pub outcome: Outcome,
+#[async_trait]
+pub trait DownstreamSink: Clone + Send + Sync + 'static {
+    type Error: std::error::Error + Send + 'static;
+
+    /// Publish an event.
+    async fn publish(&self, event: Event) -> Result<PublishOutcome, DownstreamError<Self::Error>>;
+}
+
+#[derive(Error, Debug)]
+pub enum DownstreamError<E: std::error::Error + 'static> {
+    #[error("Build event error")]
+    Build(#[from] cloudevents::event::EventBuilderError),
+    #[error("Event error")]
+    Event(#[from] cloudevents::message::Error),
+    #[error("Transport error")]
+    Transport(#[source] E),
 }
 
 #[derive(Clone, Debug)]
-pub struct DownstreamSender {
-    pub client: reqwest::Client,
-    sink: String,
+pub struct DownstreamSender<S>
+where
+    S: DownstreamSink,
+{
+    sink: S,
     instance: String,
 }
 
-impl DownstreamSender {
-    pub fn new() -> anyhow::Result<Self> {
-        let sink = std::env::var("K_SINK").context("Missing variable 'K_SINK'")?;
+impl<S> DownstreamSender<S>
+where
+    S: DownstreamSink,
+{
+    pub fn new(sink: S) -> anyhow::Result<Self> {
         let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
 
-        Ok(DownstreamSender {
-            client: reqwest::ClientBuilder::new().build()?,
-            sink,
-            instance,
-        })
+        Ok(Self { sink, instance })
     }
 
-    pub async fn publish<B>(&self, publish: Publish, body: B) -> anyhow::Result<PublishResponse>
+    pub async fn publish<B>(
+        &self,
+        publish: Publish,
+        body: B,
+    ) -> Result<PublishOutcome, DownstreamError<S::Error>>
     where
         B: AsRef<[u8]>,
     {
@@ -79,7 +110,7 @@ impl DownstreamSender {
             .subject(&publish.channel)
             .time(Utc::now());
 
-        event = event.extension("partitionkey", source);
+        event = event.extension(EXT_PARTITIONKEY, source);
         event = event.extension(EXT_INSTANCE, self.instance.clone());
 
         if let Some(data_schema) = publish.options.data_schema {
@@ -111,26 +142,7 @@ impl DownstreamSender {
 
         // build event
 
-        let event = event.build()?;
-
-        let response =
-            cloudevents_sdk_reqwest::event_to_request(event, self.client.post(&self.sink))
-                .map_err(|err| anyhow::anyhow!("{}", err.to_string()))
-                .context("Failed to build event")?
-                .send()
-                .await
-                .context("Failed to perform HTTP request")?;
-
-        log::info!("Publish result: {:?}", response);
-
-        match response.status().is_success() {
-            true => Ok(PublishResponse {
-                outcome: Outcome::Accepted,
-            }),
-            false => Ok(PublishResponse {
-                outcome: Outcome::Rejected,
-            }),
-        }
+        self.sink.publish(event.build()?).await
     }
 
     pub async fn publish_http<B, H, F>(
@@ -141,13 +153,12 @@ impl DownstreamSender {
     ) -> Result<HttpResponse, HttpEndpointError>
     where
         B: AsRef<[u8]>,
-        // F: FnOnce(Outcome) -> Result<HttpResponse, HttpEndpointError>,
-        H: FnOnce(Outcome) -> F,
+        H: FnOnce(PublishOutcome) -> F,
         F: Future<Output = Result<HttpResponse, HttpEndpointError>>,
     {
         match self.publish(publish, body).await {
             // ok
-            Ok(PublishResponse { outcome }) => f(outcome).await,
+            Ok(outcome) => f(outcome).await,
 
             // internal error
             Err(err) => Ok(HttpResponse::InternalServerError()
@@ -166,8 +177,9 @@ impl DownstreamSender {
     {
         self.publish_http(publish, body, |outcome| async move {
             match outcome {
-                Outcome::Accepted => Ok(HttpResponse::Accepted().finish()),
-                Outcome::Rejected => Ok(HttpResponse::NotAcceptable().finish()),
+                PublishOutcome::Accepted => Ok(HttpResponse::Accepted().finish()),
+                PublishOutcome::Rejected => Ok(HttpResponse::NotAcceptable().finish()),
+                PublishOutcome::QueueFull => Ok(HttpResponse::ServiceUnavailable().finish()),
             }
         })
         .await

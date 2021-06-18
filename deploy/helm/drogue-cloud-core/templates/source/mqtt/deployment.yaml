@@ -69,6 +69,8 @@ spec:
                   key: CLIENT_SECRET
             - name: SSO_URL
               value: {{ include "drogue-cloud-common.sso.url" . }}
+            - name: DOWNSTREAM_KAFKA_SINK__TOPIC
+              value: iot-events
           ports:
             - containerPort: 8883
               name: endpoint

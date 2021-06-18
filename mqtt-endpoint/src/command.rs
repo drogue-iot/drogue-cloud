@@ -1,14 +1,16 @@
 use crate::{cloudevents_sdk_ntex::request_to_event, App};
-use drogue_cloud_endpoint_common::commands::Command;
+use drogue_cloud_endpoint_common::{commands::Command, downstream::DownstreamSink};
 use ntex::{http, web};
 use std::convert::TryFrom;
 
-#[web::post("/command-service")]
-pub async fn command_service(
+pub async fn command_service<S>(
     req: web::HttpRequest,
     payload: web::types::Payload,
-    app: web::types::Data<App>,
-) -> http::Response {
+    app: web::types::Data<App<S>>,
+) -> http::Response
+where
+    S: DownstreamSink,
+{
     log::debug!("Command request: {:?}", req);
 
     let request_event = request_to_event(&req, payload).await.unwrap();

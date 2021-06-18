@@ -1,7 +1,7 @@
 use crate::{error::ServerError, server::Session, x509::ClientCertificateRetriever, App};
 use bytes::Bytes;
 use bytestring::ByteString;
-use drogue_cloud_endpoint_common::downstream::{Outcome, Publish, PublishResponse};
+use drogue_cloud_endpoint_common::downstream::{DownstreamSink, Publish, PublishOutcome};
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::Id;
 use ntex_mqtt::{
@@ -50,12 +50,13 @@ macro_rules! connect {
     }};
 }
 
-pub async fn connect_v3<Io>(
+pub async fn connect_v3<Io, S>(
     mut connect: v3::Handshake<Io>,
-    app: App,
-) -> Result<v3::HandshakeAck<Io, Session>, ServerError>
+    app: App<S>,
+) -> Result<v3::HandshakeAck<Io, Session<S>>, ServerError>
 where
     Io: ClientCertificateRetriever + 'static,
+    S: DownstreamSink,
 {
     let certs = connect.io().client_certs();
     log::info!("Certs: {:?}", certs);
@@ -68,12 +69,13 @@ where
     }
 }
 
-pub async fn connect_v5<Io>(
+pub async fn connect_v5<Io, S>(
     mut connect: v5::Handshake<Io>,
-    app: App,
-) -> Result<v5::HandshakeAck<Io, Session>, ServerError>
+    app: App<S>,
+) -> Result<v5::HandshakeAck<Io, Session<S>>, ServerError>
 where
     Io: ClientCertificateRetriever + 'static,
+    S: DownstreamSink,
 {
     let certs = connect.io().client_certs();
     log::info!("Certs: {:?}", certs);
@@ -110,39 +112,45 @@ macro_rules! publish {
     }};
 }
 
-pub async fn publish_v3(
-    session: v3::Session<Session>,
+pub async fn publish_v3<S>(
+    session: v3::Session<Session<S>>,
     publish: v3::Publish,
-) -> Result<(), ServerError> {
+) -> Result<(), ServerError>
+where
+    S: DownstreamSink,
+{
     match publish!(session, publish).await {
-        Ok(PublishResponse {
-            outcome: Outcome::Accepted,
-        }) => Ok(()),
+        Ok(PublishOutcome::Accepted) => Ok(()),
 
-        Ok(PublishResponse {
-            outcome: Outcome::Rejected,
-        }) => Err(ServerError {
+        Ok(PublishOutcome::Rejected) => Err(ServerError {
             // with MQTTv3, we can only close the connection
             msg: "Rejected".into(),
+        }),
+
+        Ok(PublishOutcome::QueueFull) => Err(ServerError {
+            // with MQTTv3, we can only close the connection
+            msg: "QueueFull".into(),
         }),
 
         Err(e) => Err(ServerError { msg: e.to_string() }),
     }
 }
 
-pub async fn publish_v5(
-    session: v5::Session<Session>,
+pub async fn publish_v5<S>(
+    session: v5::Session<Session<S>>,
     publish: v5::Publish,
-) -> Result<v5::PublishAck, ServerError> {
+) -> Result<v5::PublishAck, ServerError>
+where
+    S: DownstreamSink,
+{
     match publish!(session, publish).await {
-        Ok(PublishResponse {
-            outcome: Outcome::Accepted,
-        }) => Ok(publish.ack()),
-        Ok(PublishResponse {
-            outcome: Outcome::Rejected,
-        }) => Ok(publish
+        Ok(PublishOutcome::Accepted) => Ok(publish.ack()),
+        Ok(PublishOutcome::Rejected) => Ok(publish
             .ack()
             .reason_code(PublishAckReason::UnspecifiedError)),
+        Ok(PublishOutcome::QueueFull) => {
+            Ok(publish.ack().reason_code(PublishAckReason::QuotaExceeded))
+        }
         Err(e) => Err(ServerError { msg: e.to_string() }),
     }
 }
@@ -208,10 +216,13 @@ macro_rules! unsubscribe {
     }};
 }
 
-pub async fn control_v3(
-    session: v3::Session<Session>,
+pub async fn control_v3<S>(
+    session: v3::Session<Session<S>>,
     control: v3::ControlMessage,
-) -> Result<v3::ControlResult, ServerError> {
+) -> Result<v3::ControlResult, ServerError>
+where
+    S: DownstreamSink,
+{
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => unsubscribe!(d, session, "Disconnecting device {:?}"),
@@ -223,10 +234,13 @@ pub async fn control_v3(
     }
 }
 
-pub async fn control_v5<E: Debug>(
-    session: v5::Session<Session>,
+pub async fn control_v5<E: Debug, S>(
+    session: v5::Session<Session<S>>,
     control: v5::ControlMessage<E>,
-) -> Result<v5::ControlResult, ServerError> {
+) -> Result<v5::ControlResult, ServerError>
+where
+    S: DownstreamSink,
+{
     match control {
         v5::ControlMessage::Auth(a) => Ok(a.ack(Auth::default())),
         v5::ControlMessage::Error(e) => Ok(e.ack(DisconnectReasonCode::UnspecifiedError)),

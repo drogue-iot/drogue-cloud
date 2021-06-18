@@ -5,8 +5,10 @@ use crate::{
     App, Config,
 };
 use anyhow::Context;
-use drogue_cloud_endpoint_common::commands::Commands;
-use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::{
+    commands::Commands,
+    downstream::{DownstreamSender, DownstreamSink},
+};
 use drogue_cloud_service_common::Id;
 use futures::future::ok;
 use ntex::{
@@ -20,14 +22,20 @@ use rust_tls::{internal::pemfile::certs, PrivateKey, ServerConfig};
 use std::{fs::File, io::BufReader, sync::Arc};
 
 #[derive(Clone)]
-pub struct Session {
-    pub sender: DownstreamSender,
+pub struct Session<S>
+where
+    S: DownstreamSink,
+{
+    pub sender: DownstreamSender<S>,
     pub device_id: Id,
     pub commands: Commands,
 }
 
-impl Session {
-    pub fn new(sender: DownstreamSender, device_id: Id, commands: Commands) -> Self {
+impl<S> Session<S>
+where
+    S: DownstreamSink,
+{
+    pub fn new(sender: DownstreamSender<S>, device_id: Id, commands: Commands) -> Self {
         Session {
             sender,
             device_id,
@@ -94,44 +102,58 @@ macro_rules! create_server {
                 let app = app3.clone();
                 ok::<_, ()>(fn_service(move |req| connect_v3(req, app.clone())))
             }))
-            .control(fn_factory_with_config(|session: v3::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| control_v3(session.clone(), req)))
-            }))
-            .publish(fn_factory_with_config(|session: v3::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| publish_v3(session.clone(), req)))
-            })))
+            .control(fn_factory_with_config(
+                |session: v3::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| control_v3(session.clone(), req)))
+                },
+            ))
+            .publish(fn_factory_with_config(
+                |session: v3::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| publish_v3(session.clone(), req)))
+                },
+            )))
             // MQTTv5
             .v5(v5::MqttServer::new(fn_factory_with_config(move |_| {
                 let app = app5.clone();
                 ok::<_, ()>(fn_service(move |req| connect_v5(req, app.clone())))
             }))
             .max_size(DEFAULT_MAX_SIZE)
-            .control(fn_factory_with_config(|session: v5::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| control_v5(session.clone(), req)))
-            }))
-            .publish(fn_factory_with_config(|session: v5::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| publish_v5(session.clone(), req)))
-            })))
+            .control(fn_factory_with_config(
+                |session: v5::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| control_v5(session.clone(), req)))
+                },
+            ))
+            .publish(fn_factory_with_config(
+                |session: v5::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| publish_v5(session.clone(), req)))
+                },
+            )))
     }};
 }
 
-pub fn build(
+pub fn build<S>(
     addr: Option<&str>,
     builder: ServerBuilder,
-    app: App,
-) -> anyhow::Result<ServerBuilder> {
+    app: App<S>,
+) -> anyhow::Result<ServerBuilder>
+where
+    S: DownstreamSink,
+{
     let addr = addr.unwrap_or("127.0.0.1:1883");
     log::info!("Starting MQTT (non-TLS) server: {}", addr);
 
     Ok(builder.bind("mqtt", addr, move || create_server!(app))?)
 }
 
-pub fn build_tls(
+pub fn build_tls<S>(
     addr: Option<&str>,
     builder: ServerBuilder,
-    app: App,
+    app: App<S>,
     config: &Config,
-) -> anyhow::Result<ServerBuilder> {
+) -> anyhow::Result<ServerBuilder>
+where
+    S: DownstreamSink,
+{
     let addr = addr.unwrap_or("127.0.0.1:8883");
     log::info!("Starting MQTT (TLS) server: {}", addr);
 

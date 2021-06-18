@@ -1,7 +1,7 @@
 use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
 use drogue_client::{registry, Context};
-use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::downstream::{DownstreamSender, DownstreamSink};
 use drogue_cloud_integration_common::{
     self,
     commands::CommandOptions,
@@ -52,15 +52,16 @@ impl Default for ServiceConfig {
 }
 
 #[derive(Clone, Debug)]
-pub struct App {
+pub struct App<S: DownstreamSink> {
     pub authenticator: Option<Authenticator>,
     pub user_auth: Option<Arc<UserAuthClient>>,
     pub config: ServiceConfig,
-    pub sender: DownstreamSender,
+    pub sender: DownstreamSender<S>,
+    pub client: reqwest::Client,
     pub registry: registry::v1::Client,
 }
 
-pub struct Session {
+pub struct Session<S: DownstreamSink> {
     pub config: ServiceConfig,
     pub user_auth: Option<Arc<UserAuthClient>>,
 
@@ -70,7 +71,8 @@ pub struct Session {
 
     streams: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
 
-    pub sender: DownstreamSender,
+    pub sender: DownstreamSender<S>,
+    pub client: reqwest::Client,
     pub registry: registry::v1::Client,
 
     pub token: Option<String>,
@@ -95,7 +97,10 @@ enum ContentMode {
     Structured,
 }
 
-impl App {
+impl<S> App<S>
+where
+    S: DownstreamSink,
+{
     /// Authenticate a connection from a connect packet
     async fn authenticate<Io>(
         &self,
@@ -154,7 +159,7 @@ impl App {
         Ok(user)
     }
 
-    pub async fn connect<Io>(&self, connect: Connect<'_, Io>) -> Result<Session, ServerError> {
+    pub async fn connect<Io>(&self, connect: Connect<'_, Io>) -> Result<Session<S>, ServerError> {
         log::debug!("Processing connect request");
 
         if !connect.clean_session() {
@@ -188,20 +193,25 @@ impl App {
             user,
             client_id,
             self.sender.clone(),
+            self.client.clone(),
             self.registry.clone(),
             token,
         ))
     }
 }
 
-impl Session {
+impl<S> Session<S>
+where
+    S: DownstreamSink,
+{
     pub fn new(
         config: ServiceConfig,
         user_auth: Option<Arc<UserAuthClient>>,
         sink: Sink,
         user: UserInformation,
         client_id: String,
-        sender: DownstreamSender,
+        sender: DownstreamSender<S>,
+        client: reqwest::Client,
         registry: registry::v1::Client,
         token: Option<String>,
     ) -> Self {
@@ -213,6 +223,7 @@ impl Session {
             client_id,
             streams: Arc::new(Mutex::new(HashMap::new())),
             sender,
+            client,
             registry,
             token,
         }
@@ -439,6 +450,7 @@ impl Session {
                         device_gateways.0,
                         device_gateways.1,
                         &self.sender,
+                        self.client.clone(),
                         None,
                         opts,
                         publish.payload().clone(),
@@ -572,7 +584,10 @@ impl Session {
     }
 }
 
-impl Drop for Session {
+impl<S> Drop for Session<S>
+where
+    S: DownstreamSink,
+{
     fn drop(&mut self) {
         log::debug!("Dropping session");
         if let Ok(mut streams) = self.streams.lock() {

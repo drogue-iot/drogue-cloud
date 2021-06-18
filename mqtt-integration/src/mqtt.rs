@@ -2,6 +2,7 @@ use crate::{
     error::{MqttResponse, ServerError},
     service::{App, Session},
 };
+use drogue_cloud_endpoint_common::downstream::DownstreamSink;
 use ntex::router::Path;
 use ntex::util::{ByteString, Bytes};
 use ntex_mqtt::types::QoS;
@@ -15,20 +16,26 @@ use ntex_mqtt::{
 use std::fmt::Debug;
 use std::num::NonZeroU32;
 
-pub async fn connect_v3<Io>(
+pub async fn connect_v3<Io, S>(
     connect: v3::Handshake<Io>,
-    app: App,
-) -> Result<v3::HandshakeAck<Io, Session>, ServerError> {
+    app: App<S>,
+) -> Result<v3::HandshakeAck<Io, Session<S>>, ServerError>
+where
+    S: DownstreamSink,
+{
     match app.connect(Connect::V3(&connect)).await {
         Ok(session) => Ok(connect.ack(session, false)),
         Err(_) => Ok(connect.bad_username_or_pwd()),
     }
 }
 
-pub async fn connect_v5<Io>(
+pub async fn connect_v5<Io, S>(
     connect: v5::Handshake<Io>,
-    app: App,
-) -> Result<v5::HandshakeAck<Io, Session>, ServerError> {
+    app: App<S>,
+) -> Result<v5::HandshakeAck<Io, Session<S>>, ServerError>
+where
+    S: DownstreamSink,
+{
     match app.connect(Connect::V5(&connect)).await {
         Ok(session) => Ok(connect.ack(session).with(|ack| {
             ack.retain_available = Some(false);
@@ -40,27 +47,36 @@ pub async fn connect_v5<Io>(
     }
 }
 
-pub async fn publish_v3(
-    session: v3::Session<Session>,
+pub async fn publish_v3<S>(
+    session: v3::Session<Session<S>>,
     publish: v3::Publish,
-) -> Result<(), ServerError> {
+) -> Result<(), ServerError>
+where
+    S: DownstreamSink,
+{
     session.publish(Publish::V3(&publish)).await
 }
 
-pub async fn publish_v5(
-    session: v5::Session<Session>,
+pub async fn publish_v5<S>(
+    session: v5::Session<Session<S>>,
     publish: v5::Publish,
-) -> Result<v5::PublishAck, ServerError> {
+) -> Result<v5::PublishAck, ServerError>
+where
+    S: DownstreamSink,
+{
     match session.publish(Publish::V5(&publish)).await {
         Ok(_) => Ok(publish.ack()),
         Err(err) => Ok(err.ack(publish.ack())),
     }
 }
 
-pub async fn control_v3(
-    session: v3::Session<Session>,
+pub async fn control_v3<S>(
+    session: v3::Session<Session<S>>,
     control: v3::ControlMessage,
-) -> Result<v3::ControlResult, ServerError> {
+) -> Result<v3::ControlResult, ServerError>
+where
+    S: DownstreamSink,
+{
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
@@ -81,10 +97,13 @@ pub async fn control_v3(
     }
 }
 
-pub async fn control_v5<E: Debug>(
-    session: v5::Session<Session>,
+pub async fn control_v5<E: Debug, S>(
+    session: v5::Session<Session<S>>,
     control: v5::ControlMessage<E>,
-) -> Result<v5::ControlResult, ServerError> {
+) -> Result<v5::ControlResult, ServerError>
+where
+    S: DownstreamSink,
+{
     match control {
         v5::ControlMessage::Auth(a) => {
             // we don't do extended authentication (yet?)

@@ -5,6 +5,7 @@ use crate::{
     Config,
 };
 use anyhow::Context;
+use drogue_cloud_endpoint_common::downstream::DownstreamSink;
 use futures::future::ok;
 use ntex::{
     fn_factory_with_config, fn_service,
@@ -72,33 +73,44 @@ macro_rules! create_server {
                 ok::<_, ()>(fn_service(move |req| connect_v3(req, app.clone())))
             }))
             .max_size($max_size)
-            .control(fn_factory_with_config(|session: v3::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| control_v3(session.clone(), req)))
-            }))
-            .publish(fn_factory_with_config(|session: v3::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| publish_v3(session.clone(), req)))
-            })))
+            .control(fn_factory_with_config(
+                |session: v3::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| control_v3(session.clone(), req)))
+                },
+            ))
+            .publish(fn_factory_with_config(
+                |session: v3::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| publish_v3(session.clone(), req)))
+                },
+            )))
             // MQTTv5
             .v5(v5::MqttServer::new(fn_factory_with_config(move |_| {
                 let app = app5.clone();
                 ok::<_, ()>(fn_service(move |req| connect_v5(req, app.clone())))
             }))
             .max_size($max_size)
-            .control(fn_factory_with_config(|session: v5::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| control_v5(session.clone(), req)))
-            }))
-            .publish(fn_factory_with_config(|session: v5::Session<Session>| {
-                ok::<_, ServerError>(fn_service(move |req| publish_v5(session.clone(), req)))
-            })))
+            .control(fn_factory_with_config(
+                |session: v5::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| control_v5(session.clone(), req)))
+                },
+            ))
+            .publish(fn_factory_with_config(
+                |session: v5::Session<Session<S>>| {
+                    ok::<_, ServerError>(fn_service(move |req| publish_v5(session.clone(), req)))
+                },
+            )))
     }};
 }
 
-pub fn build(
+pub fn build<S>(
     addr: Option<&str>,
     builder: ServerBuilder,
-    app: App,
+    app: App<S>,
     config: &Config,
-) -> anyhow::Result<ServerBuilder> {
+) -> anyhow::Result<ServerBuilder>
+where
+    S: DownstreamSink,
+{
     let addr = addr.unwrap_or("127.0.0.1:1883");
     let max_size = config.max_size.unwrap_or(DEFAULT_MAX_SIZE);
 
@@ -107,12 +119,15 @@ pub fn build(
     Ok(builder.bind("mqtt", addr, move || create_server!(app, max_size))?)
 }
 
-pub fn build_tls(
+pub fn build_tls<S>(
     addr: Option<&str>,
     builder: ServerBuilder,
-    app: App,
+    app: App<S>,
     config: &Config,
-) -> anyhow::Result<ServerBuilder> {
+) -> anyhow::Result<ServerBuilder>
+where
+    S: DownstreamSink,
+{
     let addr = addr.unwrap_or("127.0.0.1:8883");
     log::info!("Starting MQTT (TLS) server: {}", addr);
 

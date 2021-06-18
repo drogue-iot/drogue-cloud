@@ -24,6 +24,7 @@ anyhow = "1"
 snafu = "0.6"
 chrono = "0.4"
 
+async-trait = "0.1"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
@@ -39,10 +40,14 @@ uuid = { version = "0.8", features = ["v4"] }
 env_logger = "0.7"
 log = "0.4"
 config = "0.11"
+thiserror = "1"
 
 cloudevents-sdk = "0.4"
 cloudevents-sdk-actix-web = "0.4"
 cloudevents-sdk-reqwest = "0.4"
+cloudevents-sdk-rdkafka = "0.4"
+
+rdkafka = { version = "0.25", features = ["ssl", "sasl"]  }
 
 percent-encoding = "2"
 base64 = "0.13"

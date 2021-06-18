@@ -72,6 +72,8 @@ spec:
               value: /etc/endpoint/tls.key
             - name: SSO_URL
               value: {{ include "drogue-cloud-common.sso.url" . }}
+            - name: DOWNSTREAM_KAFKA_SINK__TOPIC
+              value: iot-events
           {{ end }}
 
           ports:

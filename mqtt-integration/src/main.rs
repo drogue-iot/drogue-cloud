@@ -11,7 +11,7 @@ use crate::{
 };
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::downstream::DownstreamSender;
+use drogue_cloud_endpoint_common::downstream::{DownstreamSender, KafkaSink};
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
@@ -124,11 +124,11 @@ async fn main() -> anyhow::Result<()> {
         Some(
             TokenConfig::from_env_prefix("REGISTRY")?
                 .amend_with_env()
-                .discover_from(client)
+                .discover_from(client.clone())
                 .await?,
         ),
     );
-    let sender = DownstreamSender::new()?;
+    let sender = DownstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
 
     // creating the application
 
@@ -137,6 +137,7 @@ async fn main() -> anyhow::Result<()> {
         user_auth,
         config: config.service.clone(),
         sender,
+        client,
         registry,
     };
 

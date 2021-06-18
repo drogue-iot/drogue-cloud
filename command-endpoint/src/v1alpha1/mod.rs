@@ -1,7 +1,10 @@
 use actix_web::{http::header, web, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use drogue_client::{registry, Context};
-use drogue_cloud_endpoint_common::{downstream::DownstreamSender, error::HttpEndpointError};
+use drogue_cloud_endpoint_common::{
+    downstream::{DownstreamSender, DownstreamSink},
+    error::HttpEndpointError,
+};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
 use serde::Deserialize;
 
@@ -10,15 +13,19 @@ pub struct CommandQuery {
     pub command: String,
 }
 
-pub async fn command(
-    sender: web::Data<DownstreamSender>,
+pub async fn command<S>(
+    sender: web::Data<DownstreamSender<S>>,
+    client: web::Data<reqwest::Client>,
     path: web::Path<(String, String)>,
     web::Query(opts): web::Query<CommandQuery>,
     req: web::HttpRequest,
     body: web::Bytes,
     registry: web::Data<registry::v1::Client>,
     token: BearerAuth,
-) -> Result<HttpResponse, HttpEndpointError> {
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    S: DownstreamSink,
+{
     let (application, device) = path.into_inner();
 
     log::debug!(
@@ -49,6 +56,7 @@ pub async fn command(
                 device_gateways.0,
                 device_gateways.1,
                 &sender,
+                client.get_ref().clone(),
                 content_type,
                 CommandOptions {
                     application,

@@ -16,7 +16,7 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command_endpoint::{CommandServer, CommandServerConfig},
     commands::Commands,
-    downstream::DownstreamSender,
+    downstream::{DownstreamSender, KafkaSink},
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting HTTP service endpoint");
 
-    let sender = DownstreamSender::new()?;
+    let sender = DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?;
     let commands = Commands::new();
 
     let config = Config::from_env()?;
@@ -97,15 +97,21 @@ async fn main() -> anyhow::Result<()> {
             // the standard endpoint
             .service(
                 web::scope("/v1")
-                    .service(telemetry::publish_plain)
-                    .service(telemetry::publish_tail),
+                    .service(
+                        web::resource("/{channel}")
+                            .route(web::post().to(telemetry::publish_plain::<KafkaSink>)),
+                    )
+                    .service(
+                        web::resource("/{channel}/{suffix:.*}")
+                            .route(web::post().to(telemetry::publish_tail::<KafkaSink>)),
+                    ),
             )
             // The Things Network variant
             .service(
                 web::scope("/ttn")
-                    .route("/", web::post().to(ttn::publish_v2))
-                    .route("/v2", web::post().to(ttn::publish_v2))
-                    .route("/v3", web::post().to(ttn::publish_v3)),
+                    .route("/", web::post().to(ttn::publish_v2::<KafkaSink>))
+                    .route("/v2", web::post().to(ttn::publish_v2::<KafkaSink>))
+                    .route("/v3", web::post().to(ttn::publish_v3::<KafkaSink>)),
             )
     })
     .on_connect(|con, ext| {

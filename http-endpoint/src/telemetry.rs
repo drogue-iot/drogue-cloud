@@ -1,15 +1,13 @@
-use crate::command::wait_for_command;
-use actix_web::{http::header, post, web, HttpResponse};
-use drogue_client::error::ErrorInformation;
+use crate::downstream::HttpCommandSender;
+use actix_web::{http::header, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     commands::Commands,
-    downstream::{self, DownstreamSender, Outcome, PublishResponse},
+    downstream::{self, DownstreamSender, DownstreamSink},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn;
-use drogue_cloud_service_common::Id;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -31,9 +29,8 @@ pub struct PublishOptions {
     pub ct: Option<u64>,
 }
 
-#[post("/{channel}")]
-pub async fn publish_plain(
-    sender: web::Data<DownstreamSender>,
+pub async fn publish_plain<S>(
+    sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     channel: web::Path<String>,
@@ -41,7 +38,10 @@ pub async fn publish_plain(
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError> {
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    S: DownstreamSink,
+{
     publish(
         sender,
         auth,
@@ -56,9 +56,8 @@ pub async fn publish_plain(
     .await
 }
 
-#[post("/{channel}/{suffix:.*}")]
-pub async fn publish_tail(
-    sender: web::Data<DownstreamSender>,
+pub async fn publish_tail<S>(
+    sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     path: web::Path<(String, String)>,
@@ -66,7 +65,10 @@ pub async fn publish_tail(
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError> {
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    S: DownstreamSink,
+{
     let (channel, suffix) = path.into_inner();
     publish(
         sender,
@@ -82,8 +84,8 @@ pub async fn publish_tail(
     .await
 }
 
-pub async fn publish(
-    sender: web::Data<DownstreamSender>,
+pub async fn publish<S>(
+    sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     channel: String,
@@ -92,7 +94,11 @@ pub async fn publish(
     req: web::HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError> {
+) -> Result<HttpResponse, HttpEndpointError>
+where
+    S: DownstreamSink + Send,
+    <S as DownstreamSink>::Error: Send,
+{
     log::debug!("Publish to '{}'", channel);
 
     let (application, device, r#as) = match auth
@@ -125,48 +131,23 @@ pub async fn publish(
 
     // publish
 
-    match sender
-        .publish(
-            downstream::Publish {
-                channel,
-                app_id: application.metadata.name.clone(),
-                device_id: device_id.clone(),
-                options: downstream::PublishOptions {
-                    data_schema: opts.common.data_schema,
-                    topic: suffix,
-                    content_type: req
-                        .headers()
-                        .get(header::CONTENT_TYPE)
-                        .and_then(|v| v.to_str().ok())
-                        .map(|s| s.to_string()),
-                    ..Default::default()
-                },
-            },
-            body,
-        )
+    let publish = downstream::Publish {
+        channel,
+        app_id: application.metadata.name.clone(),
+        device_id: device_id.clone(),
+        options: downstream::PublishOptions {
+            data_schema: opts.common.data_schema,
+            topic: suffix,
+            content_type: req
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
+            ..Default::default()
+        },
+    };
+
+    sender
+        .publish_and_await(publish, commands, opts.ct, body)
         .await
-    {
-        // ok, and accepted
-        Ok(PublishResponse {
-            outcome: Outcome::Accepted,
-        }) => {
-            wait_for_command(
-                commands,
-                Id::new(application.metadata.name, device_id),
-                opts.ct,
-            )
-            .await
-        }
-
-        // ok, but rejected
-        Ok(PublishResponse {
-            outcome: Outcome::Rejected,
-        }) => Ok(HttpResponse::build(http::StatusCode::NOT_ACCEPTABLE).finish()),
-
-        // internal error
-        Err(err) => Ok(HttpResponse::InternalServerError().json(ErrorInformation {
-            error: "InternalError".into(),
-            message: err.to_string(),
-        })),
-    }
 }
