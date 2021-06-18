@@ -49,6 +49,8 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: admin.password
+            - name: KAFKA_EVENTS__TOPIC
+              value: registry
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

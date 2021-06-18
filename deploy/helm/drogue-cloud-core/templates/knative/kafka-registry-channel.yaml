@@ -1,9 +1,0 @@
-apiVersion: eventing.knative.dev/v1alpha1
-kind: KafkaSink
-metadata:
-  name: registry
-spec:
-  bootstrapServers:
-    - drogue-iot-kafka-bootstrap.{{ .Release.Namespace }}.svc.cluster.local.:9092
-  contentMode: binary
-  topic: registry

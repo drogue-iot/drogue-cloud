@@ -1,8 +1,9 @@
 #[cfg(feature = "with_database")]
 pub mod db;
 pub mod mock;
-#[cfg(feature = "with_reqwest")]
-pub mod reqwest;
+
+mod sender;
+pub use sender::*;
 
 use async_trait::async_trait;
 use chrono::Utc;

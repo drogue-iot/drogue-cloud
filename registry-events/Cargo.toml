@@ -10,7 +10,9 @@ log = "0.4"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+humantime-serde = "1"
 
+anyhow = "1"
 thiserror = "1"
 async-trait = "0.1"
 
@@ -20,11 +22,15 @@ reqwest = { version = "0.11", optional = true }
 
 cloudevents-sdk = "0.4"
 cloudevents-sdk-reqwest = { version = "0.4", optional = true }
+cloudevents-sdk-rdkafka = { version = "0.4", optional = true }
 
 uuid = { version = "0.8", features = ["v4"] }
 mime = "0.3"
 
+rdkafka = { version = "0.25", features = ["ssl", "sasl"], optional = true }
+
 drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-database-common = { path = "../database-common", optional = true }
 
 [dev-dependencies]
@@ -32,6 +38,7 @@ tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 
 [features]
-default = ["with_reqwest", "with_database"]
+default = ["with_kafka", "with_database"]
 with_reqwest = ["reqwest", "cloudevents-sdk-reqwest"]
+with_kafka = ["rdkafka", "cloudevents-sdk-rdkafka"]
 with_database = ["drogue-cloud-database-common"]

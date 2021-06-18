@@ -5,7 +5,6 @@ pub mod utils;
 use crate::service::management::ManagementService;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
 use serde::Deserialize;
-use url::Url;
 
 #[derive(Debug)]
 pub struct WebData<S: ManagementService> {
@@ -19,8 +18,6 @@ pub struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[serde(rename = "k_sink")]
-    pub event_url: Url,
 
     #[serde(default)]
     pub health: HealthServerConfig,

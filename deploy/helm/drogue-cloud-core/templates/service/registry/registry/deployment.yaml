@@ -107,6 +107,8 @@ spec:
                   key: instance
             - name: SSO_URL
               value: {{ include "drogue-cloud-common.sso.url" . }}
+            - name: KAFKA_EVENTS__TOPIC
+              value: registry
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

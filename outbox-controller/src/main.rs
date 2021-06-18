@@ -14,7 +14,7 @@ use actix_web::{
 };
 use anyhow::Context;
 use dotenv::dotenv;
-use drogue_cloud_registry_events::reqwest::ReqwestEventSender;
+use drogue_cloud_registry_events::kafka::KafkaEventSender;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
@@ -24,7 +24,6 @@ use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
-use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
 struct Config {
@@ -43,9 +42,6 @@ struct Config {
     #[serde(with = "humantime_serde")]
     /// Send events older than x seconds.
     pub before: Duration,
-
-    #[serde(rename = "k_sink")]
-    pub event_url: Url,
 
     #[serde(default)]
     pub health: HealthServerConfig,
@@ -79,12 +75,8 @@ async fn main() -> anyhow::Result<()> {
     let service = service::OutboxService::new(OutboxServiceConfig::from_env()?)?;
 
     // create event sender
-    let sender = ReqwestEventSender::new(
-        reqwest::ClientBuilder::new()
-            .build()
-            .context("Failed to create event sender client")?,
-        config.event_url,
-    );
+    let sender =
+        KafkaEventSender::new("KAFKA_EVENTS").context("Unable to create Kafka event sender")?;
 
     // start resender
     Resender {

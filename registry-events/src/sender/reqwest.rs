@@ -24,9 +24,9 @@ impl EventSender for ReqwestEventSender {
     async fn notify<I>(&self, events: I) -> SenderResult<(), Self::Error>
     where
         I: IntoIterator<Item = Event> + Sync + Send,
+        I::IntoIter: Sync + Send,
     {
-        let events = events.into_iter().collect::<Vec<_>>();
-        for event in events {
+        for event in events.into_iter() {
             let event: cloudevents::Event = event.try_into().map_err(EventSenderError::Event)?;
             event_to_request(event, self.client.post(self.url.clone()))
                 .map_err(EventSenderError::CloudEvent)?

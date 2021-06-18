@@ -8,7 +8,7 @@ use drogue_cloud_device_management_service::{
     service::{self, PostgresManagementServiceConfig},
     Config, WebData,
 };
-use drogue_cloud_registry_events::reqwest::ReqwestEventSender;
+use drogue_cloud_registry_events::kafka::KafkaEventSender;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv, health::HealthServer, openid::Authenticator, openid_auth,
 };
@@ -30,12 +30,8 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let sender = ReqwestEventSender::new(
-        reqwest::ClientBuilder::new()
-            .build()
-            .context("Failed to create event sender client")?,
-        config.event_url,
-    );
+    let sender =
+        KafkaEventSender::new("KAFKA_EVENTS").context("Unable to create Kafka event sender")?;
 
     let max_json_payload_size = 64 * 1024;
 
@@ -58,21 +54,16 @@ async fn main() -> anyhow::Result<()> {
     let main = HttpServer::new(move || {
         let auth = openid_auth!(req -> {
             req
-            .app_data::<web::Data<WebData<service::PostgresManagementService<ReqwestEventSender>>>>()
+            .app_data::<web::Data<WebData<service::PostgresManagementService<KafkaEventSender>>>>()
             .as_ref()
             .and_then(|d|d.authenticator.as_ref())
         });
-        app!(
-            ReqwestEventSender,
-            enable_auth,
-            max_json_payload_size,
-            auth
-        )
+        app!(KafkaEventSender, enable_auth, max_json_payload_size, auth)
             // for the management service
             .app_data(data.clone())
             // for the admin service
-            .data(apps::WebData{
-                service: service.clone()
+            .data(apps::WebData {
+                service: service.clone(),
             })
     })
     .bind(config.bind_addr)?

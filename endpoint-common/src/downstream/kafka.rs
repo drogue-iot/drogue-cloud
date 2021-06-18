@@ -1,8 +1,7 @@
 use super::*;
 
 use async_trait::async_trait;
-use cloudevents::event::ExtensionValue;
-use cloudevents::AttributesReader;
+use cloudevents::{event::ExtensionValue, AttributesReader};
 use cloudevents_sdk_rdkafka::{FutureRecordExt, MessageRecord};
 use drogue_cloud_service_common::{config::ConfigFromEnv, defaults};
 use futures::channel::oneshot;
@@ -46,6 +45,7 @@ impl KafkaSink {
         kafka_config.set("bootstrap.servers", &config.bootstrap_servers);
 
         for (k, v) in config.custom {
+            log::info!("Kafka Option - {} = {}", k, v);
             kafka_config.set(k, v);
         }
 
