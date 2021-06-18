@@ -21,7 +21,7 @@ spec:
   config: {}
   partitions: 3
   replicas: 1
-  topicName: iot-events
+  topicName: iot-commands
 ---
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
@@ -33,4 +33,4 @@ spec:
   config: {}
   partitions: 3
   replicas: 1
-  topicName: iot-events
+  topicName: registry
