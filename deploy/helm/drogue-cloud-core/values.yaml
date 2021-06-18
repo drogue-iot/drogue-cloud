@@ -17,6 +17,8 @@ defaults:
   passthrough: {}
 
 keycloak:
+  adminPassword: admin123456
+  identityProviders: []
   postgres:
     # The way postgres gets configured. This can be:
     #  - drogue: Re-use the Drogue Cloud postgres instance

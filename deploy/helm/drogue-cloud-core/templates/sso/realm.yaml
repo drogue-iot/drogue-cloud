@@ -5,6 +5,9 @@ metadata:
   labels:
     app.kubernetes.io/part-of: console
 spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: sso
   realm:
     realm: "drogue"
     enabled: true
@@ -12,6 +15,4 @@ spec:
     registrationAllowed: true
     resetPasswordAllowed: true
     loginWithEmailAllowed: false
-  instanceSelector:
-    matchLabels:
-      app.kubernetes.io/part-of: sso
+  identityProviders: {{ .Values.keycloak.identityProviders | toYaml | nindent 4 }}

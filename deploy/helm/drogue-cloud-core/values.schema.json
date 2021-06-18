@@ -88,6 +88,9 @@
     "keycloak": {
       "type": "object",
       "properties": {
+        "adminPassword": {
+          "type": "string"
+        },
         "postgres": {
           "type": "object",
           "required": [
