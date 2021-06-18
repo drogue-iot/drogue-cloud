@@ -1,4 +1,4 @@
-apiVersion: sources.knative.dev/v1beta1
+apiVersion: sources.knative.dev/v1alpha1
 kind: KafkaSource
 metadata:
   name: influxdb
@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/name: influxdb
     app.kubernetes.io/part-of: custom-app-1
 spec:
-  consumerGroup: ttn-operator
+  consumerGroup: influxdb
   bootstrapServers:
     - drogue-iot-kafka-bootstrap:9092
   topics:
