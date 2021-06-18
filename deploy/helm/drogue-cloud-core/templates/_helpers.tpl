@@ -50,11 +50,11 @@ Passthrough service
 {{ .Values.defaults.passthrough.type }}
 {{- else }}
 
-{{- if eq .Values.cluster "openshift" -}}
+{{- if eq .Values.global.cluster "openshift" -}}
 ClusterIP
-{{- else if eq .Values.cluster "minikube" -}}
+{{- else if eq .Values.global.cluster "minikube" -}}
 NodePort
-{{- else if eq .Values.cluster "kind" -}}
+{{- else if eq .Values.global.cluster "kind" -}}
 NodePort
 {{- else -}}
 LoadBalancer
