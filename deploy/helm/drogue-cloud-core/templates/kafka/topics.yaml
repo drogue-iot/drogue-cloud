@@ -4,7 +4,7 @@ kind: KafkaTopic
 metadata:
   name: iot-events
   labels:
-    strimzi.io/cluster: my-cluster
+    strimzi.io/cluster: drogue-iot
 spec:
   config: {}
   partitions: 3
@@ -16,7 +16,7 @@ kind: KafkaTopic
 metadata:
   name: iot-commands
   labels:
-    strimzi.io/cluster: my-cluster
+    strimzi.io/cluster: drogue-iot
 spec:
   config: {}
   partitions: 3
@@ -28,7 +28,7 @@ kind: KafkaTopic
 metadata:
   name: registry
   labels:
-    strimzi.io/cluster: my-cluster
+    strimzi.io/cluster: drogue-iot
 spec:
   config: {}
   partitions: 3
