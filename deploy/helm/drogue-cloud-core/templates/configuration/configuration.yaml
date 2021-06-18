@@ -4,4 +4,4 @@ kind: ConfigMap
 metadata:
   name: configuration
 data:
-  instance: {{ .Values.instance }}
+  instance: {{ .Values.global.instance }}

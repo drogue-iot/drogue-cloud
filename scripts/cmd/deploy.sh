@@ -148,8 +148,8 @@ fi
 if [[ -f $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml ]]; then
     HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml"
 fi
-HELM_ARGS="$HELM_ARGS --set cluster=$CLUSTER"
-HELM_ARGS="$HELM_ARGS --set domain=$(detect_domain)"
+HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
+HELM_ARGS="$HELM_ARGS --set global.domain=$(detect_domain)"
 
 # install Drogue IoT
 

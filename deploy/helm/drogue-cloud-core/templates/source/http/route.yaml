@@ -1,4 +1,4 @@
-{{ if eq .Values.cluster "openshift" }}
+{{ if eq .Values.global.cluster "openshift" }}
 kind: Route
 apiVersion: route.openshift.io/v1
 metadata:

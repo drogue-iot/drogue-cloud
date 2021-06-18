@@ -116,7 +116,7 @@ spec:
                 secretKeyRef:
                   key: ADMIN_PASSWORD
                   name: credential-sso
-            {{ if ne .Values.cluster "openshift" }}
+            {{ if ne .Values.global.cluster "openshift" }}
             - name: ENDPOINTS__LOCAL_CERTS
               value: "true"
             - name: "KEYCLOAK__TLS_NOVERIFY"

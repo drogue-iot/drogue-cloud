@@ -6,14 +6,14 @@ This takes an array of two values:
 - The .Values variable
 */}}
 {{- define "drogue-cloud-common.ingress.hostname" -}}
-{{- index . 1 }}.{{- (index . 0).Values.domain }}
+{{- index . 1 }}{{- (index . 0).Values.global.domain }}
 {{- end }}
 
 {{/*
 Ingress HTTP protocol
 */}}
 {{- define "drogue-cloud-common.ingress.proto" -}}
-{{- if eq .Values.cluster "openshift" }}https://{{- else }}http://{{- end }}
+{{- if eq .Values.global.cluster "openshift" }}https://{{- else }}http://{{- end }}
 {{- end }}
 
 {{/*

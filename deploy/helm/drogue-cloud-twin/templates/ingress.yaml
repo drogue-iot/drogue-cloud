@@ -1,4 +1,4 @@
-{{ if ne .Values.cluster "openshift" }}
+{{ if ne .Values.global.cluster "openshift" }}
 kind: Ingress
 apiVersion: networking.k8s.io/v1
 metadata:

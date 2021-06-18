@@ -1,29 +1,36 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "required": [
-    "domain",
-    "cluster",
-    "instance",
     "defaults"
   ],
   "properties": {
-    "cluster": {
-      "type": "string",
-      "enum": [
-        "kubernetes",
-        "openshift",
-        "kind",
-        "minikube"
-      ]
-    },
-    "domain": {
-      "type": "string",
-      "description": "The base DNS domain"
-    },
-    "instance": {
-      "type": "string",
-      "description": "The instance ID",
-      "default": "drogue"
+    "global": {
+      "type": "object",
+      "required": [
+        "domain",
+        "cluster",
+        "instance"
+      ],
+      "properties": {
+        "cluster": {
+          "type": "string",
+          "enum": [
+            "kubernetes",
+            "openshift",
+            "kind",
+            "minikube"
+          ]
+        },
+        "domain": {
+          "type": "string",
+          "description": "The base DNS domain"
+        },
+        "instance": {
+          "type": "string",
+          "description": "The instance ID",
+          "default": "drogue"
+        }
+      }
     },
     "endpoints": {
       "type": "object",
