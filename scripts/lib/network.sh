@@ -16,13 +16,13 @@ function detect_domain() {
     local domain
     case $CLUSTER in
     kind)
-        domain=$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+        domain=.$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
         ;;
     minikube)
-        domain=$(minikube ip).nip.io
+        domain=.$(minikube ip).nip.io
         ;;
     openshift)
-        domain=$(kubectl -n openshift-ingress-operator get ingresscontrollers.operator.openshift.io default -o jsonpath='{.status.domain}')
+        domain=${DROGUE_NS}.$(kubectl -n openshift-ingress-operator get ingresscontrollers.operator.openshift.io default -o jsonpath='{.status.domain}')
         ;;
     *)
         die "Unable to auto-detect DNS domain on Kubernetes platform '$CLUSTER': Use -d or set DOMAIN to the base DNS domain."
@@ -42,12 +42,12 @@ function service_url() {
     kubernetes)
         DOMAIN=$(detect_domain)
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].port}')
-        URL=${scheme:-http}://$name.$DOMAIN:$PORT
+        URL=${scheme:-http}://${name}${DOMAIN}:${PORT}
         ;;
     kind)
         DOMAIN=$(detect_domain)
         PORT=$(kubectl get service -n "$DROGUE_NS" "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-        URL=${scheme:-http}://$name.$DOMAIN:$PORT
+        URL=${scheme:-http}://${name}${DOMAIN}:${PORT}
         ;;
     minikube)
         test -n "$scheme" && scheme="--$scheme"
@@ -62,23 +62,6 @@ function service_url() {
         ;;
     esac
     echo "$URL"
-}
-
-function route_url() {
-    local name="$1"
-    shift
-
-    case $CLUSTER in
-    openshift)
-        URL="$(kubectl get route -n "$DROGUE_NS" "$name" -o 'jsonpath={ .spec.host }')"
-        if [ -n "$URL" ]; then
-            URL="https://$URL"
-        fi
-        ;;
-    *)
-        ingress_url "$name"
-        ;;
-    esac
 }
 
 function ingress_url() {

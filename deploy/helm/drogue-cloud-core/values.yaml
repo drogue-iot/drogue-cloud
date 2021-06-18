@@ -1,7 +1,7 @@
 
 global:
   cluster: kubernetes
-  domain: my-cluster.dns
+  domain: .my-cluster.dns
   instance: drogue
 
 endpoints:

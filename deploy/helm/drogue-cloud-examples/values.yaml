@@ -1,6 +1,6 @@
 global:
   cluster: kubernetes
-  domain: my-cluster.dns
+  domain: .my-cluster.dns
 
 grafana:
   podSecurityContext:
