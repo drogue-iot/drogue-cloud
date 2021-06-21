@@ -4,7 +4,7 @@ metadata:
   name: migrate-database
   annotations:
     argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
   labels:
     app.kubernetes.io/name: postgres
     app.kubernetes.io/part-of: device-registry
