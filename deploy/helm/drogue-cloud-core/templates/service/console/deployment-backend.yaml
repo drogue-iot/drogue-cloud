@@ -139,11 +139,11 @@ spec:
             - name: ENDPOINTS__MQTT_ENDPOINT_HOST
               value: {{ .Values.endpoints.mqtt.ingress.host }}
             - name: ENDPOINTS__MQTT_ENDPOINT_PORT
-              value: {{ .Values.endpoints.mqtt.ingress.port }}
+              value: {{ .Values.endpoints.mqtt.ingress.port | toString }}
             - name: ENDPOINTS__MQTT_INTEGRATION_HOST
               value: {{ .Values.integrations.mqtt.ingress.host }}
             - name: ENDPOINTS__MQTT_INTEGRATION_PORT
-              value: {{ .Values.integrations.mqtt.ingress.port }}
+              value: {{ .Values.integrations.mqtt.ingress.port | toString  }}
           ports:
             - containerPort: 8080
               name: endpoint
