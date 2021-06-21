@@ -134,6 +134,16 @@ spec:
               value: {{ include "drogue-cloud-common.api.url" . }}
             - name: ENDPOINTS__COMMAND_ENDPOINT_URL
               value: {{ include "drogue-cloud-common.api.url" . }}
+            - name: ENDPOINTS__HTTP_ENDPOINT_URL
+              value: {{ .Values.endpoints.http.ingress.url }}
+            - name: ENDPOINTS__MQTT_ENDPOINT_HOST
+              value: {{ .Values.endpoints.mqtt.ingress.host }}
+            - name: ENDPOINTS__MQTT_ENDPOINT_PORT
+              value: {{ .Values.endpoints.mqtt.ingress.port }}
+            - name: ENDPOINTS__MQTT_INTEGRATION_HOST
+              value: {{ .Values.integration.mqtt.ingress.host }}
+            - name: ENDPOINTS__MQTT_INTEGRATION_PORT
+              value: {{ .Values.integration.mqtt.ingress.port }}
           ports:
             - containerPort: 8080
               name: endpoint

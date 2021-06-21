@@ -47,6 +47,8 @@ spec:
                   key: CLIENT_SECRET
             - name: SSO_URL
               value: {{ include "drogue-cloud-common.sso.url" . }}
+            - name: ENDPOINTS__HTTP_ENDPOINT_URL
+              value: {{ .Values.endpoints.http.ingress.url }}
           readinessProbe:
             initialDelaySeconds: 2
             periodSeconds: 1

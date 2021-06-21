@@ -150,6 +150,9 @@ if [[ -f $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml ]]; then
 fi
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=$(detect_domain)"
+HELM_ARGS="$HELM_ARGS --set endpoints.mqtt.ingress.host=$MQTT_ENDPOINT_HOST --set endpoints.mqtt.ingress.port=$MQTT_ENDPOINT_PORT"
+HELM_ARGS="$HELM_ARGS --set endpoints.http.ingress.url=$HTTP_ENDPOINT_URL"
+HELM_ARGS="$HELM_ARGS --set integrations.mqtt.ingress.host=$MQTT_INTEGRATION_HOST --set integrations.mqtt.ingress.port=$MQTT_INTEGRATION_PORT"
 
 # install Drogue IoT
 
@@ -215,13 +218,7 @@ fi
 
 # Update the console endpoints
 
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__MQTT_ENDPOINT_HOST=$MQTT_ENDPOINT_HOST" "ENDPOINTS__MQTT_ENDPOINT_PORT=$MQTT_ENDPOINT_PORT"
-kubectl -n "$DROGUE_NS" set env deployment/console-backend "ENDPOINTS__MQTT_INTEGRATION_HOST=$MQTT_INTEGRATION_HOST" "ENDPOINTS__MQTT_INTEGRATION_PORT=$MQTT_INTEGRATION_PORT"
-
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"
-
-kubectl -n "$DROGUE_NS" set env deployment/ttn-operator "ENDPOINTS__HTTP_ENDPOINT_URL=$HTTP_ENDPOINT_URL"
 
 if [ "$CLUSTER" != "openshift" ]; then
     kubectl -n "$DROGUE_NS" annotate ingress/keycloak --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'

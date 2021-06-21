@@ -4,9 +4,24 @@ global:
   domain: .my-cluster.dns
   instance: drogue
 
+
 endpoints:
   http:
     insecure: false
+    ingress:
+      # url: <external URL>
+  mqtt:
+    ingress:
+      # host: <external hostname>
+      # port: <external port>
+
+
+integrations:
+  mqtt:
+    ingress:
+      # host: <external hostname>
+      # port: <external port>
+
 
 defaults:
   images:
@@ -15,6 +30,7 @@ defaults:
     # tag: latest
 
   passthrough: {}
+
 
 keycloak:
   adminPassword: admin123456
@@ -34,12 +50,14 @@ keycloak:
     #   port: 5678
     #   databaseName: keycloak
 
+
 postgres:
   databaseName: registry
   username: admin
   password: admin123456
   podSecurityContext:
     enabled: false
+
 
 kafka:
   podSecurityContext:
