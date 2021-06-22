@@ -46,7 +46,6 @@ case $CLUSTER in
 esac;
 
 HTTP_ENDPOINT_URL="https://${HTTP_ENDPOINT_HOST}:${HTTP_ENDPOINT_PORT}"
-COMMAND_ENDPOINT_URL=$(service_url "command-endpoint")
 CONSOLE_URL=$(ingress_url_wait "console")
 SSO_URL="$(ingress_url_wait "keycloak")"
 API_URL="$(ingress_url_wait "api")"
@@ -63,8 +62,6 @@ if [[ -z "$SILENT" ]]; then
   echo "Console:          $CONSOLE_URL"
   echo "SSO:              $SSO_URL"
   echo "API:              $API_URL"
-  echo
-  echo "Command Endpoint: $COMMAND_ENDPOINT_URL"
   echo
   echo "HTTP Endpoint:    $HTTP_ENDPOINT_URL"
   echo "MQTT Endpoint:    $MQTT_ENDPOINT_HOST:$MQTT_ENDPOINT_PORT"
