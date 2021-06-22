@@ -5,11 +5,14 @@ metadata:
   labels:
     app: console-backend
 spec:
+
   selector:
     app: console-backend
+
+  type: ClusterIP
+
   ports:
     - name: endpoint
       protocol: TCP
       port: 8080
       targetPort: endpoint
-  type: ClusterIP

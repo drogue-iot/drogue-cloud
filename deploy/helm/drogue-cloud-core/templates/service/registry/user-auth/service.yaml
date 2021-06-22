@@ -6,12 +6,15 @@ metadata:
     app.kubernetes.io/name: user-auth-service
     app.kubernetes.io/part-of: device-registry
 spec:
+
+  selector:
+    app.kubernetes.io/name: user-auth-service
+    app.kubernetes.io/part-of: device-registry
+
+  type: ClusterIP
+
   ports:
     - name: api
       port: 80
       protocol: TCP
       targetPort: 8080
-  selector:
-    app.kubernetes.io/name: user-auth-service
-    app.kubernetes.io/part-of: device-registry
-  type: ClusterIP

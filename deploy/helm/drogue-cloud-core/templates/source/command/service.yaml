@@ -9,9 +9,12 @@ spec:
   selector:
     app.kubernetes.io/name: command-endpoint
     app.kubernetes.io/part-of: endpoints
+
+  type: ClusterIP
+
   ports:
     - name: endpoint
       protocol: TCP
       port: 8080
       targetPort: endpoint
-  type: {{ include "drogue-cloud-core.service.passthrough.type" . }}
+

@@ -1,26 +1,28 @@
 
 global:
+  # cluster defines the cluster type
   cluster: kubernetes
   domain: .my-cluster.dns
   instance: drogue
 
 
 endpoints:
+
   http:
     insecure: false
     ingress:
-      # url: <external URL>
+      port: 443
+
   mqtt:
     ingress:
-      # host: <external hostname>
-      # port: <external port>
+      port: 8883
 
 
 integrations:
+
   mqtt:
     ingress:
-      # host: <external hostname>
-      # port: <external port>
+      port: 8883
 
 
 defaults:
@@ -29,14 +31,12 @@ defaults:
     pullPolicy: IfNotPresent
     # tag: latest
 
-  passthrough: {}
-
 
 keycloak:
   adminPassword: admin123456
   identityProviders: []
   postgres:
-    # The way postgres gets configured. This can be:
+    # mode is the way postgres gets configured. This can be:
     #  - drogue: Re-use the Drogue Cloud postgres instance
     #  - operator: Let the keycloak operate manage one
     #  - external: Use an external instance

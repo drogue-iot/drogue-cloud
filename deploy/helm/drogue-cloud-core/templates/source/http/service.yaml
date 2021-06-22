@@ -9,9 +9,20 @@ spec:
   selector:
     app.kubernetes.io/name: http-endpoint
     app.kubernetes.io/part-of: endpoints
+
+  {{- if eq .Values.global.cluster "openshift" }}
+  type: ClusterIP
+  {{- else if has .Values.global.cluster (list "minikube" "kind" ) }}
+  type: NodePort
+  {{- else }}
+  type: LoadBalancer
+  {{- end }}
+
   ports:
     - name: endpoint
       port: {{ if .Values.endpoints.http.insecure }}8080{{ else }}443{{ end }}
       protocol: TCP
       targetPort: endpoint
-  type: {{ include "drogue-cloud-core.service.passthrough.type" . }}
+      {{- if has .Values.global.cluster (list "minikube" "kind" ) }}
+      nodePort: {{ .Values.endpoints.http.ingress.port }}
+      {{- end }}

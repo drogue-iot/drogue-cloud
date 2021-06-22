@@ -41,24 +41,28 @@ app.kubernetes.io/name: {{ include "drogue-cloud-core.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+
 {{/*
-Passthrough service
+Passthrough service URL
 */}}
-{{- define "drogue-cloud-core.service.passthrough.type" -}}
+{{- define "drogue-cloud-core.passthrough.ingress.url" -}}
+{{ if .insecure }}http{{ else }}https{{ end }}://
+{{- include "drogue-cloud-core.passthrough.ingress.host" . -}}
 
-{{- if .Values.defaults.passthrough.type }}
-{{ .Values.defaults.passthrough.type }}
-{{- else }}
-
-{{- if eq .Values.global.cluster "openshift" -}}
-ClusterIP
-{{- else if eq .Values.global.cluster "minikube" -}}
-NodePort
-{{- else if eq .Values.global.cluster "kind" -}}
-NodePort
-{{- else -}}
-LoadBalancer
-{{- end }}
+{{- $port := .ingress.port | default 443 | toString -}}
+{{- /*
+  The next line means:
+    !( port == 80 && insecure ) || ( port == 443 && !insecure)
+*/ -}}
+{{- if not (or (and (eq $port "80") .insecure) (and (eq $port "443") (not .insecure )) ) -}}
+:{{ $port }}
 {{- end }}
 
+{{- end }}
+
+{{/*
+Passthrough service host
+*/}}
+{{- define "drogue-cloud-core.passthrough.ingress.host" -}}
+{{- .ingress.host | default ( printf "%s%s" .prefix .root.Values.global.domain ) -}}
 {{- end }}

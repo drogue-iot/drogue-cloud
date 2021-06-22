@@ -37,9 +37,49 @@
       "properties": {
         "http": {
           "type": "object",
+          "required": [
+            "ingress"
+          ],
           "properties": {
             "insecure": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
+            },
+            "ingress": {
+              "type": "object",
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "format": "hostname"
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65536
+                }
+              }
+            }
+          }
+        },
+        "mqtt": {
+          "type": "object",
+          "required": [
+            "ingress"
+          ],
+          "properties": {
+            "ingress": {
+              "type": "object",
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "format": "hostname"
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65536
+                }
+              }
             }
           }
         }

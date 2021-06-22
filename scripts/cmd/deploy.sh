@@ -148,11 +148,13 @@ fi
 if [[ -f $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml ]]; then
     HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml"
 fi
+
+domain=$(detect_domain)
+
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
-HELM_ARGS="$HELM_ARGS --set global.domain=$(detect_domain)"
-HELM_ARGS="$HELM_ARGS --set endpoints.mqtt.ingress.host=$MQTT_ENDPOINT_HOST --set endpoints.mqtt.ingress.port=$MQTT_ENDPOINT_PORT"
-HELM_ARGS="$HELM_ARGS --set endpoints.http.ingress.url=$HTTP_ENDPOINT_URL"
-HELM_ARGS="$HELM_ARGS --set integrations.mqtt.ingress.host=$MQTT_INTEGRATION_HOST --set integrations.mqtt.ingress.port=$MQTT_INTEGRATION_PORT"
+HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
+
+echo "Helm arguments: $HELM_ARGS"
 
 # install Drogue IoT
 
@@ -190,13 +192,13 @@ SILENT=true source "${SCRIPTDIR}/cmd/__endpoints.sh"
 # Provide a TLS certificate for the MQTT endpoint
 
 if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] || [ "$(kubectl -n "$DROGUE_NS" get secret http-endpoint-tls --ignore-not-found)" == "" ]; then
+    progress -n "📝 Creating custom certificate ... "
     if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
         CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$MQTT_INTEGRATION_HOST, DNS:$HTTP_ENDPOINT_HOST"
         echo "  Alternative names: $CERT_ALTNAMES"
         OUT="${SCRIPTDIR}/../build/certs/endpoints"
         echo "  Output: $OUT"
 
-        progress -n "📝 Creating custom certificate ... "
         env TEST_CERTS_IMAGE="${TEST_CERTS_IMAGE}" CONTAINER="$CONTAINER" OUT="$OUT" "$SCRIPTDIR/bin/__gen-certs.sh" "$CERT_ALTNAMES"
         progress "done!"
 
@@ -205,7 +207,7 @@ if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)
         HTTP_TLS_KEY=$OUT/http-endpoint.key
         HTTP_TLS_CRT=$OUT/http-endpoint.fullchain.crt
     else
-        echo "Using provided certificate..."
+        progress "skip!"
         MQTT_TLS_KEY=$TLS_KEY
         MQTT_TLS_CRT=$TLS_CRT
         HTTP_TLS_KEY=$TLS_KEY
@@ -238,7 +240,7 @@ progress "done!"
 
 # show status
 
-progress "📒 Adding cover sheet to TPS report ... done!"
+progress "📠 Adding cover sheet to TPS report ... done!"
 progress "🥳 Deployment ready!"
 
 progress

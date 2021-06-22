@@ -1,0 +1,15 @@
+
+# Ports might seem a bit off, but they must be in the range of 30000-32767
+
+endpoints:
+  mqtt:
+    ingress:
+      port: 30001
+  http:
+    ingress:
+      port: 30443
+
+integrations:
+  mqtt:
+    ingress:
+      port: 30002

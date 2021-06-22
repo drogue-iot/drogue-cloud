@@ -20,7 +20,7 @@ function wait_for_ksvc() {
     fi
     shift
 
-    while ((${timeout} > $(date +%s))); do
+    while ((timeout > $(date +%s))); do
         if ! kubectl -n "$DROGUE_NS" wait --timeout=60s --for=condition=Ready "ksvc/${resource}"; then
             kubectl -n "$DROGUE_NS" delete deploy -l "serving.knative.dev/service=${resource}"
         else
@@ -31,4 +31,15 @@ function wait_for_ksvc() {
     if [ ${timeout} \< "$(date +%s)" ]; then
         die "Error: timed out while waiting for ${resource} to become ready."
     fi
+}
+
+function get_env() {
+    local resource="$1"
+    shift
+    local container="$1"
+    shift
+    local name="$1"
+    shift
+
+    kubectl -n "$DROGUE_NS" get $resource -o jsonpath="{.spec.template.spec.containers[?(@.name==\"$container\")].env[?(@.name==\"$name\")].value}"
 }

@@ -4,7 +4,6 @@ metadata:
   name: console-backend
   labels:
     app: console-backend
-    app.kubernetes.io/part-of: console
 spec:
   replicas: 1
   selector:
@@ -135,13 +134,13 @@ spec:
             - name: ENDPOINTS__COMMAND_ENDPOINT_URL
               value: {{ include "drogue-cloud-common.api.url" . }}
             - name: ENDPOINTS__HTTP_ENDPOINT_URL
-              value: {{ .Values.endpoints.http.ingress.url }}
+              value: {{ include "drogue-cloud-core.passthrough.ingress.url" (dict "root" . "prefix" "http-endpoint" "ingress" .Values.endpoints.http.ingress "insecure" .Values.endpoints.http.insecure ) }}
             - name: ENDPOINTS__MQTT_ENDPOINT_HOST
-              value: {{ .Values.endpoints.mqtt.ingress.host }}
+              value: {{ include "drogue-cloud-core.passthrough.ingress.host" (dict "root" . "prefix" "mqtt-endpoint" "ingress" .Values.endpoints.mqtt.ingress ) }}
             - name: ENDPOINTS__MQTT_ENDPOINT_PORT
               value: "{{ .Values.endpoints.mqtt.ingress.port }}"
             - name: ENDPOINTS__MQTT_INTEGRATION_HOST
-              value: {{ .Values.integrations.mqtt.ingress.host }}
+              value: {{ include "drogue-cloud-core.passthrough.ingress.host" (dict "root" . "prefix" "mqtt-integration" "ingress" .Values.integrations.mqtt.ingress ) }}
             - name: ENDPOINTS__MQTT_INTEGRATION_PORT
               value: "{{ .Values.integrations.mqtt.ingress.port }}"
           ports:
