@@ -1,6 +1,7 @@
 apiVersion: v2
 name: drogue-cloud-core
 description: Installation of Drogue Cloud core
+icon: https://blog.drogue.io/favicon.svg
 
 # A chart can be either an 'application' or a 'library' chart.
 #

@@ -1,6 +1,7 @@
 apiVersion: v2
 name: drogue-cloud-common
 description: Drogue Cloud common
+icon: https://blog.drogue.io/favicon.svg
 
 # A chart can be either an 'application' or a 'library' chart.
 #

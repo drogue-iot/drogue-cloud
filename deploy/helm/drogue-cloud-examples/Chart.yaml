@@ -1,6 +1,7 @@
 apiVersion: v2
 name: drogue-cloud-examples
 description: Installation of examples on top of Drogue Cloud
+icon: https://blog.drogue.io/favicon.svg
 
 # A chart can be either an 'application' or a 'library' chart.
 #
