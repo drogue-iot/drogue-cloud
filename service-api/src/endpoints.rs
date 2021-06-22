@@ -22,6 +22,8 @@ pub struct Endpoints {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub console: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub http: Option<HttpEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mqtt: Option<MqttEndpoint>,
@@ -51,6 +53,7 @@ impl Endpoints {
             mqtt_integration: None,
             sso: self.sso.clone(),
             api: self.api.clone(),
+            console: self.console.clone(),
             issuer_url: self.issuer_url.clone(),
             redirect_url: None,
             registry: self.registry.clone(),

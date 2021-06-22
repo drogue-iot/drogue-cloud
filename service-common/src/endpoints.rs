@@ -23,6 +23,8 @@ pub struct EndpointConfig {
     #[serde(default)]
     pub api_url: Option<String>,
     #[serde(default)]
+    pub console_url: Option<String>,
+    #[serde(default)]
     pub issuer_url: Option<String>,
     #[serde(default)]
     pub sso_url: Option<String>,
@@ -130,6 +132,7 @@ impl EndpointSource for EnvEndpointSource {
             .map(|url| RegistryEndpoint { url });
 
         let api = self.0.api_url.clone();
+        let console = self.0.console_url.clone();
 
         let sso = self.0.sso_url.clone();
         let issuer_url = self.0.issuer_url.as_ref().cloned().or_else(|| {
@@ -143,6 +146,7 @@ impl EndpointSource for EnvEndpointSource {
             mqtt_integration,
             sso,
             api,
+            console,
             issuer_url,
             redirect_url: self.0.redirect_url.as_ref().cloned(),
             registry,
@@ -223,7 +227,8 @@ impl EndpointSource for OpenshiftEndpointSource {
             command_url: command,
             api,
             sso,
-            redirect_url: frontend,
+            redirect_url: frontend.clone(),
+            console: frontend,
             registry: registry.map(|url| RegistryEndpoint { url }),
             demos,
             local_certs: false,
