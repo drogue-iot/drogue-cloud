@@ -38,21 +38,23 @@ our [documentation](https://book.drogue.io/).
 
 Take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/).
 
-In a nutshell you need to:
+If you know what you are doing, you may simply take a look at the following sections on how to deploy Drogue Cloud.
+
+### Minikube
 
 ~~~shell
 minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
 minikube tunnel # in a separate terminal, as it keeps running
-./scripts/drogue.sh
+env CLUSTER=minikube ./scripts/drgadm deploy
 ~~~
 
-If you experience issues with ingress during deployment, try
+### Kind
 
-~~~
- kubectl delete validatingwebhookconfigurations ingress-nginx-admission
+~~~shell
+kind create cluster --config=deploy/kind/cluster-config.yaml
+env CLUSTER=kind ./scripts/drgadm deploy
 ~~~
 
-as a temporary workaround.
 ## Useful Links
 
 * [Documentation](https://book.drogue.io/drogue-cloud/dev/index.html)
