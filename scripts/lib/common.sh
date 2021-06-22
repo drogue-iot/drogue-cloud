@@ -27,7 +27,7 @@ bold() {
 
 progress() {
     echo "$@" >&3
-    echo "$@" >> "$LOG"
+    echo "$@" >>"$LOG"
 }
 
 is_default_cluster() {

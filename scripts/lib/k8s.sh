@@ -1,4 +1,3 @@
-
 function wait_for_resource() {
     local resource="$1"
     shift
