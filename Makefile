@@ -270,8 +270,8 @@ frontend: host-build
 #
 deploy: require-container-registry
 	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy \
-		-s defaults.images.repository=$(CONTAINER_REGISTRY) \
-		-s defaults.images.pullPolicy=Always
+		-s defaults.images.repository=$(CONTAINER_REGISTRY)
+		-s defaults.images.tag=latest
 
 
 #

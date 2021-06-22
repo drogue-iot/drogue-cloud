@@ -28,7 +28,10 @@ integrations:
 defaults:
   images:
     repository: ghcr.io/drogue-iot
-    pullPolicy: IfNotPresent
+    # pullPolicy Sets the pull policy explicitly. Defaults to Always when using the 'latest'
+    #   tag and to IfNotPresent otherwise.
+    # pullPolicy: IfNotPresent
+    # tag The container tag to apply. Defaults to the chart's application version
     # tag: latest
 
 

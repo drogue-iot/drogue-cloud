@@ -36,7 +36,7 @@ spec:
       containers:
         - name: endpoint
           image: {{ include "drogue-cloud-core.image-repo" . }}http-endpoint:{{ include "drogue-cloud-core.image-tag" . }}
-          imagePullPolicy: {{ .Values.defaults.images.pullPolicy }}
+          imagePullPolicy: {{ include "drogue-cloud-core.image-pull-policy" . }}
           env:
             - name: RUST_LOG
               value: debug

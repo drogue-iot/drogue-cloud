@@ -15,6 +15,16 @@ Image tag
 {{- end }}
 
 {{/*
+Pull policy
+*/}}
+{{- define "drogue-cloud-core.image-pull-policy" -}}
+{{- with .Values.defaults.images.pullPolicy }}{{ . }}
+{{- else }}
+{{- if (eq (include "drogue-cloud-core.image-tag" .) "latest") }}Always{{ else }}IfNotPresent{{ end }}
+{{- end }}
+{{- end }}
+
+{{/*
 Expand the name of the chart.
 */}}
 {{- define "drogue-cloud-core.name" -}}
