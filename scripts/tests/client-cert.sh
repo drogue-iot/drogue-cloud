@@ -23,5 +23,5 @@ drg create device --app $APP "$DEVICE" --spec '{"credentials": {}}'
 drg get app $APP
 drg get device --app $APP "$DEVICE"
 
-#mqtt pub -v -h "$MQTT_ENDPOINT_HOST" -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'
-http -v --cert "$CERT_DIR/device.1.pem" --verify "${BASEDIR}/../build/certs/endpoints/ca-bundle.pem" POST "$HTTP_ENDPOINT_URL/v1/foo" temp:=42
+mqtt pub -v -h "$MQTT_ENDPOINT_HOST" -p "$MQTT_ENDPOINT_PORT" --cert "$CERT_DIR/device.1.crt" --key "$CERT_DIR/device.1.key"  -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'
+#http -v --cert "$CERT_DIR/device.1.pem" --verify "${BASEDIR}/../build/certs/endpoints/ca-bundle.pem" POST "$HTTP_ENDPOINT_URL/v1/foo" temp:=42
