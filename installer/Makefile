@@ -33,9 +33,9 @@ drogue-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(she
 	rm $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/.gitignore
 	rm $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/README.md
 	# inject release version to cert script
-	sed -i 's/appVersion: "latest"/appVersion: "$(VERSION)"/g' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-common/Chart.yaml
-	sed -i 's/appVersion: "latest"/appVersion: "$(VERSION)"/g' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-core/Chart.yaml
-	sed -i 's/appVersion: "latest"/appVersion: "$(VERSION)"/g' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-examples/Chart.yaml
+	sed -i 's/appVersion: .*$$/appVersion: "$(VERSION)"/' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-common/Chart.yaml
+	sed -i 's/appVersion: .*$$/appVersion: "$(VERSION)"/' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-core/Chart.yaml
+	sed -i 's/appVersion: .*$$/appVersion: "$(VERSION)"/' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-examples/Chart.yaml
 	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
 	sed -i 's/CLUSTER:=minikube/CLUSTER:=$*/' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
 	# zip it up
