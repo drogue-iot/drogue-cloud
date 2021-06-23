@@ -4,17 +4,19 @@
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/tag/drogue-iot/drogue-cloud?sort=semver)](https://github.com/drogue-iot/drogue-cloud/releases)
 [![Matrix](https://img.shields.io/matrix/drogue-iot:matrix.org)](https://matrix.to/#/#drogue-iot:matrix.org)
 
-> Serverless IoT.
+> Cloud Native IoT.
 
-Drogue IoT Cloud is an IoT/Edge connectivity layer that allows IoT devices to communicate with a cloud platform over various protocols. It acts as both a data ingestion plane, as well as a control plane. In short, Drogue IoT Cloud takes care of the data on the cloud side :grin:.
+Drogue IoT Cloud is an IoT/Edge connectivity layer that allows IoT devices to communicate with a cloud platform over
+various protocols. It acts both as data ingestion plane, and as control plane. In short, Drogue IoT Cloud takes
+care of the data on the cloud side :grin:.
 
 ![Overview diagram](docs/modules/ROOT/images/architecture.svg)
 
 It offers:
-* IoT friendly protocol endpoints
-* Protocol normalization based on Cloud Events and Knative eventing
-* Managing of device credentials and properties
-* APIs and a graphical console to manage devices and data flows
+* IoT friendly protocol endpoints and APIs
+* Protocol normalization based on Cloud Events
+* Management of device credentials and properties
+* APIs, a CLI, and a graphical console to manage devices and data flows
 
 It is built on top of:
 * *Kubernetes* – For running workloads
