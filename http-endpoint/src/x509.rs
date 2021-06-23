@@ -7,14 +7,21 @@ pub fn from_socket(con: &dyn Any) -> Option<ClientCertificateChain> {
     log::debug!("Try extracting client cert");
 
     #[cfg(feature = "openssl")]
-    if let Some(con) = con.downcast_ref::<actix_tls::connect::ssl::openssl::SslStream<TcpStream>>()
     {
-        return con.client_certs();
+        log::debug!("Trying openssl");
+        if let Some(con) = con.downcast_ref::<actix_tls::accept::openssl::TlsStream<TcpStream>>() {
+            return con.client_certs();
+        }
     }
     #[cfg(feature = "rustls")]
-    if let Some(con) = con.downcast_ref::<actix_tls::connect::ssl::rustls::TlsStream<TcpStream>>() {
-        return con.client_certs();
+    {
+        log::debug!("Trying rustls");
+        if let Some(con) = con.downcast_ref::<actix_tls::accept::openssl::TlsStream<TcpStream>>() {
+            return con.client_certs();
+        }
     }
+
+    log::warn!("No provider to extract certificates from");
 
     None
 }

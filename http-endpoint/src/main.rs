@@ -117,6 +117,7 @@ async fn main() -> anyhow::Result<()> {
     .on_connect(|con, ext| {
         if let Some(cert) = x509::from_socket(con) {
             if !cert.0.is_empty() {
+                log::debug!("Added {} client certificates", cert.0.len());
                 ext.insert(cert);
             }
         }
