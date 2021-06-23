@@ -98,7 +98,7 @@ INSERT INTO DEVICES (
          "credentials": {
            "credentials": [
              { "user": { "username": "device3", "password": "baz"}},
-             { "user": { "username": "foo", "password": "bar" }}
+             { "user": { "username": "foo", "password": "bar", "unique": true }}
            ]
          }
        }
@@ -127,4 +127,16 @@ INSERT INTO DEVICE_ALIASES(
     'device3',
     'hwaddr',
     '12:34:56'
+);
+
+INSERT INTO DEVICE_ALIASES(
+    APP,
+    DEVICE,
+    TYPE,
+    ALIAS
+) VALUES (
+    'app1',
+    'device3',
+    'username',
+    'foo'
 );

@@ -67,6 +67,18 @@ async fn test_auth_passes_password() {
     } => device1_json());
 }
 
+/// Authorize a device using a password.
+#[actix_rt::test]
+#[serial]
+async fn test_auth_passes_password_alias() {
+    test_auth!(AuthenticationRequest{
+        application: "app1".into(),
+        device: "foo".into(),
+        credential: Credential::Password("bar".into()),
+        r#as: None,
+    } => device3_json());
+}
+
 /// Authorize a device using a username/password combination for a password-only credential
 /// that has a username matching the device ID.
 #[actix_rt::test]
@@ -132,17 +144,6 @@ async fn test_auth_passes_username_password() {
     test_auth!(AuthenticationRequest{
             application: "app1".into(),
             device: "device3".into(),
-            credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()},
-            r#as: None,
-    } => device3_json());
-}
-
-#[actix_rt::test]
-#[serial]
-async fn test_auth_passes_username_password_by_alias() {
-    test_auth!(AuthenticationRequest{
-            application: "app1".into(),
-            device: "12:34:56".into(),
             credential: Credential::UsernamePassword{username: "foo".into(), password: "bar".into()},
             r#as: None,
     } => device3_json());

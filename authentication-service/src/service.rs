@@ -175,7 +175,7 @@ impl AuthenticationService for PostgresAuthenticationService {
         // validate credential
 
         Ok(
-            match validate_credential(&application, &device, request.credential) {
+            match validate_credential(&application, &device, &request.device, request.credential) {
                 true => {
                     // check gateway
                     match request.r#as {
@@ -238,6 +238,7 @@ fn validate_app(app: &registry::v1::Application) -> bool {
 fn validate_credential(
     app: &registry::v1::Application,
     device: &registry::v1::Device,
+    provided_device: &str,
     cred: authn::Credential,
 ) -> bool {
     if device.metadata.deletion_timestamp.is_some() {
@@ -257,7 +258,7 @@ fn validate_credential(
 
     match cred {
         authn::Credential::Password(provided_password) => {
-            validate_password(device, &credentials, &provided_password)
+            validate_password(device, &credentials, provided_device, &provided_password)
         }
         authn::Credential::UsernamePassword {
             username: provided_username,
@@ -285,6 +286,7 @@ fn password_matches(expected: &Password, provided: &str) -> bool {
 fn validate_password(
     device: &registry::v1::Device,
     credentials: &[registry::v1::Credential],
+    provided_device: &str,
     provided_password: &str,
 ) -> bool {
     credentials.iter().any(|c| match c {
@@ -292,11 +294,19 @@ fn validate_password(
         registry::v1::Credential::Password(stored_password) => {
             password_matches(stored_password, provided_password)
         }
+        // match passwords if the stored username is equal to the provided device name and the entry is unique
+        registry::v1::Credential::UsernamePassword {
+            username: stored_username,
+            password: stored_password,
+            unique: true,
+        } if stored_username == provided_device => {
+            password_matches(stored_password, provided_password)
+        }
         // match passwords if the stored username is equal to the device id
         registry::v1::Credential::UsernamePassword {
             username: stored_username,
             password: stored_password,
-            ..
+            unique: false,
         } if stored_username == &device.metadata.name => {
             password_matches(stored_password, provided_password)
         }

@@ -233,7 +233,7 @@ impl DeviceAuthenticator {
                 )
                 .await
             }
-            // POST /<channel>?device=<device> -> basic auth `<username>@<tenant>` / `<password>` -> UsernamePassword(<username>, <password>)
+            // POST /<channel>?device=<device> -> basic auth `<username>@<application>` / `<password>` -> UsernamePassword(<username>, <password>)
             (
                 None,
                 Some(device),
