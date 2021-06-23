@@ -123,10 +123,10 @@ HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=$(detect_domain)"
 
 progress -n "🔨 Deploying Drogue IoT Twin ... "
-helm dependency update "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-twin"
+helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-twin"
 set -x
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-twin" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/helm/charts/drogue-cloud-twin" --install $HELM_ARGS
 set +x
 progress "done!"
 

@@ -12,6 +12,6 @@
 : "${PASS:=foobar}"
 
 while true; do
-  http -v --auth "${DEVICE}@${APP}:${PASS}" ${CERT:+--verify $CERT} POST "${ENDPOINT}/v1/${CHANNEL}" "model_id==$MODEL_ID" temp:="$(printf "%f" "$(echo "s ( $(date +%s ) * 0.02 ) * 10 + 10" | bc -l)")"
-  sleep 5
+    http -v --auth "${DEVICE}@${APP}:${PASS}" ${CERT:+--verify $CERT} POST "${ENDPOINT}/v1/${CHANNEL}" "model_id==$MODEL_ID" temp:="$(printf "%f" "$(echo "s ( $(date +%s) * 0.02 ) * 10 + 10" | bc -l)")"
+    sleep 5
 done

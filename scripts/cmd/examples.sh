@@ -6,7 +6,7 @@ set -e
 
 : "${DIGITAL_TWIN:=false}"
 
-SILENT=true source "${SCRIPTDIR}/cmd/__endpoints.sh"
+SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 
 # group the following out so that we can send it to fd3
 {
@@ -149,9 +149,9 @@ echo
 echo "You can view this information again by executing the following command:"
 echo
 if is_default_cluster; then
-echo "    $SCRIPTDIR/drgadm examples"
+echo "    $BASEDIR/drgadm examples"
 else
-echo "    env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm examples"
+echo "    env CLUSTER=$CLUSTER $BASEDIR/drgadm examples"
 fi
 
 echo

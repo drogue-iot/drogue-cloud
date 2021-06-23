@@ -125,28 +125,28 @@ fi
 
 if [[ "$INSTALL_NGINX_INGRESS" == true ]]; then
     progress "📦 Deploying pre-requisites (NGINX Ingress Controller) ... "
-    source "$SCRIPTDIR/cmd/__nginx.sh"
+    source "$BASEDIR/cmd/__nginx.sh"
 fi
 if [[ "$INSTALL_STRIMZI" == true ]]; then
     progress "📦 Deploying pre-requisites (Strimzi) ... "
-    source "$SCRIPTDIR/cmd/__strimzi.sh"
+    source "$BASEDIR/cmd/__strimzi.sh"
 fi
 if [[ "$INSTALL_KNATIVE" == true ]]; then
     progress "📦 Deploying pre-requisites (Knative) ... "
-    source "$SCRIPTDIR/cmd/__knative.sh"
+    source "$BASEDIR/cmd/__knative.sh"
 fi
 if [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]]; then
     progress "📦 Deploying pre-requisites (Keycloak) ... "
-    source "$SCRIPTDIR/cmd/__sso.sh"
+    source "$BASEDIR/cmd/__sso.sh"
 fi
 
 # gather Helm arguments
 
 if [[ "$HELM_PROFILE" ]]; then
-    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/profiles/${HELM_PROFILE}.yaml"
+    HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml"
 fi
-if [[ -f $SCRIPTDIR/../deploy/profiles/${CLUSTER}.yaml ]]; then
-    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/profiles/${CLUSTER}.yaml"
+if [[ -f $BASEDIR/../deploy/profiles/${CLUSTER}.yaml ]]; then
+    HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${CLUSTER}.yaml"
 fi
 
 domain=$(detect_domain)
@@ -159,15 +159,15 @@ echo "Helm arguments: $HELM_ARGS"
 # install Drogue IoT
 
 progress -n "🔨 Deploying Drogue IoT Core ... "
-helm dependency update "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-core"
+helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-core"
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-core" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/helm/charts/drogue-cloud-core" --install $HELM_ARGS
 progress "done!"
 
 progress -n "🔨 Deploying Drogue IoT Examples ... "
-helm dependency update "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-examples"
+helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples"
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-examples" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples" --install $HELM_ARGS
 progress "done!"
 
 # Remove the wrong host entry for keycloak ingress
@@ -187,7 +187,7 @@ esac
 
 # source the endpoint information
 
-SILENT=true source "${SCRIPTDIR}/cmd/__endpoints.sh"
+SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 
 # Provide a TLS certificate for the MQTT endpoint
 
@@ -196,10 +196,10 @@ if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)
     if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
         CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$MQTT_INTEGRATION_HOST, DNS:$HTTP_ENDPOINT_HOST"
         echo "  Alternative names: $CERT_ALTNAMES"
-        OUT="${SCRIPTDIR}/../build/certs/endpoints"
+        OUT="${BASEDIR}/../build/certs/endpoints"
         echo "  Output: $OUT"
 
-        env TEST_CERTS_IMAGE="${TEST_CERTS_IMAGE}" CONTAINER="$CONTAINER" OUT="$OUT" "$SCRIPTDIR/bin/__gen-certs.sh" "$CERT_ALTNAMES"
+        env TEST_CERTS_IMAGE="${TEST_CERTS_IMAGE}" CONTAINER="$CONTAINER" OUT="$OUT" "$BASEDIR/bin/__gen-certs.sh" "$CERT_ALTNAMES"
         progress "done!"
 
         MQTT_TLS_KEY=$OUT/mqtt-endpoint.key
@@ -253,8 +253,8 @@ progress "      Password: admin123456"
 progress
 progress "  * Execute: "
 if is_default_cluster; then
-progress "      $SCRIPTDIR/drgadm examples"
+progress "      $BASEDIR/drgadm examples"
 else
-progress "      env CLUSTER=$CLUSTER $SCRIPTDIR/drgadm examples"
+progress "      env CLUSTER=$CLUSTER $BASEDIR/drgadm examples"
 fi
 progress

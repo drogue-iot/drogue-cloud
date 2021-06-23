@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source "$SCRIPTDIR/lib/common.sh"
-source "$SCRIPTDIR/lib/network.sh"
-source "$SCRIPTDIR/lib/tools.sh"
-source "$SCRIPTDIR/lib/k8s.sh"
+source "$BASEDIR/lib/common.sh"
+source "$BASEDIR/lib/network.sh"
+source "$BASEDIR/lib/tools.sh"
+source "$BASEDIR/lib/k8s.sh"

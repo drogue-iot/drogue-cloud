@@ -7,8 +7,8 @@ set -x
 : "${PASS:=foobar}"
 TEMP=${1:-42}
 
-SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
-source "$SCRIPTDIR/lib/mod.sh"
+BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
+source "$BASEDIR/lib/mod.sh"
 
 BACKEND_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__API_URL)"
 HTTP_ENDPOINT_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__HTTP_ENDPOINT_URL)"
@@ -32,4 +32,4 @@ if ! drg get device --app ${APP} ${DEVICE}; then
 fi
 
 # temp
-http --auth ${DEVICE}@${APP}:${PASS} --verify "${SCRIPTDIR}/../build/certs/endpoints/ca-bundle.pem" POST ${HTTP_ENDPOINT_URL}/v1/anything temp:=${TEMP}
+http --auth ${DEVICE}@${APP}:${PASS} --verify "${BASEDIR}/../build/certs/endpoints/ca-bundle.pem" POST ${HTTP_ENDPOINT_URL}/v1/anything temp:=${TEMP}

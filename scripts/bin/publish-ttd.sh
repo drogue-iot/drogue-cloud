@@ -24,6 +24,6 @@ while true; do
         \"payload_raw\": \"$data\",
         \"port\": 1
     }"
-   echo $payload | http --verbose --auth "${DEVICE}@${APP}:${PASS}" ${CERT:+--verify $CERT} POST ${ENDPOINT}/ttn
+   echo "$payload" | http --verbose --auth "${DEVICE}@${APP}:${PASS}" ${CERT:+--verify $CERT} POST ${ENDPOINT}/ttn
    sleep 5
  done

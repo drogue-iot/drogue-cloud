@@ -3,8 +3,8 @@
 set -e
 set -o pipefail
 
-SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "$SCRIPTDIR/lib/mod.sh"
+BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+source "$BASEDIR/lib/mod.sh"
 
 if [[ -z "$1" ]]; then
     cat <<EOF
@@ -25,7 +25,7 @@ cmd=$1
 shift
 
 # Test if this is a valid command
-test -x "$SCRIPTDIR/cmd/${cmd}.sh" || die "Unknown command: $cmd"
+test -x "$BASEDIR/cmd/${cmd}.sh" || die "Unknown command: $cmd"
 
 # set up logging
 LOG=$(mktemp /tmp/drgadm-XXXXXXX.log)
@@ -54,7 +54,7 @@ trap on_exit EXIT
 
 # run the actual command
 if [[ "$DEBUG" ]]; then
-    source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1
+    source "$BASEDIR/cmd/${cmd}.sh" 3>&1
 else
-    source "$SCRIPTDIR/cmd/${cmd}.sh" 3>&1 &>"$LOG"
+    source "$BASEDIR/cmd/${cmd}.sh" 3>&1 &>"$LOG"
 fi

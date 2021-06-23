@@ -2,13 +2,13 @@
 
 set -e
 
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source "$SCRIPTDIR/../lib/mod.sh"
+BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source "$BASEDIR/../lib/mod.sh"
 
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 
-: "${DEPLOYDIR:=$(realpath "$SCRIPTDIR/../../deploy")}"
+: "${DEPLOYDIR:=$(realpath "$BASEDIR/../../deploy")}"
 
 command -v 'helm' &>/dev/null || die "Missing the command 'helm'"
 
@@ -75,7 +75,7 @@ echo "OK"
 
 # show status
 
-DIGITAL_TWIN=true source "$SCRIPTDIR/drgadm examples"
+DIGITAL_TWIN=true source "$BASEDIR/drgadm examples"
 
 tput setaf 7 && tput dim || true
 echo -----

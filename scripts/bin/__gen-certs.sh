@@ -2,14 +2,14 @@
 
 set -e
 
-SCRIPTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 CERT_ALTNAMES="$1"
 
 test -n "$CERT_ALTNAMES" || die "Missing alt-names argument: ./scripts/gen-certs.sh <alt-names>"
 test -n "$CONTAINER" || die "Variable 'CONTAINER' is not set"
 
-: "${OUT:=${SCRIPTDIR}/../build/certs/endpoints}"
+: "${OUT:=${BASEDIR}/../build/certs/endpoints}"
 
 rm -Rf "$OUT"
 mkdir -p "$OUT"
