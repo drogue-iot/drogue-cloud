@@ -186,7 +186,7 @@ impl DeviceAuthenticator {
     /// authenticate for a typical HTTP request
     pub async fn authenticate_http<T, D>(
         &self,
-        tenant: Option<T>,
+        application: Option<T>,
         device: Option<D>,
         auth: Option<&HeaderValue>,
         certs: Option<Vec<Vec<u8>>>,
@@ -196,8 +196,8 @@ impl DeviceAuthenticator {
         T: AsRef<str>,
         D: AsRef<str>,
     {
-        match (tenant, device, auth.map(AuthValue::from), certs) {
-            // POST /<channel> -> basic auth `<device>@<tenant>` / `<password>` -> Password(<password>)
+        match (application, device, auth.map(AuthValue::from), certs) {
+            // POST /<channel> -> basic auth `<device>@<application>` / `<password>` -> Password(<password>)
             (
                 None,
                 None,
@@ -210,7 +210,7 @@ impl DeviceAuthenticator {
                 self.authenticate(&scope, &device, Credential::Password(password), r#as)
                     .await
             }
-            // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
+            // POST /<channel>?application=<application> -> basic auth `<device>` / `<password>` -> Password(<password>)
             (Some(scope), None, Some(AuthValue::Basic { username, password }), None) => {
                 self.authenticate(
                     scope.as_ref(),
@@ -220,7 +220,7 @@ impl DeviceAuthenticator {
                 )
                 .await
             }
-            // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
+            // POST /<channel>?application=<application>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
             (Some(scope), Some(device), Some(AuthValue::Basic { username, password }), None) => {
                 self.authenticate(
                     scope.as_ref(),
