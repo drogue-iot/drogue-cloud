@@ -18,7 +18,7 @@ Options:
   -s <key>=<value>   Set a Helm option, can be repeated:
                        -s foo=bar -s bar=baz -s foo.bar=baz
   -k                 Don't install dependencies
-  -p <profile>       Enable Helm profile (adds 'deploy/helm/profiles/<profile>.yaml')
+  -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
   -h                 Show this help
 
 EOF
@@ -143,10 +143,10 @@ fi
 # gather Helm arguments
 
 if [[ "$HELM_PROFILE" ]]; then
-    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/helm/profiles/${HELM_PROFILE}.yaml"
+    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/profiles/${HELM_PROFILE}.yaml"
 fi
-if [[ -f $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml ]]; then
-    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/helm/profiles/${CLUSTER}.yaml"
+if [[ -f $SCRIPTDIR/../deploy/profiles/${CLUSTER}.yaml ]]; then
+    HELM_ARGS="$HELM_ARGS --values $SCRIPTDIR/../deploy/profiles/${CLUSTER}.yaml"
 fi
 
 domain=$(detect_domain)
@@ -159,15 +159,15 @@ echo "Helm arguments: $HELM_ARGS"
 # install Drogue IoT
 
 progress -n "🔨 Deploying Drogue IoT Core ... "
-helm dependency update "$SCRIPTDIR/../deploy/helm/drogue-cloud-core"
+helm dependency update "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-core"
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot "$SCRIPTDIR/../deploy/helm/drogue-cloud-core" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-core" --install $HELM_ARGS
 progress "done!"
 
 progress -n "🔨 Deploying Drogue IoT Examples ... "
-helm dependency update "$SCRIPTDIR/../deploy/helm/drogue-cloud-examples"
+helm dependency update "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-examples"
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$SCRIPTDIR/../deploy/helm/drogue-cloud-examples" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$SCRIPTDIR/../deploy/helm/charts/drogue-cloud-examples" --install $HELM_ARGS
 progress "done!"
 
 # Remove the wrong host entry for keycloak ingress

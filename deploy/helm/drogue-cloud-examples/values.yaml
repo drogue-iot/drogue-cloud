@@ -1,8 +1,0 @@
-global:
-  cluster: kubernetes
-  domain: .my-cluster.dns
-
-grafana:
-  adminPassword: admin123456
-  podSecurityContext:
-    enabled: false
