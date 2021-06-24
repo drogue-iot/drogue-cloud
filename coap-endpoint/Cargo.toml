@@ -11,7 +11,7 @@ anyhow = "1"
 async-trait = "0.1"
 bytes = "1"
 bytestring = "1"
-coap = {version = "0.9", path = "/home/pranav/Desktop/jboss/coap-rs"}
+coap = "0.10"
 coap-lite = "0.4"
 cloudevents-sdk = "^0.4"
 cloudevents-sdk-coap = {version = "0.1", path = "/home/pranav/Desktop/jboss/cloudevents-sdk-coap"}
