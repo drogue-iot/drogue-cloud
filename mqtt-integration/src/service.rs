@@ -508,9 +508,8 @@ where
                     let event = serde_json::to_vec(&event)?;
                     sink.publish(topic.clone(), event.into())
                         .properties(|p| {
-                            p.content_type = Some(
-                                "content-type: application/cloudevents+json; charset=utf-8".into(),
-                            );
+                            p.content_type =
+                                Some("application/cloudevents+json; charset=utf-8".into());
                             p.is_utf8_payload = Some(true);
                         })
                         .send_at_most_once()
