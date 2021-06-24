@@ -87,6 +87,8 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - uses: actions/cache@v2
         with:
@@ -108,6 +110,8 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - uses: actions/cache@v2
         with:
@@ -152,6 +156,8 @@ jobs:
     steps:
 
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Install Helm binary
         run: |
@@ -234,6 +240,8 @@ jobs:
       # Start the actual build
 
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Create installer archives
         run: |
