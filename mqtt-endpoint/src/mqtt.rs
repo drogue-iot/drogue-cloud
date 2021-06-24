@@ -59,7 +59,7 @@ where
     S: DownstreamSink,
 {
     let certs = connect.io().client_certs();
-    log::info!("Certs: {:?}", certs);
+    log::debug!("Certs: {:?}", certs);
 
     // handle connect
 
@@ -78,7 +78,7 @@ where
     S: DownstreamSink,
 {
     let certs = connect.io().client_certs();
-    log::info!("Certs: {:?}", certs);
+    log::debug!("Certs: {:?}", certs);
 
     match connect!(connect, app, certs) {
         Ok(session) => Ok(connect.ack(session).with(|ack| {
@@ -90,7 +90,7 @@ where
 
 macro_rules! publish {
     ($session: expr, $publish:expr) => {{
-        log::info!(
+        log::debug!(
             "incoming publish: {:?} -> {:?} / {:?}",
             $publish.id(),
             $publish.topic(),
