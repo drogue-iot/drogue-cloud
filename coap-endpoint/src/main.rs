@@ -51,41 +51,6 @@ pub struct App {
     pub authenticator: DeviceAuthenticator,
     // pub commands: Commands,
 }
-/*
-impl App {
-    /// authenticate a client
-    async fn authenticate(
-        &self,
-        username: &Option<ByteString>,
-        password: &Option<Bytes>,
-        auth: &[u8],
-    ) -> Result<AuthOutcome, EndpointError> {
-        let password = password
-            .as_ref()
-            .map(|p| String::from_utf8(p.to_vec()))
-            .transpose()
-            .map_err(|err| {
-                log::debug!("Failed to convert password: {}", err);
-                EndpointError::AuthenticationError
-            })?;
-
-        Ok(self
-            .authenticator
-            .authenticate_coap(
-                username.as_ref(),
-                password,
-                HeaderValue::from_bytes(auth).as_ref().ok(),
-            )
-            .await
-            .map_err(|err| {
-                log::debug!("Failed to call authentication service: {}", err);
-                EndpointError::AuthenticationServiceError {
-                    source: Box::new(err),
-                }
-            })?
-            .outcome)
-    }
-}*/
 
 fn uri_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     let mut linked_list = ll.iter();
@@ -151,8 +116,6 @@ async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Opti
     let path_segments: Vec<String>;
     let queries: Option<&Vec<u8>>;
     let auth: &Vec<u8>;
-
-    println!("test");
 
     if let Ok((p, q, a)) = params(&request) {
         path_segments = p;
@@ -223,17 +186,13 @@ async fn main() -> anyhow::Result<()> {
     };
 
     println!("Server up on {}", addr);
+    let mut server = Server::new(addr).unwrap();
 
-    let device_to_endpoint = tokio::spawn(async move {
-        let mut server = Server::new(addr).unwrap();
-        server
-            .run(|request| publish_handler(request, app.clone()))
-            .await
-            .map_err(anyhow::Error::from)
-    });
+    let device_to_endpoint = server
+        .run(move |request| publish_handler(request, app.clone()));
 
     //let health = HealthServer::new(config.health, vec![]);
 
-    futures::try_join!(/*health.run_ntex(),*/ async { device_to_endpoint.await? },)?;
+    futures::try_join!(/*health.run_ntex(),*/ device_to_endpoint)?;
     Ok(())
 }
