@@ -20,6 +20,8 @@ actix-broker = "0.4.0"
 actix-tls = { version = "=3.0.0-beta.5", optional = true }
 reqwest = { version = "0.11", features = ["json"] }
 
+coap-lite = "0.4"
+
 anyhow = "1"
 snafu = "0.6"
 chrono = "0.4"
