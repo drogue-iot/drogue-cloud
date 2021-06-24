@@ -1,5 +1,5 @@
 mod auth;
-mod error;
+mod downstream;
 mod response;
 mod telemetry;
 
@@ -7,16 +7,16 @@ mod telemetry;
 //mod server;
 
 use crate::auth::DeviceAuthenticator;
-use crate::error::CoapEndpointError;
 use crate::response::Responder;
-use std::collections::LinkedList;
-use telemetry::PublishOptions;
-//use cloudevents_sdk_coap::CoapRequestExt;
 use dotenv::dotenv;
-use drogue_cloud_endpoint_common::{downstream::DownstreamSender, error::EndpointError};
-//use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
+use drogue_cloud_endpoint_common::{
+    downstream::{DownstreamSender, DownstreamSink, KafkaSink},
+    error::{CoapEndpointError, EndpointError},
+};
 use drogue_cloud_service_common::{config::ConfigFromEnv, defaults, health::HealthServerConfig};
 use futures;
+use std::collections::LinkedList;
+use telemetry::PublishOptions;
 //use http::HeaderValue;
 //use log;
 use std::net::SocketAddr;
@@ -46,8 +46,12 @@ pub struct Config {
 }
 
 #[derive(Clone, Debug)]
-pub struct App {
-    pub downstream: DownstreamSender,
+pub struct App<S>
+where
+    S: DownstreamSink + Send,
+    <S as DownstreamSink>::Error: Send,
+{
+    pub downstream: DownstreamSender<S>,
     pub authenticator: DeviceAuthenticator,
     // pub commands: Commands,
 }
@@ -112,7 +116,14 @@ fn params(
     Ok((path_segments, queries, auth))
 }
 
-async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Option<CoapResponse> {
+async fn publish_handler<S>(
+    mut request: CoapRequest<SocketAddr>,
+    app: App<S>,
+) -> Option<CoapResponse>
+where
+    S: DownstreamSink + Send,
+    <S as DownstreamSink>::Error: Send,
+{
     let path_segments: Vec<String>;
     let queries: Option<&Vec<u8>>;
     let auth: &Vec<u8>;
@@ -179,7 +190,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or("127.0.0.1:5683".to_string());
 
     let app = App {
-        downstream: DownstreamSender::new()?,
+        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),

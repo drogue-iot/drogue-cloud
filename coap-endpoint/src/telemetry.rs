@@ -1,11 +1,11 @@
 use crate::auth::DeviceAuthenticator;
-use crate::error::CoapEndpointError;
-use coap_lite::{CoapOption, CoapRequest, CoapResponse, ResponseType};
+use crate::downstream::CoapCommandSender;
+use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 //use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
     //commands::Commands,
-    downstream::{self, DownstreamSender, Outcome, PublishResponse},
-    error::EndpointError,
+    downstream::{self, DownstreamSender, DownstreamSink},
+    error::{CoapEndpointError, EndpointError},
 };
 use drogue_cloud_service_api::auth::device::authn;
 //use drogue_cloud_service_common::Id;
@@ -52,15 +52,19 @@ impl Default for PublishOptions {
     }
 }
 
-pub async fn publish_plain(
-    sender: DownstreamSender,
+pub async fn publish_plain<S>(
+    sender: DownstreamSender<S>,
     auth: DeviceAuthenticator,
     //commands: web::Data<Commands>,
     channel: String,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     cert: &Vec<u8>,
-) -> Result<Option<CoapResponse>, CoapEndpointError> {
+) -> Result<Option<CoapResponse>, CoapEndpointError>
+where
+    S: DownstreamSink + Send,
+    <S as DownstreamSink>::Error: Send,
+{
     publish(
         sender, auth, //commands,
         channel, None, opts, req, cert,
@@ -68,15 +72,19 @@ pub async fn publish_plain(
     .await
 }
 
-pub async fn publish_tail(
-    sender: DownstreamSender,
+pub async fn publish_tail<S>(
+    sender: DownstreamSender<S>,
     auth: DeviceAuthenticator,
     //commands: web::Data<Commands>,
     path: (String, String),
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     cert: &Vec<u8>,
-) -> Result<Option<CoapResponse>, CoapEndpointError> {
+) -> Result<Option<CoapResponse>, CoapEndpointError>
+where
+    S: DownstreamSink + Send,
+    <S as DownstreamSink>::Error: Send,
+{
     let (channel, suffix) = path;
     publish(
         sender,
@@ -91,8 +99,8 @@ pub async fn publish_tail(
     .await
 }
 
-pub async fn publish(
-    sender: DownstreamSender,
+pub async fn publish<S>(
+    sender: DownstreamSender<S>,
     auth: DeviceAuthenticator,
     //commands: web::Data<Commands>,
     channel: String,
@@ -100,7 +108,11 @@ pub async fn publish(
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     cert: &Vec<u8>,
-) -> Result<Option<CoapResponse>, CoapEndpointError> {
+) -> Result<Option<CoapResponse>, CoapEndpointError>
+where
+    S: DownstreamSink + Send,
+    <S as DownstreamSink>::Error: Send,
+{
     log::debug!("Publish to '{}'", channel);
 
     let (application, device, _) = match auth
@@ -132,52 +144,23 @@ pub async fn publish(
 
     // publish
 
-    match sender
-        .publish(
-            downstream::Publish {
-                channel,
-                app_id: application.metadata.name.clone(),
-                device_id: device_id.clone(),
-                options: downstream::PublishOptions {
-                    data_schema: opts.common.data_schema,
-                    topic: suffix,
-                    content_type: req
-                        .message
-                        .get_option(CoapOption::ContentFormat)
-                        .and_then(|v| std::str::from_utf8(v.front().unwrap()).ok())
-                        .map(|s| s.to_string()),
-                    ..Default::default()
-                },
-            },
-            req.message.payload,
-        )
+    let publish = downstream::Publish {
+        channel,
+        app_id: application.metadata.name.clone(),
+        device_id: device_id.clone(),
+        options: downstream::PublishOptions {
+            data_schema: opts.common.data_schema,
+            topic: suffix,
+            content_type: req
+                .message
+                .get_option(CoapOption::ContentFormat)
+                .and_then(|v| std::str::from_utf8(v.front().unwrap()).ok())
+                .map(|s| s.to_string()),
+            ..Default::default()
+        },
+    };
+
+    sender
+        .publish_and_await(publish, opts.ct, req.message.payload.clone(), req)
         .await
-    {
-        // TODO finish after command
-        // ok, and accepted
-        Ok(PublishResponse {
-            outcome: Outcome::Accepted,
-        }) => Ok(req.response.and_then(|mut v| {
-            v.set_status(ResponseType::Changed);
-            Some(v)
-        })),
-        /*{
-        wait_for_command(
-            commands,
-            Id::new(application.metadata.name, device_id),
-            opts.ct,
-        )
-        .await*/
-        // ok, but rejected
-        Ok(PublishResponse {
-            outcome: Outcome::Rejected,
-        }) => Ok(req.response.and_then(|mut v| {
-            v.set_status(ResponseType::NotAcceptable);
-            Some(v)
-        })),
-        // internal error
-        Err(err) => Err(CoapEndpointError(EndpointError::ConfigurationError {
-            details: err.to_string(),
-        })),
-    }
 }

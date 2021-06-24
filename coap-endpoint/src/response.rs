@@ -1,5 +1,5 @@
-use crate::error::CoapEndpointError;
 use coap_lite::{CoapRequest, CoapResponse};
+use drogue_cloud_endpoint_common::error::CoapEndpointError;
 use std::net::SocketAddr;
 
 pub trait Responder {
