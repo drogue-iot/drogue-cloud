@@ -289,10 +289,10 @@ endif
 #
 .PHONY: helm-lint
 helm-lint:
-	cd deploy/helm/drogue-cloud-core && helm dependency update
-	helm lint --with-subcharts deploy/helm/drogue-cloud-core
-	cd deploy/helm/drogue-cloud-examples && helm dependency update
-	helm lint --with-subcharts deploy/helm/drogue-cloud-examples
+	helm dependency update deploy/helm/charts/drogue-cloud-core
+	helm lint --with-subcharts deploy/helm/charts/drogue-cloud-core
+	helm dependency update deploy/helm/charts/drogue-cloud-examples
+	helm lint --with-subcharts deploy/helm/charts/drogue-cloud-examples
 
 
 .PHONY: all clean pre-check check build test push images
