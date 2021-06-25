@@ -142,6 +142,10 @@ fi
 
 # gather Helm arguments
 
+if [[ -f $BASEDIR/local-values.yaml ]]; then
+    progress "💡 Adding local values file ($BASEDIR/local-values.yaml)"
+    HELM_ARGS="$HELM_ARGS --values $BASEDIR/local-values.yaml"
+fi
 if [[ "$HELM_PROFILE" ]]; then
     HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml"
 fi
