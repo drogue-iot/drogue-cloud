@@ -62,6 +62,7 @@ pub async fn stream_events(
 
     let cfg = EventStreamConfig {
         bootstrap_servers: config.kafka_boostrap_servers.clone(),
+        properties: config.kafka_properties.clone(),
         topic: config.kafka_topic.clone(),
         app: query.app.clone(),
         consumer_group: None,

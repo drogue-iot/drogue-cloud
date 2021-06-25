@@ -35,6 +35,8 @@ pub struct ServiceConfig {
     #[serde(default = "defaults::kafka_events_topic")]
     pub kafka_topic: String,
     #[serde(default)]
+    pub kafka_properties: HashMap<String, String>,
+    #[serde(default)]
     pub enable_username_password_auth: bool,
     #[serde(default)]
     pub disable_api_keys: bool,
@@ -45,6 +47,7 @@ impl Default for ServiceConfig {
         Self {
             kafka_bootstrap_servers: defaults::kafka_bootstrap_servers(),
             kafka_topic: defaults::kafka_events_topic(),
+            kafka_properties: Default::default(),
             enable_username_password_auth: false,
             disable_api_keys: false,
         }
@@ -321,6 +324,7 @@ where
 
         let stream = EventStream::new(EventStreamConfig {
             bootstrap_servers: self.config.kafka_bootstrap_servers.clone(),
+            properties: self.config.kafka_properties.clone(),
             topic: self.config.kafka_topic.clone(),
             app: app.to_string(),
             consumer_group: group_id,

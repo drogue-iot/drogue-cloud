@@ -23,6 +23,7 @@ use rdkafka::{
     TopicPartitionList,
 };
 use std::{
+    collections::HashMap,
     fmt::{Debug, Formatter},
     pin::Pin,
     time::Duration,
@@ -32,6 +33,7 @@ use uuid::Uuid;
 #[derive(Clone, Debug)]
 pub struct EventStreamConfig {
     pub bootstrap_servers: String,
+    pub properties: HashMap<String, String>,
     pub topic: String,
     pub app: String,
     pub consumer_group: Option<String>,
@@ -65,18 +67,38 @@ impl EventStream {
         }
     }
 
+    /// Create a new common client config
+    fn new_config(cfg: &EventStreamConfig) -> ClientConfig {
+        let mut config = ClientConfig::new();
+
+        // start with the defaults
+
+        config
+            .set("bootstrap.servers", &cfg.bootstrap_servers)
+            .set("enable.partition.eof", "false")
+            .set("session.timeout.ms", "6000")
+            .set_log_level(RDKafkaLogLevel::Info);
+
+        // add custom properties
+
+        for (k, v) in &cfg.properties {
+            config.set(k.replace('_', ".".into()), v);
+        }
+
+        // return result
+
+        config
+    }
+
     /// Create a new message spy without using group management
     ///
     /// This is currently blocked by: https://github.com/edenhill/librdkafka/issues/3261
     #[allow(dead_code)]
     fn new_without_group(cfg: &EventStreamConfig) -> Result<Self, EventStreamError> {
-        let consumer: StreamConsumer<DefaultConsumerContext> = ClientConfig::new()
-            .set("bootstrap.servers", &cfg.bootstrap_servers)
-            .set("enable.partition.eof", "false")
-            .set("session.timeout.ms", "6000")
-            .set("enable.auto.commit", "false")
-            .set_log_level(RDKafkaLogLevel::Debug)
-            .create()?;
+        let mut consumer = Self::new_config(cfg);
+        consumer.set("enable.auto.commit", "false");
+
+        let consumer: StreamConsumer<DefaultConsumerContext> = consumer.create()?;
 
         log::debug!("Created consumer");
 
@@ -111,14 +133,12 @@ impl EventStream {
     }
 
     fn new_with_group(cfg: &EventStreamConfig, group_id: String) -> Result<Self, EventStreamError> {
-        let consumer: StreamConsumer<DefaultConsumerContext> = ClientConfig::new()
-            .set("group.id", &group_id)
-            .set("bootstrap.servers", &cfg.bootstrap_servers)
-            .set("enable.partition.eof", "false")
-            .set("session.timeout.ms", "6000")
+        let mut consumer = Self::new_config(cfg);
+        consumer
             .set("enable.auto.commit", "true")
-            .set_log_level(RDKafkaLogLevel::Debug)
-            .create()?;
+            .set("group.id", &group_id);
+
+        let consumer: StreamConsumer<DefaultConsumerContext> = consumer.create()?;
 
         log::debug!("Created consumer");
 

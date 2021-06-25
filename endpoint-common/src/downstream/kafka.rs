@@ -45,7 +45,8 @@ impl KafkaSink {
         kafka_config.set("bootstrap.servers", &config.bootstrap_servers);
 
         for (k, v) in config.custom {
-            log::info!("Kafka Option - {} = {}", k, v);
+            let k = k.replace('_', ".".into());
+            log::debug!("Kafka Option - {} = {}", k, v);
             kafka_config.set(k, v);
         }
 
@@ -81,7 +82,10 @@ impl DownstreamSink for KafkaSink {
                 // received outcome & outcome ok
                 Ok(Ok(_)) => Ok(PublishOutcome::Accepted),
                 // received outcome & outcome failed
-                Ok(Err((err, _))) => Err(DownstreamError::Transport(err.into())),
+                Ok(Err((err, _))) => {
+                    log::debug!("Kafka transport error: {}", err);
+                    Err(DownstreamError::Transport(err.into()))
+                }
                 // producer closed before delivered
                 Err(oneshot::Canceled) => {
                     Err(DownstreamError::Transport(KafkaSinkError::Canceled.into()))
@@ -92,7 +96,28 @@ impl DownstreamSink for KafkaSink {
                 Ok(PublishOutcome::QueueFull)
             }
             // some other queue error
-            Err((err, _)) => Err(DownstreamError::Transport(err.into()))?,
+            Err((err, _)) => {
+                log::debug!("Failed to send: {}", err);
+                Err(DownstreamError::Transport(err.into()))
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_custom() {
+        std::env::set_var("KAFKA__TOPIC", "baz");
+        std::env::set_var("KAFKA__CUSTOM__A_B_C", "d.e.f");
+
+        let kafka = KafkaSinkConfig::from_env_prefix("KAFKA").unwrap();
+
+        assert_eq!(kafka.topic, "baz");
+        assert_eq!(kafka.custom.get("a_b_c").cloned(), Some("d.e.f".into()));
+
+        std::env::remove_var("KAFKA__TOPIC");
     }
 }

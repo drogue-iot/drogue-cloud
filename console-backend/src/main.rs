@@ -31,6 +31,7 @@ use drogue_cloud_service_common::{
 };
 use futures::TryFutureExt;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[get("/")]
 async fn index(
@@ -59,6 +60,8 @@ pub struct Config {
     pub kafka_boostrap_servers: String,
     #[serde(default = "defaults::kafka_events_topic")]
     pub kafka_topic: String,
+    #[serde(default)]
+    pub kafka_properties: HashMap<String, String>,
 
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
