@@ -31,7 +31,7 @@ kind create cluster --config=deploy/kind/cluster-config.yaml
 ====
 The deployment requires a Kubernetes ingress controller to be deployed. When using Kind, the deployment script will
 automatically deploy the https://kubernetes.github.io/ingress-nginx/[NGINX Ingress Controller], but you still need
-to export the ports as shown above.
+to export the ports to allow access. Using the command above, will already use a configuration which takes care of that.
 ====
 
 == Other
