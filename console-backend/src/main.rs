@@ -57,7 +57,7 @@ pub struct Config {
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
     #[serde(default = "defaults::kafka_bootstrap_servers")]
-    pub kafka_boostrap_servers: String,
+    pub kafka_bootstrap_servers: String,
     #[serde(default = "defaults::kafka_events_topic")]
     pub kafka_topic: String,
     #[serde(default)]

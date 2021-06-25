@@ -1,5 +1,4 @@
-use crate::reqwest::add_service_cert;
-use crate::{config::ConfigFromEnv, defaults, openid::ExtendedClaims};
+use crate::{config::ConfigFromEnv, defaults, openid::ExtendedClaims, reqwest::add_service_cert};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use failure::Fail;
