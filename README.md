@@ -60,7 +60,7 @@ env CLUSTER=kind ./scripts/drgadm deploy
 ## Useful Links
 
 * [Documentation](https://book.drogue.io/drogue-cloud/dev/index.html)
-* [Drogue IoT Blog: Articles that talk about the design,  usecases and project updates](https://blog.drogue.io/)
+* [Drogue IoT Blog: Articles that talk about the design,  use-cases and project updates](https://blog.drogue.io/)
 
 ## Contributing
 
