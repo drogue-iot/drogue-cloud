@@ -15,7 +15,8 @@ use ntex_mqtt::{
 use std::fmt::Debug;
 
 const TOPIC_COMMAND_INBOX: &str = "command/inbox";
-const TOPIC_COMMAND_OUTBOX: &str = "command/outbox";
+const TOPIC_COMMAND_INBOX_PATTERN: &str = "command/inbox/#";
+// const TOPIC_COMMAND_OUTBOX: &str = "command/outbox";
 
 macro_rules! connect {
     ($connect:expr, $app:expr, $certs:expr) => {{
@@ -158,7 +159,7 @@ where
 macro_rules! subscribe {
     ($s: expr, $session: expr, $fail: expr) => {{
         $s.iter_mut().for_each(|mut sub| {
-            if sub.topic() == TOPIC_COMMAND_INBOX {
+            if sub.topic() == TOPIC_COMMAND_INBOX_PATTERN {
                 let device_id = $session.state().device_id.clone();
                 let mut rx = $session.state().commands.subscribe(device_id.clone());
                 let sink = $session.sink().clone();
@@ -168,7 +169,7 @@ macro_rules! subscribe {
                             .publish(
                                 ByteString::from(format!(
                                     "{}/{}",
-                                    TOPIC_COMMAND_OUTBOX, cmd.command
+                                    TOPIC_COMMAND_INBOX, cmd.command
                                 )),
                                 Bytes::from(cmd.payload.unwrap()),
                             )

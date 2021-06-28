@@ -145,7 +145,7 @@ impl Component for CommandAndControl {
 
         if let Some(mqtt) = &self.props.endpoints.mqtt {
             let publish_mqtt_cmd = format!(
-                r#"mqtt sub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t command/inbox"#,
+                r#"mqtt sub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t command/inbox/#"#,
                 host = mqtt.host,
                 port = mqtt.port,
                 app_id = &self.props.data.app_id,

@@ -84,9 +84,9 @@ echo
 echo "Or, subscribe with the MQTT device:"
 echo
 if test -f build/certs/endpoints/ca-bundle.pem; then
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile build/certs/endpoints/ca-bundle.pem -t command/inbox"
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile build/certs/endpoints/ca-bundle.pem -t command/inbox/#"
 else
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s -t command/inbox"
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s -t command/inbox/#"
 fi
 echo
 echo "Then, send a command to that device from another terminal window:"
