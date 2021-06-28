@@ -62,7 +62,7 @@ pub fn user_auth_url() -> Url {
 
 #[inline]
 pub fn registry_url() -> Url {
-    Url::parse("http://registry").unwrap()
+    Url::parse("http://device-management-service").unwrap()
 }
 
 #[inline]
