@@ -2,16 +2,18 @@ mod auth;
 mod downstream;
 mod response;
 mod telemetry;
+mod error;
 
 //mod command;
 //mod server;
 
 use crate::auth::DeviceAuthenticator;
+use crate::error::CoapEndpointError;
 use crate::response::Responder;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     downstream::{DownstreamSender, DownstreamSink, KafkaSink},
-    error::{CoapEndpointError, EndpointError},
+    error::EndpointError,
 };
 use drogue_cloud_service_common::{config::ConfigFromEnv, defaults, health::HealthServerConfig};
 use futures;
@@ -187,7 +189,7 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = config
         .bind_addr_coap
-        .unwrap_or("127.0.0.1:5683".to_string());
+        .unwrap_or("0.0.0.0:5683".to_string());
 
     let app = App {
         downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
