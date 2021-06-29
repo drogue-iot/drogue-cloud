@@ -1,5 +1,5 @@
 [package]
-name = "coap-endpoint"
+name = "drogue-cloud-coap-endpoint"
 version = "0.1.0"
 authors = ["Pranav <adpranavb2000@gmail.com>"]
 edition = "2018"
@@ -14,7 +14,6 @@ bytestring = "1"
 coap = "0.10"
 coap-lite = "0.4"
 cloudevents-sdk = "^0.4"
-cloudevents-sdk-coap = {version = "0.1", path = "/home/pranav/Desktop/jboss/cloudevents-sdk-coap"}
 chrono = "0.4"
 dotenv = "0.15"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }

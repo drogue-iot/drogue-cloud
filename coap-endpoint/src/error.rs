@@ -1,4 +1,3 @@
-
 use coap_lite::ResponseType;
 use drogue_cloud_endpoint_common::error::EndpointError;
 use std::fmt::Formatter;
