@@ -1,11 +1,12 @@
 use crate::auth::DeviceAuthenticator;
 use crate::downstream::CoapCommandSender;
+use crate::error::CoapEndpointError;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 //use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
     //commands::Commands,
     downstream::{self, DownstreamSender, DownstreamSink},
-    error::{CoapEndpointError, EndpointError},
+    error::EndpointError,
 };
 use drogue_cloud_service_api::auth::device::authn;
 //use drogue_cloud_service_common::Id;

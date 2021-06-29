@@ -28,6 +28,7 @@ endif
 # all possible container images that we build and push (so it does not include the "builder")
 #
 ALL_IMAGES=\
+	coap-endpoint \
 	http-endpoint \
 	mqtt-endpoint \
 	console-backend \
