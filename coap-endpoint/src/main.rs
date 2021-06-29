@@ -1,8 +1,8 @@
 mod auth;
 mod downstream;
+mod error;
 mod response;
 mod telemetry;
-mod error;
 
 //mod command;
 //mod server;
@@ -187,9 +187,7 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::from_env()?;
 
-    let addr = config
-        .bind_addr_coap
-        .unwrap_or("0.0.0.0:5683".to_string());
+    let addr = config.bind_addr_coap.unwrap_or("0.0.0.0:5683".to_string());
 
     let app = App {
         downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,

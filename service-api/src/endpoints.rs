@@ -2,6 +2,11 @@ use crate::serde::is_default;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct CoapEndpoint {
+    pub url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct HttpEndpoint {
     pub url: String,
 }
@@ -23,6 +28,8 @@ pub struct Endpoints {
     pub api: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub console: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coap: Option<CoapEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub http: Option<HttpEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -48,6 +55,7 @@ pub struct Endpoints {
 impl Endpoints {
     pub fn publicize(&self) -> Endpoints {
         Endpoints {
+            coap: None,
             http: None,
             mqtt: None,
             mqtt_integration: None,

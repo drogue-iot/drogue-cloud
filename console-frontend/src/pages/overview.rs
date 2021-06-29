@@ -113,7 +113,9 @@ impl Overview {
         if let Some(registry) = &endpoints.registry {
             service_cards.push(self.render_card("Device registry", &registry.url, false));
         }
-
+        if let Some(coap) = &endpoints.coap {
+            endpoint_cards.push(self.render_card("CoAP endpoint", &coap.url, false));
+        }
         if let Some(http) = &endpoints.http {
             endpoint_cards.push(self.render_card("HTTP endpoint", &http.url, false));
         }

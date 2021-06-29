@@ -31,6 +31,8 @@ pub struct EndpointConfig {
     #[serde(default)]
     pub redirect_url: Option<String>,
     #[serde(default)]
+    pub coap_endpoint_url: Option<String>,
+    #[serde(default)]
     pub http_endpoint_url: Option<String>,
     #[serde(default)]
     pub mqtt_endpoint_host: Option<String>,
@@ -106,6 +108,12 @@ pub struct EnvEndpointSource(pub EndpointConfig);
 #[async_trait]
 impl EndpointSource for EnvEndpointSource {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints> {
+        let coap = self
+            .0
+            .coap_endpoint_url
+            .as_ref()
+            .cloned()
+            .map(|url| CoapEndpoint { url });
         let http = self
             .0
             .http_endpoint_url
@@ -141,6 +149,7 @@ impl EndpointSource for EnvEndpointSource {
         });
 
         Ok(Endpoints {
+            coap,
             http,
             mqtt,
             mqtt_integration,
@@ -188,6 +197,7 @@ impl EndpointSource for OpenshiftEndpointSource {
         let routes: Api<Route> = Api::namespaced(client.clone(), &self.namespace);
         let ingress: Api<Ingress> = Api::namespaced(client.clone(), &self.namespace);
 
+        let coap = url_from_route(&routes.get("http-endpoint").await?);
         let mqtt = host_from_route(&routes.get("mqtt-endpoint").await?);
         let mqtt_integration = host_from_route(&routes.get("mqtt-integration").await?);
         let http = url_from_route(&routes.get("http-endpoint").await?);
@@ -212,6 +222,7 @@ impl EndpointSource for OpenshiftEndpointSource {
             .await;
 
         let result = Endpoints {
+            coap: coap.map(|url| CoapEndpoint { url }),
             http: http.map(|url| HttpEndpoint { url }),
             mqtt: mqtt.map(|mqtt| MqttEndpoint {
                 host: mqtt,
