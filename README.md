@@ -40,21 +40,21 @@ our [documentation](https://book.drogue.io/).
 
 Take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/).
 
-If you know what you are doing, you may simply take a look at the following sections on how to deploy Drogue Cloud.
+If you know what you are doing, the next sections give you a quick may of deploying the "latest" version of Drogue Cloud.
 
 ### Minikube
 
 ~~~shell
 minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
-minikube tunnel # in a separate terminal, as it keeps running
-env CLUSTER=minikube ./scripts/drgadm deploy
+minikube tunnel # run this in a separate terminal, as it needs to keep running
+make deploy CLUSTER=minikube
 ~~~
 
 ### Kind
 
 ~~~shell
 kind create cluster --config=deploy/kind/cluster-config.yaml
-env CLUSTER=kind ./scripts/drgadm deploy
+make deploy CLUSTER=kind
 ~~~
 
 ## Useful Links

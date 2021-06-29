@@ -19,19 +19,16 @@ Additionally, you will need to:
 
 == Deploy standard images
 
-Installing Drogue Cloud, using the standard images, can be done by calling the "installation" script (`drgadm`)
-directly from the repository:
+Installing Drogue Cloud, using the standard images, can be done by calling the makefile target `deploy`:
 
 [source,bash]
 ----
-./script/drgadm deploy
+make deploy
 ----
-
-TIP: This is the same script as from the installer packages explained before. Thus is accepts the same variables/options.
 
 == Deploy custom images
 
-If you built custom images, and pushed them to a container repository:
+If you built custom images, and pushed them to a container repository, you can deploy them using the following command:
 
 [source,bash]
 ----
@@ -44,3 +41,12 @@ You can install them using:
 ----
 make CONTAINER_REGISTRY=quay.io/my-repo deploy
 ----
+
+== Using the installer script for development
+
+The makefile actually uses the installer script `scripts/drgadm` internally. It only passes in the right arguments,
+so that the installer will install images from a different registry, or use a different tag.
+
+NOTE: By default, the installer scripts, even on the main branch, will install a tagged version. Sometimes tagged
+versions are not yet available on the container registry, and thus, the installation may fail. It is therefore
+recommended to install "latest" images using the `make deploy` command.

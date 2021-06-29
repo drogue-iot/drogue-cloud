@@ -268,7 +268,10 @@ frontend: host-build
 #
 # Do a local deploy
 #
-deploy: require-container-registry
+# For a local deploy, we allow using the default container registry of the project
+#
+deploy: CONTAINER_REGISTRY ?= "ghcr.io/drogue-cloud"
+deploy:
 	test -d deploy/helm/charts || git submodule update --init
 	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy \
 		-s defaults.images.repository=$(CONTAINER_REGISTRY) \
