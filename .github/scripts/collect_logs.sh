@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 LOGDIR=$1
 NAMESPACE=$2
 
@@ -18,31 +19,31 @@ function runcmd {
 }
 
 #extract overall status
-mkdir -p "${LOGDIR}/logs/"
-runcmd "${CMD} get all" "${LOGDIR}/logs/all.log"
+mkdir -p "${LOGDIR}/"
+runcmd "${CMD} get all" "${LOGDIR}/all.log"
 
 #extract the pods logs
-mkdir -p "${LOGDIR}/logs/pods/"
+mkdir -p "${LOGDIR}/pods/"
 
 for pod in $(${CMD} get pods -o jsonpath='{.items[*].metadata.name}')
 do
     for container in $(${CMD} get pod "$pod" -o jsonpath='{.spec.containers[*].name}')
     do
-        runcmd "${CMD} logs -c $container $pod" "${LOGDIR}/logs/pods/${pod}_${container}.log"
+        runcmd "${CMD} logs -c $container $pod" "${LOGDIR}/pods/${pod}_${container}.log"
     done
-    runcmd "${CMD} describe pod $pod" "${LOGDIR}/logs/pods/${pod}_describe.log"
+    runcmd "${CMD} describe pod $pod" "${LOGDIR}/pods/${pod}_describe.log"
 done
 
 function gather() {
   local resource=$1
   shift
 
-  mkdir -p "${LOGDIR}/logs/${resource}/"
+  mkdir -p "${LOGDIR}/${resource}/"
 
   for item in $(${CMD} get "${resource}" -o jsonpath='{.items[*].metadata.name}')
   do
-      runcmd "${CMD} describe ${resource} ${item}" "${LOGDIR}/logs/${resource}/${item}.log"
-      runcmd "${CMD} get ${resource} ${item} -o yaml" "${LOGDIR}/logs/${resource}/${item}.yaml"
+      runcmd "${CMD} describe ${resource} ${item}" "${LOGDIR}/${resource}/${item}.log"
+      runcmd "${CMD} get ${resource} ${item} -o yaml" "${LOGDIR}/${resource}/${item}.yaml"
   done
 }
 
