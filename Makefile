@@ -270,7 +270,7 @@ frontend: host-build
 #
 # For a local deploy, we allow using the default container registry of the project
 #
-deploy: CONTAINER_REGISTRY ?= "ghcr.io/drogue-cloud"
+deploy: CONTAINER_REGISTRY ?= "ghcr.io/drogue-iot"
 deploy:
 	test -d deploy/helm/charts || git submodule update --init
 	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy \
