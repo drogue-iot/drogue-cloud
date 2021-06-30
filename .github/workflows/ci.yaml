@@ -210,6 +210,7 @@ jobs:
         if: failure()
         run: |
           mkdir -p /tmp/logs
+          kind export logs /tmp/logs
           for ns in kafka kourier-system knative-serving knative-eventing drogue-iot; do
             ./.github/scripts/collect_logs.sh /tmp/logs/$ns $ns
           done
