@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-ttn-operator"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
 
