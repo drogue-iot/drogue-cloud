@@ -31,9 +31,7 @@ pub struct EndpointConfig {
     #[serde(default)]
     pub redirect_url: Option<String>,
     #[serde(default)]
-    pub coap_endpoint_host: Option<String>,
-    #[serde(default)]
-    pub coap_endpoint_port: u16,
+    pub coap_endpoint_url: Option<String>,
     #[serde(default)]
     pub http_endpoint_url: Option<String>,
     #[serde(default)]
@@ -110,10 +108,12 @@ pub struct EnvEndpointSource(pub EndpointConfig);
 #[async_trait]
 impl EndpointSource for EnvEndpointSource {
     async fn eval_endpoints(&self) -> anyhow::Result<Endpoints> {
-        let coap = self.0.coap_endpoint_host.as_ref().map(|host| CoapEndpoint {
-            host: host.clone(),
-            port: self.0.coap_endpoint_port,
-        });
+        let coap = self
+            .0
+            .coap_endpoint_url
+            .as_ref()
+            .cloned()
+            .map(|url| CoapEndpoint { url });
         let http = self
             .0
             .http_endpoint_url
@@ -197,7 +197,7 @@ impl EndpointSource for OpenshiftEndpointSource {
         let routes: Api<Route> = Api::namespaced(client.clone(), &self.namespace);
         let ingress: Api<Ingress> = Api::namespaced(client.clone(), &self.namespace);
 
-        let coap = host_from_route(&routes.get("coap-endpoint").await?);
+        let coap = url_from_route(&routes.get("http-endpoint").await?);
         let mqtt = host_from_route(&routes.get("mqtt-endpoint").await?);
         let mqtt_integration = host_from_route(&routes.get("mqtt-integration").await?);
         let http = url_from_route(&routes.get("http-endpoint").await?);
@@ -222,10 +222,7 @@ impl EndpointSource for OpenshiftEndpointSource {
             .await;
 
         let result = Endpoints {
-            coap: coap.map(|coap| CoapEndpoint { 
-                host: coap,
-                port: 443, 
-            }),
+            coap: coap.map(|url| CoapEndpoint { url }),
             http: http.map(|url| HttpEndpoint { url }),
             mqtt: mqtt.map(|mqtt| MqttEndpoint {
                 host: mqtt,
