@@ -57,7 +57,7 @@ impl Component for PublishData {
                     password = &self.props.data.password,
                 )),
                 certs = local_certs
-                    .then(|| "--verify build/certs/endpoints/ca-bundle.pem ")
+                    .then(|| "--verify build/certs/endpoints/root-cert.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
@@ -81,7 +81,7 @@ impl Component for PublishData {
                 password = shell_quote(&self.props.data.password),
                 payload = shell_single_quote(&self.props.data.payload),
                 certs = local_certs
-                    .then(|| "--cafile build/certs/endpoints/ca-bundle.pem ")
+                    .then(|| "--cafile build/certs/endpoints/root-cert.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{

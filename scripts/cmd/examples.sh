@@ -52,19 +52,19 @@ echo
 echo "Data published by devices can be received via MQTT. Possibly start this in another terminal."
 echo
 echo "Structured content mode (MQTT v3.1.1 and v5):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'"
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/app_id'"
 echo
 echo "Binary content mode (MQTT v5 only):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/ca-bundle.pem -t 'app/app_id'" -up content-mode=binary
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/app_id'" -up content-mode=binary
 echo
 bold "Publish data:"
 bold "---------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
-if test -f build/certs/endpoints/ca-bundle.pem; then
-  echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/ca-bundle.pem -t temp -m '{\"temp\":42}'"
+if test -f build/certs/endpoints/root-cert.pem; then
+  echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s --cafile build/certs/endpoints/root-cert.pem -t temp -m '{\"temp\":42}'"
 else
   echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
   echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -s -t temp -m '{\"temp\":42}'"
@@ -75,16 +75,16 @@ bold "------------------------------"
 echo
 echo "Publish data from the device and specify how long will you wait for a command with 'ct' parameter (in seconds):"
 echo
-if test -f build/certs/endpoints/ca-bundle.pem; then
-  echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
+if test -f build/certs/endpoints/root-cert.pem; then
+  echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 else
   echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 fi
 echo
 echo "Or, subscribe with the MQTT device:"
 echo
-if test -f build/certs/endpoints/ca-bundle.pem; then
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile build/certs/endpoints/ca-bundle.pem -t command/inbox/#"
+if test -f build/certs/endpoints/root-cert.pem; then
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s --cafile build/certs/endpoints/root-cert.pem -t command/inbox/#"
 else
   echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@app_id -pw foobar -i device_id -s -t command/inbox/#"
 fi
@@ -134,7 +134,7 @@ echo "  http --auth device_id@app_id:foobar POST $HTTP_ENDPOINT_URL/v1/foo data_
 echo
 echo "Local test certificates:"
 echo
-echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/ca-bundle.pem POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
+echo "  http --auth device_id@app_id:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
 echo
 echo "Check the twin status:"
 echo "-----------------------"
