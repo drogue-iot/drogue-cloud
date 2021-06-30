@@ -16,6 +16,7 @@ build: $(EGEN)/root-key.pem $(EGEN)/root-cert.pem
 
 build: $(EGEN)/http-endpoint.key $(EGEN)/http-endpoint.crt $(EGEN)/http-endpoint.fullchain.crt
 build: $(EGEN)/mqtt-endpoint.key $(EGEN)/mqtt-endpoint.crt $(EGEN)/mqtt-endpoint.fullchain.crt
+build: $(EGEN)/coap-endpoint.key $(EGEN)/coap-endpoint.crt $(EGEN)/coap-endpoint.fullchain.crt
 
 $(EGEN):
 	install -d $(EGEN)
