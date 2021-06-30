@@ -178,6 +178,7 @@ jobs:
           wait: 300s
           cluster_name: kind
           config: deploy/kind/cluster-config.yaml
+          version: v0.11.1
 
       - name: Load images in docker
         run: docker load -i all.tar
