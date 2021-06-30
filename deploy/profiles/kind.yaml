@@ -2,6 +2,9 @@
 # Ports might seem a bit off, but they must be in the range of 30000-32767
 
 endpoints:
+  coap:
+    ingress:
+      port: 30003
   mqtt:
     ingress:
       port: 30001

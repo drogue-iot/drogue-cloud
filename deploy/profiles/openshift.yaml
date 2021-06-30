@@ -1,4 +1,7 @@
 endpoints:
+  coap:
+    ingress:
+      port: 443
   mqtt:
     ingress:
       port: 443
