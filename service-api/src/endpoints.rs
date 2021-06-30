@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct CoapEndpoint {
-    pub url: String,
+    pub host: String,
+    pub port: u16,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
