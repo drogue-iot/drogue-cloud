@@ -1542,6 +1542,7 @@ dependencies = [
 name = "drogue-cloud-coap-endpoint"
 version = "0.1.0"
 dependencies = [
+ "actix-web",
  "anyhow",
  "async-trait",
  "bytes 1.0.1",
