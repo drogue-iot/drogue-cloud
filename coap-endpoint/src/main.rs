@@ -15,8 +15,12 @@ use drogue_cloud_endpoint_common::{
     downstream::{DownstreamSender, DownstreamSink, KafkaSink},
     error::EndpointError,
 };
-use drogue_cloud_service_common::{config::ConfigFromEnv, defaults, health::HealthServerConfig};
-use futures;
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv,
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
+use futures::{self, TryFutureExt};
 use std::collections::LinkedList;
 use telemetry::PublishOptions;
 //use http::HeaderValue;
@@ -180,7 +184,8 @@ where
     }
 }
 
-#[tokio::main]
+// Health server uses actix_web to run
+#[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
@@ -201,8 +206,8 @@ async fn main() -> anyhow::Result<()> {
 
     let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
 
-    //let health = HealthServer::new(config.health, vec![]);
+    let health = HealthServer::new(config.health, vec![]);
 
-    futures::try_join!(/*health.run_ntex(),*/ device_to_endpoint)?;
+    futures::try_join!(health.run(), device_to_endpoint.err_into())?;
     Ok(())
 }
