@@ -2,9 +2,9 @@
 
 API_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__API_URL)"
 CONSOLE_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__CONSOLE_URL)"
-
+ 
 COAP_ENDPOINT_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__COAP_ENDPOINT_URL)"
-COAP_ENDPOINT_HOST="$(echo "$COAP_ENDPOINT_URL" | sed -E -e 's/:[0-9]+$//' -e 's|^http?://||' )"
+COAP_ENDPOINT_HOST="$(echo "$COAP_ENDPOINT_URL" | sed -E -e 's/:[0-9]+$//' -e 's|^coap?://||' )"
 
 MQTT_ENDPOINT_HOST="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_HOST)"
 MQTT_ENDPOINT_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_PORT)"

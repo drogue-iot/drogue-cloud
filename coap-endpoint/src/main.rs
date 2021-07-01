@@ -43,8 +43,6 @@ pub struct Config {
     pub key_file: Option<String>,
     #[serde(default)]
     pub bind_addr_coap: Option<String>,
-    #[serde(default)]
-    pub bind_addr_mqtt: Option<String>,
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr_http: String,
     #[serde(default)]
