@@ -1,6 +1,6 @@
 use crate::WebData;
 use actix_web::{post, web, HttpRequest, HttpResponse};
-use cloudevents_sdk_actix_web::HttpRequestExt;
+use cloudevents::actix::HttpRequestExt;
 use drogue_cloud_registry_events::Event;
 use serde_json::json;
 use std::convert::TryInto;

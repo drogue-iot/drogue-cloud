@@ -98,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
     let main = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(max_json_payload_size))
+            .app_data(web::JsonConfig::default().limit(max_json_payload_size))
             .app_data(data.clone())
             .service(index)
             .service(endpoints::events)

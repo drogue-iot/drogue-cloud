@@ -87,9 +87,9 @@ async fn main() -> anyhow::Result<()> {
         let app = App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))
-            .data(web::JsonConfig::default().limit(max_json_payload_size))
-            .data(sender.clone())
-            .data(http_server_commands.clone());
+            .app_data(web::JsonConfig::default().limit(max_json_payload_size))
+            .app_data(sender.clone())
+            .app_data(http_server_commands.clone());
 
         let app = app.app_data(Data::new(device_authenticator.clone()));
 

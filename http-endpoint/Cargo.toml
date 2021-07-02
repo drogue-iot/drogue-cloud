@@ -25,10 +25,9 @@ actix-broker = "0.4.0"
 actix-rt = "2"
 #actix-service = "1"
 actix-tls = "=3.0.0-beta.5"
-actix-http = "=3.0.0-beta.5" # FIXME: temporary intermediate
-actix-web = "=4.0.0-beta.5" # we need v4 as we need tokio 1
-actix-web-httpauth = "=0.6.0-beta.1"
-actix-web-actors = "=4.0.0-beta.4"
+actix-web = "4.0.0-beta.5" # we need v4 as we need tokio 1
+actix-web-httpauth = "0.6.0-beta.2"
+actix-web-actors = "4.0.0-beta.6"
 
 futures = "0.3"
 futures-core = "0.3"
@@ -46,8 +45,7 @@ http = "0.2"
 env_logger = "0.7"
 log = "0.4"
 
-cloudevents-sdk = "0.4"
-cloudevents-sdk-actix-web = "0.4"
+cloudevents-sdk = { version = "0.4", features = ["cloudevents-actix"] }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }

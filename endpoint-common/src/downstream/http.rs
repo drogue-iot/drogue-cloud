@@ -14,11 +14,10 @@ impl DownstreamSink for HttpSink {
     type Error = reqwest::Error;
 
     async fn publish(&self, event: Event) -> Result<PublishOutcome, DownstreamError<Self::Error>> {
-        let response =
-            cloudevents_sdk_reqwest::event_to_request(event, self.client.post(&self.sink))?
-                .send()
-                .await
-                .map_err(|err| DownstreamError::Transport(err))?;
+        let response = cloudevents::reqwest::event_to_request(event, self.client.post(&self.sink))?
+            .send()
+            .await
+            .map_err(|err| DownstreamError::Transport(err))?;
 
         log::debug!("Publish result: {:?}", response);
 

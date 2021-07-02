@@ -1,11 +1,10 @@
 use crate::apps::{Members, TransferOwnership};
-use actix_http::ResponseError;
 use async_trait::async_trait;
 use drogue_cloud_service_api::auth::user::UserInformation;
 
 #[async_trait]
 pub trait AdminService: Clone {
-    type Error: ResponseError;
+    type Error: actix_web::ResponseError;
 
     async fn transfer(
         &self,

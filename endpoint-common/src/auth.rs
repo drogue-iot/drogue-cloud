@@ -287,13 +287,13 @@ pub struct DeviceAuthDetails {
 
 impl FromRequest for DeviceAuthDetails {
     type Config = ();
-    type Error = ();
+    type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload<PayloadStream>) -> Self::Future {
         match req.extensions().get::<DeviceAuthDetails>() {
             Some(properties) => ok(properties.clone()),
-            None => err(()),
+            None => err(actix_web::error::ErrorBadRequest("no auth details")),
         }
     }
 }

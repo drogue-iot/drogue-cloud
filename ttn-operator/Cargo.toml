@@ -11,12 +11,11 @@ async-trait = "0.1"
 lazy_static = "1"
 maplit = "1"
 
-actix-http = "=3.0.0-beta.5" # FIXME: temporary intermediate
-actix-web = "=4.0.0-beta.5" # we need v4 as we need tokio 1
+actix-web = "4.0.0-beta.5" # we need v4 as we need tokio 1
+actix-http = "3.0.0-beta.5"
 actix-web-httpauth = "0.6.0-beta.1"
 
-cloudevents-sdk = "0.4"
-cloudevents-sdk-actix-web = "0.4"
+cloudevents-sdk = { version = "0.4", features = ["cloudevents-actix"] }
 
 http = "0.2"
 url = "2"

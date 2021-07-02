@@ -43,9 +43,9 @@ where
     }
 }
 
-impl<E> actix_http::ResponseError for ArrayStreamerError<E>
+impl<E> actix_web::ResponseError for ArrayStreamerError<E>
 where
-    E: Debug + Display + actix_http::ResponseError,
+    E: Debug + Display + actix_web::ResponseError,
 {
     fn status_code(&self) -> StatusCode {
         match self {

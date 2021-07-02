@@ -1,6 +1,6 @@
 use crate::commands::{Command, Commands};
 use actix_web::{dev::Server, middleware, post, web, App, HttpResponse, HttpServer};
-use cloudevents_sdk_actix_web::HttpRequestExt;
+use cloudevents::actix::HttpRequestExt;
 use drogue_cloud_service_common::defaults;
 use serde::Deserialize;
 use std::convert::TryFrom;
@@ -47,8 +47,8 @@ impl CommandServer {
             App::new()
                 .wrap(middleware::Logger::default())
                 .app_data(web::PayloadConfig::new(max_payload_size))
-                .data(web::JsonConfig::default().limit(max_json_size))
-                .data(commands.clone())
+                .app_data(web::JsonConfig::default().limit(max_json_size))
+                .app_data(commands.clone())
                 .service(command_service)
         })
         .bind(config.bind_addr)?
