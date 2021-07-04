@@ -70,7 +70,7 @@ macro_rules! app {
     ($sender:ty, $enable_auth:expr, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
             .wrap(actix_web::middleware::Logger::default())
-            .data(web::JsonConfig::default().limit($max_json_payload_size));
+            .app_data(web::JsonConfig::default().limit($max_json_payload_size));
 
         let app = {
             let scope = web::scope("/api/registry/v1alpha1")

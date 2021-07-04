@@ -1637,7 +1637,6 @@ name = "drogue-cloud-device-management-service"
 version = "0.6.0"
 dependencies = [
  "actix-cors",
- "actix-http",
  "actix-rt",
  "actix-web",
  "actix-web-httpauth",

@@ -1,6 +1,4 @@
-use actix_http::{http::StatusCode, Response};
 use bytes::{BufMut, Bytes, BytesMut};
-use core::fmt::Debug;
 use futures::{
     task::{Context, Poll},
     {ready, Stream},
@@ -8,7 +6,7 @@ use futures::{
 use pin_project::pin_project;
 use serde::Serialize;
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display},
     pin::Pin,
 };
 
@@ -20,46 +18,6 @@ enum State {
     Data,
     /// After the last item
     End,
-}
-
-#[derive(Debug)]
-pub enum ArrayStreamerError<E>
-where
-    E: Debug + Display,
-{
-    Source(E),
-    Serializer(serde_json::Error),
-}
-
-impl<E> Display for ArrayStreamerError<E>
-where
-    E: Debug + Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Source(err) => write!(f, "Source error: {}", err),
-            Self::Serializer(err) => write!(f, "Serializer error: {}", err),
-        }
-    }
-}
-
-impl<E> actix_web::ResponseError for ArrayStreamerError<E>
-where
-    E: Debug + Display + actix_web::ResponseError,
-{
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::Source(err) => err.status_code(),
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-
-    fn error_response(&self) -> Response {
-        match self {
-            Self::Source(err) => err.error_response(),
-            Self::Serializer(err) => Response::InternalServerError().body(err.to_string()),
-        }
-    }
 }
 
 #[pin_project]
@@ -94,7 +52,7 @@ where
     T: Serialize,
     E: Debug + Display,
 {
-    type Item = Result<Bytes, ArrayStreamerError<E>>;
+    type Item = Result<Bytes, E>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if matches!(self.state, State::End) {
@@ -111,7 +69,7 @@ where
         let res = ready!(this.stream.as_mut().poll_next(cx));
 
         match res {
-            Some(Err(err)) => return Poll::Ready(Some(Err(ArrayStreamerError::Source(err)))),
+            Some(Err(err)) => return Poll::Ready(Some(Err(err))),
             Some(Ok(item)) => {
                 // first/next item
                 if matches!(this.state, State::Data) {
@@ -120,7 +78,8 @@ where
                 // serialize
                 match serde_json::to_vec(&item) {
                     Ok(buffer) => data.put(Bytes::from(buffer)),
-                    Err(err) => return Poll::Ready(Some(Err(ArrayStreamerError::Serializer(err)))),
+                    Err(_) => return Poll::Ready(None), // TODO: not this, this...
+                                                        // Err(err) => return Poll::Ready(Some(Err(err))),
                 }
                 // change state after encoding
                 *this.state = State::Data;
