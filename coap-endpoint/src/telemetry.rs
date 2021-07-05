@@ -4,7 +4,7 @@ use crate::error::CoapEndpointError;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 //use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
-    //commands::Commands,
+    commands::Commands,
     downstream::{self, DownstreamSender, DownstreamSink},
     error::EndpointError,
 };
@@ -56,7 +56,7 @@ impl Default for PublishOptions {
 pub async fn publish_plain<S>(
     sender: DownstreamSender<S>,
     auth: DeviceAuthenticator,
-    //commands: web::Data<Commands>,
+    commands: Commands,
     channel: String,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
@@ -66,17 +66,13 @@ where
     S: DownstreamSink + Send,
     <S as DownstreamSink>::Error: Send,
 {
-    publish(
-        sender, auth, //commands,
-        channel, None, opts, req, cert,
-    )
-    .await
+    publish(sender, auth, commands, channel, None, opts, req, cert).await
 }
 
 pub async fn publish_tail<S>(
     sender: DownstreamSender<S>,
     auth: DeviceAuthenticator,
-    //commands: web::Data<Commands>,
+    commands: Commands,
     path: (String, String),
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
@@ -90,7 +86,7 @@ where
     publish(
         sender,
         auth,
-        //commands,
+        commands,
         channel,
         Some(suffix),
         opts,
@@ -103,7 +99,7 @@ where
 pub async fn publish<S>(
     sender: DownstreamSender<S>,
     auth: DeviceAuthenticator,
-    //commands: web::Data<Commands>,
+    commands: Commands,
     channel: String,
     suffix: Option<String>,
     opts: PublishOptions,
@@ -162,6 +158,6 @@ where
     };
 
     sender
-        .publish_and_await(publish, opts.ct, req.message.payload.clone(), req)
+        .publish_and_await(publish, commands, opts.ct, req.message.payload.clone(), req)
         .await
 }

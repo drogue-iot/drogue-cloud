@@ -1,4 +1,5 @@
 mod auth;
+mod command;
 mod downstream;
 mod error;
 mod response;
@@ -12,6 +13,8 @@ use crate::error::CoapEndpointError;
 use crate::response::Responder;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
+    command_endpoint::{CommandServer, CommandServerConfig},
+    commands::Commands,
     downstream::{DownstreamSender, DownstreamSink, KafkaSink},
     error::EndpointError,
 };
@@ -22,6 +25,7 @@ use drogue_cloud_service_common::{
 };
 use futures::{self, TryFutureExt};
 use std::collections::LinkedList;
+use std::ops::DerefMut;
 use telemetry::PublishOptions;
 //use http::HeaderValue;
 //use log;
@@ -45,6 +49,9 @@ pub struct Config {
     pub bind_addr_coap: Option<String>,
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr_http: String,
+
+    #[serde(default)]
+    pub command: CommandServerConfig,
     #[serde(default)]
     pub health: HealthServerConfig,
 }
@@ -122,6 +129,7 @@ fn params(
 
 async fn publish_handler<S>(
     mut request: CoapRequest<SocketAddr>,
+    commands: Commands,
     app: App<S>,
 ) -> Option<CoapResponse>
 where
@@ -153,6 +161,7 @@ where
         1 => telemetry::publish_plain(
             app.downstream,
             app.authenticator,
+            commands,
             path_segments[0].clone(),
             options,
             request.clone(),
@@ -164,6 +173,7 @@ where
         2 => telemetry::publish_tail(
             app.downstream,
             app.authenticator,
+            commands,
             (path_segments[0].clone(), path_segments[1].clone()),
             queries
                 .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x))?
@@ -189,8 +199,9 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     let config = Config::from_env()?;
-
+    let commands = Commands::new();
     let addr = config.bind_addr_coap.unwrap_or("0.0.0.0:5683".to_string());
+    let coap_server_commands = commands.clone();
 
     let app = App {
         downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
@@ -202,10 +213,17 @@ async fn main() -> anyhow::Result<()> {
     println!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
 
-    let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
+    let device_to_endpoint = server
+        .run(move |request| publish_handler(request, coap_server_commands.clone(), app.clone()));
 
     let health = HealthServer::new(config.health, vec![]);
 
-    futures::try_join!(health.run(), device_to_endpoint.err_into())?;
+    let mut command_server = CommandServer::new(config.command, commands.clone())?;
+
+    futures::try_join!(
+        health.run(),
+        device_to_endpoint.err_into(),
+        command_server.deref_mut().err_into(),
+    )?;
     Ok(())
 }
