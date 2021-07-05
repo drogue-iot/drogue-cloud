@@ -64,7 +64,7 @@ where
 {
     pub downstream: DownstreamSender<S>,
     pub authenticator: DeviceAuthenticator,
-    // pub commands: Commands,
+    pub commands: Commands,
 }
 
 fn uri_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
@@ -129,7 +129,6 @@ fn params(
 
 async fn publish_handler<S>(
     mut request: CoapRequest<SocketAddr>,
-    commands: Commands,
     app: App<S>,
 ) -> Option<CoapResponse>
 where
@@ -161,7 +160,7 @@ where
         1 => telemetry::publish_plain(
             app.downstream,
             app.authenticator,
-            commands,
+            app.commands,
             path_segments[0].clone(),
             options,
             request.clone(),
@@ -173,7 +172,7 @@ where
         2 => telemetry::publish_tail(
             app.downstream,
             app.authenticator,
-            commands,
+            app.commands,
             (path_segments[0].clone(), path_segments[1].clone()),
             queries
                 .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x))?
@@ -208,17 +207,18 @@ async fn main() -> anyhow::Result<()> {
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),
+        commands: coap_server_commands,
     };
 
     println!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
 
     let device_to_endpoint = server
-        .run(move |request| publish_handler(request, coap_server_commands.clone(), app.clone()));
+        .run(move |request| publish_handler(request, app.clone()));
 
     let health = HealthServer::new(config.health, vec![]);
 
-    let mut command_server = CommandServer::new(config.command, commands.clone())?;
+    let mut command_server = CommandServer::new(config.command, commands)?;
 
     futures::try_join!(
         health.run(),
