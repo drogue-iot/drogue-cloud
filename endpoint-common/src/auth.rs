@@ -110,48 +110,6 @@ impl DeviceAuthenticator {
             .await
     }
 
-    // TODO: temp auth func. REMOVE BEFORE PUSHING
-    pub async fn authenticate_temp<A, D>(
-        &self,
-        _application: A,
-        _device: D,
-        _credential: Credential,
-        r#_as: Option<String>,
-    ) -> AuthResult<AuthenticationResponse>
-    where
-        A: ToString,
-        D: ToString,
-    {
-        Ok(AuthenticationResponse {
-            outcome: serde_json::from_str(
-                r#"
-                {
-                    "pass": {
-                        "application": {
-                            "metadata": {
-                                "name": "app1",
-                                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d210",
-                                "creationTimestamp": "2020-01-01T00:00:00Z",
-                                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                                "generation": 0
-                            }
-                        },
-                        "device": {
-                            "metadata": {
-                                "application": "app1",
-                                "name": "device1",
-                                "uid": "4e185ea6-7c26-11eb-a319-d45d6455d211",
-                                "creationTimestamp": "2020-01-01T00:00:00Z",
-                                "resourceVersion": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-                                "generation": 0
-                            }
-                        }
-                    }
-                }"#,
-            )?,
-        })
-    }
-
     /// Authenticate a device from a client cert only.
     ///
     /// This will take the issuerDn as application id, and the subjectDn as device id.
@@ -184,12 +142,12 @@ impl DeviceAuthenticator {
                     password,
                 }),
             ) => {
-                self.authenticate_temp(&scope, &device, Credential::Password(password), None)
+                self.authenticate(&scope, &device, Credential::Password(password), None)
                     .await
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
             (Some(scope), None, Some(AuthValue::Basic { username, password })) => {
-                self.authenticate_temp(
+                self.authenticate(
                     scope.as_ref(),
                     username.into_string(),
                     Credential::Password(password),
@@ -199,7 +157,7 @@ impl DeviceAuthenticator {
             }
             // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
             (Some(scope), Some(device), Some(AuthValue::Basic { username, password })) => {
-                self.authenticate_temp(
+                self.authenticate(
                     scope.as_ref(),
                     device.as_ref(),
                     Credential::UsernamePassword {
@@ -223,7 +181,7 @@ impl DeviceAuthenticator {
                     password,
                 }),
             ) => {
-                self.authenticate_temp(
+                self.authenticate(
                     &scope,
                     device.as_ref(),
                     Credential::UsernamePassword { username, password },
