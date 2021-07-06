@@ -20,7 +20,6 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
-    defaults,
     health::{HealthServer, HealthServerConfig},
 };
 use futures::{self, TryFutureExt};
@@ -47,8 +46,6 @@ pub struct Config {
     pub key_file: Option<String>,
     #[serde(default)]
     pub bind_addr_coap: Option<String>,
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr_http: String,
 
     #[serde(default)]
     pub command: CommandServerConfig,
@@ -213,8 +210,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
 
-    let device_to_endpoint = server
-        .run(move |request| publish_handler(request, app.clone()));
+    let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
 
     let health = HealthServer::new(config.health, vec![]);
 

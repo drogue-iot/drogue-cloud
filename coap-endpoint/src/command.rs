@@ -26,6 +26,7 @@ pub async fn wait_for_command(
             match timeout(Duration::from_secs(ttd), receiver.recv()).await {
                 Ok(Some(cmd)) => {
                     commands.unsubscribe(id.clone());
+                    log::debug!("Got command: {:?}", cmd);
                     Ok(req.response.and_then(|mut v| {
                         v.set_status(ResponseType::Content);
                         let mut command_value = LinkedList::new();
