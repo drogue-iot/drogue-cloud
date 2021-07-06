@@ -6,8 +6,8 @@ mod error;
 pub use self::actix::*;
 pub use error::*;
 
+use cloudevents::binding::rdkafka::MessageExt;
 use cloudevents::{event::ExtensionValue, Event};
-use cloudevents_sdk_rdkafka::MessageExt;
 use drogue_cloud_service_api::EXT_APPLICATION;
 use futures::{
     task::{Context, Poll},

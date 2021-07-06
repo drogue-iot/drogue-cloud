@@ -1,8 +1,8 @@
 use crate::{Event, EventSender, EventSenderError, SenderResult, EXT_PARTITIONKEY};
 use anyhow::Context;
 use async_trait::async_trait;
+use cloudevents::binding::rdkafka::{FutureRecordExt, MessageRecord};
 use cloudevents::{event::ExtensionValue, AttributesReader};
-use cloudevents_sdk_rdkafka::{FutureRecordExt, MessageRecord};
 use drogue_cloud_service_common::{config::ConfigFromEnv, defaults};
 use rdkafka::{
     error::KafkaError,

@@ -21,8 +21,6 @@ chrono = "0.4"
 reqwest = { version = "0.11", optional = true }
 
 cloudevents-sdk = "0.4"
-cloudevents-sdk-reqwest = { version = "0.4", optional = true }
-cloudevents-sdk-rdkafka = { version = "0.4", optional = true }
 
 uuid = { version = "0.8", features = ["v4"] }
 mime = "0.3"
@@ -39,6 +37,6 @@ anyhow = "1"
 
 [features]
 default = ["with_kafka", "with_database"]
-with_reqwest = ["reqwest", "cloudevents-sdk-reqwest"]
-with_kafka = ["rdkafka", "cloudevents-sdk-rdkafka"]
+with_reqwest = ["reqwest", "cloudevents-sdk/reqwest"]
+with_kafka = ["rdkafka", "cloudevents-sdk/rdkafka"]
 with_database = ["drogue-cloud-database-common"]

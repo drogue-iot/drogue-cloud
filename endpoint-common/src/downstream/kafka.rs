@@ -1,8 +1,8 @@
 use super::*;
 
 use async_trait::async_trait;
+use cloudevents::binding::rdkafka::{FutureRecordExt, MessageRecord};
 use cloudevents::{event::ExtensionValue, AttributesReader};
-use cloudevents_sdk_rdkafka::{FutureRecordExt, MessageRecord};
 use drogue_cloud_service_common::{config::ConfigFromEnv, defaults};
 use futures::channel::oneshot;
 use rdkafka::{
