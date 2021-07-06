@@ -1,6 +1,6 @@
 use crate::commands::{Command, Commands};
 use actix_web::{dev::Server, middleware, post, web, App, HttpResponse, HttpServer};
-use cloudevents_sdk_actix_web::HttpRequestExt;
+use cloudevents::binding::actix::HttpRequestExt;
 use drogue_cloud_service_common::defaults;
 use serde::Deserialize;
 use std::convert::TryFrom;

@@ -47,7 +47,4 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "7c
 #actix-web-httpauth = { git = "https://github.com/ctron/actix-extras", rev = "5f08b566a04842667672d5802be2604b6054e285" }
 
 # required du to missing "beta" versions for more recent "beta" actix versions
-cloudevents-sdk = { git = "https://github.com/ctron/sdk-rust", rev = "8c9836931c71f5a822ba0b1f25af30eeffc84126" }
-cloudevents-sdk-actix-web = { git = "https://github.com/ctron/sdk-rust", rev = "8c9836931c71f5a822ba0b1f25af30eeffc84126" }
-cloudevents-sdk-reqwest = { git = "https://github.com/ctron/sdk-rust", rev = "8c9836931c71f5a822ba0b1f25af30eeffc84126" }
-cloudevents-sdk-rdkafka = { git = "https://github.com/ctron/sdk-rust", rev = "8c9836931c71f5a822ba0b1f25af30eeffc84126" }
+cloudevents-sdk = { git = "https://github.com/jcrossley3/sdk-rust", branch = "actix-beta.5" } # FIXME: pre-release branch

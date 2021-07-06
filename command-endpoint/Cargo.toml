@@ -34,9 +34,7 @@ uuid = { version = "0.8", features = ["v4"] }
 env_logger = "0.7"
 log = "0.4"
 
-cloudevents-sdk = "0.4"
-cloudevents-sdk-actix-web = "0.4"
-cloudevents-sdk-reqwest = "0.4"
+cloudevents-sdk = { version = "0.4", features = ["actix", "reqwest"] }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-integration-common = { path = "../integration-common" }

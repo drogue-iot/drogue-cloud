@@ -40,8 +40,7 @@ futures = "0.3"
 
 async-trait = "0.1"
 
-cloudevents-sdk = "0.4"
-cloudevents-sdk-rdkafka = "0.4"
+cloudevents-sdk = { version = "0.4", features = ["rdkafka"] }
 
 uuid = { version = "0.8", features = ["v4"] }
 
