@@ -1,25 +1,20 @@
 use crate::WebData;
-use actix_web::{post, web, HttpRequest, HttpResponse};
-use cloudevents::binding::actix::HttpRequestExt;
+use actix_web::{post, web, HttpResponse};
 use drogue_cloud_database_common::error::ServiceError;
 use drogue_cloud_registry_events::Event;
 use std::convert::TryInto;
 
 #[post("/")]
 pub async fn events(
-    req: HttpRequest,
-    payload: web::Payload,
+    event: cloudevents::Event,
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let event = req.to_event(payload).await;
-
     log::debug!("Received event: {:?}", event);
-
-    Ok(mark_seen(event?, data).await?)
+    Ok(mark_seen(event, data).await?)
 }
 
 async fn mark_seen(
-    event: cloudevents::event::Event,
+    event: cloudevents::Event,
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, ServiceError> {
     let event: Event = event

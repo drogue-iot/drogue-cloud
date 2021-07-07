@@ -47,4 +47,4 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "7c
 #actix-web-httpauth = { git = "https://github.com/ctron/actix-extras", rev = "5f08b566a04842667672d5802be2604b6054e285" }
 
 # required du to missing "beta" versions for more recent "beta" actix versions
-cloudevents-sdk = { git = "https://github.com/jcrossley3/sdk-rust", branch = "actix-beta.5" } # FIXME: pre-release branch
+cloudevents-sdk = { git = "https://github.com/jcrossley3/sdk-rust", branch = "actix-4-beta.5" } # FIXME: pre-release branch
