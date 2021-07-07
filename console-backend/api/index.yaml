@@ -861,7 +861,24 @@ components:
       description: A JSON object containing arbritrary data attached to a device.
       properties:
         credentials:
-          $ref: '#/components/schemas/DeviceCredentials'
+          type: object
+          additionalProperties: false
+          properties:
+            credentials:
+              $ref: '#/components/schemas/DeviceCredentials'
+        gatewaySelector:
+          $ref: '#/components/schemas/GatewaySelector'
+
+    GatewaySelector:
+      type: object
+      additionalProperties: false
+      properties:
+        matchNames:
+          type: array
+          items:
+            type: string
+            description: The device ID of the device to use as a gateway.
+
 
     DeviceStatus:
       type: object
