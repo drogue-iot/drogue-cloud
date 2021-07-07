@@ -1,6 +1,5 @@
 use crate::commands::{Command, Commands};
 use actix_web::{dev::Server, middleware, post, web, App, HttpResponse, HttpServer};
-use cloudevents::binding::actix::HttpRequestExt;
 use drogue_cloud_service_common::defaults;
 use serde::Deserialize;
 use std::convert::TryFrom;
@@ -83,19 +82,18 @@ impl DerefMut for CommandServer {
 #[post("/command-service")]
 pub async fn command_service(
     body: web::Bytes,
-    req: web::HttpRequest,
-    payload: web::Payload,
+    event: cloudevents::Event,
     commands: web::Data<Commands>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::debug!("Req: {:?}", req);
+    log::debug!("Event: {:?}", event);
 
-    let mut request_event = req.to_event(payload).await?;
+    let mut request_event = event.clone();
     request_event.set_data(
         "application/json",
         String::from_utf8(body.as_ref().to_vec()).unwrap(),
     );
 
-    match Command::try_from(request_event.clone()) {
+    match Command::try_from(request_event) {
         Ok(command) => {
             if let Err(e) = commands.send(command).await {
                 log::error!("Failed to route command: {}", e);

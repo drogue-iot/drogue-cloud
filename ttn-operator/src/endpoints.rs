@@ -1,21 +1,17 @@
 use crate::WebData;
-use actix_web::{post, web, HttpRequest, HttpResponse};
-use cloudevents::binding::actix::HttpRequestExt;
+use actix_web::{post, web, HttpResponse};
 use drogue_cloud_registry_events::Event;
 use serde_json::json;
 use std::convert::TryInto;
 
 #[post("/")]
 pub async fn events(
-    req: HttpRequest,
-    payload: web::Payload,
+    event: cloudevents::Event,
     data: web::Data<WebData>,
 ) -> Result<HttpResponse, actix_web::error::Error> {
-    let event = req.to_event(payload).await;
-
     log::debug!("Received event: {:?}", event);
 
-    let event = match event?.try_into() {
+    let event = match event.try_into() {
         Ok(event) => event,
         Err(err) => {
             return Ok(HttpResponse::BadRequest().json(json!({ "details": format!("{}", err) })))
