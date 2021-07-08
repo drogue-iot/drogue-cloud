@@ -2,19 +2,17 @@ use crate::auth::DeviceAuthenticator;
 use crate::downstream::CoapCommandSender;
 use crate::error::CoapEndpointError;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
-//use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
     commands::Commands,
     downstream::{self, DownstreamSender, DownstreamSink},
     error::EndpointError,
 };
 use drogue_cloud_service_api::auth::device::authn;
-//use drogue_cloud_service_common::Id;
 use http::HeaderValue;
 use serde::Deserialize;
 use std::net::SocketAddr;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct PublishCommonOptions {
     pub application: Option<String>,
     pub device: Option<String>,
@@ -32,7 +30,7 @@ impl Default for PublishCommonOptions {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct PublishOptions {
     #[serde(flatten)]
     pub common: PublishCommonOptions,
@@ -55,28 +53,38 @@ impl Default for PublishOptions {
 
 pub async fn publish_plain<S>(
     sender: DownstreamSender<S>,
-    auth: DeviceAuthenticator,
+    authenticator: DeviceAuthenticator,
     commands: Commands,
     channel: String,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    cert: &Vec<u8>,
+    auth: &Vec<u8>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
     S: DownstreamSink + Send,
     <S as DownstreamSink>::Error: Send,
 {
-    publish(sender, auth, commands, channel, None, opts, req, cert).await
+    publish(
+        sender,
+        authenticator,
+        commands,
+        channel,
+        None,
+        opts,
+        req,
+        auth,
+    )
+    .await
 }
 
 pub async fn publish_tail<S>(
     sender: DownstreamSender<S>,
-    auth: DeviceAuthenticator,
+    authenticator: DeviceAuthenticator,
     commands: Commands,
     path: (String, String),
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    cert: &Vec<u8>,
+    auth: &Vec<u8>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
     S: DownstreamSink + Send,
@@ -85,26 +93,26 @@ where
     let (channel, suffix) = path;
     publish(
         sender,
-        auth,
+        authenticator,
         commands,
         channel,
         Some(suffix),
         opts,
         req,
-        cert,
+        auth,
     )
     .await
 }
 
 pub async fn publish<S>(
     sender: DownstreamSender<S>,
-    auth: DeviceAuthenticator,
+    authenticator: DeviceAuthenticator,
     commands: Commands,
     channel: String,
     suffix: Option<String>,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    cert: &Vec<u8>,
+    auth: &Vec<u8>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
     S: DownstreamSink + Send,
@@ -112,13 +120,11 @@ where
 {
     log::debug!("Publish to '{}'", channel);
 
-    let (application, device, _) = match auth
+    let (application, device, _) = match authenticator
         .authenticate_coap(
             opts.common.application,
             opts.common.device,
-            HeaderValue::from_bytes(cert).as_ref().ok(),
-            //certs.map(|c| c.0),
-            //opts.r#as.clone(),
+            HeaderValue::from_bytes(auth).as_ref().ok(),
         )
         .await
         .map_err(|err| CoapEndpointError(err.into()))?

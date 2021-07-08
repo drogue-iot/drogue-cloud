@@ -18,7 +18,7 @@ pub trait CoapCommandSender {
         &self,
         publish: Publish,
         commands: Commands,
-        _ttd: Option<u64>,
+        ttd: Option<u64>,
         //command: CommandWait,
         body: B,
         req: CoapRequest<SocketAddr>,
@@ -46,7 +46,6 @@ where
     {
         let id = Id::new(&publish.app_id, &publish.device_id);
         match self.publish(publish, body).await {
-            // TODO finish after command
             // ok, and accepted
             Ok(PublishOutcome::Accepted) => wait_for_command(req, commands, id, ttd).await,
 

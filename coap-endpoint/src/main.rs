@@ -5,9 +5,6 @@ mod error;
 mod response;
 mod telemetry;
 
-//mod command;
-//mod server;
-
 use crate::auth::DeviceAuthenticator;
 use crate::error::CoapEndpointError;
 use crate::response::Responder;
@@ -24,26 +21,26 @@ use drogue_cloud_service_common::{
 };
 use futures::{self, TryFutureExt};
 use std::collections::LinkedList;
+use std::net::SocketAddr;
 use std::ops::DerefMut;
 use telemetry::PublishOptions;
-//use http::HeaderValue;
-//use log;
-use std::net::SocketAddr;
 
-//use bytes::Bytes;
-//use bytestring::ByteString;
 use coap::Server;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use serde::Deserialize;
 
+// RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
+//
+// Option Number 4209 corresponds to the auth header, which contains
+// HTTP-like authorization information
+const HEADER_AUTH: CoapOption = CoapOption::Unknown(4209);
+//
+// Option Number 4210 correspons to the command header,
+// which is meant for commands to be sent back to the device
+const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default)]
-    pub disable_tls: bool,
-    #[serde(default)]
-    pub cert_bundle_file: Option<String>,
-    #[serde(default)]
-    pub key_file: Option<String>,
     #[serde(default)]
     pub bind_addr_coap: Option<String>,
 
@@ -64,7 +61,7 @@ where
     pub commands: Commands,
 }
 
-fn uri_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
+fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     let mut linked_list = ll.iter();
     let mut option_values = Vec::new();
     linked_list
@@ -75,6 +72,7 @@ fn uri_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
         .ok_or_else(|| EndpointError::InvalidRequest {
             details: "incorrect version number".to_string(),
         })?;
+
     let channel = linked_list
         .next()
         .map(|x| String::from_utf8(x.clone()).ok())
@@ -83,17 +81,18 @@ fn uri_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
             details: "error parsing channel".to_string(),
         })?;
 
+    option_values.push(channel);
+
     let mut subject = String::new();
     for i in linked_list {
         subject.push_str(std::str::from_utf8(i).map_err(|err| {
             return EndpointError::InvalidRequest {
-                details: format!("error parsing channel: {:?}", err).to_string(),
+                details: format!("error parsing subject: {:?}", err).to_string(),
             };
         })?);
         subject.push('/');
     }
 
-    option_values.push(channel);
     if subject.len() != 0 {
         subject.pop();
         option_values.push(subject);
@@ -107,9 +106,9 @@ fn params(
     let path_segments = request
         .message
         .get_option(CoapOption::UriPath)
-        .map(|uri| uri_parser(uri).ok())
+        .map(|paths| path_parser(paths).ok())
         .flatten()
-        .ok_or_else(|| anyhow::Error::msg("Error parsing path segments"))?; // TODO: see how this behaves, should you put in separate function?
+        .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?; // TODO: see how this behaves, should you put in separate function?
     let queries = request
         .message
         .get_option(CoapOption::UriQuery)
@@ -117,10 +116,10 @@ fn params(
         .flatten();
     let auth = request
         .message
-        .get_option(CoapOption::Unknown(4209))
+        .get_option(HEADER_AUTH)
         .map(|x| x.front())
         .flatten()
-        .ok_or_else(|| anyhow::Error::msg("Error parsing path segments"))?;
+        .ok_or_else(|| anyhow::Error::msg("Error parsing auth"))?;
     Ok((path_segments, queries, auth))
 }
 
@@ -222,4 +221,262 @@ async fn main() -> anyhow::Result<()> {
         command_server.deref_mut().err_into(),
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+pub mod test {
+    use coap_lite::{CoapOption, CoapRequest};
+    use regex::Regex;
+    use std::io::{Error, ErrorKind, Result};
+    use std::net::SocketAddr;
+    use url::Url;
+
+    use super::params;
+    use super::path_parser;
+
+    struct CoapRequestBuilder {
+        req: CoapRequest<SocketAddr>,
+    }
+
+    impl CoapRequestBuilder {
+        fn new(url: &str) -> Self {
+            let (_, _, path, queries) = CoapRequestBuilder::parse_coap_url(url).unwrap();
+
+            let auth = "some auth val".as_bytes().to_vec();
+
+            let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
+            request.set_path(path.as_str());
+            request.message.add_option(CoapOption::Unknown(4209), auth);
+
+            if let Some(q) = queries {
+                request.message.add_option(CoapOption::UriQuery, q);
+            }
+
+            CoapRequestBuilder { req: request }
+        }
+
+        fn parse_coap_url(url: &str) -> Result<(String, u16, String, Option<Vec<u8>>)> {
+            let url_params = match Url::parse(url) {
+                Ok(url_params) => url_params,
+                Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
+            };
+
+            let host = match url_params.host_str() {
+                Some("") => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
+                Some(h) => h,
+                None => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
+            };
+            let host = Regex::new(r"^\[(.*?)]$")
+                .unwrap()
+                .replace(&host, "$1")
+                .to_string();
+
+            let port = match url_params.port() {
+                Some(p) => p,
+                None => 5683,
+            };
+
+            let path = url_params.path().to_string();
+
+            let queries = url_params.query().map(|q| q.as_bytes().to_vec());
+
+            return Ok((host.to_string(), port, path, queries));
+        }
+    }
+
+    #[test]
+    fn path_parser_ok() {
+        // /{channel}
+        let mut request = CoapRequestBuilder::new("coap://test-url/v1/Rust?ct=30").req;
+        let mut path_segments = request
+            .message
+            .get_option(CoapOption::UriPath)
+            .map(|paths| path_parser(paths).ok())
+            .flatten()
+            .unwrap();
+        assert_eq!(vec!["Rust".to_string()], path_segments);
+
+        // channel name with special character
+        request = CoapRequestBuilder::new("coap://test-url/v1/Röst?ct=30").req;
+        assert!(request
+            .message
+            .get_option(CoapOption::UriPath)
+            .map(|paths| path_parser(paths))
+            .unwrap()
+            .is_ok());
+
+        // /{channel}/{subject}
+        request = CoapRequestBuilder::new("coap://test-url/v1/Rust/test?ct=30").req;
+        path_segments = request
+            .message
+            .get_option(CoapOption::UriPath)
+            .map(|paths| path_parser(paths).ok())
+            .flatten()
+            .unwrap();
+        assert_eq!(vec!["Rust".to_string(), "test".to_string()], path_segments);
+
+        // /{channel}/{urlencoded_subject}
+        request = CoapRequestBuilder::new("coap://test-url/v1/Rust/test/test2?ct=30").req;
+        path_segments = request
+            .message
+            .get_option(CoapOption::UriPath)
+            .map(|paths| path_parser(paths).ok())
+            .flatten()
+            .unwrap();
+        assert_eq!(
+            vec!["Rust".to_string(), "test/test2".to_string()],
+            path_segments
+        );
+    }
+
+    #[test]
+    fn path_parser_err() {
+        // endpoint version check(should be v1)
+        let request = CoapRequestBuilder::new("coap://test-url/v2/Rust?ct=30").req;
+        assert!(request
+            .message
+            .get_option(CoapOption::UriPath)
+            .map(|paths| path_parser(paths))
+            .unwrap()
+            .is_err());
+    }
+
+    #[test]
+    fn params_ok() {
+        // /{channel}
+        assert_eq!(
+            params(&CoapRequestBuilder::new("coap://test-url/v1/Rust").req).unwrap(),
+            (
+                vec![(String::from("Rust"))],
+                None,
+                &"some auth val".as_bytes().to_vec()
+            )
+        );
+
+        // /{channel}/{subject}
+        assert_eq!(
+            params(&CoapRequestBuilder::new("coap://test-url/v1/Rust/test-1").req).unwrap(),
+            (
+                vec![(String::from("Rust")), (String::from("test-1"))],
+                None,
+                &"some auth val".as_bytes().to_vec()
+            )
+        );
+
+        // /{channel}?param
+        assert_eq!(
+            params(&CoapRequestBuilder::new("coap://test-url/v1/Rust?ct=30").req).unwrap(),
+            (
+                vec![(String::from("Rust"))],
+                Some(&"ct=30".as_bytes().to_vec()),
+                &"some auth val".as_bytes().to_vec()
+            )
+        );
+
+        // /{channel}/{subject}?param1&param2
+        assert_eq!(
+            params(
+                &CoapRequestBuilder::new("coap://test-url/v1/Rust/test?ct=30&as=device%232").req
+            )
+            .unwrap(),
+            (
+                vec![(String::from("Rust")), (String::from("test"))],
+                Some(&"ct=30&as=device%232".as_bytes().to_vec()),
+                &"some auth val".as_bytes().to_vec()
+            )
+        );
+    }
+
+    #[test]
+    fn params_err() {
+        // /{channel}?param
+        assert_ne!(
+            params(&CoapRequestBuilder::new("coap://test-url/v1/Rust?ct=30").req).unwrap(),
+            (
+                vec![(String::from("Rust"))],
+                None,
+                &"some auth val".as_bytes().to_vec()
+            )
+        );
+    }
+
+    use super::telemetry::{PublishCommonOptions, PublishOptions};
+    #[test]
+    fn publish_options_test() {
+        // application=app1, device=device#2, data_schema=application/octet-stream, ct=30, as=device#2
+        let mut req = CoapRequestBuilder::new("coap://test-url/v1/Rust/test?application=app1&device=device%232&data_schema=application%2Foctet-stream&as=device%232&ct=30").req;
+        let (_, queries, _) = params(&req).unwrap();
+        assert_eq!(
+            queries
+                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
+                .flatten()
+                .unwrap_or_default(),
+            PublishOptions {
+                common: PublishCommonOptions {
+                    application: Some("app1".to_string()),
+                    device: Some("device#2".to_string()),
+                    data_schema: Some("application/octet-stream".to_string()),
+                },
+                r#as: Some("device#2".to_string()),
+                ct: Some(30),
+            }
+        );
+
+        // application=None, device=None, data_schema=None, ct=30, as=device#2
+        req = CoapRequestBuilder::new("coap://test-url/v1/Rust/test?as=device%232&ct=30").req;
+        let (_, queries, _) = params(&req).unwrap();
+        assert_eq!(
+            queries
+                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
+                .flatten()
+                .unwrap_or_default(),
+            PublishOptions {
+                common: PublishCommonOptions {
+                    application: None,
+                    device: None,
+                    data_schema: None,
+                },
+                r#as: Some("device#2".to_string()),
+                ct: Some(30),
+            }
+        );
+
+        // application=None, device=None, data_schema=None, as=None, ct=30
+        req = CoapRequestBuilder::new("coap://test-url/v1/Rust/test?ct=30").req;
+        let (_, queries, _) = params(&req).unwrap();
+        assert_eq!(
+            queries
+                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
+                .flatten()
+                .unwrap_or_default(),
+            PublishOptions {
+                common: PublishCommonOptions {
+                    application: None,
+                    device: None,
+                    data_schema: None,
+                },
+                r#as: None,
+                ct: Some(30),
+            }
+        );
+
+        // application=None, device=None, data_schema=None, as=None, ct=None
+        req = CoapRequestBuilder::new("coap://test-url/v1/Rust/test").req;
+        let (_, queries, _) = params(&req).unwrap();
+        assert_eq!(
+            queries
+                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
+                .flatten()
+                .unwrap_or_default(),
+            PublishOptions {
+                common: PublishCommonOptions {
+                    application: None,
+                    device: None,
+                    data_schema: None,
+                },
+                r#as: None,
+                ct: None,
+            }
+        );
+    }
 }
