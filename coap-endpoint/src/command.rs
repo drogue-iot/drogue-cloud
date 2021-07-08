@@ -1,9 +1,9 @@
-//! Http context command handlers
+//! CoAP context command handlers
 //!
-//! Contains actors that handles commands for HTTP endpoint
+//! Contains actors that handles commands for CoAP endpoint
 
-use crate::error::CoapEndpointError;
-use coap_lite::{CoapOption, CoapRequest, CoapResponse, ResponseType};
+use crate::{error::CoapEndpointError, HEADER_COMMAND};
+use coap_lite::{CoapRequest, CoapResponse, ResponseType};
 use drogue_cloud_endpoint_common::commands::Commands;
 use drogue_cloud_service_common::Id;
 
@@ -11,8 +11,6 @@ use actix_rt::time::timeout;
 use std::collections::LinkedList;
 use std::net::SocketAddr;
 use std::time::Duration;
-
-const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
 
 pub async fn wait_for_command(
     req: CoapRequest<SocketAddr>,

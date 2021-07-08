@@ -34,7 +34,9 @@ our [documentation](https://book.drogue.io/).
 | -------------------------- | :-------------: |
 | HTTP                       |        ✓        |
 | MQTT v3/v5                 |        ✓        |
-| CoAP                       |  Coming soon    |
+| CoAP                       |        ✓*       |
+
+_\* - has no DTLS support, authentication done using [custom CoAP options](https://github.com/drogue-iot/rfcs/blob/main/active/0007-cloudevent-to-coap-options.md#mappings-of-drogue-iot-extension-attributes-to-coap-option-numbers)(no encryption)_ 
 
 ## Installation
 
