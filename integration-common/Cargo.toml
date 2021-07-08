@@ -19,7 +19,7 @@ tokio-stream = { version = "0.1", features = ["time"] }
 cloudevents-sdk = { version = "0.4", features = ["rdkafka"] }
 
 serde = "1"
-serde_json = { version = "1", optional = true }
+serde_json = { version = "1" }
 
 owning_ref = "0.4"
 reqwest = "0.11"
@@ -43,4 +43,4 @@ version = "0.25"
 features = ["ssl", "sasl"]
 
 [features]
-with_actix = ["actix", "actix-http", "actix-web", "serde_json"]
+with_actix = ["actix", "actix-http", "actix-web"]
