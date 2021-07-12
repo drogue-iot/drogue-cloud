@@ -234,7 +234,7 @@ where
             }
 
             // next generation
-            let generation = app.next_generation(&current)?;
+            let generation = app.set_incremented_generation(&current)?;
 
             let name = app.name.clone();
             let uid = app.uid;

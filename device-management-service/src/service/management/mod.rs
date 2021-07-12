@@ -282,7 +282,7 @@ where
         }
 
         // next generation
-        let generation = current.set_next_generation()?;
+        let generation = current.increment_generation()?;
         let uid = current.uid;
 
         // if there are no finalizers ...
@@ -515,7 +515,7 @@ where
                 return Ok(());
             }
 
-            let generation = device.next_generation(&current)?;
+            let generation = device.set_incremented_generation(&current)?;
             let uid = current.uid;
 
             accessor
@@ -596,7 +596,7 @@ where
         // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next generation
-        let generation = current.set_next_generation()?;
+        let generation = current.increment_generation()?;
         let uid = current.uid;
 
         // if there are no finalizers ...

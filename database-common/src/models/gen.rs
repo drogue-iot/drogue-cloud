@@ -35,14 +35,22 @@ pub enum GenerationError {
 }
 
 pub trait Generation {
-    fn next_generation(&mut self, current: &dyn Generation) -> Result<u64, GenerationError> {
+    /// Get the generation from the provided resource, increment it by one, and set it to this resource.
+    fn set_incremented_generation(
+        &mut self,
+        current: &dyn Generation,
+    ) -> Result<u64, GenerationError> {
         self.set_generation(current.generation() + 1)
     }
 
-    fn set_next_generation(&mut self) -> Result<u64, GenerationError> {
+    /// Increment the generation of this resource by one
+    fn increment_generation(&mut self) -> Result<u64, GenerationError> {
         self.set_generation(self.generation() + 1)
     }
 
+    /// Get the current generation
     fn generation(&self) -> u64;
+
+    /// Set the generation
     fn set_generation(&mut self, generation: u64) -> Result<u64, GenerationError>;
 }
