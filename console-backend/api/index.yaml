@@ -450,6 +450,8 @@ paths:
       responses:
         204:
           description: The application's member list was updated.
+        400:
+          description: The payload format was invalid.
         404:
           description: If requested application does not exist or if the user has no access to it.
         409:
