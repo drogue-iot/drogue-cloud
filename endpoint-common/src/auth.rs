@@ -6,9 +6,7 @@ use actix_web::{
 use anyhow::Context;
 use drogue_client::{error::ClientError, registry};
 use drogue_cloud_service_api::auth::device::authn::{
-    AuthenticationRequest,
-    AuthenticationResponse,
-    Credential, //Outcome
+    AuthenticationRequest, AuthenticationResponse, Credential,
 };
 use drogue_cloud_service_common::{
     client::ReqwestAuthenticatorClient, config::ConfigFromEnv, defaults, openid::TokenConfig,
@@ -17,7 +15,6 @@ use futures::future::{err, ok, Ready};
 use http::HeaderValue;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-//use tokio::fs::read;
 use std::fmt::Debug;
 use x509_parser::prelude::X509Certificate;
 
