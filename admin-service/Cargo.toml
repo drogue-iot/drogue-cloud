@@ -10,9 +10,8 @@ edition = "2018"
 
 anyhow = "1"
 
-actix-http = { version = "=3.0.0-beta.5", optional = true } # FIXME: temporary intermediate
-actix-web = { version = "=4.0.0-beta.5", optional = true } # we need v4 as we need tokio 1
-actix-web-httpauth = { version = "=0.6.0-beta.1", optional = true }
+actix-http = { version = "=3.0.0-beta.8", optional = true } # FIXME: temporary intermediate
+actix-web = { version = "=4.0.0-beta.8", optional = true } # we need v4 as we need tokio 1
 
 tokio = { version = "1", features = ["full"] }
 
@@ -44,4 +43,4 @@ drogue-cloud-registry-events = { path = "../registry-events" }
 [features]
 default = ["service", "endpoints"]
 service = ["async-trait"]
-endpoints = ["actix-http", "actix-web", "actix-web-httpauth"]
+endpoints = ["actix-http", "actix-web"]

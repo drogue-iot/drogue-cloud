@@ -164,10 +164,10 @@ async fn main() -> anyhow::Result<()> {
         let auth = openid_auth!(req -> req.app_data::<web::Data<Authenticator>>().map(|data|data.get_ref()));
 
         let app = App::new()
-            .wrap(middleware::Logger::default())
             .wrap(Cors::permissive())
-            .data(web::JsonConfig::default().limit(4096))
-            .data(app_config.clone());
+            .wrap(middleware::Logger::default())
+            .app_data(web::Data::new(web::JsonConfig::default().limit(4096)))
+            .app_data(web::Data::new(app_config.clone()));
 
         let app = if let Some(authenticator) = &authenticator {
             app.app_data(authenticator.clone())
@@ -189,7 +189,7 @@ async fn main() -> anyhow::Result<()> {
 
         let app = app.app_data(keycloak_service.clone());
 
-        let app = app.data(endpoints.clone())
+        let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(
                 web::scope("/api/keys/v1alpha1")
                     .wrap(Condition::new(enable_auth, auth.clone()))

@@ -47,7 +47,7 @@ impl UserInformation {
 #[cfg(feature = "with_actix")]
 impl actix_web::FromRequest for UserInformation {
     type Config = ();
-    type Error = ();
+    type Error = actix_web::Error;
     type Future = core::future::Ready<Result<Self, Self::Error>>;
 
     fn from_request(

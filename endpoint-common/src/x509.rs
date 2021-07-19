@@ -1,6 +1,6 @@
 use actix_web::{
     dev::{Payload, PayloadStream},
-    FromRequest, HttpRequest,
+    error, FromRequest, HttpRequest,
 };
 use futures_util::future::{ready, Ready};
 
@@ -81,12 +81,12 @@ macro_rules! retriever_none {
 
 impl FromRequest for ClientCertificateChain {
     type Config = ();
-    type Error = ();
+    type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload<PayloadStream>) -> Self::Future {
         let result = req.extensions().get::<ClientCertificateChain>().cloned();
 
-        ready(result.ok_or(()))
+        ready(result.ok_or(error::ErrorBadRequest("Missing certificate chain")))
     }
 }

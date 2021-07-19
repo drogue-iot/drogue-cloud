@@ -1,6 +1,5 @@
-use actix_http::{http::StatusCode, Response};
+use actix_web::{http::StatusCode, HttpResponse};
 use bytes::{BufMut, Bytes, BytesMut};
-use core::fmt::Debug;
 use futures::{
     task::{Context, Poll},
     {ready, Stream},
@@ -8,7 +7,7 @@ use futures::{
 use pin_project::pin_project;
 use serde::Serialize;
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     pin::Pin,
 };
 
@@ -43,9 +42,9 @@ where
     }
 }
 
-impl<E> actix_http::ResponseError for ArrayStreamerError<E>
+impl<E> actix_web::ResponseError for ArrayStreamerError<E>
 where
-    E: Debug + Display + actix_http::ResponseError,
+    E: Debug + Display + actix_web::ResponseError,
 {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -54,13 +53,15 @@ where
         }
     }
 
-    fn error_response(&self) -> Response {
+    fn error_response(&self) -> HttpResponse {
         match self {
             Self::Source(err) => err.error_response(),
-            Self::Serializer(err) => Response::InternalServerError().body(err.to_string()),
+            Self::Serializer(err) => HttpResponse::InternalServerError().body(err.to_string()),
         }
     }
 }
+
+impl<E: Debug + Display> std::error::Error for ArrayStreamerError<E> {}
 
 #[pin_project]
 pub struct ArrayStreamer<S, T, E>
