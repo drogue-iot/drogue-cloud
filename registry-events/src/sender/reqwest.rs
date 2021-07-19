@@ -1,6 +1,6 @@
 use crate::{Event, EventSender, EventSenderError, SenderResult};
 use async_trait::async_trait;
-use cloudevents_sdk_reqwest::event_to_request;
+use cloudevents::binding::reqwest::event_to_request;
 use reqwest::{Client, Url};
 use std::convert::TryInto;
 
