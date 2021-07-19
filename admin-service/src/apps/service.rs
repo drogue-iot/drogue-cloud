@@ -1,5 +1,5 @@
 use crate::apps::{Members, TransferOwnership};
-use actix_http::ResponseError;
+use actix_web::ResponseError;
 use async_trait::async_trait;
 use drogue_cloud_service_api::auth::user::UserInformation;
 

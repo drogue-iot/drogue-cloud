@@ -11,7 +11,7 @@ use actix_web::{
     dev::{Service, ServiceResponse},
     http::StatusCode,
     middleware::Condition,
-    test, web, App,
+    test, web, App, Error,
 };
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_device_management_service::{
@@ -836,6 +836,7 @@ where
     B: MessageBody + Unpin,
     E: std::fmt::Debug,
     S1: AsRef<str>,
+    B::Error: Into<Error>,
 {
     let query = {
         let mut query = form_urlencoded::Serializer::new(String::new());

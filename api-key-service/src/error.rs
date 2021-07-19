@@ -1,6 +1,5 @@
 use actix_http::http::StatusCode;
-use actix_http::{Response, ResponseError};
-use actix_web::HttpResponse;
+use actix_web::{HttpResponse, ResponseError};
 use drogue_cloud_service_common::error::ErrorResponse;
 use keycloak::KeycloakError;
 use thiserror::Error;
@@ -20,7 +19,7 @@ pub enum Error {
 }
 
 impl Error {
-    fn transport_error(err: &reqwest::Error) -> Response {
+    fn transport_error(err: &reqwest::Error) -> HttpResponse {
         HttpResponse::BadGateway().json(ErrorResponse {
             error: "GatewayError".into(),
             message: err.to_string(),
@@ -29,7 +28,7 @@ impl Error {
 }
 
 impl ResponseError for Error {
-    fn error_response(&self) -> Response {
+    fn error_response(&self) -> HttpResponse {
         match self {
             Self::Internal(message) => HttpResponse::InternalServerError().json(ErrorResponse {
                 error: "InternalError".into(),

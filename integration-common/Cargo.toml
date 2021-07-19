@@ -34,13 +34,11 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 
 drogue-client = "0.6.0"
 
-actix = { version = "0.11.0", optional = true }
-actix-http = { version = "=3.0.0-beta.5", optional = true }
-actix-web = { version = "=4.0.0-beta.5", optional = true } # we need v4 as we need tokio 1
+actix-web = { version = "=4.0.0-beta.8", optional = true } # we need v4 as we need tokio 1
 
 [dependencies.rdkafka]
 version = "0.25"
 features = ["ssl", "sasl"]
 
 [features]
-with_actix = ["actix", "actix-http", "actix-web"]
+with_actix = ["actix-web"]

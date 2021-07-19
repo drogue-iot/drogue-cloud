@@ -62,9 +62,9 @@ async fn main() -> anyhow::Result<()> {
             // for the management service
             .app_data(data.clone())
             // for the admin service
-            .data(apps::WebData {
+            .app_data(web::Data::new(apps::WebData {
                 service: service.clone(),
-            })
+            }))
     })
     .bind(config.bind_addr)?
     .run();

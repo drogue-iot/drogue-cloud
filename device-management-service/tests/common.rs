@@ -58,9 +58,9 @@ macro_rules! test {
                 // for the management service
                 .app_data(data.clone())
                 // for the admin service
-                .data(apps::WebData{
+                .app_data(web::Data::new(apps::WebData{
                     service: service.clone(),
-                })
+                }))
                 .wrap_fn(|req, srv|{
                     log::warn!("Running test-user middleware");
                     use actix_web::dev::Service;
