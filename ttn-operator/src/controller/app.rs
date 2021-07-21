@@ -1,4 +1,4 @@
-use super::Controller;
+use crate::controller::ensure_stable_app_id;
 use crate::{
     data::*,
     ttn::{self},
@@ -11,17 +11,75 @@ use drogue_client::{
     meta::{self, v1::CommonMetadataMut},
     registry, Translator,
 };
-use drogue_cloud_operator_common::controller::reconciler::{
-    ReconcileError, ReconcileState, Reconciler, ReconcilerOutcome,
+use drogue_cloud_operator_common::controller::{
+    base::{ControllerOperation, ProcessOutcome},
+    reconciler::{ReconcileError, ReconcileProcessor, ReconcileState, Reconciler},
 };
 use maplit::{convert_args, hashmap};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 use url::Url;
 
 const FINALIZER: &str = "ttn";
 const TTN_GATEWAY_NAME: &str = "ttn-gateway";
 const TTN_WEBHOOK_NAME: &str = "drogue-iot";
+
+pub struct ApplicationController {
+    registry: registry::v1::Client,
+    ttn: ttn::Client,
+    endpoint_url: Url,
+}
+
+impl ApplicationController {
+    pub fn new(registry: registry::v1::Client, ttn: ttn::Client, endpoint_url: Url) -> Self {
+        Self {
+            registry,
+            ttn,
+            endpoint_url,
+        }
+    }
+}
+
+#[async_trait]
+impl ControllerOperation<String, registry::v1::Application, registry::v1::Application>
+    for ApplicationController
+{
+    async fn process_resource(
+        &self,
+        application: registry::v1::Application,
+    ) -> Result<ProcessOutcome<registry::v1::Application>, ReconcileError> {
+        ReconcileProcessor(ApplicationReconciler {
+            ttn: &self.ttn,
+            registry: &self.registry,
+            endpoint_url: &self.endpoint_url,
+        })
+        .reconcile(application)
+        .await
+    }
+
+    async fn recover(
+        &self,
+        message: &str,
+        mut app: registry::v1::Application,
+    ) -> Result<registry::v1::Application, ()> {
+        let generation = app.metadata.generation;
+        app.update_section(|mut status: TtnAppStatus| {
+            status.reconcile = TtnReconcileStatus::failed(generation, message);
+            status
+        })
+        .map_err(|_| ())?;
+
+        Ok(app)
+    }
+}
+
+impl Deref for ApplicationController {
+    type Target = registry::v1::Client;
+
+    fn deref(&self) -> &Self::Target {
+        &self.registry
+    }
+}
 
 pub struct ConstructContext {
     pub app: registry::v1::Application,
@@ -83,14 +141,14 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     async fn construct(
         &self,
         mut ctx: Self::Construct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // ensure
 
         // ensure we have a finalizer
 
         if ctx.app.metadata.ensure_finalizer(FINALIZER) {
             // early return
-            return Ok(ReconcilerOutcome::Retry(ctx.app, None));
+            return Ok(ProcessOutcome::Retry(ctx.app, None));
         }
 
         // ensure we have a status section, and a stable app id
@@ -104,9 +162,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             .clone();
         let mut status = if let Some(mut status) = ctx.status {
             match status.app_id {
-                Some(ref app_id) => {
-                    Controller::ensure_stable_app_id(&ctx.app.metadata, &ctx.spec, &app_id)?
-                }
+                Some(ref app_id) => ensure_stable_app_id(&ctx.app.metadata, &ctx.spec, &app_id)?,
                 None => {
                     status.app_id = Some(app_id.clone());
                 }
@@ -136,13 +192,13 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
 
         // done
 
-        Ok(ReconcilerOutcome::Complete(ctx.app))
+        Ok(ProcessOutcome::Complete(ctx.app))
     }
 
     async fn deconstruct(
         &self,
         mut ctx: Self::Deconstruct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // delete
 
         if let Some(app_id) = ctx.status.as_ref().and_then(|s| s.app_id.as_ref()) {
@@ -159,7 +215,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
 
         // done
 
-        Ok(ReconcilerOutcome::Complete(ctx.app))
+        Ok(ProcessOutcome::Complete(ctx.app))
     }
 }
 

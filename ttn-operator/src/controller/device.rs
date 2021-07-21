@@ -1,16 +1,72 @@
-use super::Controller;
+use crate::controller::ensure_stable_app_id;
 use crate::{data::*, ttn};
 use async_trait::async_trait;
 use drogue_client::{
     meta::{self, v1::CommonMetadataMut},
     registry, Dialect, Translator,
 };
-use drogue_cloud_operator_common::controller::reconciler::{
-    ReconcileError, ReconcileState, Reconciler, ReconcilerOutcome,
+use drogue_cloud_operator_common::controller::{
+    base::{ControllerOperation, ProcessOutcome},
+    reconciler::{ReconcileError, ReconcileProcessor, ReconcileState, Reconciler},
 };
 use maplit::{convert_args, hashmap};
+use std::ops::Deref;
 
 const FINALIZER: &str = "ttn";
+
+pub struct DeviceController {
+    registry: registry::v1::Client,
+    ttn: ttn::Client,
+}
+
+impl DeviceController {
+    pub fn new(registry: registry::v1::Client, ttn: ttn::Client) -> Self {
+        Self { registry, ttn }
+    }
+}
+
+#[async_trait]
+impl
+    ControllerOperation<
+        (String, String),
+        (registry::v1::Application, registry::v1::Device),
+        registry::v1::Device,
+    > for DeviceController
+{
+    async fn process_resource(
+        &self,
+        device: (registry::v1::Application, registry::v1::Device),
+    ) -> Result<ProcessOutcome<registry::v1::Device>, ReconcileError> {
+        ReconcileProcessor(DeviceReconciler { ttn: &self.ttn })
+            .reconcile(device)
+            .await
+    }
+
+    async fn recover(
+        &self,
+        message: &str,
+        input: (registry::v1::Application, registry::v1::Device),
+    ) -> Result<registry::v1::Device, ()> {
+        let mut device = input.1;
+        let generation = device.metadata.generation;
+        device
+            .update_section(|mut status: TtnAppStatus| {
+                status.reconcile = TtnReconcileStatus::failed(generation, message);
+                status
+            })
+            .map_err(|_| ())?;
+
+        Ok(device)
+    }
+}
+
+impl Deref for DeviceController {
+    type Target = registry::v1::Client;
+
+    fn deref(&self) -> &Self::Target {
+        &self.registry
+    }
+}
 
 pub struct ConstructContext {
     pub app: registry::v1::Application,
@@ -87,10 +143,10 @@ impl<'a> Reconciler for DeviceReconciler<'a> {
     async fn construct(
         &self,
         mut ctx: Self::Construct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         if ctx.device.metadata.ensure_finalizer(FINALIZER) {
             // early return
-            return Ok(ReconcilerOutcome::Retry(ctx.device, None));
+            return Ok(ProcessOutcome::Retry(ctx.device, None));
         }
 
         let mut device_status: TtnDeviceStatus = ctx
@@ -118,13 +174,13 @@ impl<'a> Reconciler for DeviceReconciler<'a> {
             .unwrap_or(&ctx.app.metadata.name)
             .clone();
 
-        Controller::ensure_stable_app_id(&ctx.app.metadata, &app_spec, &app_id)?;
+        ensure_stable_app_id(&ctx.app.metadata, &app_spec, &app_id)?;
 
         // ensure we have the gateway entry set
 
         if self.ensure_gateway_for_device(&mut ctx.device).await? {
             // device was changed, need to store
-            return Ok(ReconcilerOutcome::Retry(ctx.device, None));
+            return Ok(ProcessOutcome::Retry(ctx.device, None));
         }
 
         // ensure the device configuration
@@ -135,13 +191,13 @@ impl<'a> Reconciler for DeviceReconciler<'a> {
         device_status.reconcile = TtnReconcileStatus::reconciled(ctx.device.metadata.generation);
         ctx.device.set_section(device_status)?;
 
-        Ok(ReconcilerOutcome::Complete(ctx.device))
+        Ok(ProcessOutcome::Complete(ctx.device))
     }
 
     async fn deconstruct(
         &self,
         mut ctx: Self::Deconstruct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // delete
 
         // remove the ttn-gateway mapping
@@ -178,7 +234,7 @@ impl<'a> Reconciler for DeviceReconciler<'a> {
 
         // done
 
-        Ok(ReconcilerOutcome::Complete(ctx.device))
+        Ok(ProcessOutcome::Complete(ctx.device))
     }
 }
 

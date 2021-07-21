@@ -1,19 +1,16 @@
 mod controller;
 mod data;
-mod endpoints;
 
-use crate::controller::base::{
-    ApplicationController, BaseController, EventSource, FnEventProcessor,
-};
-use crate::controller::ControllerConfig;
-use actix_web::{
-    get, middleware,
-    web::{self},
-    App, HttpResponse, HttpServer, Responder,
-};
+use crate::controller::{app::ApplicationController, ControllerConfig};
+use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use anyhow::Context;
+use async_std::sync::Mutex;
 use dotenv::dotenv;
 use drogue_client::registry;
+use drogue_cloud_operator_common::controller::base::queue::WorkQueueConfig;
+use drogue_cloud_operator_common::controller::base::{
+    events, BaseController, EventSource, FnEventProcessor,
+};
 use drogue_cloud_registry_events::Event;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
@@ -42,6 +39,8 @@ struct Config {
     pub health: HealthServerConfig,
 
     pub controller: ControllerConfig,
+
+    pub work_queue: WorkQueueConfig,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -58,14 +57,23 @@ impl Default for RegistryConfig {
     }
 }
 
-pub struct WebData {
-    // pub controller: controller::Controller,
-    pub processor: BaseController<String, ApplicationController>,
-}
-
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
+}
+
+fn is_relevant(event: &Event) -> Option<String> {
+    match event {
+        Event::Application {
+            path, application, ..
+        } if
+        // watch the creation of a new application
+        path == "." ||
+            // watch the finalizer addition
+            path == ".metadata" => Some(application.clone()),
+
+        _ => None,
+    }
 }
 
 #[actix_web::main]
@@ -102,20 +110,23 @@ async fn main() -> anyhow::Result<()> {
         ),
     );
 
-    let controller = controller::Controller::new(
-        config.controller,
-        registry.clone(),
-        kafka_topic_resource,
-        kafka_topics,
-    );
-
     // controller
 
-    let processor = BaseController::new(ApplicationController::new(registry));
+    let processor = BaseController::new(
+        config.work_queue,
+        "app",
+        ApplicationController::new(
+            config.controller,
+            registry,
+            kafka_topic_resource,
+            kafka_topics,
+        ),
+    )?;
+    let controller = EventSource::one(FnEventProcessor::new(Mutex::new(processor), is_relevant));
 
     // app data
 
-    let data = web::Data::new(WebData { processor });
+    let data = web::Data::new(controller);
 
     // health server
 
@@ -129,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
             .app_data(web::JsonConfig::default().limit(max_json_payload_size))
             .app_data(data.clone())
             .service(index)
-            .service(endpoints::events)
+            .service(events)
     })
     .bind(config.bind_addr)?
     .run();
