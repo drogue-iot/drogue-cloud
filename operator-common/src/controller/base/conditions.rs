@@ -34,7 +34,7 @@ impl From<ReadyState> for ConditionStatus {
 }
 
 pub trait ConditionExt {
-    fn eval_ready(conditions: &Conditions) -> Option<bool>;
+    fn eval_ready(conditions: &Conditions) -> Vec<String>;
 
     fn finish_ready<S: StatusSection>(
         &mut self,
@@ -53,25 +53,21 @@ impl<T> ConditionExt for T
 where
     T: Translator,
 {
-    fn eval_ready(conditions: &Conditions) -> Option<bool> {
-        let mut ready = Some(true);
+    fn eval_ready(conditions: &Conditions) -> Vec<String> {
+        let mut waiting = Vec::new();
         for condition in &conditions.0 {
             if condition.r#type == CONDITION_RECONCILED {
                 continue;
             }
             match condition.status.as_str() {
                 "True" => {}
-                "False" => {
-                    ready = Some(false);
-                    break;
-                }
                 _ => {
-                    ready = None;
+                    waiting.push(condition.r#type.clone());
                     break;
                 }
             }
         }
-        ready
+        waiting
     }
 
     fn finish_ready<S: StatusSection>(
@@ -79,15 +75,24 @@ where
         conditions: Conditions,
         observed_generation: u64,
     ) -> Result<(), ReconcileError> {
-        let ready = Self::eval_ready(&conditions);
+        let waiting = Self::eval_ready(&conditions);
 
         self.set_status::<S>(conditions, observed_generation)?;
 
         // update the global conditions sections
 
-        let ready_state = ConditionStatus {
-            status: ready,
-            ..Default::default()
+        let ready_state = if waiting.is_empty() {
+            ConditionStatus {
+                status: Some(true),
+                ..Default::default()
+            }
+        } else {
+            let message = format!("Waiting to become ready: {}", waiting.join(", "));
+            ConditionStatus {
+                status: Some(false),
+                reason: Some("WaitingForReady".into()),
+                message: Some(message),
+            }
         };
 
         self.update_section(|mut conditions: Conditions| {

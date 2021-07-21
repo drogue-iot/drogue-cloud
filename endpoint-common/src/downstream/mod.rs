@@ -10,6 +10,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
+use drogue_cloud_service_api::events::EventTarget;
 use drogue_cloud_service_api::EXT_INSTANCE;
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
@@ -55,7 +56,11 @@ pub trait DownstreamSink: Clone + Send + Sync + 'static {
     type Error: std::error::Error + Send + 'static;
 
     /// Publish an event.
-    async fn publish(&self, event: Event) -> Result<PublishOutcome, DownstreamError<Self::Error>>;
+    async fn publish(
+        &self,
+        target: EventTarget,
+        event: Event,
+    ) -> Result<PublishOutcome, DownstreamError<Self::Error>>;
 }
 
 #[derive(Error, Debug)]
@@ -106,7 +111,7 @@ where
             // we need an "absolute" URL for the moment: until 0.4 is released
             // see: https://github.com/cloudevents/sdk-rust/issues/106
             .source(format!("drogue://{}", source))
-            .inject(Id::new(publish.app_id, publish.device_id))
+            .inject(Id::new(publish.app_id.clone(), publish.device_id))
             .subject(&publish.channel)
             .time(Utc::now());
 
@@ -142,7 +147,9 @@ where
 
         // build event
 
-        self.sink.publish(event.build()?).await
+        self.sink
+            .publish(EventTarget::Events(publish.app_id), event.build()?)
+            .await
     }
 
     pub async fn publish_http<B, H, F>(

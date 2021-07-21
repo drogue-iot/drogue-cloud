@@ -1,63 +1,9 @@
 use crate::controller::reconciler::ReconcileError;
 use async_trait::async_trait;
 use drogue_client::core::v1::{ConditionStatus, Conditions};
-use std::future::Future;
-use std::time::Duration;
+use std::{future::Future, time::Duration};
 
-/*
-status:
-  kafka:
-    topic: events-foo-bar
-    conditions:
-      - type: FinalizerAdded
-        status: True
-      - type: TopicCreated
-        state: True
-      - type: TopicReady
-        state: False
-  conditions:
-    - type: KafkaReady
-      status: True
-      reason: FooBar
-      message: Foo Bar
-
-constructor:
-
-    add finalizer
-        if finalizer exists
-            -> continue
-        else
-            add finalizer
-            -> retry-now
-
-    create kafka topic
-        get kafka topic -> fail
-        if exists
-            if changed
-                update -> fail
-        else
-            create -> fail
-        -> continue
-
-    check kafka topic
-        if ready
-            -> continue
-        else
-            -> retry-later(30s)
-
-    aggregate conditions -> continue
-
-step:
-    run(context):
-        -> continue(context) -> True
-        -> retry(now or later, context) -> False (Reason = <provided>, Message = <provided>)
-        -> fail -> Unknown (Reason = Failed, Message = err.to_string())
-    when_skipped(context) -> Status
-    when_failed() -> Status
-
-*/
-
-pub struct Constructor<C>(Vec<Box<dyn ConstructOperation<C>>>);
+pub struct Constructor<'c, C>(Vec<Box<dyn ConstructOperation<C> + 'c>>);
 
 pub enum Outcome<C>
 where
@@ -76,11 +22,11 @@ pub enum Construction<C> {
     Failed(ReconcileError, Conditions),
 }
 
-impl<C> Constructor<C>
+impl<'c, C> Constructor<'c, C>
 where
-    C: Send + Sync + 'static,
+    C: Send + Sync,
 {
-    pub fn new(steps: Vec<Box<dyn ConstructOperation<C>>>) -> Self {
+    pub fn new(steps: Vec<Box<dyn ConstructOperation<C> + 'c>>) -> Self {
         Self(steps)
     }
 
@@ -110,7 +56,7 @@ where
                     );
                     while let Some(s) = i.next() {
                         let condition_type = s.type_name();
-                        let (c, status) = s.when_skipped(context).await;
+                        let (c, status) = s.when_skipped(context);
                         conditions.update(condition_type, status);
                         context = c;
                     }
@@ -127,7 +73,7 @@ where
                     );
                     while let Some(s) = i.next() {
                         let condition_type = s.type_name();
-                        let status = s.when_failed().await;
+                        let status = s.when_failed();
                         conditions.update(condition_type, status);
                     }
                     return Construction::Failed(err, conditions);
@@ -142,17 +88,17 @@ where
 #[async_trait]
 pub trait ConstructOperation<C>: Send + Sync
 where
-    C: Send + Sync + 'static,
+    C: Send + Sync,
 {
     fn type_name(&self) -> String;
 
     async fn run(&self, context: C) -> Result<C>;
 
-    async fn when_skipped(&self, context: C) -> (C, ConditionStatus) {
+    fn when_skipped(&self, context: C) -> (C, ConditionStatus) {
         (context, ConditionStatus::default())
     }
 
-    async fn when_failed(&self) -> ConditionStatus {
+    fn when_failed(&self) -> ConditionStatus {
         ConditionStatus::default()
     }
 }

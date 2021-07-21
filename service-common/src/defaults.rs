@@ -41,11 +41,6 @@ pub fn kafka_bootstrap_servers() -> String {
 }
 
 #[inline]
-pub fn kafka_events_topic() -> String {
-    "iot-events".into()
-}
-
-#[inline]
 pub fn oauth2_scopes() -> String {
     "openid profile email".into()
 }

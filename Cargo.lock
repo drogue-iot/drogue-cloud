@@ -1218,6 +1218,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "deadpool"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef82259c587bceda08349f28ff00f69ae4c897898f254140af6021eb218e8232"
+dependencies = [
+ "async-trait",
+ "config 0.11.0",
+ "num_cpus",
+ "serde 1.0.126",
+ "tokio",
+]
+
+[[package]]
 name = "deadpool-postgres"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1225,7 +1238,7 @@ checksum = "5452506f60a0ceca624c4becc948f9f0ae67f35fc0ae471b9dcb841d110cf70a"
 dependencies = [
  "async-trait",
  "config 0.10.1",
- "deadpool",
+ "deadpool 0.7.0",
  "futures",
  "log",
  "serde 1.0.126",
@@ -1466,7 +1479,7 @@ dependencies = [
  "bcrypt",
  "chrono",
  "config 0.10.1",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
  "dotenv",
  "drogue-client 0.7.0",
@@ -1650,7 +1663,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "criterion",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
  "drogue-client 0.7.0",
  "drogue-cloud-service-api",
@@ -1684,7 +1697,7 @@ dependencies = [
  "bytes",
  "chrono",
  "config 0.10.1",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
  "dotenv",
  "drogue-client 0.7.0",
@@ -1733,6 +1746,7 @@ dependencies = [
  "cloudevents-sdk 0.4.0",
  "coap-lite",
  "config 0.11.0",
+ "deadpool 0.8.2",
  "drogue-client 0.7.0",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1907,9 +1921,9 @@ dependencies = [
  "async-trait",
  "chrono",
  "cloudevents-sdk 0.4.0",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
- "drogue-client",
+ "drogue-client 0.7.0",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "futures",
@@ -1934,7 +1948,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk 0.4.0",
  "config 0.10.1",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-database-common",
@@ -2027,10 +2041,13 @@ dependencies = [
  "humantime-serde",
  "k8s-openapi",
  "kube",
+ "lazy_static",
  "log",
+ "md5",
  "ntex",
  "openid",
  "pem",
+ "regex",
  "reqwest",
  "rustls",
  "serde 1.0.126",
@@ -2046,7 +2063,7 @@ name = "drogue-cloud-test-common"
 version = "0.6.0"
 dependencies = [
  "anyhow",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
  "log",
  "serde 1.0.126",
@@ -2087,11 +2104,9 @@ dependencies = [
  "lazy_static",
  "log",
  "maplit",
- "md5",
  "operator-framework",
  "pem",
  "rand 0.7.3",
- "regex",
  "reqwest",
  "rust-crypto",
  "serde 1.0.126",
@@ -2154,7 +2169,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "config 0.10.1",
- "deadpool",
+ "deadpool 0.7.0",
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-api-key-service",

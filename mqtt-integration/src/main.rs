@@ -96,7 +96,6 @@ async fn main() -> anyhow::Result<()> {
         config.service.enable_username_password_auth
     );
     log::info!("Kafka servers: {}", config.service.kafka_bootstrap_servers);
-    log::info!("Kafka topic: {}", config.service.kafka_topic);
 
     // set up security
 
