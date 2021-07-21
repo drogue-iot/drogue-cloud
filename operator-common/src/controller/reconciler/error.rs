@@ -24,7 +24,6 @@ impl From<reqwest::Error> for ReconcileError {
     }
 }
 
-#[cfg(feature = "serde_json")]
 impl From<serde_json::Error> for ReconcileError {
     fn from(err: serde_json::Error) -> Self {
         Self::permanent(err)

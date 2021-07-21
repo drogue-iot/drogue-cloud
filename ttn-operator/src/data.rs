@@ -32,7 +32,7 @@ pub struct TtnReconcileStatus {
 }
 
 impl TtnReconcileStatus {
-    pub fn failed(generation: u64, err: ReconcileError) -> Self {
+    pub fn failed<S: ToString>(generation: u64, err: S) -> Self {
         Self {
             observed_generation: generation,
             state: "Failed".into(),

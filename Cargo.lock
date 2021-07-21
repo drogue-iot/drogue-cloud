@@ -1365,7 +1365,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=0938c7fd8a7a41019651b21cbcda846e4a0d8b69#0938c7fd8a7a41019651b21cbcda846e4a0d8b69"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=81999b28b63c761ed1c9e2cc1dab4108ca90b9db#81999b28b63c761ed1c9e2cc1dab4108ca90b9db"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1900,9 +1900,19 @@ dependencies = [
 name = "drogue-cloud-operator-common"
 version = "0.6.0"
 dependencies = [
+ "actix-http",
+ "actix-web",
+ "anyhow",
+ "async-std",
  "async-trait",
  "chrono",
+ "cloudevents-sdk 0.4.0",
+ "deadpool",
+ "deadpool-postgres",
  "drogue-client",
+ "drogue-cloud-database-common",
+ "drogue-cloud-registry-events",
+ "futures",
  "kube",
  "log",
  "reqwest",
@@ -1910,6 +1920,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-postgres",
 ]
 
 [[package]]
@@ -2052,6 +2063,7 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "async-std",
  "async-trait",
  "chrono",
  "cloudevents-sdk 0.4.0",
@@ -2097,6 +2109,7 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "async-std",
  "async-trait",
  "bcrypt",
  "chrono",

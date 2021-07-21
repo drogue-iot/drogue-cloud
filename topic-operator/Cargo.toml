@@ -33,6 +33,7 @@ log = "0.4"
 serde = "1"
 serde_json = "1"
 indexmap = { version = "1", features = ["serde"] }
+async-std = "1"
 futures = "0.3"
 rust-crypto = "0.2"
 rand = "0.7"
@@ -48,7 +49,7 @@ drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
-drogue-cloud-operator-common = { path = "../operator-common", features = ["reqwest", "serde_json", "kube"] }
+drogue-cloud-operator-common = { path = "../operator-common", features = ["reqwest", "kube"] }
 
 drogue-client = "0.7.0"
 

@@ -5,9 +5,6 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct KafkaAppStatus {
     pub observed_generation: u64,
-    pub state: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reason: Option<String>,
     pub conditions: core::v1::Conditions,
 }
 

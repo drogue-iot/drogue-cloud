@@ -8,13 +8,31 @@ edition = "2018"
 async-trait = "0.1"
 log = "0.4"
 thiserror = "1"
+anyhow = "1"
 
-serde = { version = "1", optional = true }
-serde_json = { version = "1", optional = true }
+serde = { version = "1" }
+serde_json = { version = "1" }
 reqwest = { version = "0.11", optional = true }
 kube = { version = "0.58", optional = true }
+async-std = "1.9.0"
+futures = "0.3"
+tokio = "1"
+chrono = "0.4"
 
 drogue-client = "0.7"
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-database-common = { path = "../database-common" }
+
+actix-web = { version="=4.0.0-beta.5", optional = true} # we need v4 as we need tokio 1
+actix-http = { version = "=3.0.0-beta.5", optional = true } # FIXME: temporary intermediate
+cloudevents-sdk = { version = "0.4", optional = true }
+
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1", "with-uuid-0_8", "with-chrono-0_4"] }
+
+[features]
+with_actix = ["actix-web", "actix-http", "cloudevents-sdk", "cloudevents-sdk/actix"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

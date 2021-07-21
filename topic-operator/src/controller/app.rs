@@ -1,12 +1,18 @@
 use crate::{
-    controller::{ControllerConfig, CONDITION_READY},
+    controller::{ControllerConfig, CONDITION_KAFKA_READY},
     data::*,
 };
 use async_trait::async_trait;
-use drogue_client::{core, meta::v1::CommonMetadataMut, registry, Translator};
-use drogue_cloud_operator_common::controller::reconciler::{
-    construct::{ConstructOperation, Construction, Constructor, Outcome},
-    ReconcileError, ReconcileState, Reconciler, ReconcilerOutcome,
+use drogue_client::{core::v1::Conditions, meta::v1::CommonMetadataMut, registry, Translator};
+use drogue_cloud_operator_common::controller::{
+    base::{
+        ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, StatusSection,
+        CONDITION_RECONCILED,
+    },
+    reconciler::{
+        construct::{ConstructOperation, Construction, Constructor, Outcome},
+        ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
+    },
 };
 use kube::{
     api::{ApiResource, DynamicObject},
@@ -16,7 +22,7 @@ use lazy_static::lazy_static;
 use operator_framework::{install::Delete, process::create_or_update_by};
 use regex::Regex;
 use serde_json::json;
-use std::time::Duration;
+use std::{ops::Deref, time::Duration};
 
 const FINALIZER: &str = "kafka";
 const LABEL_KAFKA_CLUSTER: &str = "strimzi.io/cluster";
@@ -25,6 +31,74 @@ const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
 const REGEXP: &str = r#"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"#;
 lazy_static! {
     static ref TOPIC_PATTERN: Regex = Regex::new(REGEXP).expect("Regexp must compile");
+}
+
+pub struct ApplicationController {
+    config: ControllerConfig,
+    registry: registry::v1::Client,
+    kafka_topic_resource: ApiResource,
+    kafka_topics: Api<DynamicObject>,
+}
+
+impl ApplicationController {
+    pub fn new(
+        config: ControllerConfig,
+        registry: registry::v1::Client,
+        kafka_topic_resource: ApiResource,
+        kafka_topics: Api<DynamicObject>,
+    ) -> Self {
+        Self {
+            config,
+            registry,
+            kafka_topic_resource,
+            kafka_topics,
+        }
+    }
+}
+
+#[async_trait]
+impl ControllerOperation<String, registry::v1::Application, registry::v1::Application>
+    for ApplicationController
+{
+    async fn process_resource(
+        &self,
+        application: registry::v1::Application,
+    ) -> Result<ProcessOutcome<registry::v1::Application>, ReconcileError> {
+        ReconcileProcessor(ApplicationReconciler {
+            config: &self.config,
+            registry: &self.registry,
+            kafka_topic_resource: &self.kafka_topic_resource,
+            kafka_topics: &self.kafka_topics,
+        })
+        .reconcile(application)
+        .await
+    }
+
+    async fn recover(
+        &self,
+        message: &str,
+        mut app: registry::v1::Application,
+    ) -> Result<registry::v1::Application, ()> {
+        let mut conditions = app
+            .section::<KafkaAppStatus>()
+            .and_then(|s| s.ok().map(|s| s.conditions))
+            .unwrap_or_default();
+
+        conditions.update(CONDITION_RECONCILED, ReadyState::Failed(message.into()));
+
+        app.finish_ready::<KafkaAppStatus>(conditions, app.metadata.generation)
+            .map_err(|_| ())?;
+
+        Ok(app)
+    }
+}
+
+impl Deref for ApplicationController {
+    type Target = registry::v1::Client;
+
+    fn deref(&self) -> &Self::Target {
+        &self.registry
+    }
 }
 
 pub struct ConstructContext {
@@ -76,7 +150,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     async fn construct(
         &self,
         ctx: Self::Construct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         let constructor = Constructor::<Self::Construct>::new(vec![
             Box::new(("HasFinalizer", |mut ctx: Self::Construct| async {
                 // ensure we have a finalizer
@@ -106,38 +180,31 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             })),
         ]);
 
-        let original_app = ctx.app.clone();
-
-        let mut status = ctx.status.as_ref().cloned().unwrap_or_default();
-        status.observed_generation = ctx.app.metadata.generation;
-        let conditions = status.conditions.clone();
+        let mut original_app = ctx.app.clone();
+        let conditions = ctx.status.as_ref().cloned().unwrap_or_default().conditions;
+        let observed_generation = ctx.app.metadata.generation;
 
         let result = match constructor.run(conditions, ctx).await {
-            Construction::Complete(context, conditions) => {
-                status.conditions = conditions;
-                status.state = "Ready".to_string();
-                status.reason = None;
-                let mut app = Self::aggregate_ready(context.app, &status)?;
-                app.set_section(status)?;
-                ReconcilerOutcome::Complete(app)
+            Construction::Complete(mut context, mut conditions) => {
+                conditions.update(CONDITION_RECONCILED, ReadyState::Complete);
+                context
+                    .app
+                    .finish_ready::<KafkaAppStatus>(conditions, observed_generation)?;
+                ProcessOutcome::Complete(context.app)
             }
-            Construction::Retry(context, when, conditions) => {
-                status.conditions = conditions;
-                status.state = "Processing".to_string();
-                status.reason = None;
-                let mut app = Self::aggregate_ready(context.app, &status)?;
-                app.set_section(status)?;
-                ReconcilerOutcome::Retry(app, when)
+            Construction::Retry(mut context, when, mut conditions) => {
+                conditions.update(CONDITION_RECONCILED, ReadyState::Progressing);
+                context
+                    .app
+                    .finish_ready::<KafkaAppStatus>(conditions, observed_generation)?;
+                ProcessOutcome::Retry(context.app, when)
             }
-            Construction::Failed(err, conditions) => {
-                status.conditions = conditions;
-                status.state = "Failed".to_string();
-                status.reason = Some(err.to_string());
-                let mut app = Self::aggregate_ready(original_app, &status)?;
-                app.set_section(status)?;
+            Construction::Failed(err, mut conditions) => {
+                conditions.update(CONDITION_RECONCILED, ReadyState::Failed(err.to_string()));
+                original_app.finish_ready::<KafkaAppStatus>(conditions, observed_generation)?;
                 match err {
-                    ReconcileError::Permanent(_) => ReconcilerOutcome::Complete(app),
-                    ReconcileError::Temporary(_) => ReconcilerOutcome::Retry(app, None),
+                    ReconcileError::Permanent(_) => ProcessOutcome::Complete(original_app),
+                    ReconcileError::Temporary(_) => ProcessOutcome::Retry(original_app, None),
                 }
             }
         };
@@ -150,7 +217,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     async fn deconstruct(
         &self,
         mut ctx: Self::Deconstruct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // delete
 
         self.delete_kafka_topic(&mut ctx.app).await?;
@@ -161,7 +228,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
 
         // done
 
-        Ok(ReconcilerOutcome::Complete(ctx.app))
+        Ok(ProcessOutcome::Complete(ctx.app))
     }
 }
 
@@ -314,37 +381,16 @@ impl<'a> ApplicationReconciler<'a> {
                     .next()
             })
     }
+}
 
-    fn aggregate_ready(
-        mut app: registry::v1::Application,
-        status: &KafkaAppStatus,
-    ) -> Result<registry::v1::Application, ReconcileError> {
-        let mut ready = Some(true);
-        for condition in &status.conditions.0 {
-            match condition.status.as_str() {
-                "True" => {}
-                "False" => {
-                    ready = Some(false);
-                    break;
-                }
-                _ => {
-                    ready = None;
-                    break;
-                }
-            }
-        }
+impl StatusSection for KafkaAppStatus {
+    fn ready_name() -> &'static str {
+        CONDITION_KAFKA_READY
+    }
 
-        let ready_state = core::v1::ConditionStatus {
-            status: ready,
-            ..Default::default()
-        };
-
-        app.update_section(|mut conditions: core::v1::Conditions| {
-            conditions.update(CONDITION_READY, ready_state);
-            conditions
-        })?;
-
-        Ok(app)
+    fn update_status(&mut self, conditions: Conditions, observed_generation: u64) {
+        self.conditions = conditions;
+        self.observed_generation = observed_generation;
     }
 }
 

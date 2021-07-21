@@ -3,9 +3,9 @@ mod error;
 
 pub use error::*;
 
+use crate::controller::base::ProcessOutcome;
 use async_trait::async_trait;
 use core::fmt::{Debug, Formatter};
-use std::time::Duration;
 
 pub enum ReconcileState<I, C, D> {
     Ignore(I),
@@ -19,21 +19,6 @@ impl<I, C, D> Debug for ReconcileState<I, C, D> {
             Self::Ignore(..) => write!(f, "Ignore(..)"),
             Self::Construct(..) => write!(f, "Construct(..)"),
             Self::Deconstruct(..) => write!(f, "Deconstruct(..)"),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum ReconcilerOutcome<T> {
-    Complete(T),
-    Retry(T, Option<Duration>),
-}
-
-impl<T> ReconcilerOutcome<T> {
-    pub fn split(self) -> (T, Option<Option<Duration>>) {
-        match self {
-            Self::Complete(t) => (t, None),
-            Self::Retry(t, when) => (t, Some(when)),
         }
     }
 }
@@ -53,11 +38,11 @@ pub trait Reconciler {
     async fn construct(
         &self,
         c: Self::Construct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError>;
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError>;
     async fn deconstruct(
         &self,
         d: Self::Deconstruct,
-    ) -> Result<ReconcilerOutcome<Self::Output>, ReconcileError>;
+    ) -> Result<ProcessOutcome<Self::Output>, ReconcileError>;
 }
 
 pub struct ReconcileProcessor<R>(pub R)
@@ -71,11 +56,11 @@ where
     pub async fn reconcile(
         &self,
         input: R::Input,
-    ) -> Result<ReconcilerOutcome<R::Output>, ReconcileError> {
+    ) -> Result<ProcessOutcome<R::Output>, ReconcileError> {
         let state = self.0.eval_state(input).await?;
         log::debug!("Reconcile state: {:?}", state);
         match state {
-            ReconcileState::Ignore(output) => Ok(ReconcilerOutcome::Complete(output)),
+            ReconcileState::Ignore(output) => Ok(ProcessOutcome::Complete(output)),
             ReconcileState::Construct(ctx) => self.0.construct(ctx).await,
             ReconcileState::Deconstruct(ctx) => self.0.deconstruct(ctx).await,
         }
