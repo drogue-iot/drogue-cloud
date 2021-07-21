@@ -17,6 +17,10 @@ actix-rt = "2"
 ntex = "0.3"
 http = "0.2"
 
+lazy_static = "1"
+regex = "1"
+md5 = "0.7"
+
 tokio = "1"
 
 reqwest = "0.11"

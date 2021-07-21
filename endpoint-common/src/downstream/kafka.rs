@@ -3,6 +3,8 @@ use super::*;
 use async_trait::async_trait;
 use cloudevents::binding::rdkafka::{FutureRecordExt, MessageRecord};
 use cloudevents::{event::ExtensionValue, AttributesReader};
+use drogue_cloud_service_api::events::EventTarget;
+use drogue_cloud_service_common::kafka::make_topic_resource_name;
 use drogue_cloud_service_common::{config::ConfigFromEnv, defaults};
 use futures::channel::oneshot;
 use rdkafka::{
@@ -24,7 +26,6 @@ pub enum KafkaSinkError {
 pub struct KafkaSinkConfig {
     #[serde(default = "defaults::kafka_bootstrap_servers")]
     pub bootstrap_servers: String,
-    pub topic: String,
     #[serde(default)]
     pub custom: HashMap<String, String>,
 }
@@ -32,7 +33,6 @@ pub struct KafkaSinkConfig {
 #[derive(Clone)]
 pub struct KafkaSink {
     producer: FutureProducer,
-    topic: String,
 }
 
 impl KafkaSink {
@@ -52,7 +52,6 @@ impl KafkaSink {
 
         Ok(Self {
             producer: kafka_config.create()?,
-            topic: config.topic,
         })
     }
 }
@@ -61,18 +60,24 @@ impl KafkaSink {
 impl DownstreamSink for KafkaSink {
     type Error = KafkaSinkError;
 
-    async fn publish(&self, event: Event) -> Result<PublishOutcome, DownstreamError<Self::Error>> {
+    async fn publish(
+        &self,
+        target: EventTarget,
+        event: Event,
+    ) -> Result<PublishOutcome, DownstreamError<Self::Error>> {
         let key = match event.extension(EXT_PARTITIONKEY) {
             Some(ExtensionValue::String(key)) => key,
             _ => event.id(),
         }
         .into();
 
-        log::debug!("Key: {}", key);
+        let topic = make_topic_resource_name(target);
+
+        log::debug!("Key: {}, Topic: {}", key, topic);
 
         let message_record = MessageRecord::from_event(event)?;
 
-        let record = FutureRecord::<String, Vec<u8>>::to(&self.topic)
+        let record = FutureRecord::<String, Vec<u8>>::to(&topic)
             .key(&key)
             .message_record(&message_record);
 
@@ -110,12 +115,10 @@ mod test {
 
     #[test]
     fn test_custom() {
-        std::env::set_var("KAFKA__TOPIC", "baz");
         std::env::set_var("KAFKA__CUSTOM__A_B_C", "d.e.f");
 
         let kafka = KafkaSinkConfig::from_env_prefix("KAFKA").unwrap();
 
-        assert_eq!(kafka.topic, "baz");
         assert_eq!(kafka.custom.get("a_b_c").cloned(), Some("d.e.f".into()));
 
         std::env::remove_var("KAFKA__TOPIC");

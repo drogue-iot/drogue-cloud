@@ -42,8 +42,6 @@ chrono = { version = "0.4", features = ["serde"] }
 pem = "0.8"
 x509-parser = "0.9"
 reqwest = "0.11"
-regex = "1"
-md5 = "0.7"
 
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }

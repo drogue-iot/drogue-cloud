@@ -88,14 +88,18 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Failed to create Kubernetes client")?;
 
+    // k8s resources
+
     // TODO: discover version too
     let gvk = GroupVersionKind::gvk("kafka.strimzi.io", "v1beta2", "KafkaTopic");
     let (kafka_topic_resource, _caps) = discovery::pinned_kind(&kube, &gvk).await?;
     let kafka_topics = Api::<DynamicObject>::namespaced_with(
-        kube,
+        kube.clone(),
         &config.controller.topic_namespace,
         &kafka_topic_resource,
     );
+
+    // client
 
     let client = reqwest::Client::new();
 

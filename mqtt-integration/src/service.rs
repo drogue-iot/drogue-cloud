@@ -12,6 +12,8 @@ use drogue_cloud_service_api::auth::user::{
     authz::{self, AuthorizationRequest, Permission},
     UserInformation,
 };
+use drogue_cloud_service_api::events::EventTarget;
+use drogue_cloud_service_common::kafka::make_topic_resource_name;
 use drogue_cloud_service_common::{
     client::UserAuthClient,
     defaults,
@@ -32,8 +34,6 @@ use tokio::task::JoinHandle;
 pub struct ServiceConfig {
     #[serde(default = "defaults::kafka_bootstrap_servers")]
     pub kafka_bootstrap_servers: String,
-    #[serde(default = "defaults::kafka_events_topic")]
-    pub kafka_topic: String,
     #[serde(default)]
     pub kafka_properties: HashMap<String, String>,
     #[serde(default)]
@@ -46,7 +46,6 @@ impl Default for ServiceConfig {
     fn default() -> Self {
         Self {
             kafka_bootstrap_servers: defaults::kafka_bootstrap_servers(),
-            kafka_topic: defaults::kafka_events_topic(),
             kafka_properties: Default::default(),
             enable_username_password_auth: false,
             disable_api_keys: false,
@@ -325,7 +324,7 @@ where
         let stream = EventStream::new(EventStreamConfig {
             bootstrap_servers: self.config.kafka_bootstrap_servers.clone(),
             properties: self.config.kafka_properties.clone(),
-            topic: self.config.kafka_topic.clone(),
+            topic: make_topic_resource_name(EventTarget::Events(app.to_string())),
             app: app.to_string(),
             consumer_group: group_id,
         })

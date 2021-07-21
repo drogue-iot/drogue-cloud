@@ -7,6 +7,8 @@ use drogue_cloud_service_api::auth::user::{
     authz::{AuthorizationRequest, Permission},
     UserInformation,
 };
+use drogue_cloud_service_api::events::EventTarget;
+use drogue_cloud_service_common::kafka::make_topic_resource_name;
 use drogue_cloud_service_common::{
     client::UserAuthClient, error::ServiceError, openid::Authenticator,
 };
@@ -63,7 +65,7 @@ pub async fn stream_events(
     let cfg = EventStreamConfig {
         bootstrap_servers: config.kafka_bootstrap_servers.clone(),
         properties: config.kafka_properties.clone(),
-        topic: config.kafka_topic.clone(),
+        topic: make_topic_resource_name(EventTarget::Events(query.app.clone())),
         app: query.app.clone(),
         consumer_group: None,
     };

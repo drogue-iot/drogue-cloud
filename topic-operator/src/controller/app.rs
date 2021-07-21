@@ -10,17 +10,17 @@ use drogue_cloud_operator_common::controller::{
         CONDITION_RECONCILED,
     },
     reconciler::{
-        construct::{ConstructOperation, Construction, Constructor, Outcome},
+        construct::{self, ConstructOperation, Construction, Constructor, Outcome},
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
+use drogue_cloud_service_api::events::EventTarget;
+use drogue_cloud_service_common::kafka::make_topic_resource_name;
 use kube::{
     api::{ApiResource, DynamicObject},
     Api, Resource,
 };
-use lazy_static::lazy_static;
 use operator_framework::{install::Delete, process::create_or_update_by};
-use regex::Regex;
 use serde_json::json;
 use std::{ops::Deref, time::Duration};
 
@@ -28,14 +28,10 @@ const FINALIZER: &str = "kafka";
 const LABEL_KAFKA_CLUSTER: &str = "strimzi.io/cluster";
 const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
 
-const REGEXP: &str = r#"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"#;
-lazy_static! {
-    static ref TOPIC_PATTERN: Regex = Regex::new(REGEXP).expect("Regexp must compile");
-}
-
 pub struct ApplicationController {
     config: ControllerConfig,
     registry: registry::v1::Client,
+
     kafka_topic_resource: ApiResource,
     kafka_topics: Api<DynamicObject>,
 }
@@ -103,8 +99,8 @@ impl Deref for ApplicationController {
 
 pub struct ConstructContext {
     pub app: registry::v1::Application,
-    pub status: Option<KafkaAppStatus>,
-    pub topic: Option<DynamicObject>,
+    pub events_topic: Option<DynamicObject>,
+    pub commands_topic: Option<DynamicObject>,
 }
 
 pub struct DeconstructContext {
@@ -139,8 +135,8 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
         Ok(match (configured, deleted) {
             (_, false) => ReconcileState::Construct(ConstructContext {
                 app,
-                status,
-                topic: None,
+                events_topic: None,
+                commands_topic: None,
             }),
             (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
             (false, true) => ReconcileState::Ignore(app),
@@ -162,27 +158,21 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                 }
             })),
             Box::new(CreateTopic {
-                api: self.kafka_topics.clone(),
-                resource: self.kafka_topic_resource.clone(),
-                config: self.config.clone(),
+                api: &self.kafka_topics,
+                resource: &self.kafka_topic_resource,
+                config: &self.config,
             }),
-            Box::new(("TopicReady", |ctx: Self::Construct| async {
-                let ready = ctx
-                    .topic
-                    .as_ref()
-                    .and_then(|topic| Self::is_topic_ready(topic))
-                    .unwrap_or_default();
-
-                match ready {
-                    true => Ok(Outcome::Continue(ctx)),
-                    false => Ok(Outcome::Retry(ctx, Some(Duration::from_secs(15)))),
-                }
-            })),
+            Box::new(TopicReady),
         ]);
 
-        let mut original_app = ctx.app.clone();
-        let conditions = ctx.status.as_ref().cloned().unwrap_or_default().conditions;
         let observed_generation = ctx.app.metadata.generation;
+        let mut original_app = ctx.app.clone();
+        let conditions = ctx
+            .app
+            .section::<KafkaAppStatus>()
+            .and_then(|s| s.ok())
+            .unwrap_or_default()
+            .conditions;
 
         let result = match constructor.run(conditions, ctx).await {
             Construction::Complete(mut context, mut conditions) => {
@@ -220,7 +210,10 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // delete
 
-        self.delete_kafka_topic(&mut ctx.app).await?;
+        self.delete_kafka_topic(EventTarget::Events(ctx.app.metadata.name.clone()))
+            .await?;
+        self.delete_kafka_topic(EventTarget::Commands(ctx.app.metadata.name.clone()))
+            .await?;
 
         // remove finalizer
 
@@ -232,16 +225,16 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     }
 }
 
-struct CreateTopic {
-    pub api: Api<DynamicObject>,
-    pub resource: ApiResource,
-    pub config: ControllerConfig,
+struct CreateTopic<'o> {
+    pub api: &'o Api<DynamicObject>,
+    pub resource: &'o ApiResource,
+    pub config: &'o ControllerConfig,
 }
 
 #[async_trait]
-impl ConstructOperation<ConstructContext> for CreateTopic {
+impl<'o> ConstructOperation<ConstructContext> for CreateTopic<'o> {
     fn type_name(&self) -> String {
-        "CreateTopic".into()
+        "CreateTopics".into()
     }
 
     async fn run(
@@ -253,111 +246,61 @@ impl ConstructOperation<ConstructContext> for CreateTopic {
             &self.api,
             &self.resource,
             &self.config,
-            &mut ctx.app,
+            EventTarget::Events(ctx.app.metadata.name.clone()),
         )
         .await?;
 
-        ctx.topic = Some(topic);
+        ctx.events_topic = Some(topic);
+
+        let topic = ApplicationReconciler::ensure_kafka_topic(
+            &self.api,
+            &self.resource,
+            &self.config,
+            EventTarget::Commands(ctx.app.metadata.name.clone()),
+        )
+        .await?;
+
+        ctx.commands_topic = Some(topic);
+
+        // done
 
         Ok(Outcome::Continue(ctx))
     }
 }
 
-const MAX_TOPIC_LEN: usize = 63;
+struct TopicReady;
 
-impl<'a> ApplicationReconciler<'a> {
-    pub(crate) fn make_topic_resource_name(app: &registry::v1::Application) -> String {
-        let name = format!("events-{}", app.metadata.name);
+#[async_trait]
+impl ConstructOperation<ConstructContext> for TopicReady {
+    fn type_name(&self) -> String {
+        "TopicsReady".into()
+    }
 
-        // try the simple route, if that works ...
-        if name.len() < MAX_TOPIC_LEN && TOPIC_PATTERN.is_match(&name) {
-            // ... simply return
-            return name;
+    async fn run(&self, ctx: ConstructContext) -> construct::Result<ConstructContext> {
+        let events_ready = ctx
+            .events_topic
+            .as_ref()
+            .and_then(|topic| Self::is_topic_ready(topic))
+            .unwrap_or_default();
+        let commands_ready = ctx
+            .commands_topic
+            .as_ref()
+            .and_then(|topic| Self::is_topic_ready(topic))
+            .unwrap_or_default();
+
+        match events_ready && commands_ready {
+            true => Ok(Outcome::Continue(ctx)),
+            false => Self::retry(ctx),
         }
-
-        // otherwise we need to clean up the name, and ensure we don't generate duplicates
-        let hash = md5::compute(&app.metadata.name);
-        // use a different prefix to prevent clashes with the simple names
-        let name = format!("evt-{:x}-{}", hash, &app.metadata.name);
-
-        let name: String = name
-            .to_lowercase()
-            .chars()
-            .map(|c| match c {
-                '-' | 'a'..='z' | '0'..='9' => c,
-                _ => '-',
-            })
-            .take(MAX_TOPIC_LEN)
-            .collect();
-
-        let name = name.trim_end_matches('-').to_string();
-
-        name
     }
+}
 
-    async fn ensure_kafka_topic(
-        kafka_topics: &Api<DynamicObject>,
-        kafka_topic_resource: &ApiResource,
-        config: &ControllerConfig,
-        app: &mut registry::v1::Application,
-    ) -> Result<DynamicObject, ReconcileError> {
-        let topic_name = Self::make_topic_resource_name(app);
-
-        let topic = create_or_update_by(
-            &kafka_topics,
-            Some(""),
-            &topic_name,
-            |meta| {
-                let mut topic = DynamicObject::new(&topic_name, &kafka_topic_resource)
-                    .within(&config.topic_namespace);
-                *topic.meta_mut() = meta;
-                topic
-            },
-            |this, that| this.metadata == that.metadata && this.data == that.data,
-            |mut topic| {
-                // set target cluster
-                topic
-                    .metadata
-                    .labels
-                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
-                topic
-                    .metadata
-                    .annotations
-                    .insert(ANNOTATION_APP_NAME.into(), app.metadata.name.clone());
-                // set config
-                topic.data["spec"] = json!({
-                    "config": {},
-                    "partitions": 3,
-                    "replicas": 1,
-                    "topicName": topic_name,
-                });
-
-                Ok::<_, ReconcileError>(topic)
-            },
-        )
-        .await?
-        .resource();
-
-        // done
-
-        Ok(topic)
-    }
-
-    async fn delete_kafka_topic(
-        &self,
-        app: &mut registry::v1::Application,
-    ) -> Result<(), ReconcileError> {
-        let topic_name = Self::make_topic_resource_name(app);
-
-        // remove topic
-
-        self.kafka_topics
-            .delete_optionally(&topic_name, &Default::default())
-            .await?;
-
-        // done
-
-        Ok(())
+impl TopicReady {
+    fn retry<C>(ctx: C) -> construct::Result<C>
+    where
+        C: Send + Sync,
+    {
+        Ok(Outcome::Retry(ctx, Some(Duration::from_secs(15))))
     }
 
     fn is_topic_ready(topic: &DynamicObject) -> Option<bool> {
@@ -383,6 +326,70 @@ impl<'a> ApplicationReconciler<'a> {
     }
 }
 
+impl<'a> ApplicationReconciler<'a> {
+    async fn ensure_kafka_topic(
+        kafka_topics: &Api<DynamicObject>,
+        kafka_topic_resource: &ApiResource,
+        config: &ControllerConfig,
+        target: EventTarget,
+    ) -> Result<DynamicObject, ReconcileError> {
+        let topic_name = make_topic_resource_name(target.clone());
+
+        let topic = create_or_update_by(
+            &kafka_topics,
+            Some(config.topic_namespace.clone()),
+            &topic_name,
+            |meta| {
+                let mut topic = DynamicObject::new(&topic_name, &kafka_topic_resource)
+                    .within(&config.topic_namespace);
+                *topic.meta_mut() = meta;
+                topic
+            },
+            |this, that| this.metadata == that.metadata && this.data == that.data,
+            |mut topic| {
+                // set target cluster
+                topic
+                    .metadata
+                    .labels
+                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
+                topic
+                    .metadata
+                    .annotations
+                    .insert(ANNOTATION_APP_NAME.into(), target.app_name().into());
+                // set config
+                topic.data["spec"] = json!({
+                    "config": {},
+                    "partitions": 3,
+                    "replicas": 1,
+                    "topicName": topic_name,
+                });
+
+                Ok::<_, ReconcileError>(topic)
+            },
+        )
+        .await?
+        .resource();
+
+        // done
+
+        Ok(topic)
+    }
+
+    async fn delete_kafka_topic(&self, target: EventTarget) -> Result<(), ReconcileError> {
+        let topic_name = make_topic_resource_name(target);
+
+        // remove topic
+
+        self.kafka_topics
+            .delete_optionally(&topic_name, &Default::default())
+            .await?;
+
+        // done
+
+        Ok(())
+    }
+}
+
 impl StatusSection for KafkaAppStatus {
     fn ready_name() -> &'static str {
         CONDITION_KAFKA_READY
@@ -391,45 +398,5 @@ impl StatusSection for KafkaAppStatus {
     fn update_status(&mut self, conditions: Conditions, observed_generation: u64) {
         self.conditions = conditions;
         self.observed_generation = observed_generation;
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use chrono::Utc;
-    use drogue_client::meta;
-
-    #[test]
-    fn topic_names() {
-        for i in [
-            ("foo", "events-foo"),
-            ("00foo", "events-00foo"),
-            (
-                "0123456789012345678901234567890123456789012345678901234567890123456789",
-                "evt-109eb12c10c45d94ddac8eca7b818bed-01234567890123456789012345",
-            ),
-            ("FOO", "evt-901890a8e9c8cf6d5a1a542b229febff-foo"),
-            ("foo-", "evt-03f19ca8da08c40c2d036c8915d383e2-foo"),
-        ] {
-            assert_eq!(
-                i.1,
-                ApplicationReconciler::make_topic_resource_name(&registry::v1::Application {
-                    metadata: meta::v1::NonScopedMetadata {
-                        name: i.0.to_string(),
-                        uid: "".to_string(),
-                        creation_timestamp: Utc::now(),
-                        generation: 0,
-                        resource_version: "".to_string(),
-                        deletion_timestamp: None,
-                        finalizers: vec![],
-                        labels: Default::default(),
-                        annotations: Default::default()
-                    },
-                    spec: Default::default(),
-                    status: Default::default()
-                })
-            )
-        }
     }
 }

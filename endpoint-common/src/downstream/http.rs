@@ -13,7 +13,11 @@ pub struct HttpSink {
 impl DownstreamSink for HttpSink {
     type Error = reqwest::Error;
 
-    async fn publish(&self, event: Event) -> Result<PublishOutcome, DownstreamError<Self::Error>> {
+    async fn publish(
+        &self,
+        _target: EventTarget,
+        event: Event,
+    ) -> Result<PublishOutcome, DownstreamError<Self::Error>> {
         let response =
             cloudevents::binding::reqwest::event_to_request(event, self.client.post(&self.sink))?
                 .send()

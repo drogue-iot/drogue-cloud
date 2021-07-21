@@ -23,8 +23,8 @@ drogue-client = "0.7"
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-database-common = { path = "../database-common" }
 
-actix-web = { version="=4.0.0-beta.5", optional = true} # we need v4 as we need tokio 1
-actix-http = { version = "=3.0.0-beta.5", optional = true } # FIXME: temporary intermediate
+actix-web = { version="=4.0.0-beta.8", optional = true} # we need v4 as we need tokio 1
+actix-http = { version = "=3.0.0-beta.8", optional = true } # FIXME: temporary intermediate
 cloudevents-sdk = { version = "0.4", optional = true }
 
 deadpool = "0.7"
