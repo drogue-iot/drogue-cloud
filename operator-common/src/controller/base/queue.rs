@@ -1,4 +1,5 @@
 use crate::controller::base::Key;
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::tokio_postgres::types::Type;
 use deadpool_postgres::{Pool, PoolError};
@@ -30,14 +31,30 @@ where
     running: Arc<AtomicBool>,
 }
 
+#[async_trait]
+pub trait WorkQueueHandler<K>: Send + Sync {
+    async fn handle(&self, key: K) -> Result<Option<(K, Duration)>, ()>;
+}
+
+#[async_trait]
+impl<K, F, Fut> WorkQueueHandler<K> for F
+where
+    K: Key,
+    F: Fn(K) -> Fut + Send + Sync + 'static,
+    Fut: Future<Output = Result<Option<(K, Duration)>, ()>> + Send,
+{
+    async fn handle(&self, key: K) -> Result<Option<(K, Duration)>, ()> {
+        (self)(key).await
+    }
+}
+
 impl<K> WorkQueueReader<K>
 where
     K: Key,
 {
-    pub fn new<F, Fut>(pool: Pool, instance: String, r#type: String, f: F) -> Self
+    pub fn new<H>(pool: Pool, instance: String, r#type: String, handler: H) -> Self
     where
-        F: Fn(K) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<Option<(K, Duration)>, ()>> + Send,
+        H: WorkQueueHandler<K> + 'static,
     {
         let running = Arc::new(AtomicBool::new(true));
         let inner = InnerReader::<K> {
@@ -54,7 +71,7 @@ where
         };
         tokio::spawn(async move {
             while let Some(entry) = inner.next().await {
-                match f(entry.key.clone()).await {
+                match handler.handle(entry.key.clone()).await {
                     Ok(Some((rt, after))) => {
                         if writer.add(rt, after).await.is_ok() {
                             inner.ack(entry).await;
@@ -85,7 +102,7 @@ where
 }
 
 impl WorkQueueWriter {
-    pub fn new(instance: String, r#type: String, pool: Pool) -> Self {
+    pub fn new(pool: Pool, instance: String, r#type: String) -> Self {
         Self {
             instance,
             r#type,
