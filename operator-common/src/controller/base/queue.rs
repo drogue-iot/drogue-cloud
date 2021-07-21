@@ -118,9 +118,7 @@ impl WorkQueueWriter {
         // being processed, we (always) increment the generation. So that the current iteration will
         // not delete the entry, as that will only check the current iteration generation.
 
-        let r = c
-            .execute(
-                r#"
+        let sql = r#"
 INSERT INTO WORKQUEUE (
     INSTANCE,
     TYPE,
@@ -141,7 +139,23 @@ DO
             WORKQUEUE.TS > EXCLUDED.TS
         OR
             WORKQUEUE.TS < now()
-"#,
+"#;
+
+        let stmt = c
+            .prepare_typed(
+                sql,
+                &[
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::TIMESTAMPTZ,
+                ],
+            )
+            .await?;
+
+        let r = c
+            .execute(
+                &stmt,
                 &[&self.instance, &self.r#type, &key.to_string(), &ts],
             )
             .await;
@@ -262,16 +276,30 @@ LIMIT 1
     async fn do_ack(&self, key: String, ts: DateTime<Utc>, gen: u64) -> Result<(), anyhow::Error> {
         let c = self.pool.get().await?;
 
-        let r = c
-            .execute(
-                r#"
+        let sql = r#"
 DELETE FROM WORKQUEUE WHERE
     INSTANCE = $1 AND
     TYPE = $2 AND
     KEY = $3 AND
     TS <= $4 AND
     GEN = $5
-"#,
+"#;
+        let stmt = c
+            .prepare_typed(
+                sql,
+                &[
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::TIMESTAMPTZ,
+                    Type::INT8,
+                ],
+            )
+            .await?;
+
+        let r = c
+            .execute(
+                &stmt,
                 &[&self.instance, &self.r#type, &key, &ts, &(gen as i64)],
             )
             .await;
