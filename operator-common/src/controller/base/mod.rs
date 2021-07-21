@@ -12,6 +12,7 @@ pub use event::*;
 #[cfg(feature = "with_actix")]
 pub use event::actix::events;
 
+use crate::controller::base::queue::WorkQueueHandler;
 use crate::controller::{
     base::queue::{WorkQueueConfig, WorkQueueReader, WorkQueueWriter},
     reconciler::ReconcileError,
@@ -96,13 +97,8 @@ where
 
         let instance = config.instance;
 
-        let writer = WorkQueueWriter::new(instance.clone(), r#type.clone(), pool.clone());
-
-        let inner_handler = inner.clone();
-        let reader = WorkQueueReader::new(pool, instance, r#type, move |key| {
-            let inner_handler = inner_handler.clone();
-            async move { inner_handler.lock().await.process(key).await }
-        });
+        let writer = WorkQueueWriter::new(pool.clone(), instance.clone(), r#type.clone());
+        let reader = WorkQueueReader::new(pool, instance, r#type, Handler(inner.clone()));
 
         Ok(Self {
             writer,
@@ -116,6 +112,26 @@ where
             self.writer.add(queue.0, queue.1).await?;
         }
         Ok(())
+    }
+}
+
+struct Handler<K, RI, RO, O>(pub Arc<Mutex<InnerBaseController<K, RI, RO, O>>>)
+where
+    K: Key,
+    RI: Clone + Send + Sync + 'static,
+    RO: Clone + Send + Sync + 'static,
+    O: ControllerOperation<K, RI, RO> + Send + Sync + 'static;
+
+#[async_trait]
+impl<K, RI, RO, O> WorkQueueHandler<K> for Handler<K, RI, RO, O>
+where
+    K: Key,
+    RI: Clone + Send + Sync + 'static,
+    RO: Clone + Send + Sync + 'static,
+    O: ControllerOperation<K, RI, RO> + Send + Sync + 'static,
+{
+    async fn handle(&self, key: K) -> Result<Option<(K, Duration)>, ()> {
+        self.0.lock().await.process(key).await
     }
 }
 
@@ -139,6 +155,12 @@ where
 {
     const MAX_RETRIES: usize = 10;
 
+    /// Process a key, locally retrying.
+    ///
+    /// This runs the operation, and does local retries if they are immediate.
+    ///
+    /// After a few retries, or when a long-term retry comes back, we forward that to the
+    /// work queue and continue.
     pub async fn process(&mut self, key: K) -> Result<Option<(K, Duration)>, ()> {
         let mut retries: usize = 0;
         loop {
