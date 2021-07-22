@@ -1,8 +1,6 @@
 #![type_length_limit = "6000000"]
 
 mod auth;
-mod cloudevents_sdk_ntex;
-mod command;
 mod error;
 mod mqtt;
 mod server;
@@ -10,16 +8,14 @@ mod x509;
 
 use crate::{
     auth::DeviceAuthenticator,
-    command::command_service,
     server::{build, build_tls},
 };
 use bytes::Bytes;
 use bytestring::ByteString;
 use dotenv::dotenv;
-use drogue_cloud_endpoint_common::downstream::DownstreamSink;
 use drogue_cloud_endpoint_common::{
-    commands::Commands,
-    downstream::{DownstreamSender, KafkaSink},
+    command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
+    downstream::{DownstreamSender, DownstreamSink, KafkaSink, Target},
     error::EndpointError,
     x509::ClientCertificateChain,
 };
@@ -30,7 +26,6 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
 };
 use futures::TryFutureExt;
-use ntex::web;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -48,6 +43,8 @@ pub struct Config {
 
     #[serde(default)]
     pub health: HealthServerConfig,
+
+    pub command_source_kafka: KafkaCommandSourceConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -104,47 +101,38 @@ async fn main() -> anyhow::Result<()> {
     let commands = Commands::new();
 
     let app = App {
-        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
+        downstream: DownstreamSender::new(
+            KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?,
+            Target::Events,
+        )?,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),
         commands: commands.clone(),
     };
 
-    let web_app = app.clone();
-
     let builder = ntex::server::Server::build();
     let addr = config.bind_addr_mqtt.as_deref();
 
     let builder = if !config.disable_tls {
-        build_tls(addr, builder, app, &config)?
+        build_tls(addr, builder, app.clone(), &config)?
     } else {
-        build(addr, builder, app)?
+        build(addr, builder, app.clone())?
     };
 
     log::info!("Starting web server");
 
+    // command source
+
+    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
+
     // health server
 
-    let health = HealthServer::new(config.health, vec![]);
-
-    // web server
-
-    let web_server = web::server(move || {
-        web::App::new().data(web_app.clone()).service(
-            web::resource("/command-service").route(web::post().to(command_service::<KafkaSink>)),
-        )
-    })
-    .bind(config.bind_addr_http)?
-    .run();
+    let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
     // run
 
-    futures::try_join!(
-        health.run_ntex(),
-        builder.run().err_into(),
-        web_server.err_into(),
-    )?;
+    futures::try_join!(health.run_ntex(), builder.run().err_into(),)?;
 
     // exiting
 

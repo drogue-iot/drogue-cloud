@@ -158,10 +158,10 @@ where
 
 macro_rules! subscribe {
     ($s: expr, $session: expr, $fail: expr) => {{
-        $s.iter_mut().for_each(|mut sub| {
+        for mut sub in $s.iter_mut() {
             if sub.topic() == TOPIC_COMMAND_INBOX_PATTERN {
                 let device_id = $session.state().device_id.clone();
-                let mut rx = $session.state().commands.subscribe(device_id.clone());
+                let mut rx = $session.state().commands.subscribe(device_id.clone()).await;
                 let sink = $session.sink().clone();
                 ntex::rt::spawn(async move {
                     while let Some(cmd) = rx.recv().await {
@@ -177,10 +177,7 @@ macro_rules! subscribe {
                             .await
                         {
                             Ok(_) => {
-                                log::debug!(
-                                    "Command sent to device subscription {:?}",
-                                    device_id.clone()
-                                )
+                                log::debug!("Command sent to device subscription {:?}", device_id)
                             }
                             Err(e) => log::error!(
                                 "Failed to send a command to device subscription {:?}",
@@ -194,13 +191,13 @@ macro_rules! subscribe {
 
                 log::debug!(
                     "Device '{:?}' subscribed to receive commands",
-                    $session.state().device_id.clone()
+                    $session.state().device_id
                 );
             } else {
                 log::info!("Subscribing to topic {:?} not allowed", sub.topic());
                 $fail(sub);
             }
-        });
+        }
 
         Ok($s.ack())
     }};
@@ -211,8 +208,9 @@ macro_rules! unsubscribe {
         $session
             .state()
             .commands
-            .unsubscribe($session.state().device_id.clone());
-        log::debug!($log, $session.state().device_id.clone());
+            .unsubscribe(&$session.state().device_id)
+            .await;
+        log::debug!($log, $session.state().device_id);
         Ok($ack.ack())
     }};
 }

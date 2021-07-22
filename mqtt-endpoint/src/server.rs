@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Context;
 use drogue_cloud_endpoint_common::{
-    commands::Commands,
+    command::Commands,
     downstream::{DownstreamSender, DownstreamSink},
 };
 use drogue_cloud_service_common::Id;

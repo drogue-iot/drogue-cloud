@@ -1,8 +1,9 @@
-use super::EventStream;
+use crate::stream::EventStream;
 use actix_web::{
     http::StatusCode,
     web::{Bytes, BytesMut},
 };
+use drogue_cloud_event_common::stream;
 use futures::{future, Stream, TryStreamExt};
 use std::pin::Pin;
 
@@ -20,6 +21,7 @@ fn make_frame(event: String) -> Bytes {
 pub fn map_to_sse(
     event_stream: EventStream,
 ) -> impl Stream<Item = Result<Bytes, actix_web::Error>> {
+    let event_stream: stream::EventStream = event_stream.into();
     event_stream
         .map_err(|err| {
             log::debug!("Failed to process event: {}", err);

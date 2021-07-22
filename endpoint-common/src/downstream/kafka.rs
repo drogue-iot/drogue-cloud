@@ -1,11 +1,14 @@
 use super::*;
 
+use crate::kafka::KafkaConfig;
 use async_trait::async_trait;
-use cloudevents::binding::rdkafka::{FutureRecordExt, MessageRecord};
-use cloudevents::{event::ExtensionValue, AttributesReader};
+use cloudevents::{
+    binding::rdkafka::{FutureRecordExt, MessageRecord},
+    event::ExtensionValue,
+    AttributesReader,
+};
 use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_common::kafka::make_topic_resource_name;
-use drogue_cloud_service_common::{config::ConfigFromEnv, defaults};
+use drogue_cloud_service_common::{config::ConfigFromEnv, kafka::make_topic_resource_name};
 use futures::channel::oneshot;
 use rdkafka::{
     error::{KafkaError, RDKafkaErrorCode},
@@ -22,14 +25,6 @@ pub enum KafkaSinkError {
     Canceled,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct KafkaSinkConfig {
-    #[serde(default = "defaults::kafka_bootstrap_servers")]
-    pub bootstrap_servers: String,
-    #[serde(default)]
-    pub custom: HashMap<String, String>,
-}
-
 #[derive(Clone)]
 pub struct KafkaSink {
     producer: FutureProducer,
@@ -38,7 +33,7 @@ pub struct KafkaSink {
 impl KafkaSink {
     /// Create a new Kafka sink from a configuration specified by the prefix.
     pub fn new(prefix: &str) -> anyhow::Result<Self> {
-        let config = KafkaSinkConfig::from_env_prefix(prefix)
+        let config = KafkaConfig::from_env_prefix(prefix)
             .with_context(|| format!("Failed to parse {} config", prefix))?;
 
         let mut kafka_config = ClientConfig::new();
@@ -106,21 +101,5 @@ impl DownstreamSink for KafkaSink {
                 Err(DownstreamError::Transport(err.into()))
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_custom() {
-        std::env::set_var("KAFKA__CUSTOM__A_B_C", "d.e.f");
-
-        let kafka = KafkaSinkConfig::from_env_prefix("KAFKA").unwrap();
-
-        assert_eq!(kafka.custom.get("a_b_c").cloned(), Some("d.e.f".into()));
-
-        std::env::remove_var("KAFKA__TOPIC");
     }
 }

@@ -7,7 +7,8 @@ pub enum EventTarget {
 impl EventTarget {
     pub fn app_name(&self) -> &str {
         match self {
-            Self::Commands(app) | Self::Events(app) => app.as_str(),
+            Self::Commands(app) => app.as_str(),
+            Self::Events(app) => app.as_str(),
         }
     }
 }

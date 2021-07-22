@@ -26,6 +26,7 @@ members = [
     "topic-operator",
     "api-key-service",
     "admin-service",
+    "event-common",
 ]
 
 [patch.crates-io]

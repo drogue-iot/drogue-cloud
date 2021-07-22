@@ -8,10 +8,14 @@ mod telemetry;
 use crate::auth::DeviceAuthenticator;
 use crate::error::CoapEndpointError;
 use crate::response::Responder;
+use coap::Server;
+use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use dotenv::dotenv;
+use drogue_cloud_endpoint_common::command::{
+    Commands, KafkaCommandSource, KafkaCommandSourceConfig,
+};
+use drogue_cloud_endpoint_common::downstream::Target;
 use drogue_cloud_endpoint_common::{
-    command_endpoint::{CommandServer, CommandServerConfig},
-    commands::Commands,
     downstream::{DownstreamSender, DownstreamSink, KafkaSink},
     error::EndpointError,
 };
@@ -20,14 +24,10 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
 };
 use futures::{self, TryFutureExt};
+use serde::Deserialize;
 use std::collections::LinkedList;
 use std::net::SocketAddr;
-use std::ops::DerefMut;
 use telemetry::PublishOptions;
-
-use coap::Server;
-use coap_lite::{CoapOption, CoapRequest, CoapResponse};
-use serde::Deserialize;
 
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
 //
@@ -44,8 +44,7 @@ pub struct Config {
     #[serde(default)]
     pub bind_addr_coap: Option<String>,
 
-    #[serde(default)]
-    pub command: CommandServerConfig,
+    pub command_source_kafka: KafkaCommandSourceConfig,
     #[serde(default)]
     pub health: HealthServerConfig,
 }
@@ -199,7 +198,10 @@ async fn main() -> anyhow::Result<()> {
     let coap_server_commands = commands.clone();
 
     let app = App {
-        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
+        downstream: DownstreamSender::new(
+            KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?,
+            Target::Events,
+        )?,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),
@@ -211,15 +213,11 @@ async fn main() -> anyhow::Result<()> {
 
     let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
 
-    let health = HealthServer::new(config.health, vec![]);
+    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
 
-    let mut command_server = CommandServer::new(config.command, commands)?;
+    let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
-    futures::try_join!(
-        health.run(),
-        device_to_endpoint.err_into(),
-        command_server.deref_mut().err_into(),
-    )?;
+    futures::try_join!(health.run(), device_to_endpoint.err_into(),)?;
     Ok(())
 }
 

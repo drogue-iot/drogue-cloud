@@ -5,18 +5,19 @@ mod ttn;
 mod x509;
 
 #[cfg(feature = "rustls")]
-use actix_tls::rustls::Session;
+use actix_tls::accept::rustls::Session;
 use actix_web::{
     get, middleware,
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
 use dotenv::dotenv;
+use drogue_cloud_endpoint_common::command::{
+    Commands, KafkaCommandSource, KafkaCommandSourceConfig,
+};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    command_endpoint::{CommandServer, CommandServerConfig},
-    commands::Commands,
-    downstream::{DownstreamSender, KafkaSink},
+    downstream::{DownstreamSender, KafkaSink, Target},
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
@@ -26,7 +27,6 @@ use drogue_cloud_service_common::{
 use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
-use std::ops::DerefMut;
 
 drogue_cloud_endpoint_common::retriever!();
 
@@ -57,8 +57,7 @@ struct Config {
     #[serde(default)]
     pub health: HealthServerConfig,
 
-    #[serde(default)]
-    pub command: CommandServerConfig,
+    pub command_source_kafka: KafkaCommandSourceConfig,
 }
 
 #[get("/")]
@@ -73,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting HTTP service endpoint");
 
-    let sender = DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?;
+    let sender = DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?, Target::Events)?;
     let commands = Commands::new();
 
     let config = Config::from_env()?;
@@ -157,17 +156,13 @@ async fn main() -> anyhow::Result<()> {
 
     let http_server = http_server.run();
 
-    let mut command_server = CommandServer::new(config.command, commands.clone())?;
+    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![]);
+    let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
-    futures::try_join!(
-        health.run(),
-        command_server.deref_mut().err_into(),
-        http_server.err_into()
-    )?;
+    futures::try_join!(health.run(), http_server.err_into())?;
 
     Ok(())
 }

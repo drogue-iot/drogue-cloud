@@ -2,10 +2,9 @@ use crate::command::wait_for_command;
 use actix_web::{web, HttpResponse};
 use async_trait::async_trait;
 use drogue_client::error::ErrorInformation;
-use drogue_cloud_endpoint_common::downstream::PublishOutcome;
 use drogue_cloud_endpoint_common::{
-    commands::Commands,
-    downstream::{DownstreamSender, DownstreamSink, Publish},
+    command::Commands,
+    downstream::{DownstreamSender, DownstreamSink, Publish, PublishOutcome},
     error::HttpEndpointError,
 };
 use drogue_cloud_service_common::Id;

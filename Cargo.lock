@@ -1740,6 +1740,7 @@ dependencies = [
  "actix-tls",
  "actix-web",
  "anyhow",
+ "async-std",
  "async-trait",
  "base64 0.13.0",
  "chrono",
@@ -1748,6 +1749,7 @@ dependencies = [
  "config 0.11.0",
  "deadpool 0.8.2",
  "drogue-client 0.7.0",
+ "drogue-cloud-event-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
@@ -1769,6 +1771,22 @@ dependencies = [
  "tokio",
  "uuid",
  "x509-parser",
+]
+
+[[package]]
+name = "drogue-cloud-event-common"
+version = "0.6.0"
+dependencies = [
+ "cloudevents-sdk 0.4.0",
+ "drogue-cloud-service-api",
+ "futures",
+ "log",
+ "owning_ref",
+ "rdkafka",
+ "serde_json",
+ "thiserror",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1820,11 +1838,11 @@ dependencies = [
  "cloudevents-sdk 0.4.0",
  "drogue-client 0.7.0",
  "drogue-cloud-endpoint-common",
+ "drogue-cloud-event-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "futures",
  "log",
- "owning_ref",
  "rdkafka",
  "reqwest",
  "serde 1.0.126",
@@ -1832,7 +1850,6 @@ dependencies = [
  "thiserror",
  "tokio-stream",
  "url",
- "uuid",
 ]
 
 [[package]]
