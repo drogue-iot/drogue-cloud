@@ -7,13 +7,14 @@ use drogue_cloud_integration_common::{
     commands::CommandOptions,
     stream::{EventStream, EventStreamConfig},
 };
-use drogue_cloud_service_api::auth::user::{
-    authn::{AuthenticationRequest, Outcome},
-    authz::{self, AuthorizationRequest, Permission},
-    UserInformation,
+use drogue_cloud_service_api::{
+    auth::user::{
+        authn::{AuthenticationRequest, Outcome},
+        authz::{self, AuthorizationRequest, Permission},
+        UserInformation,
+    },
+    events::EventTarget,
 };
-use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_common::kafka::make_topic_resource_name;
 use drogue_cloud_service_common::{
     client::UserAuthClient,
     defaults,
@@ -324,8 +325,7 @@ where
         let stream = EventStream::new(EventStreamConfig {
             bootstrap_servers: self.config.kafka_bootstrap_servers.clone(),
             properties: self.config.kafka_properties.clone(),
-            topic: make_topic_resource_name(EventTarget::Events(app.to_string())),
-            app: app.to_string(),
+            target: EventTarget::Events(app.to_string()),
             consumer_group: group_id,
         })
         .map_err(|err| {

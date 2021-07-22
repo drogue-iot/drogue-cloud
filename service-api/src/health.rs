@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum HealthCheckError {
     #[error("Health check failed: {0}")]
     Failed(#[from] Box<dyn std::error::Error>),
+    #[error("Not OK: {0}")]
+    NotOk(String),
 }
 
 impl HealthCheckError {
@@ -12,7 +14,11 @@ impl HealthCheckError {
     where
         E: std::error::Error + 'static,
     {
-        HealthCheckError::Failed(Box::new(err))
+        Self::Failed(Box::new(err))
+    }
+
+    pub fn nok<T>(reason: String) -> Result<T, Self> {
+        Err(Self::NotOk(reason))
     }
 }
 

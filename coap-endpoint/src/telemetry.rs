@@ -3,7 +3,7 @@ use crate::downstream::CoapCommandSender;
 use crate::error::CoapEndpointError;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use drogue_cloud_endpoint_common::{
-    commands::Commands,
+    command::Commands,
     downstream::{self, DownstreamSender, DownstreamSink},
     error::EndpointError,
 };

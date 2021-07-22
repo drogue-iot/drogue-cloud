@@ -1,0 +1,26 @@
+[package]
+name = "drogue-cloud-event-common"
+version = "0.6.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+log = "0.4"
+thiserror = "1"
+
+uuid = { version = "0.8", features = ["v4"] }
+serde_json = "1"
+owning_ref = "0.4"
+futures = "0.3"
+
+cloudevents-sdk = { version = "0.4", features = ["rdkafka"] }
+
+drogue-cloud-service-api = { path = "../service-api" }
+
+[dependencies.rdkafka]
+version = "0.25"
+features = ["ssl", "sasl"]
+
+[dev-dependencies]
+url = "2"

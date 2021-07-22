@@ -73,23 +73,43 @@ pub enum DownstreamError<E: std::error::Error + 'static> {
     Transport(#[source] E),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy)]
+pub enum Target {
+    Events,
+    Commands,
+}
+
+impl Target {
+    pub fn translate(&self, app: String) -> EventTarget {
+        match self {
+            Self::Commands => EventTarget::Commands(app),
+            Self::Events => EventTarget::Events(app),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DownstreamSender<S>
 where
     S: DownstreamSink,
 {
     sink: S,
     instance: String,
+    target: Target,
 }
 
 impl<S> DownstreamSender<S>
 where
     S: DownstreamSink,
 {
-    pub fn new(sink: S) -> anyhow::Result<Self> {
+    pub fn new(sink: S, target: Target) -> anyhow::Result<Self> {
         let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
 
-        Ok(Self { sink, instance })
+        Ok(Self {
+            sink,
+            instance,
+            target,
+        })
     }
 
     pub async fn publish<B>(
@@ -148,7 +168,7 @@ where
         // build event
 
         self.sink
-            .publish(EventTarget::Events(publish.app_id), event.build()?)
+            .publish(self.target.translate(publish.app_id), event.build()?)
             .await
     }
 

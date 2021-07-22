@@ -100,7 +100,6 @@ impl Deref for ApplicationController {
 pub struct ConstructContext {
     pub app: registry::v1::Application,
     pub events_topic: Option<DynamicObject>,
-    pub commands_topic: Option<DynamicObject>,
 }
 
 pub struct DeconstructContext {
@@ -136,7 +135,6 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             (_, false) => ReconcileState::Construct(ConstructContext {
                 app,
                 events_topic: None,
-                commands_topic: None,
             }),
             (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
             (false, true) => ReconcileState::Ignore(app),
@@ -212,8 +210,6 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
 
         self.delete_kafka_topic(EventTarget::Events(ctx.app.metadata.name.clone()))
             .await?;
-        self.delete_kafka_topic(EventTarget::Commands(ctx.app.metadata.name.clone()))
-            .await?;
 
         // remove finalizer
 
@@ -252,16 +248,6 @@ impl<'o> ConstructOperation<ConstructContext> for CreateTopic<'o> {
 
         ctx.events_topic = Some(topic);
 
-        let topic = ApplicationReconciler::ensure_kafka_topic(
-            &self.api,
-            &self.resource,
-            &self.config,
-            EventTarget::Commands(ctx.app.metadata.name.clone()),
-        )
-        .await?;
-
-        ctx.commands_topic = Some(topic);
-
         // done
 
         Ok(Outcome::Continue(ctx))
@@ -282,13 +268,8 @@ impl ConstructOperation<ConstructContext> for TopicReady {
             .as_ref()
             .and_then(|topic| Self::is_topic_ready(topic))
             .unwrap_or_default();
-        let commands_ready = ctx
-            .commands_topic
-            .as_ref()
-            .and_then(|topic| Self::is_topic_ready(topic))
-            .unwrap_or_default();
 
-        match events_ready && commands_ready {
+        match events_ready {
             true => Ok(Outcome::Continue(ctx)),
             false => Self::retry(ctx),
         }

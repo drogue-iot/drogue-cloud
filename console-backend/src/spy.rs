@@ -3,12 +3,13 @@ use actix::clock::{interval_at, Instant};
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, web::Bytes, HttpResponse};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
-use drogue_cloud_service_api::auth::user::{
-    authz::{AuthorizationRequest, Permission},
-    UserInformation,
+use drogue_cloud_service_api::{
+    auth::user::{
+        authz::{AuthorizationRequest, Permission},
+        UserInformation,
+    },
+    events::EventTarget,
 };
-use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_common::kafka::make_topic_resource_name;
 use drogue_cloud_service_common::{
     client::UserAuthClient, error::ServiceError, openid::Authenticator,
 };
@@ -65,8 +66,7 @@ pub async fn stream_events(
     let cfg = EventStreamConfig {
         bootstrap_servers: config.kafka_bootstrap_servers.clone(),
         properties: config.kafka_properties.clone(),
-        topic: make_topic_resource_name(EventTarget::Events(query.app.clone())),
-        app: query.app.clone(),
+        target: EventTarget::Events(query.app.clone()),
         consumer_group: None,
     };
 

@@ -11,27 +11,20 @@ lazy_static! {
 
 pub fn make_topic_resource_name(target: EventTarget) -> String {
     let name = match &target {
-        EventTarget::Events(app) => format!("events-{}", app),
-        EventTarget::Commands(app) => format!("commands-{}", app),
-    };
-
-    // try the simple route, if that works ...
-    if name.len() < MAX_TOPIC_LEN && TOPIC_PATTERN.is_match(&name) {
-        // ... simply return
-        return name;
-    }
-
-    // otherwise we need to clean up the name, and ensure we don't generate duplicates
-    // use a different prefix to prevent clashes with the simple names
-    let name = match &target {
         EventTarget::Events(app) => {
-            let hash = md5::compute(app);
-            format!("evt-{:x}-{}", hash, app)
+            let name = format!("events-{}", app);
+            // try the simple route, if that works ...
+            if name.len() < MAX_TOPIC_LEN && TOPIC_PATTERN.is_match(&name) {
+                // ... simply return
+                return name;
+            } else {
+                // otherwise we need to clean up the name, and ensure we don't generate duplicates
+                // use a different prefix to prevent clashes with the simple names
+                let hash = md5::compute(app);
+                format!("evt-{:x}-{}", hash, app)
+            }
         }
-        EventTarget::Commands(app) => {
-            let hash = md5::compute(app);
-            format!("cmd-{:x}-{}", hash, app)
-        }
+        EventTarget::Commands(_) => return "iot-commands".to_string(),
     };
 
     let name: String = name

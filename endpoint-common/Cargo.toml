@@ -19,6 +19,7 @@ snafu = "0.6"
 chrono = "0.4"
 
 async-trait = "0.1"
+async-std = "1"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
@@ -49,6 +50,7 @@ openid = "0.9"
 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-event-common = { path = "../event-common" }
 drogue-client = "0.7.0"
 
 x509-parser = "0.9"

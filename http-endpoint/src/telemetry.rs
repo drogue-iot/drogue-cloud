@@ -1,8 +1,8 @@
 use crate::downstream::HttpCommandSender;
 use actix_web::{http::header, web, HttpResponse};
+use drogue_cloud_endpoint_common::command::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    commands::Commands,
     downstream::{self, DownstreamSender, DownstreamSink},
     error::{EndpointError, HttpEndpointError},
     x509::ClientCertificateChain,

@@ -51,8 +51,7 @@ impl KafkaEventSender {
         kafka_config.set("bootstrap.servers", &config.bootstrap_servers);
 
         for (k, v) in config.custom {
-            log::info!("Kafka Option - {} = {}", k, v);
-            kafka_config.set(k, v);
+            kafka_config.set(k.replace('_', "."), v);
         }
 
         let queue_timeout = match config.queue_timeout {
