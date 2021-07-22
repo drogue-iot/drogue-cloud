@@ -1,4 +1,3 @@
-use actix_web::{http::StatusCode, HttpResponse};
 use bytes::{BufMut, Bytes, BytesMut};
 use futures::{
     task::{Context, Poll},
@@ -6,10 +5,7 @@ use futures::{
 };
 use pin_project::pin_project;
 use serde::Serialize;
-use std::{
-    fmt::{Debug, Display, Formatter},
-    pin::Pin,
-};
+use std::{error::Error, pin::Pin};
 
 /// The internal state of the stream
 enum State {
@@ -21,54 +17,12 @@ enum State {
     End,
 }
 
-#[derive(Debug)]
-pub enum ArrayStreamerError<E>
-where
-    E: Debug + Display,
-{
-    Source(E),
-    Serializer(serde_json::Error),
-}
-
-impl<E> Display for ArrayStreamerError<E>
-where
-    E: Debug + Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Source(err) => write!(f, "Source error: {}", err),
-            Self::Serializer(err) => write!(f, "Serializer error: {}", err),
-        }
-    }
-}
-
-impl<E> actix_web::ResponseError for ArrayStreamerError<E>
-where
-    E: Debug + Display + actix_web::ResponseError,
-{
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::Source(err) => err.status_code(),
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        match self {
-            Self::Source(err) => err.error_response(),
-            Self::Serializer(err) => HttpResponse::InternalServerError().body(err.to_string()),
-        }
-    }
-}
-
-impl<E: Debug + Display> std::error::Error for ArrayStreamerError<E> {}
-
 #[pin_project]
 pub struct ArrayStreamer<S, T, E>
 where
     S: Stream<Item = Result<T, E>>,
     T: Serialize,
-    E: Debug + Display,
+    E: Error + 'static,
 {
     #[pin]
     stream: S,
@@ -79,7 +33,7 @@ impl<S, T, E> ArrayStreamer<S, T, E>
 where
     S: Stream<Item = Result<T, E>>,
     T: Serialize,
-    E: Debug + Display,
+    E: Error + 'static,
 {
     pub fn new(stream: S) -> Self {
         Self {
@@ -93,9 +47,9 @@ impl<S, T, E> Stream for ArrayStreamer<S, T, E>
 where
     S: Stream<Item = Result<T, E>>,
     T: Serialize,
-    E: Debug + Display,
+    E: Error + 'static,
 {
-    type Item = Result<Bytes, ArrayStreamerError<E>>;
+    type Item = Result<Bytes, Box<dyn Error + 'static>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if matches!(self.state, State::End) {
@@ -112,7 +66,7 @@ where
         let res = ready!(this.stream.as_mut().poll_next(cx));
 
         match res {
-            Some(Err(err)) => return Poll::Ready(Some(Err(ArrayStreamerError::Source(err)))),
+            Some(Err(err)) => return Poll::Ready(Some(Err(Box::new(err)))),
             Some(Ok(item)) => {
                 // first/next item
                 if matches!(this.state, State::Data) {
@@ -121,7 +75,7 @@ where
                 // serialize
                 match serde_json::to_vec(&item) {
                     Ok(buffer) => data.put(Bytes::from(buffer)),
-                    Err(err) => return Poll::Ready(Some(Err(ArrayStreamerError::Serializer(err)))),
+                    Err(err) => return Poll::Ready(Some(Err(Box::new(err)))),
                 }
                 // change state after encoding
                 *this.state = State::Data;
@@ -156,7 +110,7 @@ mod test {
 
     #[tokio::test]
     async fn test_streamer_default() {
-        let data: Vec<Result<_, String>> = vec![Ok("foo"), Ok("bar")];
+        let data: Vec<Result<_, actix_web::Error>> = vec![Ok("foo"), Ok("bar")];
         let streamer = ArrayStreamer::new(stream::iter(data));
         let outcome: Vec<Bytes> = streamer.try_collect().await.unwrap();
         let outcome: String = outcome
@@ -168,7 +122,7 @@ mod test {
 
     #[tokio::test]
     async fn test_streamer_empty() {
-        let data: Vec<Result<String, String>> = vec![];
+        let data: Vec<Result<String, actix_web::Error>> = vec![];
         let streamer = ArrayStreamer::new(stream::iter(data));
         let outcome: Vec<Bytes> = streamer.try_collect().await.unwrap();
         let outcome: String = outcome
