@@ -81,14 +81,14 @@ pub struct Session<S: DownstreamSink> {
     pub token: Option<String>,
 }
 
-struct Stream {
+struct Stream<'s> {
     pub topic: ByteString,
     pub id: Option<NonZeroU32>,
-    pub event_stream: EventStream,
+    pub event_stream: EventStream<'s>,
     pub content_mode: ContentMode,
 }
 
-impl Drop for Stream {
+impl Drop for Stream<'_> {
     fn drop(&mut self) {
         log::info!("Dropped stream - topic: {}", self.topic);
     }
@@ -486,7 +486,7 @@ where
         Ok(())
     }
 
-    async fn run_stream(mut stream: Stream, sink: &mut Sink) -> Result<(), anyhow::Error> {
+    async fn run_stream(mut stream: Stream<'_>, sink: &mut Sink) -> Result<(), anyhow::Error> {
         let content_mode = stream.content_mode;
 
         log::debug!("Running stream - content-mode: {:?}", content_mode);
@@ -551,7 +551,7 @@ where
         Ok(())
     }
 
-    fn attach_app(&self, stream: Stream) {
+    fn attach_app(&self, stream: Stream<'static>) {
         let topic = stream.topic.to_string();
         let mut sink = self.sink.clone();
 

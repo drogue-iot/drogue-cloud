@@ -3,7 +3,9 @@ use crate::{
     kafka::KafkaConfig,
 };
 use async_trait::async_trait;
-use drogue_cloud_event_common::stream::{EventStream, EventStreamConfig, EventStreamError};
+use drogue_cloud_event_common::stream::{
+    AutoAck, EventStream, EventStreamConfig, EventStreamError,
+};
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use drogue_cloud_service_common::defaults;
 use futures::StreamExt;
@@ -33,7 +35,7 @@ impl KafkaCommandSource {
     where
         D: CommandDispatcher + Send + Sync + 'static,
     {
-        let mut source = EventStream::new(EventStreamConfig {
+        let mut source = EventStream::<AutoAck>::new(EventStreamConfig {
             bootstrap_servers: config.kafka.bootstrap_servers,
             properties: config.kafka.custom,
             topic: config.topic,
@@ -80,7 +82,7 @@ impl HealthChecked for KafkaCommandSource {
         if self.alive.load(Ordering::Relaxed) {
             Ok(())
         } else {
-            HealthCheckError::nok("Event loop is not alive".into())
+            HealthCheckError::nok("Event loop is not alive")
         }
     }
 }

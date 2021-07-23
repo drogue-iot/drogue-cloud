@@ -18,10 +18,10 @@ fn make_frame(event: String) -> Bytes {
     r.freeze()
 }
 
-pub fn map_to_sse(
-    event_stream: EventStream,
-) -> impl Stream<Item = Result<Bytes, actix_web::Error>> {
-    let event_stream: stream::EventStream = event_stream.into();
+pub fn map_to_sse<'s>(
+    event_stream: EventStream<'s>,
+) -> impl Stream<Item = Result<Bytes, actix_web::Error>> + 's {
+    let event_stream: stream::EventStream<'s> = event_stream.into();
     event_stream
         .map_err(|err| {
             log::debug!("Failed to process event: {}", err);
@@ -38,12 +38,12 @@ pub fn map_to_sse(
         })
 }
 
-pub trait IntoSseStream {
-    fn into_sse_stream(self) -> Pin<Box<dyn Stream<Item = Result<Bytes, actix_web::Error>>>>;
+pub trait IntoSseStream<'s> {
+    fn into_sse_stream(self) -> Pin<Box<dyn Stream<Item = Result<Bytes, actix_web::Error>> + 's>>;
 }
 
-impl IntoSseStream for EventStream {
-    fn into_sse_stream(self) -> Pin<Box<dyn Stream<Item = Result<Bytes, actix_web::Error>>>> {
+impl<'s> IntoSseStream<'s> for EventStream<'s> {
+    fn into_sse_stream(self) -> Pin<Box<dyn Stream<Item = Result<Bytes, actix_web::Error>> + 's>> {
         Box::pin(map_to_sse(self))
     }
 }

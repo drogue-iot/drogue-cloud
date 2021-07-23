@@ -17,8 +17,8 @@ impl HealthCheckError {
         Self::Failed(Box::new(err))
     }
 
-    pub fn nok<T>(reason: String) -> Result<T, Self> {
-        Err(Self::NotOk(reason))
+    pub fn nok<T, S: Into<String>>(reason: S) -> Result<T, Self> {
+        Err(Self::NotOk(reason.into()))
     }
 }
 

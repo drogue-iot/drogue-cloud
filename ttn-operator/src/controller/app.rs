@@ -1,11 +1,9 @@
-use crate::controller::ensure_stable_app_id;
 use crate::{
+    controller::ensure_stable_app_id,
     data::*,
     ttn::{self},
     utils,
 };
-use actix_http::http::header::IntoHeaderValue;
-use actix_web_httpauth::headers::authorization::Basic;
 use async_trait::async_trait;
 use drogue_client::{
     meta::{self, v1::CommonMetadataMut},
@@ -15,6 +13,8 @@ use drogue_cloud_operator_common::controller::{
     base::{ControllerOperation, ProcessOutcome},
     reconciler::{ReconcileError, ReconcileProcessor, ReconcileState, Reconciler},
 };
+use headers::authorization::Credentials;
+use headers::Authorization;
 use maplit::{convert_args, hashmap};
 use serde_json::{json, Value};
 use std::{collections::HashMap, ops::Deref};
@@ -242,12 +242,12 @@ impl<'a> ApplicationReconciler<'a> {
             Some(ttn_app) => self.update_app(ttn_app_id, ttn_app, &app, &ctx).await,
         }?;
 
-        let auth = Basic::new(
-            format!("{}@{}", TTN_GATEWAY_NAME, app.metadata.name),
-            Some(gw_password),
+        let auth = Authorization::basic(
+            &format!("{}@{}", TTN_GATEWAY_NAME, app.metadata.name),
+            &gw_password,
         )
-        .try_into_value()
-        .map_err(|_| ReconcileError::permanent("Failed to convert auth information"))?;
+        .0
+        .encode();
         let auth = auth
             .to_str()
             .map_err(|_| ReconcileError::permanent("Failed to convert auth information"))?;

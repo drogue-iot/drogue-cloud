@@ -4,20 +4,17 @@ mod ttn;
 mod utils;
 
 use crate::controller::{app::ApplicationController, device::DeviceController};
-use actix_web::{
-    get, middleware,
-    web::{self},
-    App, HttpResponse, HttpServer, Responder,
-};
 use anyhow::anyhow;
 use async_std::sync::Mutex;
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_operator_common::controller::base::queue::WorkQueueConfig;
 use drogue_cloud_operator_common::controller::base::{
-    events, BaseController, EventSource, FnEventProcessor,
+    queue::WorkQueueConfig, BaseController, EventSource, FnEventProcessor,
 };
-use drogue_cloud_registry_events::Event;
+use drogue_cloud_registry_events::{
+    stream::{KafkaEventStream, KafkaStreamConfig},
+    Event,
+};
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
@@ -25,9 +22,7 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
     openid::TokenConfig,
 };
-use futures::TryFutureExt;
 use serde::Deserialize;
-use serde_json::json;
 use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -45,6 +40,8 @@ struct Config {
     pub health: HealthServerConfig,
 
     pub work_queue: WorkQueueConfig,
+
+    pub kafka_source: KafkaStreamConfig,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -59,11 +56,6 @@ impl Default for RegistryConfig {
             url: defaults::registry_url(),
         }
     }
-}
-
-#[get("/")]
-async fn index() -> impl Responder {
-    HttpResponse::Ok().json(json!({"success": true}))
 }
 
 fn is_app_relevant(event: &Event) -> Option<String> {
@@ -93,13 +85,12 @@ fn is_device_relevant(event: &Event) -> Option<(String, String)> {
     }
 }
 
-#[actix_web::main]
+#[actix::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
 
     let config = Config::from_env()?;
-    let max_json_payload_size = config.max_json_payload_size;
 
     let endpoint_source = create_endpoint_source()?;
     let endpoints = endpoint_source.eval_endpoints().await?;
@@ -150,28 +141,19 @@ async fn main() -> anyhow::Result<()> {
         )),
     ]);
 
-    let data = web::Data::new(controller);
+    // event source
+
+    let source = KafkaEventStream::new(config.kafka_source)?;
+    let source = source.run(controller);
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![]);
-
-    // main
-
-    let main = HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(web::JsonConfig::default().limit(max_json_payload_size))
-            .app_data(data.clone())
-            .service(index)
-            .service(events)
-    })
-    .bind(config.bind_addr)?
-    .run();
+    let health = HealthServer::new(config.health, vec![Box::new(source)]);
 
     // run
 
-    futures::try_join!(health.run(), main.err_into())?;
+    log::info!("Running service ...");
+    futures::try_join!(health.run())?;
 
     // exiting
 
