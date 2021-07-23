@@ -140,7 +140,11 @@ impl Overview {
                 { Self::render_cards("Services", service_cards) }
                 { Self::render_cards("Endpoints", endpoint_cards) }
                 { Self::render_cards("Integrations", integration_cards) }
-                { Self::render_cards("Demos", demo_cards) }
+                { if !demo_cards.is_empty() {
+                    Self::render_cards("Demos", demo_cards)
+                } else {
+                    html_nested!{<Flex></Flex>}
+                } }
             </Flex>
         };
     }
