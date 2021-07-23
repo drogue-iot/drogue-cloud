@@ -7,19 +7,20 @@ pub use source::*;
 use async_trait::async_trait;
 use cloudevents::{AttributesReader, Event};
 use drogue_cloud_service_common::Id;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
+use thiserror::Error;
 
 /// Represents command
 #[derive(Clone, Debug)]
 pub struct Command {
     pub device_id: Id,
     pub command: String,
-    pub payload: Option<String>,
+    pub payload: Option<Vec<u8>>,
 }
 
 impl Command {
     /// Create a new scoped Command
-    pub fn new<C: Into<String>>(device_id: Id, command: C, payload: Option<String>) -> Self {
+    pub fn new<C: Into<String>>(device_id: Id, command: C, payload: Option<Vec<u8>>) -> Self {
         Self {
             device_id,
             command: command.into(),
@@ -28,18 +29,31 @@ impl Command {
     }
 }
 
-impl TryFrom<Event> for Command {
-    type Error = ();
+#[derive(Clone, Debug, Error)]
+pub enum ParseCommandError {
+    #[error("Missing attribute: {0}")]
+    Missing(&'static str),
+    #[error("Invalid payload")]
+    Payload,
+}
 
-    fn try_from(event: Event) -> Result<Self, Self::Error> {
-        match Id::from_event(&event) {
-            Some(device_id) => Ok(Command::new(
-                device_id,
-                event.subject().unwrap().to_string(),
-                String::try_from(event.data().unwrap().clone()).ok(),
-            )),
-            _ => Err(()),
-        }
+impl TryFrom<Event> for Command {
+    type Error = ParseCommandError;
+
+    fn try_from(mut event: Event) -> Result<Self, Self::Error> {
+        let id = Id::from_event(&event).ok_or(ParseCommandError::Missing("ID"))?;
+
+        let payload = if let (Some(data), ..) = event.take_data() {
+            Some(data.try_into().map_err(|_| ParseCommandError::Payload)?)
+        } else {
+            None
+        };
+
+        let command = event
+            .subject()
+            .ok_or(ParseCommandError::Missing("Command"))?;
+
+        Ok(Command::new(id, command, payload))
     }
 }
 
