@@ -66,6 +66,7 @@ gather "keycloakusers"
 
 gather "kafkas"
 gather "kafkatopics"
+gather "kafkausers"
 
 # Knative serving
 
