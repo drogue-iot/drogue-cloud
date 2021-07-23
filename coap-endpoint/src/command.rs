@@ -24,27 +24,27 @@ pub async fn wait_for_command(
                 Ok(Some(cmd)) => {
                     commands.unsubscribe(&id).await;
                     log::debug!("Got command: {:?}", cmd);
-                    Ok(req.response.and_then(|mut v| {
+                    Ok(req.response.map(|mut v| {
                         v.set_status(ResponseType::Content);
                         let mut command_value = LinkedList::new();
                         command_value.push_back(cmd.command.as_bytes().to_vec());
                         v.message.set_option(HEADER_COMMAND, command_value);
                         v.message.payload = cmd.payload.unwrap_or_default().as_bytes().to_vec();
-                        Some(v)
+                        v
                     }))
                 }
                 _ => {
                     commands.unsubscribe(&id).await;
-                    Ok(req.response.and_then(|mut v| {
+                    Ok(req.response.map(|mut v| {
                         v.set_status(ResponseType::Changed);
-                        Some(v)
+                        v
                     }))
                 }
             }
         }
-        _ => Ok(req.response.and_then(|mut v| {
+        _ => Ok(req.response.map(|mut v| {
             v.set_status(ResponseType::Changed);
-            Some(v)
+            v
         })),
     }
 }

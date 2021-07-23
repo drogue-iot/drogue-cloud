@@ -86,13 +86,13 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     for i in linked_list {
         subject.push_str(std::str::from_utf8(i).map_err(|err| {
             return EndpointError::InvalidRequest {
-                details: format!("error parsing subject: {:?}", err).to_string(),
+                details: format!("error parsing subject: {:?}", err),
             };
         })?);
         subject.push('/');
     }
 
-    if subject.len() != 0 {
+    if !subject.is_empty() {
         subject.pop();
         option_values.push(subject);
     }
@@ -194,7 +194,9 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::from_env()?;
     let commands = Commands::new();
-    let addr = config.bind_addr_coap.unwrap_or("0.0.0.0:5683".to_string());
+    let addr = config
+        .bind_addr_coap
+        .unwrap_or_else(|| "0.0.0.0:5683".to_string());
     let coap_server_commands = commands.clone();
 
     let app = App {
@@ -269,16 +271,12 @@ pub mod test {
                 .replace(&host, "$1")
                 .to_string();
 
-            let port = match url_params.port() {
-                Some(p) => p,
-                None => 5683,
-            };
-
+            let port = url_params.port().unwrap_or(5683);
             let path = url_params.path().to_string();
 
             let queries = url_params.query().map(|q| q.as_bytes().to_vec());
 
-            return Ok((host.to_string(), port, path, queries));
+            Ok((host.to_string(), port, path, queries))
         }
     }
 

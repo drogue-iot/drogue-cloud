@@ -58,7 +58,7 @@ pub async fn publish_plain<S>(
     channel: String,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    auth: &Vec<u8>,
+    auth: &[u8],
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
     S: DownstreamSink + Send,
@@ -84,7 +84,7 @@ pub async fn publish_tail<S>(
     path: (String, String),
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    auth: &Vec<u8>,
+    auth: &[u8],
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
     S: DownstreamSink + Send,
@@ -112,7 +112,7 @@ pub async fn publish<S>(
     suffix: Option<String>,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    auth: &Vec<u8>,
+    auth: &[u8],
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
     S: DownstreamSink + Send,
