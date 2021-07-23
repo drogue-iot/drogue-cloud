@@ -29,7 +29,7 @@ pub async fn wait_for_command(
                         let mut command_value = LinkedList::new();
                         command_value.push_back(cmd.command.as_bytes().to_vec());
                         v.message.set_option(HEADER_COMMAND, command_value);
-                        v.message.payload = cmd.payload.unwrap_or_default().as_bytes().to_vec();
+                        v.message.payload = cmd.payload.unwrap_or_default();
                         v
                     }))
                 }
