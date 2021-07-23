@@ -11,10 +11,10 @@ impl Responder for Result<Option<CoapResponse>, CoapEndpointError> {
         match self {
             Ok(val) => val,
             Err(e) => {
-                req.response.as_mut().and_then(|v| {
+                req.response.as_mut().map(|v| {
                     v.set_status(e.status_code());
                     v.message.payload = e.to_string()[..].as_bytes().to_vec();
-                    Some(v.clone())
+                    v
                 });
                 req.response.clone()
             }

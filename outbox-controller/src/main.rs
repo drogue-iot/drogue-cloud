@@ -80,8 +80,8 @@ async fn main() -> anyhow::Result<()> {
 
     // start resender
     Resender {
-        interval: config.resend_period.into(),
-        before: chrono::Duration::from_std(config.before.into())?,
+        interval: config.resend_period,
+        before: chrono::Duration::from_std(config.before)?,
         service: Arc::new(service.clone()),
         sender: Arc::new(sender),
     }

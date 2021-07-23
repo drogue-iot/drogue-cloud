@@ -49,15 +49,15 @@ where
             Ok(PublishOutcome::Accepted) => wait_for_command(req, commands, id, ttd).await,
 
             // ok, but rejected
-            Ok(PublishOutcome::Rejected) => Ok(req.response.and_then(|mut v| {
+            Ok(PublishOutcome::Rejected) => Ok(req.response.map(|mut v| {
                 v.set_status(ResponseType::NotAcceptable);
-                Some(v)
+                v
             })),
 
             // ok, but queue full
-            Ok(PublishOutcome::QueueFull) => Ok(req.response.and_then(|mut v| {
+            Ok(PublishOutcome::QueueFull) => Ok(req.response.map(|mut v| {
                 v.set_status(ResponseType::ServiceUnavailable);
-                Some(v)
+                v
             })),
 
             // internal error
