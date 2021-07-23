@@ -32,9 +32,7 @@ macro_rules! app {
     ($data:expr, $max_json_payload_size:expr, $enable_auth: expr, $auth: expr) => {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
-            .app_data(web::Data::new(
-                web::JsonConfig::default().limit($max_json_payload_size),
-            ))
+            .app_data(web::JsonConfig::default().limit($max_json_payload_size))
             .app_data($data.clone())
             .service(
                 web::scope("/api/v1")

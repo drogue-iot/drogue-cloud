@@ -166,7 +166,7 @@ async fn main() -> anyhow::Result<()> {
         let app = App::new()
             .wrap(Cors::permissive())
             .wrap(middleware::Logger::default())
-            .app_data(web::Data::new(web::JsonConfig::default().limit(4096)))
+            .app_data(web::JsonConfig::default().limit(4096))
             .app_data(web::Data::new(app_config.clone()));
 
         let app = if let Some(authenticator) = &authenticator {

@@ -113,9 +113,7 @@ async fn main() -> anyhow::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(data.clone())
-            .app_data(web::Data::new(
-                web::JsonConfig::default().limit(max_json_payload_size),
-            ))
+            .app_data(web::JsonConfig::default().limit(max_json_payload_size))
             .app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(registry.clone()))
             .app_data(web::Data::new(client.clone()))

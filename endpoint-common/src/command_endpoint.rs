@@ -46,9 +46,7 @@ impl CommandServer {
             App::new()
                 .wrap(middleware::Logger::default())
                 .app_data(web::PayloadConfig::new(max_payload_size))
-                .app_data(web::Data::new(
-                    web::JsonConfig::default().limit(max_json_size),
-                ))
+                .app_data(web::JsonConfig::default().limit(max_json_size))
                 .app_data(web::Data::new(commands.clone()))
                 .service(command_service)
         })
