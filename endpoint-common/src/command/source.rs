@@ -10,6 +10,7 @@ use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use drogue_cloud_service_common::defaults;
 use futures::StreamExt;
 use serde::Deserialize;
+use std::sync::Arc;
 use std::{
     convert::TryFrom,
     sync::atomic::{AtomicBool, Ordering},
@@ -27,7 +28,7 @@ pub struct KafkaCommandSourceConfig {
 
 pub struct KafkaCommandSource {
     handle: JoinHandle<()>,
-    alive: AtomicBool,
+    alive: Arc<AtomicBool>,
 }
 
 impl KafkaCommandSource {
@@ -41,6 +42,9 @@ impl KafkaCommandSource {
             topic: config.topic,
             consumer_group: Some(config.consumer_group),
         })?;
+
+        let alive = Arc::new(AtomicBool::new(true));
+        let a = alive.clone();
 
         let handle = tokio::spawn(async move {
             while let Some(event) = source.next().await {
@@ -61,12 +65,10 @@ impl KafkaCommandSource {
                 }
             }
             log::info!("Exiting event loop!");
+            a.store(false, Ordering::Relaxed);
         });
 
-        Ok(Self {
-            handle,
-            alive: AtomicBool::new(true),
-        })
+        Ok(Self { handle, alive })
     }
 }
 
