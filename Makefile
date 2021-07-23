@@ -42,6 +42,7 @@ ALL_IMAGES=\
 	user-auth-service \
 	mqtt-integration \
 	ttn-operator \
+	topic-operator \
 
 
 #
