@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{
-    types::{Json, ToSql},
+    types::{Json, ToSql, Type},
     Row,
 };
 use uuid::Uuid;
@@ -228,7 +228,10 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
 
         let stmt = self
             .client
-            .prepare("INSERT INTO APPLICATION_ALIASES (APP, TYPE, ALIAS) VALUES ($1, $2, $3)")
+            .prepare_typed(
+                "INSERT INTO APPLICATION_ALIASES (APP, TYPE, ALIAS) VALUES ($1, $2, $3)",
+                &[Type::VARCHAR, Type::VARCHAR, Type::VARCHAR],
+            )
             .await?;
 
         for alias in aliases {
@@ -246,10 +249,7 @@ trait Param: ToSql + Sync {}
 #[async_trait]
 impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
     async fn lookup(&self, alias: &str) -> Result<Option<Application>, ServiceError> {
-        let row = self
-            .client
-            .query_opt(
-                r#"
+        let sql = r#"
 SELECT
     A2.NAME,
     A2.UID,
@@ -268,19 +268,18 @@ FROM
         APPLICATION_ALIASES A1 INNER JOIN APPLICATIONS A2
     ON
         A1.APP=A2.NAME WHERE A1.ALIAS = $1
-"#,
-                &[&alias],
-            )
-            .await?;
+"#;
+
+        let stmt = self.client.prepare_typed(sql, &[Type::VARCHAR]).await?;
+        let row = self.client.query_opt(&stmt, &[&alias]).await?;
 
         Ok(row.map(Self::from_row).transpose()?)
     }
 
     async fn delete(&self, id: &str) -> Result<(), ServiceError> {
-        let count = self
-            .client
-            .execute("DELETE FROM APPLICATIONS WHERE NAME = $1", &[&id])
-            .await?;
+        let sql = "DELETE FROM APPLICATIONS WHERE NAME = $1";
+        let stmt = self.client.prepare_typed(sql, &[Type::VARCHAR]).await?;
+        let count = self.client.execute(&stmt, &[&id]).await?;
 
         if count > 0 {
             Ok(())
@@ -300,8 +299,7 @@ FROM
         sort: &[&str],
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Application, ServiceError>> + Send>>, ServiceError>
     {
-        let select = format!(
-            r#"
+        let select = r#"
 SELECT
     NAME,
     UID,
@@ -317,10 +315,10 @@ SELECT
     MEMBERS,
     DATA
 FROM APPLICATIONS
-"#,
-        );
+"#
+        .to_string();
 
-        let builder = SelectBuilder::new(select, Vec::new())
+        let builder = SelectBuilder::new(select, Vec::new(), Vec::new())
             .name(&name)
             .labels(&labels.0)
             .auth_read(&id)
@@ -329,18 +327,20 @@ FROM APPLICATIONS
             .limit(limit)
             .offset(offset);
 
-        let (select, params) = builder.build();
+        let (select, params, types) = builder.build();
+
+        let stmt = self.client.prepare_typed(&select, &types).await?;
 
         let stream = self
             .client
-            .query_raw(select.as_str(), slice_iter(&params[..]))
+            .query_raw(&stmt, slice_iter(&params[..]))
             .await
             .map_err(|err| {
                 log::debug!("Failed to get: {}", err);
                 err
             })?
             .and_then(|row| future::ready(Self::from_row(row)))
-            .map_err(|err| ServiceError::Database(err));
+            .map_err(ServiceError::Database);
 
         Ok(Box::pin(stream))
     }
@@ -443,9 +443,11 @@ WHERE
 
         update_aliases!(count, aliases, |aliases| {
             // clear existing aliases
-            self.client
-                .execute("DELETE FROM APPLICATION_ALIASES WHERE APP=$1", &[&name])
-                .await?;
+
+            let sql = "DELETE FROM APPLICATION_ALIASES WHERE APP=$1";
+            let stmt = self.client.prepare_typed(sql, &[Type::VARCHAR]).await?;
+
+            self.client.execute(&stmt, &[&name]).await?;
 
             // insert new alias set
             self.insert_aliases(&name, &aliases).await?;
@@ -461,19 +463,22 @@ WHERE
         transfer_owner: Option<String>,
     ) -> Result<u64, ServiceError> {
         // update application
-        let count = self
-            .client
-            .execute(
-                r#"
+        let sql = r#"
 UPDATE APPLICATIONS
 SET
     OWNER = $2,
     TRANSFER_OWNER = $3
 WHERE
     NAME = $1
-"#,
-                &[&app, &owner, &transfer_owner],
-            )
+"#;
+
+        let stmt = self
+            .client
+            .prepare_typed(sql, &[Type::VARCHAR, Type::VARCHAR, Type::VARCHAR])
+            .await?;
+        let count = self
+            .client
+            .execute(&stmt, &[&app, &owner, &transfer_owner])
             .await?;
 
         Ok(count)
@@ -485,19 +490,21 @@ WHERE
         members: IndexMap<String, MemberEntry>,
     ) -> Result<u64, ServiceError> {
         // update application
-        let count = self
-            .client
-            .execute(
-                r#"
+
+        let sql = r#"
 UPDATE APPLICATIONS
 SET
     MEMBERS = $2
 WHERE
     NAME = $1
-"#,
-                &[&app, &Json(members)],
-            )
+"#;
+
+        let stmt = self
+            .client
+            .prepare_typed(sql, &[Type::VARCHAR, Type::JSONB])
             .await?;
+
+        let count = self.client.execute(&stmt, &[&app, &Json(members)]).await?;
 
         Ok(count)
     }

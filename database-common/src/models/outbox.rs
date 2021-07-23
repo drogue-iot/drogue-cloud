@@ -2,9 +2,11 @@ use crate::{error::ServiceError, Client};
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use futures::{Stream, StreamExt};
-use std::convert::{TryFrom, TryInto};
-use std::pin::Pin;
-use tokio_postgres::Row;
+use std::{
+    convert::{TryFrom, TryInto},
+    pin::Pin,
+};
+use tokio_postgres::{types::Type, Row};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OutboxEntry {
@@ -69,10 +71,7 @@ impl<'c, C: Client> PostgresOutboxAccessor<'c, C> {
 #[async_trait]
 impl<'c, C: Client> OutboxAccessor for PostgresOutboxAccessor<'c, C> {
     async fn create(&self, entry: OutboxEntry) -> Result<(), ServiceError> {
-        let num = self
-            .client
-            .execute(
-                r#"
+        let sql = r#"
 INSERT INTO outbox (
     INSTANCE,
     APP,
@@ -100,7 +99,27 @@ DO
             outbox.GENERATION < EXCLUDED.GENERATION
         OR
             outbox.UID != EXCLUDED.UID
-"#,
+"#;
+
+        let stmt = self
+            .client
+            .prepare_typed(
+                sql,
+                &[
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::INT8,
+                ],
+            )
+            .await?;
+
+        let num = self
+            .client
+            .execute(
+                &stmt,
                 &[
                     &entry.instance,
                     &entry.app,
@@ -120,10 +139,8 @@ DO
     async fn mark_seen(&self, entry: OutboxEntry) -> Result<bool, ServiceError> {
         // We do not filter by instance here, as we expect to own the full table, and
         // don't add the extra data to the index this way.
-        let num = self
-            .client
-            .execute(
-                r#"
+
+        let sql = r#"
 DELETE
     FROM outbox
 WHERE
@@ -136,7 +153,26 @@ WHERE
         GENERATION <= $4
     AND
         UID = $5
-"#,
+"#;
+
+        let stmt = self
+            .client
+            .prepare_typed(
+                sql,
+                &[
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::VARCHAR,
+                    Type::INT8,
+                    Type::VARCHAR,
+                ],
+            )
+            .await?;
+
+        let num = self
+            .client
+            .execute(
+                &stmt,
                 &[
                     &entry.app,
                     &entry.device.unwrap_or_default(),
@@ -158,10 +194,7 @@ WHERE
     ) -> Result<Pin<Box<dyn Stream<Item = Result<OutboxEntry, ServiceError>>>>, ServiceError> {
         let beginning = Utc::now() - duration;
 
-        let result = self
-            .client
-            .query_raw(
-                r#"
+        let sql = r#"
 SELECT
     INSTANCE, APP, DEVICE, PATH, GENERATION, UID
 FROM
@@ -170,10 +203,11 @@ WHERE
     TS < $1
 ORDER BY
     TS ASC
-"#,
-                &[beginning],
-            )
-            .await?;
+"#;
+
+        let stmt = self.client.prepare_typed(sql, &[Type::TIMESTAMPTZ]).await?;
+
+        let result = self.client.query_raw(&stmt, &[beginning]).await?;
 
         Ok(Box::pin(result.map(|item| match item {
             Ok(row) => row.try_into(),

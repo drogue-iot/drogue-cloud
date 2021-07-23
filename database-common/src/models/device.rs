@@ -16,7 +16,7 @@ use futures::{future, Stream, TryStreamExt};
 use serde_json::Value;
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use std::pin::Pin;
-use tokio_postgres::types::ToSql;
+use tokio_postgres::types::{ToSql, Type};
 use tokio_postgres::{types::Json, Row};
 use uuid::Uuid;
 
@@ -164,8 +164,9 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
         let stmt = self
             .client
-            .prepare(
+            .prepare_typed(
                 "INSERT INTO DEVICE_ALIASES (APP, DEVICE, TYPE, ALIAS) VALUES ($1, $2, $3, $4)",
+                &[Type::VARCHAR, Type::VARCHAR, Type::VARCHAR, Type::VARCHAR],
             )
             .await?;
 
@@ -182,10 +183,7 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 #[async_trait]
 impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
     async fn lookup(&self, app: &str, alias: &str) -> Result<Option<Device>, ServiceError> {
-        let result = self
-            .client
-            .query_opt(
-                r#"
+        let sql = r#"
 SELECT
     D.NAME,
     D.UID,
@@ -206,9 +204,16 @@ WHERE
         A.APP = $1
     AND
         A.ALIAS = $2
-"#,
-                &[&app, &alias],
-            )
+"#;
+
+        let stmt = self
+            .client
+            .prepare_typed(sql, &[Type::VARCHAR, Type::VARCHAR])
+            .await?;
+
+        let result = self
+            .client
+            .query_opt(&stmt, &[&app, &alias])
             .await?
             .map(Self::from_row)
             .transpose()?;
@@ -217,13 +222,14 @@ WHERE
     }
 
     async fn delete(&self, app: &str, device: &str) -> Result<(), ServiceError> {
-        let count = self
+        let sql = "DELETE FROM DEVICES WHERE APP = $1 AND NAME = $2";
+
+        let stmt = self
             .client
-            .execute(
-                "DELETE FROM DEVICES WHERE APP = $1 AND NAME = $2",
-                &[&app, &device],
-            )
+            .prepare_typed(sql, &[Type::VARCHAR, Type::VARCHAR])
             .await?;
+
+        let count = self.client.execute(&stmt, &[&app, &device]).await?;
 
         if count > 0 {
             Ok(())
@@ -242,8 +248,7 @@ WHERE
         lock: Lock,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<Device, ServiceError>> + Send>>, ServiceError>
     {
-        let select = format!(
-            r#"
+        let select = r#"
 SELECT
     UID,
     NAME,
@@ -258,13 +263,16 @@ SELECT
     DATA
 FROM DEVICES
 WHERE APP=$1
-"#,
-        );
+"#
+        .to_string();
+
+        let mut types: Vec<Type> = Vec::new();
+        types.push(Type::VARCHAR);
 
         let mut params: Vec<&(dyn ToSql + Sync)> = Vec::new();
         params.push(&app);
 
-        let builder = SelectBuilder::new(select, params)
+        let builder = SelectBuilder::new(select, params, types)
             .has_where()
             .name(&name)
             .labels(&labels.0)
@@ -273,18 +281,20 @@ WHERE APP=$1
             .limit(limit)
             .offset(offset);
 
-        let (select, params) = builder.build();
+        let (select, params, types) = builder.build();
+
+        let stmt = self.client.prepare_typed(&select, &types).await?;
 
         let stream = self
             .client
-            .query_raw(select.as_str(), slice_iter(&params[..]))
+            .query_raw(&stmt, slice_iter(&params[..]))
             .await
             .map_err(|err| {
                 log::debug!("Failed to get: {}", err);
                 err
             })?
             .and_then(|row| future::ready(Self::from_row(row)))
-            .map_err(|err| ServiceError::Database(err));
+            .map_err(ServiceError::Database);
 
         Ok(Box::pin(stream))
     }
@@ -381,11 +391,13 @@ WHERE
 
         update_aliases!(count, aliases, |aliases| {
             // clear existing aliases
+            let sql = "DELETE FROM DEVICE_ALIASES WHERE APP=$1 AND DEVICE=$2";
+            let stmt = self
+                .client
+                .prepare_typed(sql, &[Type::VARCHAR, Type::VARCHAR])
+                .await?;
             self.client
-                .execute(
-                    "DELETE FROM DEVICE_ALIASES WHERE APP=$1 AND DEVICE=$2",
-                    &[&device.application, &device.name],
-                )
+                .execute(&stmt, &[&device.application, &device.name])
                 .await?;
 
             // insert new alias set
@@ -399,20 +411,17 @@ WHERE
     async fn delete_app(&self, app_id: &str) -> Result<u64, ServiceError> {
         // delete all devices without finalizers directly
 
-        let count = self
-            .client
-            .execute(
-                r#"
+        let sql = r#"
 DELETE FROM
     DEVICES
 WHERE
     APP = $1
 AND
     cardinality ( FINALIZERS ) = 0
-"#,
-                &[&app_id],
-            )
-            .await?;
+"#;
+
+        let stmt = self.client.prepare_typed(sql, &[Type::VARCHAR]).await?;
+        let count = self.client.execute(&stmt, &[&app_id]).await?;
 
         log::debug!("Deleted {} devices without a finalizer", count);
 
@@ -428,12 +437,11 @@ AND
     }
 
     async fn count_devices(&self, app_id: &str) -> Result<u64, ServiceError> {
+        let sql = r#"SELECT COUNT(NAME) AS COUNT FROM DEVICES WHERE APP = $1"#;
+        let stmt = self.client.prepare_typed(sql, &[Type::VARCHAR]).await?;
         let count = self
             .client
-            .query_opt(
-                r#"SELECT COUNT(NAME) AS COUNT FROM DEVICES WHERE APP = $1"#,
-                &[&app_id],
-            )
+            .query_opt(&stmt, &[&app_id])
             .await?
             .ok_or_else(|| {
                 ServiceError::Internal("Unable to retrieve number of devices with finalizer".into())

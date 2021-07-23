@@ -1,6 +1,6 @@
 use crate::models::Lock;
 use drogue_cloud_service_api::{auth::user::UserInformation, labels::Operation};
-use tokio_postgres::types::ToSql;
+use tokio_postgres::types::{ToSql, Type};
 
 pub fn slice_iter<'a>(
     s: &'a [&'a (dyn ToSql + Sync)],
@@ -11,6 +11,7 @@ pub fn slice_iter<'a>(
 pub struct SelectBuilder<'a> {
     select: String,
     params: Vec<&'a (dyn ToSql + Sync + 'a)>,
+    types: Vec<Type>,
 
     have_where: bool,
     sort: Vec<String>,
@@ -20,10 +21,15 @@ pub struct SelectBuilder<'a> {
 }
 
 impl<'a> SelectBuilder<'a> {
-    pub fn new<S: Into<String>>(select: S, params: Vec<&'a (dyn ToSql + Sync)>) -> Self {
+    pub fn new<S: Into<String>>(
+        select: S,
+        params: Vec<&'a (dyn ToSql + Sync)>,
+        types: Vec<Type>,
+    ) -> Self {
         Self {
             select: select.into(),
             params,
+            types,
             have_where: false,
             lock: Lock::None,
             sort: Vec::new(),
@@ -97,8 +103,12 @@ impl<'a> SelectBuilder<'a> {
         match user {
             UserInformation::Authenticated(user) => {
                 self.params.push(&user.user_id);
+                self.types.push(Type::VARCHAR);
             }
-            UserInformation::Anonymous => self.params.push(&""),
+            UserInformation::Anonymous => {
+                self.params.push(&"");
+                self.types.push(Type::VARCHAR);
+            }
         }
         let idx = self.params.len();
 
@@ -126,6 +136,7 @@ impl<'a> SelectBuilder<'a> {
         if let Some(name) = name.as_ref() {
             self.ensure_where_or_and();
             self.params.push(name);
+            self.types.push(Type::VARCHAR);
             self.select
                 .push_str(&format!(" NAME=${}", self.params.len()));
         }
@@ -139,17 +150,21 @@ impl<'a> SelectBuilder<'a> {
             match op {
                 Operation::Exists(label) => {
                     self.params.push(label);
+                    self.types.push(Type::VARCHAR);
                     self.select
                         .push_str(&format!(" LABELS ? ${}", self.params.len()));
                 }
                 Operation::NotExists(label) => {
                     self.params.push(label);
+                    self.types.push(Type::VARCHAR);
                     self.select
                         .push_str(&format!(" (NOT LABELS ? ${})", self.params.len()));
                 }
                 Operation::Eq(label, value) => {
                     self.params.push(label);
                     self.params.push(value);
+                    self.types.push(Type::VARCHAR);
+                    self.types.push(Type::VARCHAR);
                     self.select.push_str(&format!(
                         " LABELS ->> ${} = ${}",
                         self.params.len() - 1,
@@ -159,6 +174,8 @@ impl<'a> SelectBuilder<'a> {
                 Operation::NotEq(label, value) => {
                     self.params.push(label);
                     self.params.push(value);
+                    self.types.push(Type::VARCHAR);
+                    self.types.push(Type::VARCHAR);
                     self.select.push_str(&format!(
                         " LABELS ->> ${} <> ${}",
                         self.params.len() - 1,
@@ -168,6 +185,8 @@ impl<'a> SelectBuilder<'a> {
                 Operation::In(label, values) => {
                     self.params.push(label);
                     self.params.push(values);
+                    self.types.push(Type::VARCHAR);
+                    self.types.push(Type::VARCHAR_ARRAY);
                     self.select.push_str(&format!(
                         " LABELS ->> ${} = ANY (${})",
                         self.params.len() - 1,
@@ -177,6 +196,8 @@ impl<'a> SelectBuilder<'a> {
                 Operation::NotIn(label, values) => {
                     self.params.push(label);
                     self.params.push(values);
+                    self.types.push(Type::VARCHAR);
+                    self.types.push(Type::VARCHAR_ARRAY);
                     self.select.push_str(&format!(
                         " NOT(LABELS ->> ${} = ANY (${}))",
                         self.params.len() - 1,
@@ -188,7 +209,7 @@ impl<'a> SelectBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> (String, Vec<&'a (dyn ToSql + Sync)>) {
+    pub fn build(self) -> (String, Vec<&'a (dyn ToSql + Sync)>, Vec<Type>) {
         let mut select = self.select;
 
         if !self.sort.is_empty() {
@@ -209,7 +230,7 @@ impl<'a> SelectBuilder<'a> {
         select.push_str(self.lock.as_ref());
 
         // return result
-        (select, self.params)
+        (select, self.params, self.types)
     }
 }
 
@@ -222,9 +243,9 @@ mod test {
 
     #[test]
     fn test_to_sql_1() {
-        let builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new());
+        let builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new(), Vec::new());
 
-        let (sql, params) = builder.build();
+        let (sql, params, types) = builder.build();
 
         assert_eq!(sql, "SELECT * FROM TABLE\n");
         assert_eq!(
@@ -234,15 +255,16 @@ mod test {
                 .collect::<Vec<String>>(),
             Vec::<String>::new()
         );
+        assert_eq!(types, vec![]);
     }
 
     #[test]
     fn test_to_sql_name() {
-        let mut builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new());
+        let mut builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new(), Vec::new());
 
         builder = builder.name(&Some("Foo"));
 
-        let (sql, params) = builder.build();
+        let (sql, params, types) = builder.build();
 
         assert_eq!(sql, "SELECT * FROM TABLE\nWHERE NAME=$1\n");
         assert_eq!(
@@ -252,16 +274,17 @@ mod test {
                 .collect::<Vec<String>>(),
             to_debug(&[&"Foo"])
         );
+        assert_eq!(types, vec![Type::VARCHAR]);
     }
 
     #[test]
     fn test_to_labels_1() {
-        let mut builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new());
+        let mut builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new(), Vec::new());
 
         let selector: LabelSelector = r#"foo,bar"#.try_into().unwrap();
         builder = builder.labels(&selector.0);
 
-        let (sql, params) = builder.build();
+        let (sql, params, types) = builder.build();
 
         assert_eq!(
             sql,
@@ -277,16 +300,17 @@ AND LABELS ? $2
                 .collect::<Vec<String>>(),
             to_debug(&[&"foo", &"bar"])
         );
+        assert_eq!(types, vec![Type::VARCHAR, Type::VARCHAR]);
     }
 
     #[test]
     fn test_to_labels_2() {
-        let mut builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new());
+        let mut builder = SelectBuilder::new("SELECT * FROM TABLE", Vec::new(), Vec::new());
 
         let selector: LabelSelector = r#"!foo,bar in (f1, f2, f3), baz!=abc"#.try_into().unwrap();
         builder = builder.labels(&selector.0);
 
-        let (sql, params) = builder.build();
+        let (sql, params, types) = builder.build();
 
         assert_eq!(
             sql,
@@ -302,6 +326,16 @@ AND LABELS ->> $4 <> $5
                 .map(|p| format!("{:?}", p))
                 .collect::<Vec<String>>(),
             to_debug(&[&"foo", &"bar", &["f1", "f2", "f3"], &"baz", &"abc"])
+        );
+        assert_eq!(
+            types,
+            vec![
+                Type::VARCHAR,
+                Type::VARCHAR,
+                Type::VARCHAR_ARRAY,
+                Type::VARCHAR,
+                Type::VARCHAR
+            ]
         );
     }
 

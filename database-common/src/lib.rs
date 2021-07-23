@@ -9,13 +9,15 @@ use deadpool::managed::Object;
 use deadpool_postgres::{ClientWrapper, Pool};
 use std::ops::Deref;
 use tokio_postgres::{
-    types::{BorrowToSql, ToSql},
+    types::{BorrowToSql, ToSql, Type},
     Error, Row, RowStream, Statement, ToStatement, Transaction,
 };
 
 #[async_trait]
 pub trait Client: Sync {
     async fn prepare(&self, query: &str) -> Result<Statement, Error>;
+
+    async fn prepare_typed(&self, query: &str, types: &[Type]) -> Result<Statement, Error>;
 
     async fn execute<T>(&self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
     where
@@ -41,6 +43,10 @@ pub trait Client: Sync {
 impl Client for Object<ClientWrapper, Error> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         self.deref().prepare(query).await
+    }
+
+    async fn prepare_typed(&self, query: &str, types: &[Type]) -> Result<Statement, Error> {
+        self.deref().prepare_typed(query, types).await
     }
 
     async fn execute<T>(&self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
@@ -78,6 +84,10 @@ impl Client for ClientWrapper {
         self.deref().prepare(query).await
     }
 
+    async fn prepare_typed(&self, query: &str, types: &[Type]) -> Result<Statement, Error> {
+        self.deref().prepare_typed(query, types).await
+    }
+
     async fn execute<T>(&self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
     where
         T: ?Sized + ToStatement + Sync,
@@ -113,6 +123,10 @@ impl<'a> Client for Transaction<'a> {
         Transaction::prepare(self, query).await
     }
 
+    async fn prepare_typed(&self, query: &str, types: &[Type]) -> Result<Statement, Error> {
+        Transaction::prepare_typed(self, query, types).await
+    }
+
     async fn execute<T>(&self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
     where
         T: ?Sized + ToStatement + Sync,
@@ -146,6 +160,10 @@ impl<'a> Client for Transaction<'a> {
 impl<'a> Client for deadpool_postgres::Transaction<'a> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         deadpool_postgres::Transaction::prepare(self, query).await
+    }
+
+    async fn prepare_typed(&self, query: &str, types: &[Type]) -> Result<Statement, Error> {
+        deadpool_postgres::Transaction::prepare_typed(self, query, types).await
     }
 
     async fn execute<T>(&self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
