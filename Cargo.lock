@@ -856,7 +856,7 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk"
 version = "0.4.0"
-source = "git+https://github.com/jcrossley3/sdk-rust?branch=actix-4-beta.8#57a7a837e1ec326148924ac5847156112c01d357"
+source = "git+https://github.com/cloudevents/sdk-rust?branch=actix-web-4.0.0-beta.8#538b3bd5b91d6a5dc64036d25137eebaffe31105"
 dependencies = [
  "actix-web",
  "async-trait",
@@ -867,7 +867,7 @@ dependencies = [
  "delegate-attr",
  "futures",
  "hostname",
- "lazy_static",
+ "http",
  "rdkafka",
  "reqwest",
  "serde 1.0.126",

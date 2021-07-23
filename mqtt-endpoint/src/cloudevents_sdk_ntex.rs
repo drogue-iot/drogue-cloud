@@ -6,13 +6,10 @@ use cloudevents::message::{
 };
 use cloudevents::{message, Event};
 use futures::StreamExt;
-use http::{header, header::HeaderName, HeaderValue};
+use http::{header::HeaderName, HeaderValue};
 use lazy_static::lazy_static;
 use ntex::{http::HttpMessage, web, web::HttpRequest};
 use std::convert::TryFrom;
-
-use std::collections::HashMap;
-use std::str::FromStr;
 
 macro_rules! unwrap_optional_header {
     ($headers:expr, $name:expr) => {
@@ -32,36 +29,7 @@ macro_rules! header_value_to_str {
     };
 }
 
-macro_rules! str_name_to_header {
-    ($attribute:expr) => {
-        HeaderName::from_str($attribute).map_err(|e| cloudevents::message::Error::Other {
-            source: Box::new(e),
-        })
-    };
-}
-
-macro_rules! attribute_name_to_header {
-    ($attribute:expr) => {
-        str_name_to_header!(&["ce-", $attribute].concat())
-    };
-}
-
-fn attributes_to_headers(
-    it: impl Iterator<Item = &'static str>,
-) -> HashMap<&'static str, HeaderName> {
-    it.map(|s| {
-        if s == "datacontenttype" {
-            (s, header::CONTENT_TYPE)
-        } else {
-            (s, attribute_name_to_header!(s).unwrap())
-        }
-    })
-    .collect()
-}
-
 lazy_static! {
-    pub(crate) static ref ATTRIBUTES_TO_HEADERS: HashMap<&'static str, HeaderName> =
-        attributes_to_headers(SpecVersion::all_attribute_names());
     pub(crate) static ref SPEC_VERSION_HEADER: HeaderName =
         HeaderName::from_static("ce-specversion");
     pub(crate) static ref CLOUDEVENTS_JSON_HEADER: HeaderValue =
