@@ -3,6 +3,7 @@ pub mod service;
 pub mod utils;
 
 use crate::service::management::ManagementService;
+use drogue_cloud_registry_events::sender::KafkaSenderConfig;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
 use serde::Deserialize;
 
@@ -21,6 +22,8 @@ pub struct Config {
 
     #[serde(default)]
     pub health: HealthServerConfig,
+
+    pub kafka_sender: KafkaSenderConfig,
 }
 
 #[macro_export]

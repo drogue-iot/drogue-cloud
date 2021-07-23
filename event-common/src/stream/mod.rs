@@ -16,6 +16,8 @@ use rdkafka::{
     util::Timeout,
     TopicPartitionList,
 };
+use std::marker::PhantomData;
+use std::ops::{Deref, DerefMut};
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
@@ -23,6 +25,25 @@ use std::{
     time::Duration,
 };
 use uuid::Uuid;
+
+pub trait AckMode {
+    fn configure(config: &mut ClientConfig);
+}
+
+pub struct AutoAck;
+pub struct CustomAck;
+
+impl AckMode for AutoAck {
+    fn configure(config: &mut ClientConfig) {
+        config.set("enable.auto.commit", "true");
+    }
+}
+
+impl AckMode for CustomAck {
+    fn configure(config: &mut ClientConfig) {
+        config.set("enable.auto.commit", "false");
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct EventStreamConfig {
@@ -32,15 +53,22 @@ pub struct EventStreamConfig {
     pub consumer_group: Option<String>,
 }
 
-pub struct EventStream {
+pub struct EventStream<'s, Ack = AutoAck>
+where
+    Ack: AckMode,
+{
+    _marker: PhantomData<Ack>,
     upstream: OwningHandle<
         Box<StreamConsumer>,
-        Box<rdkafka::consumer::MessageStream<'static, DefaultConsumerContext>>,
+        Box<rdkafka::consumer::MessageStream<'s, DefaultConsumerContext>>,
     >,
     topic: String,
 }
 
-impl Debug for EventStream {
+impl<Ack> Debug for EventStream<'_, Ack>
+where
+    Ack: AckMode,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("EventStream")
             .field("topic", &self.topic)
@@ -48,7 +76,10 @@ impl Debug for EventStream {
     }
 }
 
-impl EventStream {
+impl<Ack> EventStream<'_, Ack>
+where
+    Ack: AckMode,
+{
     pub fn new(cfg: EventStreamConfig) -> Result<Self, EventStreamError> {
         match &cfg.consumer_group {
             Some(consumer_group) => Self::new_with_group(&cfg, consumer_group.clone()),
@@ -89,7 +120,9 @@ impl EventStream {
     #[allow(dead_code)]
     fn new_without_group(cfg: &EventStreamConfig) -> Result<Self, EventStreamError> {
         let mut consumer = Self::new_config(cfg);
-        consumer.set("enable.auto.commit", "false");
+
+        // FIXME: don't use non-group with commits
+        Ack::configure(&mut consumer);
 
         let consumer: StreamConsumer<DefaultConsumerContext> = consumer.create()?;
 
@@ -127,9 +160,9 @@ impl EventStream {
 
     fn new_with_group(cfg: &EventStreamConfig, group_id: String) -> Result<Self, EventStreamError> {
         let mut consumer = Self::new_config(cfg);
-        consumer
-            .set("enable.auto.commit", "true")
-            .set("group.id", &group_id);
+        consumer.set("group.id", &group_id);
+
+        Ack::configure(&mut consumer);
 
         let consumer: StreamConsumer<DefaultConsumerContext> = consumer.create()?;
 
@@ -144,6 +177,7 @@ impl EventStream {
 
     fn wrap(topic: String, consumer: StreamConsumer) -> Self {
         Self {
+            _marker: PhantomData,
             upstream: OwningHandle::new_with_fn(Box::new(consumer), |c| {
                 Box::new(unsafe { &*c }.stream())
             }),
@@ -151,7 +185,11 @@ impl EventStream {
         }
     }
 
-    fn ack(&self, msg: &BorrowedMessage) -> KafkaResult<()> {
+    pub fn ack<T>(&self, handle: Handle<'_, T>) -> KafkaResult<()> {
+        self.do_ack(&handle.msg)
+    }
+
+    fn do_ack(&self, msg: &BorrowedMessage) -> KafkaResult<()> {
         self.upstream
             .as_owner()
             .commit_message(&msg, CommitMode::Async)
@@ -220,13 +258,55 @@ impl EventStream {
     }
 }
 
-impl Drop for EventStream {
+impl<'s, Ack> Drop for EventStream<'s, Ack>
+where
+    Ack: AckMode,
+{
     fn drop(&mut self) {
         log::debug!("Stream dropped: {:?}", self);
     }
 }
 
-impl Stream for EventStream {
+#[derive(Debug)]
+pub struct Handle<'s, T> {
+    value: T,
+    msg: BorrowedMessage<'s>,
+}
+
+impl<'s, T> Handle<'s, T> {
+    pub fn replace<U>(self, value: U) -> Handle<'s, U> {
+        Handle {
+            value,
+            msg: self.msg,
+        }
+    }
+
+    pub fn map<U, F>(self, f: F) -> Handle<'s, U>
+    where
+        F: Fn(T) -> U,
+    {
+        Handle {
+            value: f(self.value),
+            msg: self.msg,
+        }
+    }
+}
+
+impl<T> Deref for Handle<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<T> DerefMut for Handle<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
+}
+
+impl<'s> Stream for EventStream<'s, AutoAck> {
     type Item = Result<Event, EventStreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -238,11 +318,34 @@ impl Stream for EventStream {
                 None => Poll::Ready(None),
                 Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
                 Some(Ok(msg)) => {
-                    self.ack(&msg)?;
+                    self.do_ack(&msg)?;
 
                     let event = msg.to_event()?;
                     let event = Self::fixup_data_type(event);
 
+                    Poll::Ready(Some(Ok(event)))
+                }
+            },
+        }
+    }
+}
+
+impl<'s> Stream for EventStream<'s, CustomAck> {
+    type Item = Result<Handle<'s, Event>, EventStreamError>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let next = self.upstream.poll_next_unpin(cx);
+
+        match next {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(next) => match next {
+                None => Poll::Ready(None),
+                Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
+                Some(Ok(msg)) => {
+                    let event = msg.to_event()?;
+                    let event = Self::fixup_data_type(event);
+
+                    let event = Handle { value: event, msg };
                     Poll::Ready(Some(Ok(event)))
                 }
             },
@@ -306,7 +409,7 @@ mod test {
             ),
         ] {
             let event = event(content_type, input);
-            let (ct, st, data) = EventStream::fixup_data_type(event).take_data();
+            let (ct, st, data) = EventStream::<AutoAck>::fixup_data_type(event).take_data();
 
             assert_eq!(ct.as_deref(), content_type);
             assert_eq!(st.as_ref().map(Url::as_str), Some("https://foo.bar/"));

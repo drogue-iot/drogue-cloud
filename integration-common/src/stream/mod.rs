@@ -21,11 +21,11 @@ pub struct EventStreamConfig {
 }
 
 #[derive(Debug)]
-pub struct EventStream {
-    stream: stream::EventStream,
+pub struct EventStream<'s> {
+    stream: stream::EventStream<'s>,
 }
 
-impl EventStream {
+impl<'s> EventStream<'s> {
     pub fn new(cfg: EventStreamConfig) -> Result<Self, EventStreamError> {
         let topic = make_topic_resource_name(cfg.target);
 
@@ -40,21 +40,21 @@ impl EventStream {
     }
 }
 
-impl From<EventStream> for stream::EventStream {
-    fn from(s: EventStream) -> Self {
+impl<'s> From<EventStream<'s>> for stream::EventStream<'s> {
+    fn from(s: EventStream<'s>) -> Self {
         s.stream
     }
 }
 
-impl Deref for EventStream {
-    type Target = dyn Stream<Item = Result<Event, EventStreamError>> + Unpin;
+impl<'s> Deref for EventStream<'s> {
+    type Target = dyn Stream<Item = Result<Event, EventStreamError>> + Unpin + 's;
 
     fn deref(&self) -> &Self::Target {
         &self.stream
     }
 }
 
-impl DerefMut for EventStream {
+impl DerefMut for EventStream<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.stream
     }

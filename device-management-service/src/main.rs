@@ -8,7 +8,7 @@ use drogue_cloud_device_management_service::{
     service::{self, PostgresManagementServiceConfig},
     Config, WebData,
 };
-use drogue_cloud_registry_events::kafka::KafkaEventSender;
+use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv, health::HealthServer, openid::Authenticator, openid_auth,
 };
@@ -30,8 +30,8 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
-    let sender =
-        KafkaEventSender::new("KAFKA_EVENTS").context("Unable to create Kafka event sender")?;
+    let sender = KafkaEventSender::new(config.kafka_sender)
+        .context("Unable to create Kafka event sender")?;
 
     let max_json_payload_size = 64 * 1024;
 

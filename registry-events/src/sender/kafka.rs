@@ -1,9 +1,12 @@
-use crate::{Event, EventSender, EventSenderError, SenderResult, EXT_PARTITIONKEY};
-use anyhow::Context;
+use crate::{
+    Event, EventSender, EventSenderError, KafkaClientConfig, SenderResult, EXT_PARTITIONKEY,
+};
 use async_trait::async_trait;
-use cloudevents::binding::rdkafka::{FutureRecordExt, MessageRecord};
-use cloudevents::{event::ExtensionValue, AttributesReader};
-use drogue_cloud_service_common::{config::ConfigFromEnv, defaults};
+use cloudevents::{
+    binding::rdkafka::{FutureRecordExt, MessageRecord},
+    event::ExtensionValue,
+    AttributesReader,
+};
 use rdkafka::{
     error::KafkaError,
     producer::{FutureProducer, FutureRecord},
@@ -11,19 +14,17 @@ use rdkafka::{
     ClientConfig,
 };
 use serde::Deserialize;
-use std::{collections::HashMap, convert::TryInto, time::Duration};
+use std::{convert::TryInto, time::Duration};
 use thiserror::Error;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct KafkaSenderConfig {
-    #[serde(default = "defaults::kafka_bootstrap_servers")]
-    pub bootstrap_servers: String,
+    #[serde(flatten)]
+    pub client: KafkaClientConfig,
     pub topic: String,
     #[serde(default)]
     #[serde(with = "humantime_serde")]
     pub queue_timeout: Option<Duration>,
-    #[serde(default)]
-    pub custom: HashMap<String, String>,
 }
 
 #[derive(Debug, Error)]
@@ -42,17 +43,8 @@ pub struct KafkaEventSender {
 }
 
 impl KafkaEventSender {
-    /// Create a new Kafka sender from a configuration specified by the prefix.
-    pub fn new(prefix: &str) -> anyhow::Result<Self> {
-        let config = KafkaSenderConfig::from_env_prefix(prefix)
-            .with_context(|| format!("Failed to parse {} config", prefix))?;
-
-        let mut kafka_config = ClientConfig::new();
-        kafka_config.set("bootstrap.servers", &config.bootstrap_servers);
-
-        for (k, v) in config.custom {
-            kafka_config.set(k.replace('_', "."), v);
-        }
+    pub fn new(config: KafkaSenderConfig) -> anyhow::Result<Self> {
+        let client_config: ClientConfig = config.client.into();
 
         let queue_timeout = match config.queue_timeout {
             Some(duration) => Timeout::After(duration),
@@ -60,7 +52,7 @@ impl KafkaEventSender {
         };
 
         Ok(Self {
-            producer: kafka_config.create()?,
+            producer: client_config.create()?,
             topic: config.topic,
             queue_timeout,
         })

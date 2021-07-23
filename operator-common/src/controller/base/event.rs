@@ -1,6 +1,7 @@
 use crate::controller::base::{BaseController, ControllerOperation, Key};
 use async_std::sync::Mutex;
 use async_trait::async_trait;
+use drogue_cloud_registry_events::stream::Handler;
 use drogue_cloud_registry_events::Event;
 use std::boxed::Box;
 
@@ -64,6 +65,15 @@ impl EventSource {
         }
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl Handler for EventSource {
+    type Error = ();
+
+    async fn handle(&self, event: &Event) -> Result<(), Self::Error> {
+        self.handle(event).await
     }
 }
 

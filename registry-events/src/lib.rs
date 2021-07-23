@@ -1,9 +1,12 @@
 #[cfg(feature = "with_database")]
 pub mod db;
 pub mod mock;
+pub mod sender;
+pub mod stream;
 
-mod sender;
-pub use sender::*;
+mod kafka;
+
+pub use kafka::*;
 
 use async_trait::async_trait;
 use chrono::Utc;
