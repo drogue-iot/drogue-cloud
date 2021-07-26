@@ -2,7 +2,7 @@ mod controller;
 mod data;
 
 use crate::controller::{app::ApplicationController, ControllerConfig};
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use async_std::sync::Mutex;
 use dotenv::dotenv;
 use drogue_client::registry;
@@ -19,7 +19,7 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
     openid::TokenConfig,
 };
-use kube::{api::GroupVersionKind, core::DynamicObject, discovery, Api};
+use kube::{core::DynamicObject, discovery, Api};
 use serde::Deserialize;
 use url::Url;
 
@@ -72,6 +72,9 @@ fn is_relevant(event: &Event) -> Option<String> {
     }
 }
 
+const GROUP_KAFKA_STRIMZI_IO: &str = "kafka.strimzi.io";
+const KIND_KAFKA_TOPIC: &str = "KafkaTopic";
+
 #[actix::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -85,9 +88,10 @@ async fn main() -> anyhow::Result<()> {
 
     // k8s resources
 
-    // TODO: discover version too
-    let gvk = GroupVersionKind::gvk("kafka.strimzi.io", "v1beta2", "KafkaTopic");
-    let (kafka_topic_resource, _caps) = discovery::pinned_kind(&kube, &gvk).await?;
+    let group = discovery::group(&kube, GROUP_KAFKA_STRIMZI_IO).await?;
+    let (kafka_topic_resource, _caps) = group
+        .recommended_kind(KIND_KAFKA_TOPIC)
+        .ok_or_else(|| anyhow!("Unable to discover '{}'", KIND_KAFKA_TOPIC))?;
     let kafka_topics = Api::<DynamicObject>::namespaced_with(
         kube.clone(),
         &config.controller.topic_namespace,
