@@ -9,7 +9,7 @@ use async_std::sync::Mutex;
 use dotenv::dotenv;
 use drogue_client::registry;
 use drogue_cloud_operator_common::controller::base::{
-    queue::WorkQueueConfig, BaseController, EventSource, FnEventProcessor,
+    queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
 };
 use drogue_cloud_registry_events::{
     stream::{KafkaEventStream, KafkaStreamConfig},
@@ -23,6 +23,7 @@ use drogue_cloud_service_common::{
     openid::TokenConfig,
 };
 use serde::Deserialize;
+use std::sync::Arc;
 use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -130,13 +131,13 @@ async fn main() -> anyhow::Result<()> {
         DeviceController::new(registry, ttn::Client::new(client)),
     )?;
 
-    let controller = EventSource::new(vec![
+    let controller = EventDispatcher::new(vec![
         Box::new(FnEventProcessor::new(
-            Mutex::new(device_processor),
+            Arc::new(Mutex::new(device_processor)),
             is_device_relevant,
         )),
         Box::new(FnEventProcessor::new(
-            Mutex::new(app_processor),
+            Arc::new(Mutex::new(app_processor)),
             is_app_relevant,
         )),
     ]);
