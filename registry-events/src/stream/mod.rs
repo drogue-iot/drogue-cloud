@@ -104,6 +104,7 @@ impl Runner {
             while let Some(Ok(event)) = stream.next().await {
                 log::debug!("Processing event: {:?}", event);
                 let mut cnt = 0;
+                // try to handle it
                 while handler.handle(event.deref()).await.is_err() {
                     if cnt > 10 {
                         bail!("Failed to process event");
@@ -111,6 +112,7 @@ impl Runner {
                         cnt += 1;
                     }
                 }
+                // if we had been successful, ack it
                 stream.ack(event)?;
             }
             r.store(false, Ordering::Relaxed);
