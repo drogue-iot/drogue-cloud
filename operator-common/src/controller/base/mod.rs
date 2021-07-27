@@ -9,12 +9,8 @@ pub use conditions::*;
 pub use device::*;
 pub use event::*;
 
-#[cfg(feature = "with_actix")]
-pub use event::actix::events;
-
-use crate::controller::base::queue::WorkQueueHandler;
 use crate::controller::{
-    base::queue::{WorkQueueConfig, WorkQueueReader, WorkQueueWriter},
+    base::queue::{WorkQueueConfig, WorkQueueHandler, WorkQueueReader, WorkQueueWriter},
     reconciler::ReconcileError,
 };
 use anyhow::Context;
