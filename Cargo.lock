@@ -1917,13 +1917,10 @@ dependencies = [
 name = "drogue-cloud-operator-common"
 version = "0.6.0"
 dependencies = [
- "actix-http",
- "actix-web",
  "anyhow",
  "async-std",
  "async-trait",
  "chrono",
- "cloudevents-sdk 0.4.0",
  "deadpool 0.7.0",
  "deadpool-postgres",
  "drogue-client 0.7.0",

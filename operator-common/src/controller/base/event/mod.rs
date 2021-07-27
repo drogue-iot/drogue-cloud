@@ -3,38 +3,8 @@ mod processor;
 pub use processor::*;
 
 use async_trait::async_trait;
-use drogue_cloud_registry_events::{stream::EventHandler, Event};
+use drogue_cloud_registry_events::stream::EventHandler;
 use std::boxed::Box;
-
-#[cfg(feature = "with_actix")]
-pub mod actix {
-    use super::*;
-    use actix_web::{post, web, HttpResponse};
-    use serde_json::json;
-    use std::convert::TryInto;
-
-    #[post("/")]
-    pub async fn events(
-        event: cloudevents::Event,
-        data: web::Data<EventDispatcher<Event>>,
-    ) -> Result<HttpResponse, actix_web::error::Error> {
-        log::debug!("Received event: {:?}", event);
-
-        let event: Event = match event.try_into() {
-            Ok(event) => event,
-            Err(err) => {
-                return Ok(HttpResponse::BadRequest().json(json!({ "details": format!("{}", err) })))
-            }
-        };
-
-        log::debug!("Registry event: {:?}", event);
-
-        Ok(match data.handle(&event).await {
-            Ok(_) => HttpResponse::Ok().finish(),
-            Err(_) => HttpResponse::InternalServerError().finish(),
-        })
-    }
-}
 
 #[async_trait]
 impl<E> EventHandler for EventDispatcher<E>

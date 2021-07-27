@@ -25,16 +25,11 @@ drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-database-common = { path = "../database-common" }
 
-actix-web = { version = "=4.0.0-beta.8", optional = true } # we need v4 as we need tokio 1
-actix-http = { version = "=3.0.0-beta.8", optional = true } # FIXME: temporary intermediate
-cloudevents-sdk = { version = "0.4", optional = true }
-
 deadpool = "0.7"
 deadpool-postgres = { version = "0.7", features = ["config"] }
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1", "with-uuid-0_8", "with-chrono-0_4"] }
 
 [features]
-with_actix = ["actix-web", "actix-http", "cloudevents-sdk", "cloudevents-sdk/actix"]
 with_kube = ["kube", "kube-runtime"]
 
 [dev-dependencies]
