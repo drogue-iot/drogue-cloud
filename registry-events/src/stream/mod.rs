@@ -1,4 +1,7 @@
+mod event;
+
 pub use drogue_cloud_event_common::stream::{EventStream, EventStreamError};
+pub use event::*;
 
 use crate::{Event, EventError, KafkaClientConfig};
 use anyhow::bail;
@@ -68,17 +71,10 @@ impl<'s> KafkaEventStream<'s> {
 impl KafkaEventStream<'static> {
     pub fn run<H>(self, handler: H) -> Runner
     where
-        H: Handler + Send + Sync + 'static,
+        H: EventHandler<Event = Event> + Send + Sync + 'static,
     {
         Runner::new(self, handler)
     }
-}
-
-#[async_trait]
-pub trait Handler {
-    type Error;
-
-    async fn handle(&self, event: &Event) -> Result<(), Self::Error>;
 }
 
 pub struct Runner {
@@ -100,7 +96,7 @@ impl HealthChecked for Runner {
 impl Runner {
     pub fn new<H>(mut stream: KafkaEventStream<'static>, handler: H) -> Self
     where
-        H: Handler + Send + Sync + 'static,
+        H: EventHandler<Event = Event> + Send + Sync + 'static,
     {
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();

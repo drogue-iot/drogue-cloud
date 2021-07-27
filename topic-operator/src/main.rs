@@ -3,11 +3,15 @@ mod data;
 
 use crate::controller::{app::ApplicationController, ControllerConfig};
 use anyhow::{anyhow, Context};
-use async_std::sync::Mutex;
+use async_std::sync::{Arc, Mutex};
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_operator_common::controller::base::{
-    queue::WorkQueueConfig, BaseController, EventSource, FnEventProcessor,
+use drogue_cloud_operator_common::{
+    controller::base::{
+        queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
+        ResourceProcessor,
+    },
+    watcher::RunStream,
 };
 use drogue_cloud_registry_events::{
     stream::{KafkaEventStream, KafkaStreamConfig},
@@ -19,7 +23,8 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
     openid::TokenConfig,
 };
-use kube::{core::DynamicObject, discovery, Api};
+use kube::{api::ListParams, core::DynamicObject, discovery, Api};
+use kube_runtime::watcher;
 use serde::Deserialize;
 use url::Url;
 
@@ -115,26 +120,35 @@ async fn main() -> anyhow::Result<()> {
 
     // controller
 
-    let processor = BaseController::new(
+    let controller = Arc::new(Mutex::new(BaseController::new(
         config.work_queue,
         "app",
         ApplicationController::new(
             config.controller,
             registry,
             kafka_topic_resource,
-            kafka_topics,
+            kafka_topics.clone(),
         ),
-    )?;
-    let controller = EventSource::one(FnEventProcessor::new(Mutex::new(processor), is_relevant));
+    )?));
 
-    // event source
+    // event source - device registry
 
-    let source = KafkaEventStream::new(config.kafka_source)?;
-    let source = source.run(controller);
+    let registry_dispatcher =
+        EventDispatcher::one(FnEventProcessor::new(controller.clone(), is_relevant));
+    let registry = KafkaEventStream::new(config.kafka_source)?;
+    let registry = registry.run(registry_dispatcher);
+
+    // event source - KafkaTopic
+
+    let watcher = watcher(kafka_topics, ListParams::default());
+    let watcher = watcher.run_stream(EventDispatcher::one(ResourceProcessor::new(
+        controller,
+        "drogue.io/application-name",
+    )));
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![Box::new(source)]);
+    let health = HealthServer::new(config.health, vec![Box::new(registry), Box::new(watcher)]);
 
     // run
 

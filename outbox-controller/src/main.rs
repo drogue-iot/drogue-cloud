@@ -6,11 +6,9 @@ use actix::Actor;
 use anyhow::Context;
 use async_trait::async_trait;
 use dotenv::dotenv;
-use drogue_cloud_registry_events::sender::KafkaSenderConfig;
-use drogue_cloud_registry_events::stream::Handler;
 use drogue_cloud_registry_events::{
-    sender::KafkaEventSender,
-    stream::{KafkaEventStream, KafkaStreamConfig},
+    sender::{KafkaEventSender, KafkaSenderConfig},
+    stream::{EventHandler, KafkaEventStream, KafkaStreamConfig},
     Event,
 };
 use drogue_cloud_service_common::{
@@ -54,10 +52,11 @@ const fn before() -> Duration {
 struct OutboxHandler(Arc<service::OutboxService>);
 
 #[async_trait]
-impl Handler for OutboxHandler {
+impl EventHandler for OutboxHandler {
+    type Event = Event;
     type Error = anyhow::Error;
 
-    async fn handle(&self, event: &Event) -> Result<(), anyhow::Error> {
+    async fn handle(&self, event: &Self::Event) -> Result<(), anyhow::Error> {
         log::debug!("Outbox event: {:?}", event);
         self.0.mark_seen(event.clone()).await?;
         Ok(())
