@@ -96,11 +96,11 @@ async fn main() -> anyhow::Result<()> {
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![Box::new(source)]);
+    let health = HealthServer::new(config.health, vec![]);
 
     // run
 
-    futures::try_join!(health.run())?;
+    futures::try_join!(health.run(), source)?;
 
     // exiting
 

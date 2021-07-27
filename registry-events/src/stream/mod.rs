@@ -5,24 +5,17 @@ pub use event::*;
 
 use crate::{Event, EventError, KafkaClientConfig};
 use anyhow::bail;
-use async_trait::async_trait;
 use drogue_cloud_event_common::stream::{CustomAck, EventStreamConfig, Handle};
-use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use rdkafka::error::KafkaError;
 use serde::Deserialize;
 use std::{
     convert::TryInto,
     ops::{Deref, DerefMut},
     pin::Pin,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
     task::{Context, Poll},
 };
 use thiserror::Error;
-use tokio::task::JoinHandle;
 
 #[derive(Debug, Error)]
 pub enum KafkaStreamError {
@@ -69,59 +62,26 @@ impl<'s> KafkaEventStream<'s> {
 }
 
 impl KafkaEventStream<'static> {
-    pub fn run<H>(self, handler: H) -> Runner
+    pub async fn run<H>(self, handler: H) -> Result<(), anyhow::Error>
     where
         H: EventHandler<Event = Event> + Send + Sync + 'static,
     {
-        Runner::new(self, handler)
-    }
-}
-
-pub struct Runner {
-    _handle: JoinHandle<Result<(), anyhow::Error>>,
-    running: Arc<AtomicBool>,
-}
-
-#[async_trait]
-impl HealthChecked for Runner {
-    async fn is_alive(&self) -> Result<(), HealthCheckError> {
-        if !self.running.load(Ordering::Relaxed) {
-            HealthCheckError::nok("Event loop not running")
-        } else {
-            Ok(())
-        }
-    }
-}
-
-impl Runner {
-    pub fn new<H>(mut stream: KafkaEventStream<'static>, handler: H) -> Self
-    where
-        H: EventHandler<Event = Event> + Send + Sync + 'static,
-    {
-        let running = Arc::new(AtomicBool::new(true));
-        let r = running.clone();
-        let handle = tokio::spawn(async move {
-            while let Some(Ok(event)) = stream.next().await {
-                log::debug!("Processing event: {:?}", event);
-                let mut cnt = 0;
-                // try to handle it
-                while handler.handle(event.deref()).await.is_err() {
-                    if cnt > 10 {
-                        bail!("Failed to process event");
-                    } else {
-                        cnt += 1;
-                    }
+        let mut stream = self;
+        while let Some(event) = stream.try_next().await? {
+            log::debug!("Processing event: {:?}", event);
+            let mut cnt = 0;
+            // try to handle it
+            while handler.handle(event.deref()).await.is_err() {
+                if cnt > 10 {
+                    bail!("Failed to process event");
+                } else {
+                    cnt += 1;
                 }
-                // if we had been successful, ack it
-                stream.ack(event)?;
             }
-            r.store(false, Ordering::Relaxed);
-            Ok::<_, anyhow::Error>(())
-        });
-        Self {
-            _handle: handle,
-            running,
+            // if we had been successful, ack it
+            stream.ack(event)?;
         }
+        bail!("Stream must not end")
     }
 }
 
