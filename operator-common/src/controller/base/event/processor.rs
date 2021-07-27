@@ -99,7 +99,9 @@ where
     O: ControllerOperation<String, RI, RO> + Send + Sync + 'static,
 {
     async fn handle(&self, event: &DynamicObject) -> Result<bool, ()> {
-        if let Some(key) = self.extract(event) {
+        let key = self.extract(event);
+        log::debug!("Extracted key from event: {:?}", key);
+        if let Some(key) = key {
             self.controller.lock().await.process(key).await?;
             Ok(true)
         } else {

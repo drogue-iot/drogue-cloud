@@ -148,12 +148,12 @@ async fn main() -> anyhow::Result<()> {
 
     // health server
 
-    let health = HealthServer::new(config.health, vec![Box::new(registry), Box::new(watcher)]);
+    let health = HealthServer::new(config.health, vec![]);
 
     // run
 
     log::info!("Running service ...");
-    futures::try_join!(health.run())?;
+    futures::try_join!(health.run(), registry, watcher)?;
 
     // exiting
 
