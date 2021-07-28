@@ -270,7 +270,12 @@ impl ConstructOperation<ConstructContext> for TopicReady {
             .unwrap_or_default();
 
         match events_ready {
-            true => Ok(Outcome::Continue(ctx)),
+            true => {
+
+                ctx.app.set_section(Kafka)
+
+                Ok(Outcome::Continue(ctx))
+            },
             false => Self::retry(ctx),
         }
     }

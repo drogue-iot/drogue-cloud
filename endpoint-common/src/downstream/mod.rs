@@ -10,14 +10,12 @@ use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
-use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_api::EXT_INSTANCE;
+use drogue_cloud_service_api::{events::EventTarget, EXT_INSTANCE};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::future::Future;
+use std::{collections::HashMap, future::Future};
 use thiserror::Error;
 
 const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
