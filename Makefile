@@ -43,7 +43,7 @@ ALL_IMAGES=\
 	mqtt-integration \
 	ttn-operator \
 	topic-operator \
-
+    websocket-integration \
 
 #
 # Active images to build

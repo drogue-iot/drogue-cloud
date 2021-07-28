@@ -1,0 +1,1 @@
+- Commands support : the client sends commands in the WS. 
