@@ -76,7 +76,8 @@ impl BackendInformation {
             callback.reform(|response: Response<_>| {
                 log::info!("Backend response code: {}", response.status().as_u16());
                 match response.status().as_u16() {
-                    401 | 403 => {
+                    401 | 403 | 408 => {
+                        // 408 is "sent" by yew if the request fails, which it does when CORS is in play
                         Backend::reauthenticate().ok();
                     }
                     _ => {}
