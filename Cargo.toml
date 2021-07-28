@@ -27,6 +27,7 @@ members = [
     "api-key-service",
     "admin-service",
     "event-common",
+    "websocket-integration",
 ]
 
 [patch.crates-io]
