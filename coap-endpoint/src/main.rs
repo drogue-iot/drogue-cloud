@@ -14,10 +14,10 @@ use dotenv::dotenv;
 use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
 };
-use drogue_cloud_endpoint_common::downstream::Target;
 use drogue_cloud_endpoint_common::{
-    downstream::{DownstreamSender, DownstreamSink, KafkaSink},
+    downstream::DownstreamSender,
     error::EndpointError,
+    sink::{KafkaSink, Sink},
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
@@ -52,8 +52,8 @@ pub struct Config {
 #[derive(Clone, Debug)]
 pub struct App<S>
 where
-    S: DownstreamSink + Send,
-    <S as DownstreamSink>::Error: Send,
+    S: Sink + Send,
+    <S as Sink>::Error: Send,
 {
     pub downstream: DownstreamSender<S>,
     pub authenticator: DeviceAuthenticator,
@@ -127,8 +127,8 @@ async fn publish_handler<S>(
     app: App<S>,
 ) -> Option<CoapResponse>
 where
-    S: DownstreamSink + Send,
-    <S as DownstreamSink>::Error: Send,
+    S: Sink + Send,
+    <S as Sink>::Error: Send,
 {
     let path_segments: Vec<String>;
     let queries: Option<&Vec<u8>>;
@@ -200,10 +200,7 @@ async fn main() -> anyhow::Result<()> {
     let coap_server_commands = commands.clone();
 
     let app = App {
-        downstream: DownstreamSender::new(
-            KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?,
-            Target::Events,
-        )?,
+        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),

@@ -1,30 +1,23 @@
-mod http;
-mod kafka;
-
-pub use self::http::HttpSink;
-pub use kafka::*;
-
 use crate::error::HttpEndpointError;
+use crate::sink::{Sink, SinkError, SinkTarget};
 use actix_web::HttpResponse;
 use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
-use drogue_cloud_service_api::{events::EventTarget, EXT_INSTANCE};
+use drogue_client::registry;
+use drogue_cloud_service_api::EXT_INSTANCE;
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, future::Future};
-use thiserror::Error;
 
 const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
 
-const EXT_PARTITIONKEY: &str = "partitionkey";
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Publish {
-    pub app_id: String,
+#[derive(Clone, Debug)]
+pub struct Publish<'a> {
+    pub application: &'a registry::v1::Application,
     pub device_id: String,
     pub channel: String,
     pub options: PublishOptions,
@@ -49,76 +42,106 @@ pub enum PublishOutcome {
     QueueFull,
 }
 
-#[async_trait]
-pub trait DownstreamSink: Clone + Send + Sync + 'static {
-    type Error: std::error::Error + Send + 'static;
-
-    /// Publish an event.
-    async fn publish(
-        &self,
-        target: EventTarget,
-        event: Event,
-    ) -> Result<PublishOutcome, DownstreamError<Self::Error>>;
+#[derive(Debug, Clone)]
+pub struct UpstreamSender<S>
+where
+    S: Sink,
+{
+    sink: S,
+    instance: String,
 }
 
-#[derive(Error, Debug)]
-pub enum DownstreamError<E: std::error::Error + 'static> {
-    #[error("Build event error")]
-    Build(#[from] cloudevents::event::EventBuilderError),
-    #[error("Event error")]
-    Event(#[from] cloudevents::message::Error),
-    #[error("Transport error")]
-    Transport(#[source] E),
-}
+impl<S> UpstreamSender<S>
+where
+    S: Sink,
+{
+    pub fn new(sink: S) -> anyhow::Result<Self> {
+        let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
 
-#[derive(Debug, Clone, Copy)]
-pub enum Target {
-    Events,
-    Commands,
-}
-
-impl Target {
-    pub fn translate(&self, app: String) -> EventTarget {
-        match self {
-            Self::Commands => EventTarget::Commands(app),
-            Self::Events => EventTarget::Events(app),
-        }
+        Ok(Self { sink, instance })
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct DownstreamSender<S>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     sink: S,
     instance: String,
-    target: Target,
 }
 
 impl<S> DownstreamSender<S>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
-    pub fn new(sink: S, target: Target) -> anyhow::Result<Self> {
+    pub fn new(sink: S) -> anyhow::Result<Self> {
         let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
 
-        Ok(Self {
-            sink,
-            instance,
-            target,
-        })
+        Ok(Self { sink, instance })
+    }
+}
+
+#[async_trait]
+impl<S> Publisher<S> for DownstreamSender<S>
+where
+    S: Sink,
+{
+    fn instance(&self) -> String {
+        self.instance.clone()
     }
 
-    pub async fn publish<B>(
+    async fn send(
         &self,
-        publish: Publish,
+        app: &registry::v1::Application,
+        event: Event,
+    ) -> Result<PublishOutcome, SinkError<S::Error>> {
+        self.sink.publish(SinkTarget::Commands(app), event).await
+    }
+}
+
+#[async_trait]
+impl<S> Publisher<S> for UpstreamSender<S>
+where
+    S: Sink,
+{
+    fn instance(&self) -> String {
+        self.instance.clone()
+    }
+
+    async fn send(
+        &self,
+        app: &registry::v1::Application,
+        event: Event,
+    ) -> Result<PublishOutcome, SinkError<S::Error>> {
+        self.sink.publish(SinkTarget::Events(app), event).await
+    }
+}
+
+#[async_trait]
+pub trait Publisher<S>
+where
+    S: Sink,
+{
+    fn instance(&self) -> String;
+
+    async fn send(
+        &self,
+        app: &registry::v1::Application,
+        event: Event,
+    ) -> Result<PublishOutcome, SinkError<S::Error>>;
+
+    #[allow(clippy::needless_lifetimes)]
+    async fn publish<'a, B>(
+        &self,
+        publish: Publish<'a>,
         body: B,
-    ) -> Result<PublishOutcome, DownstreamError<S::Error>>
+    ) -> Result<PublishOutcome, SinkError<S::Error>>
     where
-        B: AsRef<[u8]>,
+        B: AsRef<[u8]> + Send + Sync,
     {
-        let app_enc = utf8_percent_encode(&publish.app_id, NON_ALPHANUMERIC);
+        let app_id = publish.application.metadata.name.clone();
+        let app_enc = utf8_percent_encode(&app_id, NON_ALPHANUMERIC);
         let device_enc = utf8_percent_encode(&publish.device_id, NON_ALPHANUMERIC);
 
         let source = format!("{}/{}", app_enc, device_enc);
@@ -129,12 +152,12 @@ where
             // we need an "absolute" URL for the moment: until 0.4 is released
             // see: https://github.com/cloudevents/sdk-rust/issues/106
             .source(format!("drogue://{}", source))
-            .inject(Id::new(publish.app_id.clone(), publish.device_id))
+            .inject(Id::new(app_id, publish.device_id))
             .subject(&publish.channel)
             .time(Utc::now());
 
-        event = event.extension(EXT_PARTITIONKEY, source);
-        event = event.extension(EXT_INSTANCE, self.instance.clone());
+        event = event.extension(crate::EXT_PARTITIONKEY, source);
+        event = event.extension(EXT_INSTANCE, self.instance());
 
         if let Some(data_schema) = publish.options.data_schema {
             event = event.extension("dataschema", data_schema);
@@ -165,21 +188,20 @@ where
 
         // build event
 
-        self.sink
-            .publish(self.target.translate(publish.app_id), event.build()?)
-            .await
+        self.send(&publish.application, event.build()?).await
     }
 
-    pub async fn publish_http<B, H, F>(
+    #[allow(clippy::needless_lifetimes)]
+    async fn publish_http<'a, B, H, F>(
         &self,
-        publish: Publish,
+        publish: Publish<'a>,
         body: B,
         f: H,
     ) -> Result<HttpResponse, HttpEndpointError>
     where
-        B: AsRef<[u8]>,
-        H: FnOnce(PublishOutcome) -> F,
-        F: Future<Output = Result<HttpResponse, HttpEndpointError>>,
+        B: AsRef<[u8]> + Send + Sync,
+        H: FnOnce(PublishOutcome) -> F + Send + Sync,
+        F: Future<Output = Result<HttpResponse, HttpEndpointError>> + Send + Sync,
     {
         match self.publish(publish, body).await {
             // ok
@@ -192,13 +214,14 @@ where
         }
     }
 
-    pub async fn publish_http_default<B>(
+    #[allow(clippy::needless_lifetimes)]
+    async fn publish_http_default<'a, B>(
         &self,
-        publish: Publish,
+        publish: Publish<'a>,
         body: B,
     ) -> Result<HttpResponse, HttpEndpointError>
     where
-        B: AsRef<[u8]>,
+        B: AsRef<[u8]> + Send + Sync,
     {
         self.publish_http(publish, body, |outcome| async move {
             match outcome {

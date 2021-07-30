@@ -4,8 +4,9 @@ use crate::error::CoapEndpointError;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use drogue_cloud_endpoint_common::{
     command::Commands,
-    downstream::{self, DownstreamSender, DownstreamSink},
+    downstream::{self, DownstreamSender},
     error::EndpointError,
+    sink::Sink,
 };
 use drogue_cloud_service_api::auth::device::authn;
 use http::HeaderValue;
@@ -61,8 +62,8 @@ pub async fn publish_plain<S>(
     auth: &[u8],
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
-    S: DownstreamSink + Send,
-    <S as DownstreamSink>::Error: Send,
+    S: Sink + Send,
+    <S as Sink>::Error: Send,
 {
     publish(
         sender,
@@ -87,8 +88,8 @@ pub async fn publish_tail<S>(
     auth: &[u8],
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
-    S: DownstreamSink + Send,
-    <S as DownstreamSink>::Error: Send,
+    S: Sink + Send,
+    <S as Sink>::Error: Send,
 {
     let (channel, suffix) = path;
     publish(
@@ -115,8 +116,8 @@ pub async fn publish<S>(
     auth: &[u8],
 ) -> Result<Option<CoapResponse>, CoapEndpointError>
 where
-    S: DownstreamSink + Send,
-    <S as DownstreamSink>::Error: Send,
+    S: Sink + Send,
+    <S as Sink>::Error: Send,
 {
     log::debug!("Publish to '{}'", channel);
 
@@ -149,7 +150,7 @@ where
 
     let publish = downstream::Publish {
         channel,
-        app_id: application.metadata.name.clone(),
+        application: &application,
         device_id: device_id.clone(),
         options: downstream::PublishOptions {
             data_schema: opts.common.data_schema,

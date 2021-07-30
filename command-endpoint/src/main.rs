@@ -8,7 +8,7 @@ use actix_web::{
 };
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::downstream::{DownstreamSender, KafkaSink, Target};
+use drogue_cloud_endpoint_common::{downstream::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,
@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting Command service endpoint");
 
-    let sender = DownstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?, Target::Commands)?;
+    let sender = UpstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
 
     let config = Config::from_env()?;
     let max_json_payload_size = config.max_json_payload_size;

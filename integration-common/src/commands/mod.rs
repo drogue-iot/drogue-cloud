@@ -3,8 +3,9 @@ mod sender;
 use actix_web::HttpResponse;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
-    downstream::{self, DownstreamSender, DownstreamSink},
+    downstream::{self, Publisher, UpstreamSender},
     error::HttpEndpointError,
+    sink::Sink,
 };
 use serde::Deserialize;
 
@@ -17,16 +18,17 @@ pub struct CommandOptions {
 }
 
 pub async fn process_command<S>(
+    application: registry::v1::Application,
     device: registry::v1::Device,
     gateways: Vec<registry::v1::Device>,
-    sender: &DownstreamSender<S>,
+    sender: &UpstreamSender<S>,
     client: reqwest::Client,
     content_type: Option<String>,
     opts: CommandOptions,
     body: bytes::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     if !device.attribute::<registry::v1::DeviceEnabled>() {
         return Ok(HttpResponse::NotAcceptable().finish());
@@ -63,7 +65,7 @@ where
         .publish_http_default(
             downstream::Publish {
                 channel: opts.command,
-                app_id: opts.application,
+                application: &application,
                 device_id: opts.device,
                 options: downstream::PublishOptions {
                     topic: None,

@@ -2,6 +2,7 @@ mod error;
 
 pub use error::*;
 
+use crate::config::KafkaConfig;
 use cloudevents::{binding::rdkafka::MessageExt, AttributesReader, AttributesWriter, Data, Event};
 use futures::{
     task::{Context, Poll},
@@ -16,11 +17,10 @@ use rdkafka::{
     util::Timeout,
     TopicPartitionList,
 };
-use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
 use std::{
-    collections::HashMap,
     fmt::{Debug, Formatter},
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
     pin::Pin,
     time::Duration,
 };
@@ -47,9 +47,7 @@ impl AckMode for CustomAck {
 
 #[derive(Clone, Debug)]
 pub struct EventStreamConfig {
-    pub bootstrap_servers: String,
-    pub properties: HashMap<String, String>,
-    pub topic: String,
+    pub kafka: KafkaConfig,
     pub consumer_group: Option<String>,
 }
 
@@ -98,14 +96,14 @@ where
         // start with the defaults
 
         config
-            .set("bootstrap.servers", &cfg.bootstrap_servers)
+            .set("bootstrap.servers", &cfg.kafka.client.bootstrap_servers)
             .set("enable.partition.eof", "false")
             .set("session.timeout.ms", "6000")
             .set_log_level(RDKafkaLogLevel::Info);
 
         // add custom properties
 
-        for (k, v) in &cfg.properties {
+        for (k, v) in &cfg.kafka.client.properties {
             config.set(k.replace('_', "."), v);
         }
 
@@ -128,7 +126,7 @@ where
 
         log::debug!("Created consumer");
 
-        let topic = cfg.topic.clone();
+        let topic = cfg.kafka.topic.clone();
 
         let metadata =
             consumer.fetch_metadata(Some(&topic), Timeout::After(Duration::from_secs(10)))?;
@@ -136,7 +134,7 @@ where
         let partitions = metadata
             .topics()
             .iter()
-            .find(|t| t.name() == topic)
+            .find(|t| t.name() == &topic)
             .map(|topic| topic.partitions())
             .ok_or_else(|| {
                 log::debug!("Failed to find metadata for topic");
@@ -155,7 +153,7 @@ where
 
         log::debug!("Subscribed");
 
-        Ok(Self::wrap(cfg.topic.clone(), consumer))
+        Ok(Self::wrap(topic, consumer))
     }
 
     fn new_with_group(cfg: &EventStreamConfig, group_id: String) -> Result<Self, EventStreamError> {
@@ -168,11 +166,11 @@ where
 
         log::debug!("Created consumer");
 
-        consumer.subscribe(&[&cfg.topic])?;
+        consumer.subscribe(&[&cfg.kafka.topic])?;
 
         log::debug!("Subscribed");
 
-        Ok(Self::wrap(cfg.topic.clone(), consumer))
+        Ok(Self::wrap(cfg.kafka.topic.clone(), consumer))
     }
 
     fn wrap(topic: String, consumer: StreamConsumer) -> Self {

@@ -13,6 +13,7 @@ uuid = { version = "0.8", features = ["v4"] }
 serde_json = "1"
 owning_ref = "0.4"
 futures = "0.3"
+serde = "1"
 
 cloudevents-sdk = { version = "0.4", features = ["rdkafka"] }
 
@@ -24,3 +25,4 @@ features = ["ssl", "sasl"]
 
 [dev-dependencies]
 url = "2"
+config = "0.11"

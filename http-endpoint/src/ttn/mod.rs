@@ -10,8 +10,9 @@ use chrono::{DateTime, Utc};
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{self, DownstreamSender, DownstreamSink},
+    downstream::{self, DownstreamSender, Publisher},
     error::{EndpointError, HttpEndpointError},
+    sink::Sink,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn;
@@ -61,7 +62,7 @@ async fn publish_uplink<S>(
     uplink: Uplink,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let device_id = uplink.device_id;
 
@@ -132,7 +133,7 @@ where
 
     send_uplink(
         sender,
-        application.metadata.name.clone(),
+        application,
         device_id,
         port,
         time,
@@ -146,7 +147,7 @@ where
 
 async fn send_uplink<B, S>(
     sender: web::Data<DownstreamSender<S>>,
-    app_id: String,
+    application: registry::v1::Application,
     device_id: String,
     port: String,
     time: DateTime<Utc>,
@@ -156,14 +157,14 @@ async fn send_uplink<B, S>(
     body: B,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    B: AsRef<[u8]>,
-    S: DownstreamSink,
+    B: AsRef<[u8]> + Send + Sync,
+    S: Sink,
 {
     sender
         .publish_http_default(
             downstream::Publish {
                 channel: port,
-                app_id,
+                application: &application,
                 device_id,
                 options: downstream::PublishOptions {
                     time: Some(time),

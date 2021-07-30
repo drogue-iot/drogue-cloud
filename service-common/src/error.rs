@@ -1,4 +1,5 @@
 use actix_web::{HttpResponse, ResponseError};
+use drogue_client::error::ClientError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -16,6 +17,19 @@ pub enum ServiceError {
     InvalidRequest(String),
     #[error("Failed to serialize data: {0}")]
     Serializer(#[from] serde_json::Error),
+    #[error("Resource not found: {0}/{1}")]
+    NotFound(String, String),
+    #[error("Client error: {0}")]
+    Client(#[source] Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl<E> From<ClientError<E>> for ServiceError
+where
+    E: std::error::Error + Send + Sync + 'static,
+{
+    fn from(err: ClientError<E>) -> Self {
+        Self::Client(Box::new(err))
+    }
 }
 
 impl ResponseError for ServiceError {
@@ -53,6 +67,14 @@ impl ResponseError for ServiceError {
                     message: err.to_string(),
                 })
             }
+            ServiceError::NotFound(t, name) => HttpResponse::NotFound().json(ErrorResponse {
+                error: "NotFound".into(),
+                message: format!("Not found {0} / {1}", t, name),
+            }),
+            ServiceError::Client(err) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
+                error: "ClientError".into(),
+                message: err.to_string(),
+            }),
         }
     }
 }

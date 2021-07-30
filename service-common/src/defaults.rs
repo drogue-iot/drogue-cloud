@@ -36,11 +36,6 @@ pub fn bind_addr() -> String {
 }
 
 #[inline]
-pub fn kafka_bootstrap_servers() -> String {
-    "drogue-iot-kafka-bootstrap:9092".into()
-}
-
-#[inline]
 pub fn kafka_command_topic() -> String {
     "iot-commands".into()
 }

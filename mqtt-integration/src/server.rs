@@ -5,7 +5,7 @@ use crate::{
     Config,
 };
 use anyhow::Context;
-use drogue_cloud_endpoint_common::downstream::DownstreamSink;
+use drogue_cloud_endpoint_common::sink::Sink;
 use futures::future::ok;
 use ntex::{
     fn_factory_with_config, fn_service,
@@ -109,7 +109,7 @@ pub fn build<S>(
     config: &Config,
 ) -> anyhow::Result<ServerBuilder>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let addr = addr.unwrap_or("127.0.0.1:1883");
     let max_size = config.max_size.unwrap_or(DEFAULT_MAX_SIZE);
@@ -126,7 +126,7 @@ pub fn build_tls<S>(
     config: &Config,
 ) -> anyhow::Result<ServerBuilder>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let addr = addr.unwrap_or("127.0.0.1:8883");
     log::info!("Starting MQTT (TLS) server: {}", addr);

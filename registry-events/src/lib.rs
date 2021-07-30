@@ -4,10 +4,6 @@ pub mod mock;
 pub mod sender;
 pub mod stream;
 
-mod kafka;
-
-pub use kafka::*;
-
 use async_trait::async_trait;
 use chrono::Utc;
 use cloudevents::{AttributesReader, Data, EventBuilder};

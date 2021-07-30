@@ -45,9 +45,12 @@ uuid = { version = "0.8", features = ["v4"] }
 
 drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-api = { path = "../service-api", features = ["with_actix"] }
+drogue-cloud-event-common = { path = "../event-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }
 drogue-cloud-api-key-service = { path = "../api-key-service" }
+
+drogue-client = "0.7.0"
 
 awc = { version = "=3.0.0-beta.7", optional = true, features = ["rustls"] }
 

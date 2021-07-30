@@ -2,13 +2,15 @@ use actix_web::{web, Error, HttpRequest, HttpResponse};
 use awc::Client;
 use url::Url;
 
+pub struct ForwardUrl(pub Url);
+
 pub async fn forward(
     req: HttpRequest,
     body: web::Bytes,
-    url: web::Data<Url>,
+    url: web::Data<ForwardUrl>,
     client: web::Data<Client>,
 ) -> Result<HttpResponse, Error> {
-    let mut new_url = url.get_ref().clone();
+    let mut new_url = url.get_ref().0.clone();
     new_url.set_path(req.uri().path());
     new_url.set_query(req.uri().query());
 

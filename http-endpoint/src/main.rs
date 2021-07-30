@@ -16,8 +16,7 @@ use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
 };
 use drogue_cloud_endpoint_common::{
-    auth::DeviceAuthenticator,
-    downstream::{DownstreamSender, KafkaSink, Target},
+    auth::DeviceAuthenticator, downstream::DownstreamSender, sink::KafkaSink,
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
@@ -72,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting HTTP service endpoint");
 
-    let sender = DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?, Target::Events)?;
+    let sender = DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?;
     let commands = Commands::new();
 
     let config = Config::from_env()?;

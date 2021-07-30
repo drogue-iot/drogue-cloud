@@ -3,8 +3,9 @@ mod event;
 pub use drogue_cloud_event_common::stream::{EventStream, EventStreamError};
 pub use event::*;
 
-use crate::{Event, EventError, KafkaClientConfig};
+use crate::{Event, EventError};
 use anyhow::bail;
+use drogue_cloud_event_common::config::KafkaConfig;
 use drogue_cloud_event_common::stream::{CustomAck, EventStreamConfig, Handle};
 use futures::{Stream, StreamExt, TryStreamExt};
 use rdkafka::error::KafkaError;
@@ -34,20 +35,17 @@ impl From<KafkaError> for KafkaStreamError {
 #[derive(Clone, Debug, Deserialize)]
 pub struct KafkaStreamConfig {
     #[serde(flatten)]
-    pub client: KafkaClientConfig,
-    pub topic: String,
+    pub client: KafkaConfig,
     pub consumer_group: String,
 }
 
 impl From<KafkaStreamConfig> for EventStreamConfig {
-    fn from(cfg: KafkaStreamConfig) -> Self {
-        let mut properties = cfg.client.custom;
+    fn from(mut cfg: KafkaStreamConfig) -> Self {
+        let properties = &mut cfg.client.client.properties;
         properties.insert("auto.offset.reset".into(), "earliest".into());
 
         Self {
-            bootstrap_servers: cfg.client.bootstrap_servers,
-            properties,
-            topic: cfg.topic,
+            kafka: cfg.client,
             consumer_group: Some(cfg.consumer_group),
         }
     }
@@ -103,11 +101,7 @@ impl<'s> Stream for KafkaEventStream<'s> {
     type Item = Result<Handle<'s, Event>, KafkaStreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let next = self.0.poll_next_unpin(cx);
-
-        log::debug!("Event: {:?}", next);
-
-        match next {
+        match self.0.poll_next_unpin(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(next) => match next {
                 None => Poll::Ready(None),

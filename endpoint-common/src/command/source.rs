@@ -1,13 +1,10 @@
-use crate::{
-    command::{Command, CommandDispatcher},
-    kafka::KafkaConfig,
-};
+use crate::command::{Command, CommandDispatcher};
 use async_trait::async_trait;
-use drogue_cloud_event_common::stream::{
-    AutoAck, EventStream, EventStreamConfig, EventStreamError,
+use drogue_cloud_event_common::{
+    config::KafkaConfig,
+    stream::{AutoAck, EventStream, EventStreamConfig, EventStreamError},
 };
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
-use drogue_cloud_service_common::defaults;
 use futures::StreamExt;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -21,8 +18,6 @@ use tokio::task::JoinHandle;
 pub struct KafkaCommandSourceConfig {
     #[serde(default, flatten)]
     pub kafka: KafkaConfig,
-    #[serde(default = "defaults::kafka_command_topic")]
-    pub topic: String,
     pub consumer_group: String,
 }
 
@@ -37,9 +32,7 @@ impl KafkaCommandSource {
         D: CommandDispatcher + Send + Sync + 'static,
     {
         let mut source = EventStream::<AutoAck>::new(EventStreamConfig {
-            bootstrap_servers: config.kafka.bootstrap_servers,
-            properties: config.kafka.custom,
-            topic: config.topic,
+            kafka: config.kafka,
             consumer_group: Some(config.consumer_group),
         })?;
 

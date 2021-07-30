@@ -5,18 +5,16 @@ mod actix;
 pub use self::actix::*;
 
 use cloudevents::Event;
-use drogue_cloud_event_common::stream::{self, EventStreamError};
-use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_common::kafka::make_topic_resource_name;
+use drogue_cloud_event_common::{
+    config::KafkaConfig,
+    stream::{self, EventStreamError},
+};
 use futures::Stream;
-use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug)]
 pub struct EventStreamConfig {
-    pub bootstrap_servers: String,
-    pub properties: HashMap<String, String>,
-    pub target: EventTarget,
+    pub kafka: KafkaConfig,
     pub consumer_group: Option<String>,
 }
 
@@ -27,13 +25,9 @@ pub struct EventStream<'s> {
 
 impl<'s> EventStream<'s> {
     pub fn new(cfg: EventStreamConfig) -> Result<Self, EventStreamError> {
-        let topic = make_topic_resource_name(cfg.target);
-
         let stream = stream::EventStream::new(stream::EventStreamConfig {
-            bootstrap_servers: cfg.bootstrap_servers,
-            properties: cfg.properties,
+            kafka: cfg.kafka,
             consumer_group: cfg.consumer_group,
-            topic,
         })?;
 
         Ok(Self { stream })
