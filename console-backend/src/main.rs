@@ -15,7 +15,7 @@ use actix_web::{
     web::{self},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use drogue_client::registry;
 use drogue_cloud_api_key_service::{
     endpoints as keys,
@@ -160,7 +160,8 @@ async fn main() -> anyhow::Result<()> {
             TokenConfig::from_env_prefix("REGISTRY")?
                 .amend_with_env()
                 .discover_from(client.clone())
-                .await?,
+                .await
+                .context("Failed to create registry client")?,
         ),
     );
 
