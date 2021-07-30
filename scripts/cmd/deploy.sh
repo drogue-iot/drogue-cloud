@@ -193,10 +193,11 @@ esac
 
 SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 
-# Provide a TLS certificate for the MQTT endpoint
+# Provide TLS certificates for endpoints
 
 if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] || [ "$(kubectl -n "$DROGUE_NS" get secret http-endpoint-tls --ignore-not-found)" == "" ] || [ "$(kubectl -n "$DROGUE_NS" get secret coap-endpoint-tls --ignore-not-found)" == "" ]; then
-    progress -n "📝 Creating custom certificate ... "
+    progress "🔐 Deploying certificates ..."
+    progress -n "  📝 Ensure existence of certificates ... "
     if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
         CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$MQTT_INTEGRATION_HOST, DNS:$HTTP_ENDPOINT_HOST" #, DNS:$COAP_ENDPOINT_HOST"
         echo "  Alternative names: $CERT_ALTNAMES"
@@ -204,27 +205,31 @@ if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)
         echo "  Output: $OUT"
 
         env TEST_CERTS_IMAGE="${TEST_CERTS_IMAGE}" CONTAINER="$CONTAINER" OUT="$OUT" "$BASEDIR/bin/__gen-certs.sh" "$CERT_ALTNAMES"
-        progress "done!"
+        progress "created!"
 
-        #COAP_TLS_KEY=$OUT/coap-endpoint.key
-        #COAP_TLS_CRT=$OUT/coap-endpoint.fullchain.crt
+        COAP_TLS_KEY=$OUT/coap-endpoint.key
+        COAP_TLS_CRT=$OUT/coap-endpoint.fullchain.crt
         MQTT_TLS_KEY=$OUT/mqtt-endpoint.key
         MQTT_TLS_CRT=$OUT/mqtt-endpoint.fullchain.crt
         HTTP_TLS_KEY=$OUT/http-endpoint.key
         HTTP_TLS_CRT=$OUT/http-endpoint.fullchain.crt
     else
-        progress "skip!"
-        #COAP_TLS_KEY=$TLS_KEY
-        #COAP_TLS_CRT=$TLS_CRT
+        progress "provided!"
+        COAP_TLS_KEY=$TLS_KEY
+        COAP_TLS_CRT=$TLS_CRT
         MQTT_TLS_KEY=$TLS_KEY
         MQTT_TLS_CRT=$TLS_CRT
         HTTP_TLS_KEY=$TLS_KEY
         HTTP_TLS_CRT=$TLS_CRT
     fi
+    progress -n "  📝 Deploying certificates ... "
     # create or update secrets
-    #kubectl -n "$DROGUE_NS" create secret tls coap-endpoint-tls --key "$COAP_TLS_KEY" --cert "$COAP_TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
+    kubectl -n "$DROGUE_NS" create secret tls coap-endpoint-tls --key "$COAP_TLS_KEY" --cert "$COAP_TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
     kubectl -n "$DROGUE_NS" create secret tls mqtt-endpoint-tls --key "$MQTT_TLS_KEY" --cert "$MQTT_TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
     kubectl -n "$DROGUE_NS" create secret tls http-endpoint-tls --key "$HTTP_TLS_KEY" --cert "$HTTP_TLS_CRT" --dry-run=client -o json | kubectl -n "$DROGUE_NS" apply -f -
+    progress "done!"
+else
+    progress "🔐 Deploying certificates ... unchanged!"
 fi
 
 # Update the console endpoints
