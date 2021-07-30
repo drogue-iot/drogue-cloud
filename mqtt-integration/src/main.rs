@@ -11,7 +11,7 @@ use crate::{
 };
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::downstream::{DownstreamSender, KafkaSink, Target};
+use drogue_cloud_endpoint_common::{downstream::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,
@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
         "User/password enabled: {}",
         config.service.enable_username_password_auth
     );
-    log::info!("Kafka servers: {}", config.service.kafka_bootstrap_servers);
+    log::info!("Kafka servers: {}", config.service.kafka.bootstrap_servers);
 
     // set up security
 
@@ -127,7 +127,7 @@ async fn main() -> anyhow::Result<()> {
                 .await?,
         ),
     );
-    let sender = DownstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?, Target::Commands)?;
+    let sender = UpstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
 
     // creating the application
 

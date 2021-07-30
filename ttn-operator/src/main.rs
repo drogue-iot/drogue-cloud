@@ -22,6 +22,7 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
     openid::TokenConfig,
 };
+use futures::FutureExt;
 use serde::Deserialize;
 use std::sync::Arc;
 use url::Url;
@@ -154,7 +155,10 @@ async fn main() -> anyhow::Result<()> {
     // run
 
     log::info!("Running service ...");
-    futures::try_join!(health.run(), source)?;
+    futures::select! {
+        _ = health.run().fuse() => {},
+        _ = source.fuse() => {}
+    };
 
     // exiting
 

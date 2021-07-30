@@ -5,10 +5,8 @@ use crate::{
     App, Config,
 };
 use anyhow::Context;
-use drogue_cloud_endpoint_common::{
-    command::Commands,
-    downstream::{DownstreamSender, DownstreamSink},
-};
+use drogue_client::registry;
+use drogue_cloud_endpoint_common::{command::Commands, downstream::DownstreamSender, sink::Sink};
 use drogue_cloud_service_common::Id;
 use futures::future::ok;
 use ntex::{
@@ -24,20 +22,27 @@ use std::{fs::File, io::BufReader, sync::Arc};
 #[derive(Clone)]
 pub struct Session<S>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     pub sender: DownstreamSender<S>,
+    pub application: registry::v1::Application,
     pub device_id: Id,
     pub commands: Commands,
 }
 
 impl<S> Session<S>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
-    pub fn new(sender: DownstreamSender<S>, device_id: Id, commands: Commands) -> Self {
+    pub fn new(
+        sender: DownstreamSender<S>,
+        application: registry::v1::Application,
+        device_id: Id,
+        commands: Commands,
+    ) -> Self {
         Session {
             sender,
+            application,
             device_id,
             commands,
         }
@@ -137,7 +142,7 @@ pub fn build<S>(
     app: App<S>,
 ) -> anyhow::Result<ServerBuilder>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let addr = addr.unwrap_or("127.0.0.1:1883");
     log::info!("Starting MQTT (non-TLS) server: {}", addr);
@@ -152,7 +157,7 @@ pub fn build_tls<S>(
     config: &Config,
 ) -> anyhow::Result<ServerBuilder>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let addr = addr.unwrap_or("127.0.0.1:8883");
     log::info!("Starting MQTT (TLS) server: {}", addr);

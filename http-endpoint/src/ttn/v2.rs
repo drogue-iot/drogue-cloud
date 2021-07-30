@@ -5,8 +5,9 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{DownstreamSender, DownstreamSink},
+    downstream::DownstreamSender,
     error::{EndpointError, HttpEndpointError},
+    sink::Sink,
     x509::ClientCertificateChain,
 };
 use drogue_ttn::v2;
@@ -20,7 +21,7 @@ pub async fn publish_v2<S>(
     cert: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let uplink: v2::Uplink = serde_json::from_slice(&body).map_err(|err| {
         log::info!("Failed to decode payload: {}", err);

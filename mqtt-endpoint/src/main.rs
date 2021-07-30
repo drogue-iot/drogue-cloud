@@ -15,8 +15,9 @@ use bytestring::ByteString;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
-    downstream::{DownstreamSender, DownstreamSink, KafkaSink, Target},
+    downstream::DownstreamSender,
     error::EndpointError,
+    sink::{KafkaSink, Sink},
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
@@ -50,7 +51,7 @@ pub struct Config {
 #[derive(Clone, Debug)]
 pub struct App<S>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     pub downstream: DownstreamSender<S>,
     pub authenticator: DeviceAuthenticator,
@@ -59,7 +60,7 @@ where
 
 impl<S> App<S>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     /// authenticate a client
     async fn authenticate(
@@ -101,10 +102,7 @@ async fn main() -> anyhow::Result<()> {
     let commands = Commands::new();
 
     let app = App {
-        downstream: DownstreamSender::new(
-            KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?,
-            Target::Events,
-        )?,
+        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
         ),

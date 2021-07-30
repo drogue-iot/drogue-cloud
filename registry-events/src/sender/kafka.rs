@@ -1,12 +1,11 @@
-use crate::{
-    Event, EventSender, EventSenderError, KafkaClientConfig, SenderResult, EXT_PARTITIONKEY,
-};
+use crate::{Event, EventSender, EventSenderError, SenderResult, EXT_PARTITIONKEY};
 use async_trait::async_trait;
 use cloudevents::{
     binding::rdkafka::{FutureRecordExt, MessageRecord},
     event::ExtensionValue,
     AttributesReader,
 };
+use drogue_cloud_event_common::config::KafkaConfig;
 use rdkafka::{
     error::KafkaError,
     producer::{FutureProducer, FutureRecord},
@@ -20,8 +19,7 @@ use thiserror::Error;
 #[derive(Clone, Debug, Deserialize)]
 pub struct KafkaSenderConfig {
     #[serde(flatten)]
-    pub client: KafkaClientConfig,
-    pub topic: String,
+    pub client: KafkaConfig,
     #[serde(default)]
     #[serde(with = "humantime_serde")]
     pub queue_timeout: Option<Duration>,
@@ -44,7 +42,7 @@ pub struct KafkaEventSender {
 
 impl KafkaEventSender {
     pub fn new(config: KafkaSenderConfig) -> anyhow::Result<Self> {
-        let client_config: ClientConfig = config.client.into();
+        let client_config: ClientConfig = config.client.client.into();
 
         let queue_timeout = match config.queue_timeout {
             Some(duration) => Timeout::After(duration),
@@ -53,7 +51,7 @@ impl KafkaEventSender {
 
         Ok(Self {
             producer: client_config.create()?,
-            topic: config.topic,
+            topic: config.client.topic,
             queue_timeout,
         })
     }

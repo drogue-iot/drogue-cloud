@@ -2,19 +2,18 @@ use crate::{
     error::{MqttResponse, ServerError},
     service::{App, Session},
 };
-use drogue_cloud_endpoint_common::downstream::DownstreamSink;
+use drogue_cloud_endpoint_common::sink::Sink as DownstreamSink;
 use ntex::router::Path;
 use ntex::util::{ByteString, Bytes};
-use ntex_mqtt::types::QoS;
 use ntex_mqtt::{
+    types::QoS,
     v3,
     v5::{
         self,
         codec::{Auth, ConnectAckReason, DisconnectReasonCode},
     },
 };
-use std::fmt::Debug;
-use std::num::NonZeroU32;
+use std::{fmt::Debug, num::NonZeroU32};
 
 pub async fn connect_v3<Io, S>(
     connect: v3::Handshake<Io>,

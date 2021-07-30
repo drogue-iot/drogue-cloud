@@ -1,7 +1,10 @@
 use crate::{error::ServerError, server::Session, x509::ClientCertificateRetriever, App};
 use bytes::Bytes;
 use bytestring::ByteString;
-use drogue_cloud_endpoint_common::downstream::{DownstreamSink, Publish, PublishOutcome};
+use drogue_cloud_endpoint_common::{
+    downstream::{Publish, PublishOutcome, Publisher},
+    sink::Sink,
+};
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::Id;
 use ntex_mqtt::{
@@ -40,6 +43,7 @@ macro_rules! connect {
 
                 let session = Session::new(
                     $app.downstream,
+                    application,
                     Id::new(app_id.clone(), device_id.clone()),
                     $app.commands.clone(),
                 );
@@ -57,7 +61,7 @@ pub async fn connect_v3<Io, S>(
 ) -> Result<v3::HandshakeAck<Io, Session<S>>, ServerError>
 where
     Io: ClientCertificateRetriever + 'static,
-    S: DownstreamSink,
+    S: Sink,
 {
     let certs = connect.io().client_certs();
     log::debug!("Certs: {:?}", certs);
@@ -76,7 +80,7 @@ pub async fn connect_v5<Io, S>(
 ) -> Result<v5::HandshakeAck<Io, Session<S>>, ServerError>
 where
     Io: ClientCertificateRetriever + 'static,
-    S: DownstreamSink,
+    S: Sink,
 {
     let certs = connect.io().client_certs();
     log::debug!("Certs: {:?}", certs);
@@ -104,7 +108,7 @@ macro_rules! publish {
         $session.state().sender.publish(
             Publish {
                 channel: channel.into(),
-                app_id: id.app_id,
+                application: &$session.application,
                 device_id: id.device_id,
                 options: Default::default(),
             },
@@ -118,7 +122,7 @@ pub async fn publish_v3<S>(
     publish: v3::Publish,
 ) -> Result<(), ServerError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     match publish!(session, publish).await {
         Ok(PublishOutcome::Accepted) => Ok(()),
@@ -142,7 +146,7 @@ pub async fn publish_v5<S>(
     publish: v5::Publish,
 ) -> Result<v5::PublishAck, ServerError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     match publish!(session, publish).await {
         Ok(PublishOutcome::Accepted) => Ok(publish.ack()),
@@ -220,7 +224,7 @@ pub async fn control_v3<S>(
     control: v3::ControlMessage,
 ) -> Result<v3::ControlResult, ServerError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
@@ -238,7 +242,7 @@ pub async fn control_v5<E: Debug, S>(
     control: v5::ControlMessage<E>,
 ) -> Result<v5::ControlResult, ServerError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     match control {
         v5::ControlMessage::Auth(a) => Ok(a.ack(Auth::default())),

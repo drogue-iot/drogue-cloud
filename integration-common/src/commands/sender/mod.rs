@@ -6,9 +6,11 @@ use crate::commands::CommandOptions;
 use actix_web::{web, HttpResponse};
 use async_trait::async_trait;
 use drogue_client::{registry, Translator};
+use drogue_cloud_endpoint_common::downstream::Publisher;
 use drogue_cloud_endpoint_common::{
-    downstream::{self, DownstreamSender, DownstreamSink},
+    downstream::{self, UpstreamSender},
     error::HttpEndpointError,
+    sink::Sink,
 };
 use reqwest::{
     header::{HeaderName, HeaderValue},
@@ -35,17 +37,18 @@ pub trait Sender {
 
     async fn process<S>(
         &self,
+        application: registry::v1::Application,
         device: registry::v1::Device,
         gateways: Vec<registry::v1::Device>,
-        sender: &DownstreamSender<S>,
+        sender: &UpstreamSender<S>,
         client: reqwest::Client,
         content_type: Option<String>,
         opts: CommandOptions,
         body: web::Bytes,
     ) -> Result<HttpResponse, HttpEndpointError>
     where
-        S: DownstreamSink + Send + Sync,
-        <S as DownstreamSink>::Error: Send,
+        S: Sink + Send + Sync,
+        <S as Sink>::Error: Send,
     {
         if !device.attribute::<registry::v1::DeviceEnabled>() {
             return Ok(HttpResponse::NotAcceptable().finish());
@@ -84,7 +87,7 @@ pub trait Sender {
             .publish_http_default(
                 downstream::Publish {
                     channel: opts.command,
-                    app_id: opts.application,
+                    application: &application,
                     device_id: opts.device,
                     options: downstream::PublishOptions {
                         topic: None,

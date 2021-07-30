@@ -23,6 +23,7 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
     openid::TokenConfig,
 };
+use futures::FutureExt;
 use kube::{api::ListParams, core::DynamicObject, discovery, Api};
 use kube_runtime::watcher;
 use serde::Deserialize;
@@ -153,7 +154,11 @@ async fn main() -> anyhow::Result<()> {
     // run
 
     log::info!("Running service ...");
-    futures::try_join!(health.run(), registry, watcher)?;
+    futures::select! {
+        _ = health.run().fuse() => {},
+        _ = registry.fuse() => {},
+        _ = watcher.fuse() => {},
+    };
 
     // exiting
 

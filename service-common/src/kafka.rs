@@ -1,6 +1,41 @@
+use drogue_client::{registry, Translator};
+use drogue_cloud_event_common::config::{KafkaClientConfig, KafkaConfig};
 use drogue_cloud_service_api::events::EventTarget;
 use lazy_static::lazy_static;
 use regex::Regex;
+
+pub trait KafkaConfigExt {
+    type Error;
+
+    fn kafka_config(&self, default_kafka: &KafkaClientConfig) -> Result<KafkaConfig, Self::Error>;
+
+    fn kafka_topic(&self) -> Result<String, Self::Error>;
+}
+
+impl KafkaConfigExt for registry::v1::Application {
+    type Error = serde_json::Error;
+
+    fn kafka_config(&self, default_kafka: &KafkaClientConfig) -> Result<KafkaConfig, Self::Error> {
+        Ok(KafkaConfig {
+            client: default_kafka.clone(),
+            topic: self.kafka_topic()?,
+        })
+    }
+
+    fn kafka_topic(&self) -> Result<String, Self::Error> {
+        match self
+            .section::<registry::v1::KafkaAppStatus>()
+            .transpose()?
+            .and_then(|s| s.downstream)
+            .map(|d| d.topic)
+        {
+            Some(topic) => Ok(topic),
+            None => Ok(make_topic_resource_name(EventTarget::Events(
+                self.metadata.name.clone(),
+            ))),
+        }
+    }
+}
 
 const MAX_TOPIC_LEN: usize = 63;
 
@@ -9,6 +44,7 @@ lazy_static! {
     static ref TOPIC_PATTERN: Regex = Regex::new(REGEXP).expect("Regexp must compile");
 }
 
+#[deprecated(note = "Use the topic from the application status section")]
 pub fn make_topic_resource_name(target: EventTarget) -> String {
     let name = match &target {
         EventTarget::Events(app) => {

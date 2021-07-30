@@ -1364,7 +1364,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=22d82c5f18c76349895af39880a18d64ebf5a6df#22d82c5f18c76349895af39880a18d64ebf5a6df"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=efa42bc071e9444bc5288c57bba4c95798126d9e#efa42bc071e9444bc5288c57bba4c95798126d9e"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1573,8 +1573,10 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "cloudevents-sdk 0.4.0",
+ "drogue-client 0.7.0",
  "drogue-cloud-api-key-service",
  "drogue-cloud-console-common",
+ "drogue-cloud-event-common",
  "drogue-cloud-integration-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1764,11 +1766,13 @@ name = "drogue-cloud-event-common"
 version = "0.6.0"
 dependencies = [
  "cloudevents-sdk 0.4.0",
+ "config 0.11.0",
  "drogue-cloud-service-api",
  "futures",
  "log",
  "owning_ref",
  "rdkafka",
+ "serde 1.0.126",
  "serde_json",
  "thiserror",
  "url",
@@ -1848,6 +1852,7 @@ dependencies = [
  "bytestring",
  "cloudevents-sdk 0.4.0",
  "dotenv",
+ "drogue-client 0.7.0",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1885,6 +1890,7 @@ dependencies = [
  "dotenv",
  "drogue-client 0.7.0",
  "drogue-cloud-endpoint-common",
+ "drogue-cloud-event-common",
  "drogue-cloud-integration-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -2028,6 +2034,7 @@ dependencies = [
  "cloudevents-sdk 0.4.0",
  "config 0.10.1",
  "drogue-client 0.7.0",
+ "drogue-cloud-event-common",
  "drogue-cloud-service-api",
  "env_logger 0.8.4",
  "failure",

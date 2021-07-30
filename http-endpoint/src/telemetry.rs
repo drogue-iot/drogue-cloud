@@ -1,10 +1,11 @@
 use crate::downstream::HttpCommandSender;
 use actix_web::{http::header, web, HttpResponse};
-use drogue_cloud_endpoint_common::command::Commands;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{self, DownstreamSender, DownstreamSink},
+    command::Commands,
+    downstream::{self, DownstreamSender},
     error::{EndpointError, HttpEndpointError},
+    sink::Sink,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn;
@@ -40,7 +41,7 @@ pub async fn publish_plain<S>(
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     publish(
         sender,
@@ -67,7 +68,7 @@ pub async fn publish_tail<S>(
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: DownstreamSink,
+    S: Sink,
 {
     let (channel, suffix) = path.into_inner();
     publish(
@@ -96,8 +97,8 @@ pub async fn publish<S>(
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: DownstreamSink + Send,
-    <S as DownstreamSink>::Error: Send,
+    S: Sink + Send,
+    <S as Sink>::Error: Send,
 {
     log::debug!("Publish to '{}'", channel);
 
@@ -133,7 +134,7 @@ where
 
     let publish = downstream::Publish {
         channel,
-        app_id: application.metadata.name.clone(),
+        application: &application,
         device_id: device_id.clone(),
         options: downstream::PublishOptions {
             data_schema: opts.common.data_schema,

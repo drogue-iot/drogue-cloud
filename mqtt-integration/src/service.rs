@@ -1,23 +1,21 @@
 use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
 use drogue_client::{registry, Context};
-use drogue_cloud_endpoint_common::downstream::{DownstreamSender, DownstreamSink};
+use drogue_cloud_endpoint_common::{downstream::UpstreamSender, sink::Sink as SenderSink};
+use drogue_cloud_event_common::config::KafkaClientConfig;
 use drogue_cloud_integration_common::{
     self,
     commands::CommandOptions,
     stream::{EventStream, EventStreamConfig},
 };
-use drogue_cloud_service_api::{
-    auth::user::{
-        authn::{AuthenticationRequest, Outcome},
-        authz::{self, AuthorizationRequest, Permission},
-        UserInformation,
-    },
-    events::EventTarget,
+use drogue_cloud_service_api::auth::user::{
+    authn::{AuthenticationRequest, Outcome},
+    authz::{self, AuthorizationRequest, Permission},
+    UserInformation,
 };
 use drogue_cloud_service_common::{
     client::UserAuthClient,
-    defaults,
+    kafka::KafkaConfigExt,
     openid::{Authenticator, AuthenticatorError},
 };
 use futures::StreamExt;
@@ -31,40 +29,27 @@ use std::{
 };
 use tokio::task::JoinHandle;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub struct ServiceConfig {
-    #[serde(default = "defaults::kafka_bootstrap_servers")]
-    pub kafka_bootstrap_servers: String,
     #[serde(default)]
-    pub kafka_properties: HashMap<String, String>,
+    pub kafka: KafkaClientConfig,
     #[serde(default)]
     pub enable_username_password_auth: bool,
     #[serde(default)]
     pub disable_api_keys: bool,
 }
 
-impl Default for ServiceConfig {
-    fn default() -> Self {
-        Self {
-            kafka_bootstrap_servers: defaults::kafka_bootstrap_servers(),
-            kafka_properties: Default::default(),
-            enable_username_password_auth: false,
-            disable_api_keys: false,
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
-pub struct App<S: DownstreamSink> {
+pub struct App<S: SenderSink> {
     pub authenticator: Option<Authenticator>,
     pub user_auth: Option<Arc<UserAuthClient>>,
     pub config: ServiceConfig,
-    pub sender: DownstreamSender<S>,
+    pub sender: UpstreamSender<S>,
     pub client: reqwest::Client,
     pub registry: registry::v1::Client,
 }
 
-pub struct Session<S: DownstreamSink> {
+pub struct Session<S: SenderSink> {
     pub config: ServiceConfig,
     pub user_auth: Option<Arc<UserAuthClient>>,
 
@@ -74,7 +59,7 @@ pub struct Session<S: DownstreamSink> {
 
     streams: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
 
-    pub sender: DownstreamSender<S>,
+    pub sender: UpstreamSender<S>,
     pub client: reqwest::Client,
     pub registry: registry::v1::Client,
 
@@ -102,7 +87,7 @@ enum ContentMode {
 
 impl<S> App<S>
 where
-    S: DownstreamSink,
+    S: SenderSink,
 {
     /// Authenticate a connection from a connect packet
     async fn authenticate<Io>(
@@ -205,7 +190,7 @@ where
 
 impl<S> Session<S>
 where
-    S: DownstreamSink,
+    S: SenderSink,
 {
     pub fn new(
         config: ServiceConfig,
@@ -213,7 +198,7 @@ where
         sink: Sink,
         user: UserInformation,
         client_id: String,
-        sender: DownstreamSender<S>,
+        sender: UpstreamSender<S>,
         client: reqwest::Client,
         registry: registry::v1::Client,
         token: Option<String>,
@@ -320,12 +305,21 @@ where
             }
         }
 
+        // find kafka info
+
+        let app_res = self
+            .registry
+            .get_app(app, Default::default())
+            .await
+            .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?
+            .ok_or_else(|| v5::codec::SubscribeAckReason::UnspecifiedError)?;
+
         // create stream
 
         let stream = EventStream::new(EventStreamConfig {
-            bootstrap_servers: self.config.kafka_bootstrap_servers.clone(),
-            properties: self.config.kafka_properties.clone(),
-            target: EventTarget::Events(app.to_string()),
+            kafka: app_res
+                .kafka_config(&self.config.kafka)
+                .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
             consumer_group: group_id,
         })
         .map_err(|err| {
@@ -436,13 +430,14 @@ where
                     .map_err(|_| ServerError::NotAuthorized)?;
             }
 
-            let response = self
-                .registry
-                .get_device_and_gateways(&app, &device, Context::default())
-                .await;
+            let response = futures::try_join!(
+                self.registry.get_app(&app, Context::default()),
+                self.registry
+                    .get_device_and_gateways(&app, &device, Context::default())
+            );
 
             match response {
-                Ok(Some(device_gateways)) => {
+                Ok((Some(application), Some(device_gateways))) => {
                     let opts = CommandOptions {
                         application: app.to_string(),
                         device: device.to_string(),
@@ -450,6 +445,7 @@ where
                     };
 
                     match drogue_cloud_integration_common::commands::process_command(
+                        application,
                         device_gateways.0,
                         device_gateways.1,
                         &self.sender,
@@ -470,7 +466,7 @@ where
                         }
                     }
                 }
-                Ok(None) => Err(ServerError::NotAuthorized),
+                Ok(_) => Err(ServerError::NotAuthorized),
                 Err(e) => {
                     log::info!("Error looking up registry info {:?}", e);
                     Err(ServerError::InternalError(format!(
@@ -588,7 +584,7 @@ where
 
 impl<S> Drop for Session<S>
 where
-    S: DownstreamSink,
+    S: SenderSink,
 {
     fn drop(&mut self) {
         log::debug!("Dropping session");

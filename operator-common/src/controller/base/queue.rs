@@ -97,6 +97,7 @@ where
     K: Key,
 {
     fn drop(&mut self) {
+        log::info!("Dropping work queue reader");
         self.running.store(false, Ordering::Relaxed);
     }
 }

@@ -1,17 +1,14 @@
 use crate::Config;
 use actix::clock::{interval_at, Instant};
-use actix_web::http::header::ContentType;
-use actix_web::{get, web, web::Bytes, HttpResponse};
+use actix_web::{get, http::header::ContentType, web, web::Bytes, HttpResponse};
+use drogue_client::{registry, Context};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
-use drogue_cloud_service_api::{
-    auth::user::{
-        authz::{AuthorizationRequest, Permission},
-        UserInformation,
-    },
-    events::EventTarget,
+use drogue_cloud_service_api::auth::user::{
+    authz::{AuthorizationRequest, Permission},
+    UserInformation,
 };
 use drogue_cloud_service_common::{
-    client::UserAuthClient, error::ServiceError, openid::Authenticator,
+    client::UserAuthClient, error::ServiceError, kafka::KafkaConfigExt, openid::Authenticator,
 };
 use futures::{stream::select, StreamExt};
 use openid::CustomClaims;
@@ -31,6 +28,7 @@ pub async fn stream_events(
     query: web::Query<SpyQuery>,
     config: web::Data<Config>,
     user_auth: Option<web::Data<UserAuthClient>>,
+    registry: web::Data<registry::v1::Client>,
 ) -> Result<HttpResponse, actix_web::Error> {
     if let Some(user_auth) = user_auth {
         let user = authenticator
@@ -60,13 +58,22 @@ pub async fn stream_events(
                 message: format!("Authorization failed: {}", err),
             })?
             .outcome
-            .ensure(|| ServiceError::AuthenticationError)?
+            .ensure(|| ServiceError::AuthenticationError)?;
     }
 
+    let app = registry
+        .get_app(
+            &query.app,
+            Context {
+                provided_token: Some(query.token.clone()),
+            },
+        )
+        .await
+        .map_err(ServiceError::from)?
+        .ok_or_else(|| ServiceError::NotFound("Application".into(), query.app.clone()))?;
+
     let cfg = EventStreamConfig {
-        bootstrap_servers: config.kafka_bootstrap_servers.clone(),
-        properties: config.kafka_properties.clone(),
-        target: EventTarget::Events(query.app.clone()),
+        kafka: app.kafka_config(&config.kafka)?,
         consumer_group: None,
     };
 

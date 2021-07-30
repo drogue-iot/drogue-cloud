@@ -15,10 +15,13 @@ use actix_web::{
     web::{self},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
+use anyhow::anyhow;
+use drogue_client::registry;
 use drogue_cloud_api_key_service::{
     endpoints as keys,
     service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
 };
+use drogue_cloud_event_common::config::KafkaClientConfig;
 use drogue_cloud_service_api::endpoints::Endpoints;
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
@@ -31,7 +34,7 @@ use drogue_cloud_service_common::{
 };
 use futures::TryFutureExt;
 use serde::Deserialize;
-use std::collections::HashMap;
+use url::Url;
 
 #[get("/")]
 async fn index(
@@ -56,10 +59,7 @@ pub struct Config {
     pub health_bind_addr: String,
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[serde(default = "defaults::kafka_bootstrap_servers")]
-    pub kafka_bootstrap_servers: String,
-    #[serde(default)]
-    pub kafka_properties: HashMap<String, String>,
+    pub kafka: KafkaClientConfig,
 
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
@@ -145,6 +145,25 @@ async fn main() -> anyhow::Result<()> {
         service: KeycloakApiKeyService::new(config.keycloak)?,
     });
 
+    let client = reqwest::Client::new();
+
+    let registry = registry::v1::Client::new(
+        client.clone(),
+        Url::parse(
+            &endpoints
+                .registry
+                .as_ref()
+                .map(|r| &r.url)
+                .ok_or_else(|| anyhow!("Missing registry URL"))?,
+        )?,
+        Some(
+            TokenConfig::from_env_prefix("REGISTRY")?
+                .amend_with_env()
+                .discover_from(client.clone())
+                .await?,
+        ),
+    );
+
     // health server
 
     let health = HealthServer::new(config.health, vec![]);
@@ -186,6 +205,7 @@ async fn main() -> anyhow::Result<()> {
         };
 
         let app = app.app_data(keycloak_service.clone());
+        let app = app.app_data(web::Data::new(registry.clone()));
 
         let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(
@@ -229,8 +249,8 @@ async fn main() -> anyhow::Result<()> {
 
         #[cfg(feature = "forward")]
         let app = app
-            .data(awc::Client::new())
-            .data(forward_url.clone())
+            .app_data(web::Data::new(awc::Client::new()))
+            .app_data(web::Data::new(forward::ForwardUrl(forward_url.clone())))
             .default_service(web::route().to(forward::forward));
 
         app

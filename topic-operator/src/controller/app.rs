@@ -10,7 +10,10 @@ use drogue_cloud_operator_common::controller::{
         CONDITION_RECONCILED,
     },
     reconciler::{
-        construct::{self, ConstructOperation, Construction, Constructor, Outcome},
+        construct::{
+            self, application::ApplicationAccessor, ConstructOperation, Constructor, Outcome,
+            RunConstructor,
+        },
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
@@ -100,6 +103,7 @@ impl Deref for ApplicationController {
 pub struct ConstructContext {
     pub app: registry::v1::Application,
     pub events_topic: Option<DynamicObject>,
+    pub events_topic_name: Option<String>,
 }
 
 pub struct DeconstructContext {
@@ -135,6 +139,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             (_, false) => ReconcileState::Construct(ConstructContext {
                 app,
                 events_topic: None,
+                events_topic_name: None,
             }),
             (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
             (false, true) => ReconcileState::Ignore(app),
@@ -145,7 +150,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
         &self,
         ctx: Self::Construct,
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
-        let constructor = Constructor::<Self::Construct>::new(vec![
+        Constructor::<Self::Construct>::new(vec![
             Box::new(("HasFinalizer", |mut ctx: Self::Construct| async {
                 // ensure we have a finalizer
                 if ctx.app.metadata.ensure_finalizer(FINALIZER) {
@@ -160,46 +165,12 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                 resource: &self.kafka_topic_resource,
                 config: &self.config,
             }),
-            Box::new(TopicReady),
-        ]);
-
-        let observed_generation = ctx.app.metadata.generation;
-        let mut original_app = ctx.app.clone();
-        let conditions = ctx
-            .app
-            .section::<KafkaAppStatus>()
-            .and_then(|s| s.ok())
-            .unwrap_or_default()
-            .conditions;
-
-        let result = match constructor.run(conditions, ctx).await {
-            Construction::Complete(mut context, mut conditions) => {
-                conditions.update(CONDITION_RECONCILED, ReadyState::Complete);
-                context
-                    .app
-                    .finish_ready::<KafkaAppStatus>(conditions, observed_generation)?;
-                ProcessOutcome::Complete(context.app)
-            }
-            Construction::Retry(mut context, when, mut conditions) => {
-                conditions.update(CONDITION_RECONCILED, ReadyState::Progressing);
-                context
-                    .app
-                    .finish_ready::<KafkaAppStatus>(conditions, observed_generation)?;
-                ProcessOutcome::Retry(context.app, when)
-            }
-            Construction::Failed(err, mut conditions) => {
-                conditions.update(CONDITION_RECONCILED, ReadyState::Failed(err.to_string()));
-                original_app.finish_ready::<KafkaAppStatus>(conditions, observed_generation)?;
-                match err {
-                    ReconcileError::Permanent(_) => ProcessOutcome::Complete(original_app),
-                    ReconcileError::Temporary(_) => ProcessOutcome::Retry(original_app, None),
-                }
-            }
-        };
-
-        // done
-
-        Ok(result)
+            Box::new(TopicReady {
+                config: &self.config,
+            }),
+        ])
+        .run_with::<KafkaAppStatus>(ctx)
+        .await
     }
 
     async fn deconstruct(
@@ -221,6 +192,28 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     }
 }
 
+impl ApplicationAccessor for ConstructContext {
+    fn app(&self) -> &registry::v1::Application {
+        &self.app
+    }
+
+    fn app_mut(&mut self) -> &mut registry::v1::Application {
+        &mut self.app
+    }
+
+    fn into(self) -> registry::v1::Application {
+        self.app
+    }
+
+    fn conditions(&self) -> Conditions {
+        self.app
+            .section::<KafkaAppStatus>()
+            .and_then(|s| s.ok())
+            .unwrap_or_default()
+            .conditions
+    }
+}
+
 struct CreateTopic<'o> {
     pub api: &'o Api<DynamicObject>,
     pub resource: &'o ApiResource,
@@ -238,7 +231,7 @@ impl<'o> ConstructOperation<ConstructContext> for CreateTopic<'o> {
         mut ctx: ConstructContext,
     ) -> drogue_cloud_operator_common::controller::reconciler::construct::Result<ConstructContext>
     {
-        let topic = ApplicationReconciler::ensure_kafka_topic(
+        let (topic, topic_name) = ApplicationReconciler::ensure_kafka_topic(
             &self.api,
             &self.resource,
             &self.config,
@@ -247,6 +240,7 @@ impl<'o> ConstructOperation<ConstructContext> for CreateTopic<'o> {
         .await?;
 
         ctx.events_topic = Some(topic);
+        ctx.events_topic_name = Some(topic_name);
 
         // done
 
@@ -254,34 +248,44 @@ impl<'o> ConstructOperation<ConstructContext> for CreateTopic<'o> {
     }
 }
 
-struct TopicReady;
+struct TopicReady<'o> {
+    pub config: &'o ControllerConfig,
+}
 
 #[async_trait]
-impl ConstructOperation<ConstructContext> for TopicReady {
+impl<'o> ConstructOperation<ConstructContext> for TopicReady<'o> {
     fn type_name(&self) -> String {
         "TopicsReady".into()
     }
 
-    async fn run(&self, ctx: ConstructContext) -> construct::Result<ConstructContext> {
+    async fn run(&self, mut ctx: ConstructContext) -> construct::Result<ConstructContext> {
         let events_ready = ctx
             .events_topic
             .as_ref()
             .and_then(|topic| Self::is_topic_ready(topic))
             .unwrap_or_default();
 
+        let downstream = match (events_ready, ctx.events_topic_name.as_ref().cloned()) {
+            (true, Some(topic)) => Some(KafkaDownstreamStatus {
+                topic,
+                ..Default::default()
+            }),
+            _ => None,
+        };
+
+        ctx.app.update_section(|mut status: KafkaAppStatus| {
+            status.downstream = downstream;
+            status
+        })?;
+
         match events_ready {
-            true => {
-
-                ctx.app.set_section(Kafka)
-
-                Ok(Outcome::Continue(ctx))
-            },
+            true => Ok(Outcome::Continue(ctx)),
             false => Self::retry(ctx),
         }
     }
 }
 
-impl TopicReady {
+impl<'o> TopicReady<'o> {
     fn retry<C>(ctx: C) -> construct::Result<C>
     where
         C: Send + Sync,
@@ -318,7 +322,7 @@ impl<'a> ApplicationReconciler<'a> {
         kafka_topic_resource: &ApiResource,
         config: &ControllerConfig,
         target: EventTarget,
-    ) -> Result<DynamicObject, ReconcileError> {
+    ) -> Result<(DynamicObject, String), ReconcileError> {
         let topic_name = make_topic_resource_name(target.clone());
 
         let topic = create_or_update_by(
@@ -358,7 +362,7 @@ impl<'a> ApplicationReconciler<'a> {
 
         // done
 
-        Ok(topic)
+        Ok((topic, topic_name))
     }
 
     async fn delete_kafka_topic(&self, target: EventTarget) -> Result<(), ReconcileError> {
