@@ -8,12 +8,13 @@ It offers:
 
  * IoT friendly protocol endpoints.
  * Protocol normalization based on Cloud Events and Knative eventing.
- * Managing of device credentials and properties APIs and a graphical console to manage devices and data flows.
+ * Management of devices and their credentials and properties through an API.
+ * A web-console and a command-line client to manage devices and data flows.
  * APIs for cloud-side application integration.
 
 It is built on top of:
 
  * _Kubernetes_ – For running workloads
  * _Cloud Events_ - For normalizing transport protocols
- * _Apache Kafka_ – For persisting events
+ * _Apache Kafka_ – For streaming events
  * _Keycloak_ - For single-sign-on

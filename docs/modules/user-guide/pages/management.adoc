@@ -1,0 +1,18 @@
+= Managing applications and devices
+
+== Applications
+
+=== Creating a new application
+=== Modifying an application
+=== Deleting an application
+
+== Devices
+
+=== Create a new device
+=== Modifying a device
+=== Deleting a device
+
+=== Setting password credentials
+=== Setting X.509 client certificate credentials
+
+=== Configuring a gateway device

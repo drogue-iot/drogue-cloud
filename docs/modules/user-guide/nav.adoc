@@ -1,0 +1,10 @@
+* xref:index.adoc[User Guide]
+** xref:index.adoc[Overview]
+** xref:management.adoc[Management]
+** Endpoints
+*** xref:endpoint-http.adoc[HTTP Endpoint]
+*** xref:endpoint-mqtt.adoc[MQTT Endpoint]
+** Integrations
+*** xref:integration-command.adoc[HTTP Command Integration]
+*** xref:integration-mqtt.adoc[MQTT Integration]
+*** xref:integration-kafka.adoc[Apache Kafka Integration]
