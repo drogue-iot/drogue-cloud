@@ -42,6 +42,7 @@ pub enum PublishOutcome {
     QueueFull,
 }
 
+/// A sender delivering events upstream, from the cloud to the device.
 #[derive(Debug, Clone)]
 pub struct UpstreamSender<S>
 where
@@ -62,6 +63,7 @@ where
     }
 }
 
+/// A sender delivering events downstream, from the device to the cloud.
 #[derive(Debug, Clone)]
 pub struct DownstreamSender<S>
 where
@@ -96,7 +98,7 @@ where
         app: &registry::v1::Application,
         event: Event,
     ) -> Result<PublishOutcome, SinkError<S::Error>> {
-        self.sink.publish(SinkTarget::Commands(app), event).await
+        self.sink.publish(SinkTarget::Events(app), event).await
     }
 }
 
@@ -114,7 +116,7 @@ where
         app: &registry::v1::Application,
         event: Event,
     ) -> Result<PublishOutcome, SinkError<S::Error>> {
-        self.sink.publish(SinkTarget::Events(app), event).await
+        self.sink.publish(SinkTarget::Commands(app), event).await
     }
 }
 
