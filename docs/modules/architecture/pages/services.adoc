@@ -3,11 +3,25 @@
 Drogue Cloud consists of multiple internal and external services, as explained in this chapter. The following sub-sections
 list a few of the core services, considered interfacing points for users of Drogue Cloud.
 
-== APIs
+== Device Registry
 
 === Management API
 
 The management access to the device registry.
+
+=== Operators
+
+Acting on device change events, operators will reconcile the desired state of applications and devices, with internal
+or external services.
+
+==== Topic operator
+
+The topic operator creates Kafka topics as required by the applications.
+
+==== The Things Network operator
+
+The Things Network operator (TTN operator) sets up a connection between Drogue Cloud and a TTN V3  instance. It will
+also synchronize devices from Drogue Cloud to TTN.
 
 == Endpoints
 
