@@ -5,9 +5,7 @@ mod error;
 mod response;
 mod telemetry;
 
-use crate::auth::DeviceAuthenticator;
-use crate::error::CoapEndpointError;
-use crate::response::Responder;
+use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap::Server;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use dotenv::dotenv;
@@ -15,8 +13,8 @@ use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
 };
 use drogue_cloud_endpoint_common::{
-    downstream::DownstreamSender,
     error::EndpointError,
+    sender::DownstreamSender,
     sink::{KafkaSink, Sink},
 };
 use drogue_cloud_service_common::{
@@ -25,8 +23,7 @@ use drogue_cloud_service_common::{
 };
 use futures::{self, TryFutureExt};
 use serde::Deserialize;
-use std::collections::LinkedList;
-use std::net::SocketAddr;
+use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
 
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers

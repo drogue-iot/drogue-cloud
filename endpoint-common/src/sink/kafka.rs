@@ -7,8 +7,10 @@ use cloudevents::{
     AttributesReader,
 };
 use drogue_cloud_event_common::config::KafkaClientConfig;
-use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_common::{config::ConfigFromEnv, kafka::make_topic_resource_name};
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv,
+    kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
+};
 use futures::channel::oneshot;
 use rdkafka::{
     error::{KafkaError, RDKafkaErrorCode},
@@ -27,7 +29,7 @@ pub enum KafkaSinkError {
 
 #[derive(Clone)]
 pub struct KafkaSink {
-    producer: FutureProducer,
+    internal_producer: FutureProducer,
 }
 
 impl KafkaSink {
@@ -39,41 +41,26 @@ impl KafkaSink {
         let kafka_config: ClientConfig = config.into();
 
         Ok(Self {
-            producer: kafka_config.create()?,
+            internal_producer: kafka_config.create()?,
         })
     }
-}
 
-#[async_trait]
-impl Sink for KafkaSink {
-    type Error = KafkaSinkError;
+    fn create_producer(config: KafkaClientConfig) -> Result<FutureProducer, KafkaError> {
+        let config: ClientConfig = config.into();
+        config.create()
+    }
 
-    #[allow(clippy::needless_lifetimes)]
-    async fn publish<'a>(
-        &self,
-        target: SinkTarget<'a>,
-        event: Event,
-    ) -> Result<PublishOutcome, SinkError<Self::Error>> {
-        let key = match event.extension(crate::EXT_PARTITIONKEY) {
-            Some(ExtensionValue::String(key)) => key,
-            _ => event.id(),
-        }
-        .into();
-
-        let topic = make_topic_resource_name(match target {
-            SinkTarget::Events(app) => EventTarget::Events(app.metadata.name.clone()),
-            SinkTarget::Commands(app) => EventTarget::Commands(app.metadata.name.clone()),
-        });
-
-        log::debug!("Key: {}, Topic: {}", key, topic);
-
-        let message_record = MessageRecord::from_event(event)?;
-
+    async fn send_with(
+        producer: &FutureProducer,
+        topic: String,
+        key: String,
+        message_record: MessageRecord,
+    ) -> Result<PublishOutcome, SinkError<KafkaSinkError>> {
         let record = FutureRecord::<String, Vec<u8>>::to(&topic)
             .key(&key)
             .message_record(&message_record);
 
-        match self.producer.send_result(record) {
+        match producer.send_result(record) {
             // accepted deliver
             Ok(fut) => match fut.await {
                 // received outcome & outcome ok
@@ -94,6 +81,49 @@ impl Sink for KafkaSink {
             Err((err, _)) => {
                 log::debug!("Failed to send: {}", err);
                 Err(SinkError::Transport(err.into()))
+            }
+        }
+    }
+}
+
+#[async_trait]
+impl Sink for KafkaSink {
+    type Error = KafkaSinkError;
+
+    #[allow(clippy::needless_lifetimes)]
+    async fn publish<'a>(
+        &self,
+        target: SinkTarget<'a>,
+        event: Event,
+    ) -> Result<PublishOutcome, SinkError<Self::Error>> {
+        let kafka = match target {
+            SinkTarget::Commands(app) => app.kafka_target(KafkaEventType::Commands),
+            SinkTarget::Events(app) => app.kafka_target(KafkaEventType::Events),
+        }
+        .map_err(|err| SinkError::Target(Box::new(err)))?;
+
+        let key = match event.extension(crate::EXT_PARTITIONKEY) {
+            Some(ExtensionValue::String(key)) => key,
+            _ => event.id(),
+        }
+        .into();
+
+        log::debug!("Key: {}, Kafka Config: {:?}", key, kafka);
+
+        let message_record = MessageRecord::from_event(event)?;
+
+        match kafka {
+            KafkaTarget::Internal { topic } => {
+                Self::send_with(&self.internal_producer, topic, key, message_record).await
+            }
+            KafkaTarget::External { config } => {
+                let topic = config.topic;
+                match Self::create_producer(config.client) {
+                    Ok(producer) => Self::send_with(&producer, topic, key, message_record).await,
+                    Err(err) => {
+                        return Err(SinkError::Transport(KafkaSinkError::Kafka(err.clone())));
+                    }
+                }
             }
         }
     }

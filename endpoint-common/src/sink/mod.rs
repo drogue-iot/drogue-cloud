@@ -4,7 +4,7 @@ mod kafka;
 pub use self::http::HttpSink;
 pub use kafka::*;
 
-use crate::downstream::PublishOutcome;
+use crate::sender::PublishOutcome;
 use async_trait::async_trait;
 use cloudevents::Event;
 use drogue_client::registry;
@@ -36,4 +36,6 @@ pub enum SinkError<E: std::error::Error + 'static> {
     Event(#[from] cloudevents::message::Error),
     #[error("Transport error")]
     Transport(#[source] E),
+    #[error("Target error")]
+    Target(#[source] Box<dyn std::error::Error + Send>),
 }

@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::Context;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::{command::Commands, downstream::DownstreamSender, sink::Sink};
+use drogue_cloud_endpoint_common::{command::Commands, sender::DownstreamSender, sink::Sink};
 use drogue_cloud_service_common::Id;
 use futures::future::ok;
 use ntex::{

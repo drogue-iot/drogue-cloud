@@ -4,11 +4,10 @@ use crate::command::wait_for_command;
 use crate::error::CoapEndpointError;
 use async_trait::async_trait;
 use coap_lite::{CoapRequest, CoapResponse, ResponseType};
-use drogue_cloud_endpoint_common::downstream::Publisher;
 use drogue_cloud_endpoint_common::{
     command::Commands,
-    downstream::{DownstreamSender, Publish, PublishOutcome},
     error::EndpointError,
+    sender::{DownstreamSender, Publish, PublishOutcome, Publisher},
     sink::Sink,
 };
 use drogue_cloud_service_common::Id;

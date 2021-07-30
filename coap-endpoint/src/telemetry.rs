@@ -1,11 +1,9 @@
-use crate::auth::DeviceAuthenticator;
-use crate::downstream::CoapCommandSender;
-use crate::error::CoapEndpointError;
+use crate::{auth::DeviceAuthenticator, downstream::CoapCommandSender, error::CoapEndpointError};
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use drogue_cloud_endpoint_common::{
     command::Commands,
-    downstream::{self, DownstreamSender},
     error::EndpointError,
+    sender::{self, DownstreamSender},
     sink::Sink,
 };
 use drogue_cloud_service_api::auth::device::authn;
@@ -148,11 +146,11 @@ where
 
     // publish
 
-    let publish = downstream::Publish {
+    let publish = sender::Publish {
         channel,
         application: &application,
         device_id: device_id.clone(),
-        options: downstream::PublishOptions {
+        options: sender::PublishOptions {
             data_schema: opts.common.data_schema,
             topic: suffix,
             content_type: req

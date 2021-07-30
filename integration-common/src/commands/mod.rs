@@ -3,8 +3,8 @@ mod sender;
 use actix_web::HttpResponse;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
-    downstream::{self, Publisher, UpstreamSender},
     error::HttpEndpointError,
+    sender::{Publish, PublishOptions, Publisher, UpstreamSender},
     sink::Sink,
 };
 use serde::Deserialize;
@@ -63,11 +63,11 @@ where
     // no hits so far
     sender
         .publish_http_default(
-            downstream::Publish {
+            Publish {
                 channel: opts.command,
                 application: &application,
                 device_id: opts.device,
-                options: downstream::PublishOptions {
+                options: PublishOptions {
                     topic: None,
                     content_type,
                     ..Default::default()

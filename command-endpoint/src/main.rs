@@ -8,7 +8,7 @@ use actix_web::{
 };
 use dotenv::dotenv;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::{downstream::UpstreamSender, sink::KafkaSink};
+use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
     defaults,

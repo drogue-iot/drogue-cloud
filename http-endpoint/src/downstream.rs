@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
     command::Commands,
-    downstream::{DownstreamSender, Publish, PublishOutcome, Publisher},
     error::HttpEndpointError,
+    sender::{DownstreamSender, Publish, PublishOutcome, Publisher},
     sink::Sink,
 };
 use drogue_cloud_service_common::Id;

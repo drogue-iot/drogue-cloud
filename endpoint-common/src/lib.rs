@@ -1,7 +1,7 @@
 pub mod auth;
 pub mod command;
-pub mod downstream;
 pub mod error;
+pub mod sender;
 pub mod sink;
 pub mod x509;
 
