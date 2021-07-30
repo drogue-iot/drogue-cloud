@@ -5,8 +5,8 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::DownstreamSender,
     error::{EndpointError, HttpEndpointError},
+    sender::DownstreamSender,
     sink::Sink,
     x509::ClientCertificateChain,
 };

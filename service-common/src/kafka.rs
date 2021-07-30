@@ -4,36 +4,75 @@ use drogue_cloud_service_api::events::EventTarget;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+#[derive(Clone, Debug, Copy)]
+pub enum KafkaEventType {
+    Commands,
+    Events,
+}
+
+impl KafkaEventType {
+    fn make_topic(&self, name: String) -> String {
+        make_topic_resource_name(match self {
+            Self::Commands => EventTarget::Commands(name),
+            Self::Events => EventTarget::Events(name),
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum KafkaTarget {
+    Internal { topic: String },
+    External { config: KafkaConfig },
+}
+
 pub trait KafkaConfigExt {
     type Error;
 
-    fn kafka_config(&self, default_kafka: &KafkaClientConfig) -> Result<KafkaConfig, Self::Error>;
+    /// Get a Kafka target, this can be either internal or external.
+    ///
+    /// This method must only return an Internal topic from a trusted source. Otherwise the user
+    /// could internally redirect traffic.
+    fn kafka_target(&self, event_type: KafkaEventType) -> Result<KafkaTarget, Self::Error>;
 
-    fn kafka_topic(&self) -> Result<String, Self::Error>;
+    /// Get a Kafka config, this can be either internal or external.
+    ///
+    /// This method must only return an Internal topic from a trusted source. Otherwise the user
+    /// could internally redirect traffic.
+    fn kafka_config(
+        &self,
+        event_type: KafkaEventType,
+        default_kafka: &KafkaClientConfig,
+    ) -> Result<KafkaConfig, Self::Error> {
+        match self.kafka_target(event_type)? {
+            KafkaTarget::External { config } => Ok(config),
+            KafkaTarget::Internal { topic } => Ok(KafkaConfig {
+                client: default_kafka.clone(),
+                topic,
+            }),
+        }
+    }
 }
 
 impl KafkaConfigExt for registry::v1::Application {
     type Error = serde_json::Error;
 
-    fn kafka_config(&self, default_kafka: &KafkaClientConfig) -> Result<KafkaConfig, Self::Error> {
-        Ok(KafkaConfig {
-            client: default_kafka.clone(),
-            topic: self.kafka_topic()?,
-        })
-    }
+    fn kafka_target(&self, event_type: KafkaEventType) -> Result<KafkaTarget, Self::Error> {
+        let status = self.section::<registry::v1::KafkaAppStatus>().transpose()?;
 
-    fn kafka_topic(&self) -> Result<String, Self::Error> {
-        match self
-            .section::<registry::v1::KafkaAppStatus>()
-            .transpose()?
-            .and_then(|s| s.downstream)
-            .map(|d| d.topic)
-        {
-            Some(topic) => Ok(topic),
-            None => Ok(make_topic_resource_name(EventTarget::Events(
-                self.metadata.name.clone(),
-            ))),
-        }
+        Ok(match status.and_then(|s| s.downstream) {
+            Some(status) => KafkaTarget::External {
+                config: KafkaConfig {
+                    client: KafkaClientConfig {
+                        bootstrap_servers: status.bootstrap_servers,
+                        properties: status.properties,
+                    },
+                    topic: status.topic,
+                },
+            },
+            None => KafkaTarget::Internal {
+                topic: event_type.make_topic(self.metadata.name.clone()),
+            },
+        })
     }
 }
 

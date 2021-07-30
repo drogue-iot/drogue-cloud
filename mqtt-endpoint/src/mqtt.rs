@@ -2,7 +2,7 @@ use crate::{error::ServerError, server::Session, x509::ClientCertificateRetrieve
 use bytes::Bytes;
 use bytestring::ByteString;
 use drogue_cloud_endpoint_common::{
-    downstream::{Publish, PublishOutcome, Publisher},
+    sender::{Publish, PublishOutcome, Publisher},
     sink::Sink,
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;

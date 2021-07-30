@@ -15,8 +15,8 @@ use bytestring::ByteString;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
-    downstream::DownstreamSender,
     error::EndpointError,
+    sender::DownstreamSender,
     sink::{KafkaSink, Sink},
     x509::ClientCertificateChain,
 };

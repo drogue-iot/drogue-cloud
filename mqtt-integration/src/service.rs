@@ -1,7 +1,7 @@
 use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
 use drogue_client::{registry, Context};
-use drogue_cloud_endpoint_common::{downstream::UpstreamSender, sink::Sink as SenderSink};
+use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
 use drogue_cloud_event_common::config::KafkaClientConfig;
 use drogue_cloud_integration_common::{
     self,
@@ -15,7 +15,7 @@ use drogue_cloud_service_api::auth::user::{
 };
 use drogue_cloud_service_common::{
     client::UserAuthClient,
-    kafka::KafkaConfigExt,
+    kafka::{KafkaConfigExt, KafkaEventType},
     openid::{Authenticator, AuthenticatorError},
 };
 use futures::StreamExt;
@@ -318,7 +318,7 @@ where
 
         let stream = EventStream::new(EventStreamConfig {
             kafka: app_res
-                .kafka_config(&self.config.kafka)
+                .kafka_config(KafkaEventType::Events, &self.config.kafka)
                 .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
             consumer_group: group_id,
         })

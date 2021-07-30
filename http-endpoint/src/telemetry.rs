@@ -3,8 +3,8 @@ use actix_web::{http::header, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command::Commands,
-    downstream::{self, DownstreamSender},
     error::{EndpointError, HttpEndpointError},
+    sender::{self, DownstreamSender},
     sink::Sink,
     x509::ClientCertificateChain,
 };
@@ -132,11 +132,11 @@ where
 
     // publish
 
-    let publish = downstream::Publish {
+    let publish = sender::Publish {
         channel,
         application: &application,
         device_id: device_id.clone(),
-        options: downstream::PublishOptions {
+        options: sender::PublishOptions {
             data_schema: opts.common.data_schema,
             topic: suffix,
             content_type: req

@@ -1364,7 +1364,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=efa42bc071e9444bc5288c57bba4c95798126d9e#efa42bc071e9444bc5288c57bba4c95798126d9e"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=b1f432ecd972d0884e4a145f42fcd7488b20aa26#b1f432ecd972d0884e4a145f42fcd7488b20aa26"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1733,7 +1733,6 @@ dependencies = [
  "base64 0.13.0",
  "chrono",
  "cloudevents-sdk 0.4.0",
- "coap-lite",
  "config 0.11.0",
  "deadpool 0.8.2",
  "drogue-client 0.7.0",

@@ -8,7 +8,10 @@ use drogue_cloud_service_api::auth::user::{
     UserInformation,
 };
 use drogue_cloud_service_common::{
-    client::UserAuthClient, error::ServiceError, kafka::KafkaConfigExt, openid::Authenticator,
+    client::UserAuthClient,
+    error::ServiceError,
+    kafka::{KafkaConfigExt, KafkaEventType},
+    openid::Authenticator,
 };
 use futures::{stream::select, StreamExt};
 use openid::CustomClaims;
@@ -73,7 +76,7 @@ pub async fn stream_events(
         .ok_or_else(|| ServiceError::NotFound("Application".into(), query.app.clone()))?;
 
     let cfg = EventStreamConfig {
-        kafka: app.kafka_config(&config.kafka)?,
+        kafka: app.kafka_config(KafkaEventType::Events, &config.kafka)?,
         consumer_group: None,
     };
 

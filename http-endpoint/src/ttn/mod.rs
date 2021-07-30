@@ -10,8 +10,8 @@ use chrono::{DateTime, Utc};
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
-    downstream::{self, DownstreamSender, Publisher},
     error::{EndpointError, HttpEndpointError},
+    sender::{self, DownstreamSender, Publisher},
     sink::Sink,
     x509::ClientCertificateChain,
 };
@@ -162,11 +162,11 @@ where
 {
     sender
         .publish_http_default(
-            downstream::Publish {
+            sender::Publish {
                 channel: port,
                 application: &application,
                 device_id,
-                options: downstream::PublishOptions {
+                options: sender::PublishOptions {
                     time: Some(time),
                     content_type,
                     data_schema,

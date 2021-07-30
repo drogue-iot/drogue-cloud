@@ -16,7 +16,7 @@ use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
 };
 use drogue_cloud_endpoint_common::{
-    auth::DeviceAuthenticator, downstream::DownstreamSender, sink::KafkaSink,
+    auth::DeviceAuthenticator, sender::DownstreamSender, sink::KafkaSink,
 };
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
