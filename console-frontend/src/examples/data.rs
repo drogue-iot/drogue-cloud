@@ -26,7 +26,7 @@ pub struct ExampleData {
 impl Default for ExampleData {
     fn default() -> Self {
         Self {
-            app_id: "app1".into(),
+            app_id: "example-app".into(),
             device_id: "device1".into(),
             password: "hey-rodney".into(),
             payload: json!({"temp": 42}).to_string(),
