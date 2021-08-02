@@ -1,7 +1,7 @@
 use crate::controller::base::{BaseController, ControllerOperation, Key};
 use async_std::sync::Mutex;
 use async_trait::async_trait;
-use kube::api::DynamicObject;
+use kube::Resource;
 use std::{boxed::Box, sync::Arc};
 
 #[async_trait]
@@ -86,19 +86,20 @@ where
         }
     }
 
-    fn extract(&self, resource: &DynamicObject) -> Option<String> {
-        resource.metadata.annotations.get(&self.annotation).cloned()
+    fn extract<R: Resource>(&self, resource: &R) -> Option<String> {
+        resource.meta().annotations.get(&self.annotation).cloned()
     }
 }
 
 #[async_trait]
-impl<RI, RO, O> EventProcessor<DynamicObject> for ResourceProcessor<String, RI, RO, O>
+impl<R, RI, RO, O> EventProcessor<R> for ResourceProcessor<String, RI, RO, O>
 where
+    R: Resource + Send + Sync,
     RI: Clone + Send + Sync + 'static,
     RO: Clone + Send + Sync + 'static,
     O: ControllerOperation<String, RI, RO> + Send + Sync + 'static,
 {
-    async fn handle(&self, event: &DynamicObject) -> Result<bool, ()> {
+    async fn handle(&self, event: &R) -> Result<bool, ()> {
         let key = self.extract(event);
         log::debug!("Extracted key from event: {:?}", key);
         if let Some(key) = key {

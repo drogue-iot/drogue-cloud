@@ -1,7 +1,10 @@
 mod controller;
 mod data;
 
-use crate::controller::{app::ApplicationController, ControllerConfig};
+use crate::controller::{
+    app::{ApplicationController, ANNOTATION_APP_NAME},
+    ControllerConfig,
+};
 use anyhow::{anyhow, Context};
 use async_std::sync::{Arc, Mutex};
 use dotenv::dotenv;
@@ -24,9 +27,11 @@ use drogue_cloud_service_common::{
     openid::TokenConfig,
 };
 use futures::FutureExt;
+use k8s_openapi::api::core::v1::Secret;
 use kube::{api::ListParams, core::DynamicObject, discovery, Api};
 use kube_runtime::watcher;
 use serde::Deserialize;
+use std::fmt::Debug;
 use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -80,6 +85,7 @@ fn is_relevant(event: &Event) -> Option<String> {
 
 const GROUP_KAFKA_STRIMZI_IO: &str = "kafka.strimzi.io";
 const KIND_KAFKA_TOPIC: &str = "KafkaTopic";
+const KIND_KAFKA_USER: &str = "KafkaUser";
 
 #[actix::main]
 async fn main() -> anyhow::Result<()> {
@@ -103,6 +109,15 @@ async fn main() -> anyhow::Result<()> {
         &config.controller.topic_namespace,
         &kafka_topic_resource,
     );
+    let (kafka_user_resource, _caps) = group
+        .recommended_kind(KIND_KAFKA_USER)
+        .ok_or_else(|| anyhow!("Unable to discover '{}'", KIND_KAFKA_USER))?;
+    let kafka_users = Api::<DynamicObject>::namespaced_with(
+        kube.clone(),
+        &config.controller.topic_namespace,
+        &kafka_user_resource,
+    );
+    let secrets = Api::<Secret>::namespaced(kube.clone(), &config.controller.topic_namespace);
 
     // client
 
@@ -129,6 +144,9 @@ async fn main() -> anyhow::Result<()> {
             registry,
             kafka_topic_resource,
             kafka_topics.clone(),
+            kafka_user_resource,
+            kafka_users.clone(),
+            secrets.clone(),
         ),
     )?));
 
@@ -141,10 +159,26 @@ async fn main() -> anyhow::Result<()> {
 
     // event source - KafkaTopic
 
-    let watcher = watcher(kafka_topics, ListParams::default());
-    let watcher = watcher.run_stream(EventDispatcher::one(ResourceProcessor::new(
+    let watcher_topics = watcher(kafka_topics, ListParams::default());
+    let watcher_topics = watcher_topics.run_stream(EventDispatcher::one(ResourceProcessor::new(
+        controller.clone(),
+        ANNOTATION_APP_NAME,
+    )));
+
+    // event source - KafkaUser
+
+    let watcher_users = watcher(kafka_users, ListParams::default());
+    let watcher_users = watcher_users.run_stream(EventDispatcher::one(ResourceProcessor::new(
+        controller.clone(),
+        ANNOTATION_APP_NAME,
+    )));
+
+    // event source - Secret
+
+    let watcher_secret = watcher(secrets, ListParams::default());
+    let watcher_secret = watcher_secret.run_stream(EventDispatcher::one(ResourceProcessor::new(
         controller,
-        "drogue.io/application-name",
+        ANNOTATION_APP_NAME,
     )));
 
     // health server
@@ -157,7 +191,9 @@ async fn main() -> anyhow::Result<()> {
     futures::select! {
         _ = health.run().fuse() => {},
         _ = registry.fuse() => {},
-        _ = watcher.fuse() => {},
+        _ = watcher_topics.fuse() => {},
+        _ = watcher_users.fuse() => {},
+        _ = watcher_secret.fuse() => {},
     };
 
     // exiting

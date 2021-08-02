@@ -1,8 +1,24 @@
 use drogue_client::{registry, Translator};
 use drogue_cloud_event_common::config::{KafkaClientConfig, KafkaConfig};
-use drogue_cloud_service_api::events::EventTarget;
 use lazy_static::lazy_static;
 use regex::Regex;
+
+#[derive(Clone, Debug)]
+pub enum ResourceType {
+    Events(String),
+    Commands(String),
+    Users(String),
+}
+
+impl ResourceType {
+    pub fn app_name(&self) -> &str {
+        match self {
+            Self::Commands(app) => app.as_str(),
+            Self::Events(app) => app.as_str(),
+            Self::Users(app) => app.as_str(),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Copy)]
 pub enum KafkaEventType {
@@ -12,9 +28,9 @@ pub enum KafkaEventType {
 
 impl KafkaEventType {
     fn make_topic(&self, name: String) -> String {
-        make_topic_resource_name(match self {
-            Self::Commands => EventTarget::Commands(name),
-            Self::Events => EventTarget::Events(name),
+        make_kafka_resource_name(match self {
+            Self::Commands => ResourceType::Commands(name),
+            Self::Events => ResourceType::Events(name),
         })
     }
 }
@@ -76,29 +92,32 @@ impl KafkaConfigExt for registry::v1::Application {
     }
 }
 
-const MAX_TOPIC_LEN: usize = 63;
+const MAX_NAME_LEN: usize = 63;
 
-const REGEXP: &str = r#"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"#;
+const NAME_REGEXP: &str = r#"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"#;
 lazy_static! {
-    static ref TOPIC_PATTERN: Regex = Regex::new(REGEXP).expect("Regexp must compile");
+    static ref NAME_PATTERN: Regex = Regex::new(NAME_REGEXP).expect("Regexp must compile");
 }
 
-pub fn make_topic_resource_name(target: EventTarget) -> String {
+fn resource_name(prefix: &str, hashed_prefix: &str, resource: &str) -> String {
+    let name = format!("{}-{}", prefix, resource);
+    // try the simple route, if that works ...
+    if name.len() < MAX_NAME_LEN && NAME_PATTERN.is_match(&resource) {
+        // ... simply return
+        name
+    } else {
+        // otherwise we need to clean up the name, and ensure we don't generate duplicates
+        // use a different prefix to prevent clashes with the simple names
+        let hash = md5::compute(resource);
+        format!("{}-{:x}-{}", hashed_prefix, hash, resource)
+    }
+}
+
+pub fn make_kafka_resource_name(target: ResourceType) -> String {
     let name = match &target {
-        EventTarget::Events(app) => {
-            let name = format!("events-{}", app);
-            // try the simple route, if that works ...
-            if name.len() < MAX_TOPIC_LEN && TOPIC_PATTERN.is_match(&name) {
-                // ... simply return
-                return name;
-            } else {
-                // otherwise we need to clean up the name, and ensure we don't generate duplicates
-                // use a different prefix to prevent clashes with the simple names
-                let hash = md5::compute(app);
-                format!("evt-{:x}-{}", hash, app)
-            }
-        }
-        EventTarget::Commands(_) => return "iot-commands".to_string(),
+        ResourceType::Events(app) => resource_name("events", "evt", app),
+        ResourceType::Users(app) => resource_name("user", "usr", app),
+        ResourceType::Commands(_) => return "iot-commands".to_string(),
     };
 
     let name: String = name
@@ -108,12 +127,10 @@ pub fn make_topic_resource_name(target: EventTarget) -> String {
             '-' | 'a'..='z' | '0'..='9' => c,
             _ => '-',
         })
-        .take(MAX_TOPIC_LEN)
+        .take(MAX_NAME_LEN)
         .collect();
 
-    let name = name.trim_end_matches('-').to_string();
-
-    name
+    name.trim_end_matches('-').to_string()
 }
 
 #[cfg(test)]
@@ -134,7 +151,7 @@ mod test {
         ] {
             assert_eq!(
                 i.1,
-                make_topic_resource_name(EventTarget::Events(i.0.to_string()))
+                make_kafka_resource_name(ResourceType::Events(i.0.to_string()))
             )
         }
     }

@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use drogue_client::core::v1::{ConditionStatus, Conditions};
 use std::{future::Future, time::Duration};
 
-pub struct Constructor<'c, C>(Vec<Box<dyn ConstructOperation<C> + 'c>>);
+pub struct Progressor<'c, C>(Vec<Box<dyn ProgressOperation<C> + 'c>>);
 
-pub enum Outcome<C>
+pub enum OperationOutcome<C>
 where
     C: Send + Sync,
 {
@@ -14,30 +14,30 @@ where
     Retry(C, Option<Duration>),
 }
 
-pub type Result<T> = std::result::Result<Outcome<T>, ReconcileError>;
+pub type Result<T> = std::result::Result<OperationOutcome<T>, ReconcileError>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Construction<C> {
+pub enum Progress<C> {
     Complete(C, Conditions),
     Retry(C, Option<Duration>, Conditions),
     Failed(ReconcileError, Conditions),
 }
 
-impl<'c, C> Constructor<'c, C>
+impl<'c, C> Progressor<'c, C>
 where
     C: Send + Sync,
 {
-    pub fn new(steps: Vec<Box<dyn ConstructOperation<C> + 'c>>) -> Self {
+    pub fn new(steps: Vec<Box<dyn ProgressOperation<C> + 'c>>) -> Self {
         Self(steps)
     }
 
-    pub async fn run(&self, mut conditions: Conditions, mut context: C) -> Construction<C> {
+    pub async fn run(&self, mut conditions: Conditions, mut context: C) -> Progress<C> {
         let mut i = self.0.iter();
 
         while let Some(s) = i.next() {
             let condition_type = s.type_name();
             context = match s.run(context).await {
-                Ok(Outcome::Continue(context)) => {
+                Ok(OperationOutcome::Continue(context)) => {
                     conditions.update(
                         condition_type,
                         ConditionStatus {
@@ -47,7 +47,7 @@ where
                     );
                     context
                 }
-                Ok(Outcome::Retry(mut context, when)) => {
+                Ok(OperationOutcome::Retry(mut context, when)) => {
                     conditions.update(
                         condition_type,
                         ConditionStatus {
@@ -61,7 +61,7 @@ where
                         conditions.update(condition_type, status);
                         context = c;
                     }
-                    return Construction::Retry(context, when, conditions);
+                    return Progress::Retry(context, when, conditions);
                 }
                 Err(err) => {
                     conditions.update(
@@ -72,22 +72,22 @@ where
                             message: Some(err.to_string()),
                         },
                     );
-                    while let Some(s) = i.next() {
+                    for s in i {
                         let condition_type = s.type_name();
                         let status = s.when_failed();
                         conditions.update(condition_type, status);
                     }
-                    return Construction::Failed(err, conditions);
+                    return Progress::Failed(err, conditions);
                 }
             }
         }
 
-        Construction::Complete(context, conditions)
+        Progress::Complete(context, conditions)
     }
 }
 
 #[async_trait]
-pub trait ConstructOperation<C>: Send + Sync
+pub trait ProgressOperation<C>: Send + Sync
 where
     C: Send + Sync,
 {
@@ -105,7 +105,7 @@ where
 }
 
 #[async_trait]
-impl<S, F, Fut, C> ConstructOperation<C> for (S, F)
+impl<S, F, Fut, C> ProgressOperation<C> for (S, F)
 where
     S: ToString + Send + Sync,
     F: Fn(C) -> Fut + Send + Sync,
@@ -137,7 +137,7 @@ pub mod application {
     use crate::controller::{
         base::{ConditionExt, ProcessOutcome, ReadyState, StatusSection, CONDITION_RECONCILED},
         reconciler::{
-            construct::{Construction, Constructor},
+            progress::{Progress, Progressor},
             ReconcileError,
         },
     };
@@ -152,7 +152,7 @@ pub mod application {
     }
 
     #[async_trait]
-    impl<'c, C> RunConstructor for Constructor<'c, C>
+    impl<'c, C> RunConstructor for Progressor<'c, C>
     where
         C: ApplicationAccessor + Send + Sync,
     {
@@ -168,21 +168,21 @@ pub mod application {
             let conditions = ctx.conditions();
 
             let result = match self.run(conditions, ctx).await {
-                Construction::Complete(mut context, mut conditions) => {
+                Progress::Complete(mut context, mut conditions) => {
                     conditions.update(CONDITION_RECONCILED, ReadyState::Complete);
                     context
                         .app_mut()
                         .finish_ready::<S>(conditions, observed_generation)?;
                     ProcessOutcome::Complete(context.into())
                 }
-                Construction::Retry(mut context, when, mut conditions) => {
+                Progress::Retry(mut context, when, mut conditions) => {
                     conditions.update(CONDITION_RECONCILED, ReadyState::Progressing);
                     context
                         .app_mut()
                         .finish_ready::<S>(conditions, observed_generation)?;
                     ProcessOutcome::Retry(context.into(), when)
                 }
-                Construction::Failed(err, mut conditions) => {
+                Progress::Failed(err, mut conditions) => {
                     conditions.update(CONDITION_RECONCILED, ReadyState::Failed(err.to_string()));
                     original_app.finish_ready::<S>(conditions, observed_generation)?;
                     match err {
@@ -203,15 +203,11 @@ mod test {
     use chrono::{DateTime, Utc};
     use drogue_client::core::v1::Condition;
 
-    fn set_now<C>(now: DateTime<Utc>, result: &mut Construction<C>) {
+    fn set_now<C>(now: DateTime<Utc>, result: &mut Progress<C>) {
         match result {
-            Construction::Complete(_, c) => {
-                c.0.iter_mut().for_each(|c| c.last_transition_time = now)
-            }
-            Construction::Retry(_, _, c) => {
-                c.0.iter_mut().for_each(|c| c.last_transition_time = now)
-            }
-            Construction::Failed(_, c) => c.0.iter_mut().for_each(|c| c.last_transition_time = now),
+            Progress::Complete(_, c) => c.0.iter_mut().for_each(|c| c.last_transition_time = now),
+            Progress::Retry(_, _, c) => c.0.iter_mut().for_each(|c| c.last_transition_time = now),
+            Progress::Failed(_, c) => c.0.iter_mut().for_each(|c| c.last_transition_time = now),
         }
     }
 
@@ -222,9 +218,9 @@ mod test {
 
         let conditions = Conditions::default();
 
-        let c = Constructor::<Context>(vec![Box::new(("Foo", |ctx| async {
+        let c = Progressor::<Context>(vec![Box::new(("Foo", |ctx| async {
             println!("Foo");
-            Ok(Outcome::Continue(ctx))
+            Ok(OperationOutcome::Continue(ctx))
         }))]);
 
         let mut result = c.run(conditions, Context {}).await;
@@ -235,7 +231,7 @@ mod test {
 
         assert_eq!(
             result,
-            Construction::Complete(
+            Progress::Complete(
                 Context {},
                 Conditions(vec![Condition {
                     last_transition_time: now,
@@ -255,18 +251,18 @@ mod test {
 
         let conditions = Conditions::default();
 
-        let c = Constructor::<Context>(vec![
+        let c = Progressor::<Context>(vec![
             Box::new(("Foo", |ctx| async {
                 println!("Foo");
-                Ok(Outcome::Continue(ctx))
+                Ok(OperationOutcome::Continue(ctx))
             })),
             Box::new(("Bar", |ctx| async {
                 println!("Bar");
-                Ok(Outcome::Retry(ctx, None))
+                Ok(OperationOutcome::Retry(ctx, None))
             })),
             Box::new(("Baz", |ctx| async {
                 println!("Baz");
-                Ok(Outcome::Continue(ctx))
+                Ok(OperationOutcome::Continue(ctx))
             })),
         ]);
 
@@ -278,7 +274,7 @@ mod test {
 
         assert_eq!(
             result,
-            Construction::Retry(
+            Progress::Retry(
                 Context {},
                 None,
                 Conditions(vec![
@@ -315,10 +311,10 @@ mod test {
 
         let conditions = Conditions::default();
 
-        let c = Constructor::<Context>(vec![
+        let c = Progressor::<Context>(vec![
             Box::new(("Foo", |ctx| async {
                 println!("Foo");
-                Ok(Outcome::Continue(ctx))
+                Ok(OperationOutcome::Continue(ctx))
             })),
             Box::new(("Bar", |_| async {
                 println!("Bar");
@@ -326,7 +322,7 @@ mod test {
             })),
             Box::new(("Baz", |ctx| async {
                 println!("Baz");
-                Ok(Outcome::Continue(ctx))
+                Ok(OperationOutcome::Continue(ctx))
             })),
         ]);
 
@@ -338,7 +334,7 @@ mod test {
 
         assert_eq!(
             result,
-            Construction::Failed(
+            Progress::Failed(
                 ReconcileError::permanent("Some error"),
                 Conditions(vec![
                     Condition {
