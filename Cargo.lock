@@ -1528,7 +1528,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-command-endpoint"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -1560,7 +1560,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-backend"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix",
  "actix-cors",
@@ -1600,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "serde 1.0.126",
@@ -1608,7 +1608,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-frontend"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -1644,7 +1644,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-database-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-web",
  "anyhow",
@@ -1672,7 +1672,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-device-management-service"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -1722,7 +1722,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-endpoint-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-broker",
  "actix-tls",
@@ -1762,7 +1762,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-event-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cloudevents-sdk 0.4.0",
  "config 0.11.0",
@@ -1780,7 +1780,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-http-endpoint"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-rt",
  "actix-tls",
@@ -1818,7 +1818,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-integration-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-web",
  "async-trait",
@@ -1843,7 +1843,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-mqtt-endpoint"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1879,7 +1879,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-mqtt-integration"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1920,7 +1920,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-operator-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "async-std",
@@ -1946,7 +1946,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-outbox-controller"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix",
  "anyhow",
@@ -1975,7 +1975,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-registry-events"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2000,7 +2000,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-service-api"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-web",
  "async-trait",
@@ -2020,7 +2020,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-service-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-rt",
  "actix-service",
@@ -2062,7 +2062,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-test-common"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "deadpool 0.7.0",
@@ -2110,7 +2110,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-ttn-operator"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix",
  "anyhow",
@@ -2150,7 +2150,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-user-auth-service"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-rt",
  "actix-service",
