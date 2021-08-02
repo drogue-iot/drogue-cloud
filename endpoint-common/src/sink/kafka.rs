@@ -121,7 +121,7 @@ impl Sink for KafkaSink {
                 match Self::create_producer(config.client) {
                     Ok(producer) => Self::send_with(&producer, topic, key, message_record).await,
                     Err(err) => {
-                        return Err(SinkError::Transport(KafkaSinkError::Kafka(err.clone())));
+                        return Err(SinkError::Transport(KafkaSinkError::Kafka(err)));
                     }
                 }
             }
