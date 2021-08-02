@@ -83,7 +83,6 @@ lazy_static! {
     static ref TOPIC_PATTERN: Regex = Regex::new(REGEXP).expect("Regexp must compile");
 }
 
-#[deprecated(note = "Use the topic from the application status section")]
 pub fn make_topic_resource_name(target: EventTarget) -> String {
     let name = match &target {
         EventTarget::Events(app) => {
