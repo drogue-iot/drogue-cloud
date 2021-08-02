@@ -1,3 +1,9 @@
+mod topic;
+mod user;
+
+use topic::*;
+use user::*;
+
 use crate::{
     controller::{ControllerConfig, CONDITION_KAFKA_READY},
     data::*,
@@ -10,15 +16,14 @@ use drogue_cloud_operator_common::controller::{
         CONDITION_RECONCILED,
     },
     reconciler::{
-        construct::{
-            self, application::ApplicationAccessor, ConstructOperation, Constructor, Outcome,
-            RunConstructor,
+        progress::{
+            self, application::ApplicationAccessor, OperationOutcome, Progressor, RunConstructor,
         },
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
-use drogue_cloud_service_api::events::EventTarget;
-use drogue_cloud_service_common::kafka::make_topic_resource_name;
+use drogue_cloud_service_common::kafka::{make_kafka_resource_name, ResourceType};
+use k8s_openapi::api::core::v1::Secret;
 use kube::{
     api::{ApiResource, DynamicObject},
     Api, Resource,
@@ -29,7 +34,7 @@ use std::{ops::Deref, time::Duration};
 
 const FINALIZER: &str = "kafka";
 const LABEL_KAFKA_CLUSTER: &str = "strimzi.io/cluster";
-const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
+pub const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
 
 pub struct ApplicationController {
     config: ControllerConfig,
@@ -37,6 +42,9 @@ pub struct ApplicationController {
 
     kafka_topic_resource: ApiResource,
     kafka_topics: Api<DynamicObject>,
+    kafka_user_resource: ApiResource,
+    kafka_users: Api<DynamicObject>,
+    secrets: Api<Secret>,
 }
 
 impl ApplicationController {
@@ -45,12 +53,18 @@ impl ApplicationController {
         registry: registry::v1::Client,
         kafka_topic_resource: ApiResource,
         kafka_topics: Api<DynamicObject>,
+        kafka_user_resource: ApiResource,
+        kafka_users: Api<DynamicObject>,
+        secrets: Api<Secret>,
     ) -> Self {
         Self {
             config,
             registry,
             kafka_topic_resource,
             kafka_topics,
+            kafka_user_resource,
+            kafka_users,
+            secrets,
         }
     }
 }
@@ -68,6 +82,9 @@ impl ControllerOperation<String, registry::v1::Application, registry::v1::Applic
             registry: &self.registry,
             kafka_topic_resource: &self.kafka_topic_resource,
             kafka_topics: &self.kafka_topics,
+            kafka_user_resource: &self.kafka_user_resource,
+            kafka_users: &self.kafka_users,
+            secrets: &self.secrets,
         })
         .reconcile(application)
         .await
@@ -104,6 +121,8 @@ pub struct ConstructContext {
     pub app: registry::v1::Application,
     pub events_topic: Option<DynamicObject>,
     pub events_topic_name: Option<String>,
+    pub app_user: Option<DynamicObject>,
+    pub app_user_name: Option<String>,
 }
 
 pub struct DeconstructContext {
@@ -116,6 +135,9 @@ pub struct ApplicationReconciler<'a> {
     pub registry: &'a registry::v1::Client,
     pub kafka_topic_resource: &'a ApiResource,
     pub kafka_topics: &'a Api<DynamicObject>,
+    pub kafka_user_resource: &'a ApiResource,
+    pub kafka_users: &'a Api<DynamicObject>,
+    pub secrets: &'a Api<Secret>,
 }
 
 #[async_trait]
@@ -140,6 +162,8 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                 app,
                 events_topic: None,
                 events_topic_name: None,
+                app_user: None,
+                app_user_name: None,
             }),
             (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
             (false, true) => ReconcileState::Ignore(app),
@@ -150,14 +174,14 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
         &self,
         ctx: Self::Construct,
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
-        Constructor::<Self::Construct>::new(vec![
+        Progressor::<Self::Construct>::new(vec![
             Box::new(("HasFinalizer", |mut ctx: Self::Construct| async {
                 // ensure we have a finalizer
                 if ctx.app.metadata.ensure_finalizer(FINALIZER) {
                     // early return
-                    Ok(Outcome::Retry(ctx, None))
+                    Ok(OperationOutcome::Retry(ctx, None))
                 } else {
-                    Ok(Outcome::Continue(ctx))
+                    Ok(OperationOutcome::Continue(ctx))
                 }
             })),
             Box::new(CreateTopic {
@@ -167,6 +191,15 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             }),
             Box::new(TopicReady {
                 config: &self.config,
+            }),
+            Box::new(CreateUser {
+                api: &self.kafka_users,
+                resource: &self.kafka_user_resource,
+                config: &self.config,
+            }),
+            Box::new(UserReady {
+                config: &self.config,
+                secrets: &self.secrets,
             }),
         ])
         .run_with::<KafkaAppStatus>(ctx)
@@ -179,8 +212,22 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // delete
 
-        self.delete_kafka_topic(EventTarget::Events(ctx.app.metadata.name.clone()))
+        let topic_name =
+            make_kafka_resource_name(ResourceType::Events(ctx.app.metadata.name.clone()));
+
+        let user_name =
+            make_kafka_resource_name(ResourceType::Users(ctx.app.metadata.name.clone()));
+
+        // remove topic
+
+        self.kafka_topics
+            .delete_optionally(&topic_name, &Default::default())
             .await?;
+        self.kafka_users
+            .delete_optionally(&user_name, &Default::default())
+            .await?;
+
+        // TODO: wait for resources to be actually deleted, then remove the finalizer
 
         // remove finalizer
 
@@ -214,116 +261,14 @@ impl ApplicationAccessor for ConstructContext {
     }
 }
 
-struct CreateTopic<'o> {
-    pub api: &'o Api<DynamicObject>,
-    pub resource: &'o ApiResource,
-    pub config: &'o ControllerConfig,
-}
-
-#[async_trait]
-impl<'o> ConstructOperation<ConstructContext> for CreateTopic<'o> {
-    fn type_name(&self) -> String {
-        "CreateTopics".into()
-    }
-
-    async fn run(
-        &self,
-        mut ctx: ConstructContext,
-    ) -> drogue_cloud_operator_common::controller::reconciler::construct::Result<ConstructContext>
-    {
-        let (topic, topic_name) = ApplicationReconciler::ensure_kafka_topic(
-            &self.api,
-            &self.resource,
-            &self.config,
-            EventTarget::Events(ctx.app.metadata.name.clone()),
-        )
-        .await?;
-
-        ctx.events_topic = Some(topic);
-        ctx.events_topic_name = Some(topic_name);
-
-        // done
-
-        Ok(Outcome::Continue(ctx))
-    }
-}
-
-struct TopicReady<'o> {
-    pub config: &'o ControllerConfig,
-}
-
-#[async_trait]
-impl<'o> ConstructOperation<ConstructContext> for TopicReady<'o> {
-    fn type_name(&self) -> String {
-        "TopicsReady".into()
-    }
-
-    async fn run(&self, mut ctx: ConstructContext) -> construct::Result<ConstructContext> {
-        let events_ready = ctx
-            .events_topic
-            .as_ref()
-            .and_then(|topic| Self::is_topic_ready(topic))
-            .unwrap_or_default();
-
-        let downstream = match (events_ready, ctx.events_topic_name.as_ref().cloned()) {
-            (true, Some(topic)) => Some(KafkaDownstreamStatus {
-                topic,
-                ..Default::default()
-            }),
-            _ => None,
-        };
-
-        ctx.app.update_section(|mut status: KafkaAppStatus| {
-            status.downstream = downstream;
-            status
-        })?;
-
-        match events_ready {
-            true => Ok(Outcome::Continue(ctx)),
-            false => Self::retry(ctx),
-        }
-    }
-}
-
-impl<'o> TopicReady<'o> {
-    fn retry<C>(ctx: C) -> construct::Result<C>
-    where
-        C: Send + Sync,
-    {
-        Ok(Outcome::Retry(ctx, Some(Duration::from_secs(15))))
-    }
-
-    fn is_topic_ready(topic: &DynamicObject) -> Option<bool> {
-        topic.data["status"]["conditions"]
-            .as_array()
-            .and_then(|conditions| {
-                conditions
-                    .iter()
-                    .filter_map(|cond| cond.as_object())
-                    .filter_map(|cond| {
-                        if cond["type"] == "Ready" {
-                            match cond["status"].as_str() {
-                                Some("True") => Some(true),
-                                Some("False") => Some(false),
-                                _ => None,
-                            }
-                        } else {
-                            None
-                        }
-                    })
-                    .next()
-            })
-    }
-}
-
 impl<'a> ApplicationReconciler<'a> {
     async fn ensure_kafka_topic(
         kafka_topics: &Api<DynamicObject>,
         kafka_topic_resource: &ApiResource,
         config: &ControllerConfig,
-        target: EventTarget,
+        target: ResourceType,
     ) -> Result<(DynamicObject, String), ReconcileError> {
-        let topic_name = make_topic_resource_name(target.clone());
+        let topic_name = make_kafka_resource_name(target.clone());
 
         let topic = create_or_update_by(
             &kafka_topics,
@@ -365,18 +310,74 @@ impl<'a> ApplicationReconciler<'a> {
         Ok((topic, topic_name))
     }
 
-    async fn delete_kafka_topic(&self, target: EventTarget) -> Result<(), ReconcileError> {
-        let topic_name = make_topic_resource_name(target);
+    async fn ensure_kafka_user(
+        kafka_users: &Api<DynamicObject>,
+        kafka_user_resource: &ApiResource,
+        config: &ControllerConfig,
+        app: String,
+    ) -> Result<(DynamicObject, String), ReconcileError> {
+        let topic_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
 
-        // remove topic
+        let topic = create_or_update_by(
+            &kafka_users,
+            Some(config.topic_namespace.clone()),
+            &topic_name,
+            |meta| {
+                let mut topic = DynamicObject::new(&topic_name, &kafka_user_resource)
+                    .within(&config.topic_namespace);
+                *topic.meta_mut() = meta;
+                topic
+            },
+            |this, that| this.metadata == that.metadata && this.data == that.data,
+            |mut topic| {
+                // set target cluster
+                topic
+                    .metadata
+                    .labels
+                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
+                topic
+                    .metadata
+                    .annotations
+                    .insert(ANNOTATION_APP_NAME.into(), app.clone());
+                // set config
+                topic.data["spec"] = json!({
+                    "authentication": {
+                        "type": "scram-sha-512",
+                    },
+                    "authorization": {
+                        "acls": [
+                            {
+                                "host": "*",
+                                "operation": "Read",
+                                "resource": {
+                                    "name": topic_name,
+                                    "patternType": "literal",
+                                    "type": "topic",
+                                },
+                            },
+                        ],
+                        "type": "simple",
+                    },
+                    "template": {
+                        "secret": {
+                            "metadata": {
+                                "annotations": {
+                                   ANNOTATION_APP_NAME: app,
+                                }
+                            },
+                        }
+                    }
+                });
 
-        self.kafka_topics
-            .delete_optionally(&topic_name, &Default::default())
-            .await?;
+                Ok::<_, ReconcileError>(topic)
+            },
+        )
+        .await?
+        .resource();
 
         // done
 
-        Ok(())
+        Ok((topic, topic_name))
     }
 }
 
@@ -389,4 +390,33 @@ impl StatusSection for KafkaAppStatus {
         self.conditions = conditions;
         self.observed_generation = observed_generation;
     }
+}
+
+fn retry<C>(ctx: C) -> progress::Result<C>
+where
+    C: Send + Sync,
+{
+    Ok(OperationOutcome::Retry(ctx, Some(Duration::from_secs(15))))
+}
+
+fn condition_ready(condition: &str, resource: &DynamicObject) -> Option<bool> {
+    resource.data["status"]["conditions"]
+        .as_array()
+        .and_then(|conditions| {
+            conditions
+                .iter()
+                .filter_map(|cond| cond.as_object())
+                .filter_map(|cond| {
+                    if cond["type"] == condition {
+                        match cond["status"].as_str() {
+                            Some("True") => Some(true),
+                            Some("False") => Some(false),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .next()
+        })
 }
