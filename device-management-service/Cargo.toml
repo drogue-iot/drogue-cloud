@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-device-management-service"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2018"
 
