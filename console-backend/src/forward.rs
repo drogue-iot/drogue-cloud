@@ -1,8 +1,20 @@
-use actix_web::{web, Error, HttpRequest, HttpResponse};
+use actix_web::{web, Error, HttpRequest, HttpResponse, ResponseError};
 use awc::Client;
+use std::fmt::Formatter;
 use url::Url;
 
 pub struct ForwardUrl(pub Url);
+
+#[derive(Debug)]
+pub struct ForwardError(awc::error::SendRequestError);
+
+impl std::fmt::Display for ForwardError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Forward error: {}", self.0)
+    }
+}
+
+impl ResponseError for ForwardError {}
 
 pub async fn forward(
     req: HttpRequest,
@@ -28,7 +40,7 @@ pub async fn forward(
     log::info!("Headers: {:#?}", forwarded_req.headers());
 
     // rewrite host
-    let forwarded_req = if let Some(host) = url.get_ref().host_str() {
+    let forwarded_req = if let Some(host) = url.get_ref().0.host_str() {
         forwarded_req.headers_mut().remove("host");
         forwarded_req.append_header((
             "host",
@@ -36,6 +48,7 @@ pub async fn forward(
                 "{}{}",
                 host,
                 url.get_ref()
+                    .0
                     .port()
                     .map(|p| format!(":{}", p))
                     .unwrap_or_default()
@@ -47,7 +60,7 @@ pub async fn forward(
 
     log::info!("Headers (post): {:#?}", forwarded_req.headers());
 
-    let mut res = forwarded_req.send_body(body).await.map_err(Error::from)?;
+    let mut res = forwarded_req.send_body(body).await.map_err(ForwardError)?;
 
     let mut client_resp = HttpResponse::build(res.status());
     // Remove `Connection` as per
