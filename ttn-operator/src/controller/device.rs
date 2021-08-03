@@ -50,7 +50,7 @@ impl
         let mut device = input.1;
         let generation = device.metadata.generation;
         device
-            .update_section(|mut status: TtnAppStatus| {
+            .update_section(|mut status: TtnDeviceStatus| {
                 status.reconcile = TtnReconcileStatus::failed(generation, message);
                 status
             })
