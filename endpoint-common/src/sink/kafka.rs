@@ -6,6 +6,7 @@ use cloudevents::{
     event::ExtensionValue,
     AttributesReader,
 };
+use drogue_client::{core, registry, Translator};
 use drogue_cloud_event_common::config::KafkaClientConfig;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
@@ -23,6 +24,8 @@ use thiserror::Error;
 pub enum KafkaSinkError {
     #[error("Kafka error")]
     Kafka(#[from] KafkaError),
+    #[error("Kafka topic is not ready")]
+    NotReady,
     #[error("Transmission canceled")]
     Canceled,
 }
@@ -84,6 +87,18 @@ impl KafkaSink {
             }
         }
     }
+
+    fn is_ready(app: &registry::v1::Application) -> bool {
+        app.section::<core::v1::Conditions>()
+            .and_then(|s| s.ok())
+            .and_then(|conditions| {
+                conditions
+                    .iter()
+                    .find(|c| c.r#type == "KafkaReady")
+                    .map(|c| c.status == "True")
+            })
+            .unwrap_or_default()
+    }
 }
 
 #[async_trait]
@@ -96,6 +111,11 @@ impl Sink for KafkaSink {
         target: SinkTarget<'a>,
         event: Event,
     ) -> Result<PublishOutcome, SinkError<Self::Error>> {
+        if !Self::is_ready(&target) {
+            log::debug!("Kafka topic is not ready yet");
+            return Err(SinkError::Transport(KafkaSinkError::NotReady));
+        }
+
         let kafka = match target {
             SinkTarget::Commands(app) => app.kafka_target(KafkaEventType::Commands),
             SinkTarget::Events(app) => app.kafka_target(KafkaEventType::Events),
@@ -126,5 +146,27 @@ impl Sink for KafkaSink {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use drogue_client::core::v1::Conditions;
+
+    #[test]
+    fn test_ready() {
+        let mut app = registry::v1::Application::default();
+
+        assert!(!KafkaSink::is_ready(&app));
+
+        app.update_section(|mut conditions: Conditions| {
+            conditions.update("KafkaReady", true);
+            conditions
+        })
+        .unwrap();
+
+        assert!(KafkaSink::is_ready(&app));
     }
 }

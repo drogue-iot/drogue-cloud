@@ -8,11 +8,23 @@ use crate::sender::PublishOutcome;
 use async_trait::async_trait;
 use cloudevents::Event;
 use drogue_client::registry;
+use std::ops::Deref;
 use thiserror::Error;
 
 pub enum SinkTarget<'a> {
     Events(&'a registry::v1::Application),
     Commands(&'a registry::v1::Application),
+}
+
+impl<'a> Deref for SinkTarget<'a> {
+    type Target = registry::v1::Application;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            SinkTarget::Commands(app) => app,
+            SinkTarget::Events(app) => app,
+        }
+    }
 }
 
 #[async_trait]
