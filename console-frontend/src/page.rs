@@ -5,6 +5,7 @@ use crate::{
     examples::{self, Examples},
     pages::{self, apps::ApplicationContext},
     spy::Spy,
+    utils::url_decode,
 };
 use patternfly_yew::*;
 use yew::prelude::*;
@@ -236,7 +237,7 @@ impl Component for AppPage {
                                     />},
                                     AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
                                         backend=backend.clone()
-                                        name=name
+                                        name=url_decode(&name)
                                         details=details
                                     />},
                                     AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
@@ -245,8 +246,8 @@ impl Component for AppPage {
                                     />},
                                     AppRoute::Devices(pages::devices::Pages::Details{app, name, details}) => html!{<pages::devices::Details
                                         backend=backend.clone()
-                                        app=app.to_string()
-                                        name=name
+                                        app=url_decode(&app.to_string())
+                                        name=url_decode(&name)
                                         details=details
                                     />},
                                     AppRoute::Spy => html!{<Spy/>},

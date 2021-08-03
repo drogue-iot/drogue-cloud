@@ -31,6 +31,12 @@ pub fn url_encode<S: AsRef<str>>(s: S) -> String {
         .to_string()
 }
 
+pub fn url_decode<S: AsRef<str>>(s: S) -> String {
+    percent_encoding::percent_decode_str(s.as_ref())
+        .decode_utf8_lossy()
+        .to_string()
+}
+
 /// Navigate the router to the target.
 pub fn navigate_to<SWITCH>(to: SWITCH)
 where
