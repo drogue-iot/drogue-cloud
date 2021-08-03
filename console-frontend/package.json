@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "webpack --mode development",
     "build": "webpack --mode production",
-    "start:dev": "webpack-dev-server --mode development"
+    "start:dev": "webpack serve"
   },
   "devDependencies": {
     "@wasm-tool/wasm-pack-plugin": "^1.5.0",
