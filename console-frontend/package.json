@@ -25,7 +25,7 @@
     "yaml-loader": "^0.6.0"
   },
   "dependencies": {
-    "@patternfly/patternfly": "^4.115.2",
+    "@patternfly/patternfly": "^4.125.3",
     "swagger-ui": "^3.51.1"
   }
 }

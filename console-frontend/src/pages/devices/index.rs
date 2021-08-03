@@ -1,4 +1,3 @@
-use crate::utils::navigate_to;
 use crate::{
     backend::Backend,
     data::{SharedDataDispatcher, SharedDataOps},
@@ -7,8 +6,9 @@ use crate::{
     pages::{
         apps::ApplicationContext,
         devices::{DetailsSection, Pages},
+        HasReadyState,
     },
-    utils::url_encode,
+    utils::{navigate_to, url_encode},
 };
 use drogue_client::registry::v1::{Application, Device};
 use patternfly_yew::*;
@@ -27,7 +27,8 @@ impl TableRenderer for DeviceEntry {
             0 => html! {
                 <a onclick=self.on_overview.clone().reform(|_|())>{self.device.metadata.name.clone()}</a>
             },
-            1 => self
+            1 => self.device.render_state(),
+            2 => self
                 .device
                 .metadata
                 .creation_timestamp
@@ -205,6 +206,7 @@ impl Component for Index {
                         header={html_nested!{
                             <TableHeader>
                                 <TableColumn label="Name"/>
+                                <TableColumn label="Status"/>
                                 <TableColumn label="Created"/>
                             </TableHeader>
                         }}

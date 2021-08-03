@@ -1,10 +1,16 @@
-use crate::pages::apps::DetailsSection;
-use crate::{backend::Backend, error::error, page::AppRoute, pages::apps::Pages};
+use crate::{
+    backend::Backend,
+    error::error,
+    page::AppRoute,
+    pages::{
+        apps::{DetailsSection, Pages},
+        HasReadyState,
+    },
+};
 use drogue_client::registry::v1::Application;
 use patternfly_yew::*;
 use yew::{format::*, prelude::*, services::fetch::*};
-use yew_router::agent::RouteRequest;
-use yew_router::prelude::*;
+use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApplicationEntry {
@@ -19,7 +25,8 @@ impl TableRenderer for ApplicationEntry {
             0 => html! {
                 <a onclick=self.on_overview.clone().reform(|_|())>{self.app.metadata.name.clone()}</a>
             },
-            1 => self
+            1 => self.app.render_state(),
+            2 => self
                 .app
                 .metadata
                 .creation_timestamp
@@ -116,6 +123,7 @@ impl Component for Index {
                         header={html_nested!{
                             <TableHeader>
                                 <TableColumn label="Name"/>
+                                <TableColumn label="Status"/>
                                 <TableColumn label="Created"/>
                             </TableHeader>
                         }}
