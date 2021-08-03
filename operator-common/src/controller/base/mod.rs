@@ -204,7 +204,7 @@ where
     async fn get(&self, key: &K) -> Result<Option<RI>, ClientError<reqwest::Error>>;
 
     /// Update the resource if it did change.
-    async fn update_if(&self, original: &RO, current: &RO) -> Result<OperationOutcome, ()>;
+    async fn update_if(&self, original: &RO, current: RO) -> Result<OperationOutcome, ()>;
 
     fn ref_output(input: &RI) -> &RO;
 }
@@ -227,26 +227,22 @@ where
             Ok(Some(resource)) => match self.process_resource(resource.clone()).await {
                 // ... completed -> store and return(done)
                 Ok(ProcessOutcome::Complete(outcome)) => {
-                    self.update_if(Self::ref_output(&resource), &outcome)
-                        .await?;
+                    self.update_if(Self::ref_output(&resource), outcome).await?;
                     Ok(OperationOutcome::Complete)
                 }
                 // ... need to re-try -> store and return(retry)
                 Ok(ProcessOutcome::Retry(outcome, delay)) => {
-                    self.update_if(Self::ref_output(&resource), &outcome)
-                        .await?;
+                    self.update_if(Self::ref_output(&resource), outcome).await?;
                     Ok(OperationOutcome::retry(delay))
                 }
                 Err(ReconcileError::Temporary(msg)) => {
                     let outcome = self.recover(&msg, resource.clone()).await?;
-                    self.update_if(Self::ref_output(&resource), &outcome)
-                        .await?;
+                    self.update_if(Self::ref_output(&resource), outcome).await?;
                     Ok(OperationOutcome::RetryNow)
                 }
                 Err(ReconcileError::Permanent(msg)) => {
                     let outcome = self.recover(&msg, resource.clone()).await?;
-                    self.update_if(Self::ref_output(&resource), &outcome)
-                        .await?;
+                    self.update_if(Self::ref_output(&resource), outcome).await?;
                     Ok(OperationOutcome::Complete)
                 }
             },

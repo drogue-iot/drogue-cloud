@@ -1364,7 +1364,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=ff96b0dec8a19e2b5ba08e87216c47b431a26eb1#ff96b0dec8a19e2b5ba08e87216c47b431a26eb1"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=a25e416f7cefbb584b026a465d36183309e88038#a25e416f7cefbb584b026a465d36183309e88038"
 dependencies = [
  "async-std",
  "async-trait",
