@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct UserInfo {
+    pub id: String,
     pub name: String,
     #[serde(default)]
     pub full_name: Option<String>,

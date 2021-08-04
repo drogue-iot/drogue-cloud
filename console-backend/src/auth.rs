@@ -106,6 +106,7 @@ fn make_userinfo(client: &OpenIdClient, token: &Token<StandardClaims>) -> Option
         Compact::Decoded { payload, .. } => {
             log::debug!("Userinfo: {:#?}", payload.userinfo);
             Some(UserInfo {
+                id: payload.sub.clone(),
                 name: payload
                     .userinfo
                     .preferred_username

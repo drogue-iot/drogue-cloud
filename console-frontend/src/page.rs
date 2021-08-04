@@ -132,13 +132,14 @@ impl Component for AppPage {
         };
 
         let tools = vec![{
-            let (name, full_name, account_url) =
+            let (id, name, full_name, account_url) =
                 if let Some(userinfo) = self.props.token.userinfo.as_ref() {
+                    let id = userinfo.id.clone();
                     let name = userinfo.name.clone();
                     let full_name = userinfo.full_name.as_ref().cloned();
-                    (name, full_name, userinfo.account_url.as_ref().cloned())
+                    (id, name, full_name, userinfo.account_url.as_ref().cloned())
                 } else {
-                    (String::new(), None, None)
+                    (String::new(), String::new(), None, None)
                 };
 
             let src = self
@@ -170,6 +171,10 @@ impl Component for AppPage {
                     <dl>
                         <dt class="pf-u-font-size-xs">{"Username:"}</dt>
                         <dd>{&name}</dd>
+                    </dl>
+                    <dl>
+                        <dt class="pf-u-font-size-xs">{"ID:"}</dt>
+                        <dd>{&id}</dd>
                     </dl>
                     </DropdownItemText>
                 });
@@ -207,6 +212,7 @@ impl Component for AppPage {
                 </AppLauncher>
                 <Dropdown
                     plain=true
+                    position=Position::Right
                     toggle_style="display: flex;"
                     toggle=html!{<UserToggle name=full_name.unwrap_or(name) src=src />}
                     >
