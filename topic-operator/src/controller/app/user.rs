@@ -1,20 +1,103 @@
-use super::{condition_ready, retry, ApplicationReconciler, ConstructContext};
+use super::{condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER};
 use crate::{controller::ControllerConfig, data::*};
 use async_trait::async_trait;
 use drogue_client::Translator;
-use drogue_cloud_operator_common::controller::reconciler::progress::{
-    self, OperationOutcome, ProgressOperation,
+use drogue_cloud_operator_common::controller::reconciler::{
+    progress::{self, OperationOutcome, ProgressOperation},
+    ReconcileError,
 };
+use drogue_cloud_service_common::kafka::{make_kafka_resource_name, ResourceType};
 use k8s_openapi::api::core::v1::Secret;
 use kube::{
     api::{ApiResource, DynamicObject},
-    Api,
+    Api, Resource,
 };
+use operator_framework::process::create_or_update_by;
+use serde_json::json;
 
 pub struct CreateUser<'o> {
     pub api: &'o Api<DynamicObject>,
     pub resource: &'o ApiResource,
     pub config: &'o ControllerConfig,
+}
+
+impl CreateUser<'_> {
+    async fn ensure_kafka_user(
+        kafka_users: &Api<DynamicObject>,
+        kafka_user_resource: &ApiResource,
+        config: &ControllerConfig,
+        app: String,
+    ) -> Result<(DynamicObject, String), ReconcileError> {
+        let topic_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
+
+        let topic = create_or_update_by(
+            &kafka_users,
+            Some(config.topic_namespace.clone()),
+            &topic_name,
+            |meta| {
+                let mut topic = DynamicObject::new(&topic_name, &kafka_user_resource)
+                    .within(&config.topic_namespace);
+                *topic.meta_mut() = meta;
+                topic
+            },
+            |this, that| this.metadata == that.metadata && this.data == that.data,
+            |mut topic| {
+                // set target cluster
+                topic
+                    .metadata
+                    .labels
+                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
+                topic
+                    .metadata
+                    .annotations
+                    .insert(ANNOTATION_APP_NAME.into(), app.clone());
+                // set config
+                topic.data["spec"] = json!({
+                    "authentication": {
+                        "type": "scram-sha-512",
+                    },
+                    "authorization": {
+                        "acls": [
+                            {
+                                "host": "*",
+                                "operation": "Read",
+                                "resource": {
+                                    "type": "topic",
+                                    "name": topic_name,
+                                    "patternType": "literal",
+                                },
+                            },
+                            {
+                                "host": "*",
+                                "operation": "Read",
+                                "resource": {
+                                    "type": "group",
+                                }
+                            }
+                        ],
+                        "type": "simple",
+                    },
+                    "template": {
+                        "secret": {
+                            "metadata": {
+                                "annotations": {
+                                   ANNOTATION_APP_NAME: app,
+                                }
+                            },
+                        }
+                    }
+                });
+
+                Ok::<_, ReconcileError>(topic)
+            },
+        )
+        .await?
+        .resource();
+
+        // done
+
+        Ok((topic, topic_name))
+    }
 }
 
 #[async_trait]
@@ -28,7 +111,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateUser<'o> {
         mut ctx: ConstructContext,
     ) -> drogue_cloud_operator_common::controller::reconciler::progress::Result<ConstructContext>
     {
-        let (user, user_name) = ApplicationReconciler::ensure_kafka_user(
+        let (user, user_name) = Self::ensure_kafka_user(
             &self.api,
             &self.resource,
             &self.config,

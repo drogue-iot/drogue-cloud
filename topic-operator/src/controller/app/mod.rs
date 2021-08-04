@@ -26,10 +26,9 @@ use drogue_cloud_service_common::kafka::{make_kafka_resource_name, ResourceType}
 use k8s_openapi::api::core::v1::Secret;
 use kube::{
     api::{ApiResource, DynamicObject},
-    Api, Resource,
+    Api,
 };
-use operator_framework::{install::Delete, process::create_or_update_by};
-use serde_json::json;
+use operator_framework::install::Delete;
 use std::{ops::Deref, time::Duration};
 
 const FINALIZER: &str = "kafka";
@@ -258,126 +257,6 @@ impl ApplicationAccessor for ConstructContext {
             .and_then(|s| s.ok())
             .unwrap_or_default()
             .conditions
-    }
-}
-
-impl<'a> ApplicationReconciler<'a> {
-    async fn ensure_kafka_topic(
-        kafka_topics: &Api<DynamicObject>,
-        kafka_topic_resource: &ApiResource,
-        config: &ControllerConfig,
-        target: ResourceType,
-    ) -> Result<(DynamicObject, String), ReconcileError> {
-        let topic_name = make_kafka_resource_name(target.clone());
-
-        let topic = create_or_update_by(
-            &kafka_topics,
-            Some(config.topic_namespace.clone()),
-            &topic_name,
-            |meta| {
-                let mut topic = DynamicObject::new(&topic_name, &kafka_topic_resource)
-                    .within(&config.topic_namespace);
-                *topic.meta_mut() = meta;
-                topic
-            },
-            |this, that| this.metadata == that.metadata && this.data == that.data,
-            |mut topic| {
-                // set target cluster
-                topic
-                    .metadata
-                    .labels
-                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
-                topic
-                    .metadata
-                    .annotations
-                    .insert(ANNOTATION_APP_NAME.into(), target.app_name().into());
-                // set config
-                topic.data["spec"] = json!({
-                    "config": {},
-                    "partitions": 3,
-                    "replicas": 1,
-                    "topicName": topic_name,
-                });
-
-                Ok::<_, ReconcileError>(topic)
-            },
-        )
-        .await?
-        .resource();
-
-        // done
-
-        Ok((topic, topic_name))
-    }
-
-    async fn ensure_kafka_user(
-        kafka_users: &Api<DynamicObject>,
-        kafka_user_resource: &ApiResource,
-        config: &ControllerConfig,
-        app: String,
-    ) -> Result<(DynamicObject, String), ReconcileError> {
-        let topic_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
-
-        let topic = create_or_update_by(
-            &kafka_users,
-            Some(config.topic_namespace.clone()),
-            &topic_name,
-            |meta| {
-                let mut topic = DynamicObject::new(&topic_name, &kafka_user_resource)
-                    .within(&config.topic_namespace);
-                *topic.meta_mut() = meta;
-                topic
-            },
-            |this, that| this.metadata == that.metadata && this.data == that.data,
-            |mut topic| {
-                // set target cluster
-                topic
-                    .metadata
-                    .labels
-                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
-                topic
-                    .metadata
-                    .annotations
-                    .insert(ANNOTATION_APP_NAME.into(), app.clone());
-                // set config
-                topic.data["spec"] = json!({
-                    "authentication": {
-                        "type": "scram-sha-512",
-                    },
-                    "authorization": {
-                        "acls": [
-                            {
-                                "host": "*",
-                                "operation": "Read",
-                                "resource": {
-                                    "name": topic_name,
-                                    "patternType": "literal",
-                                    "type": "topic",
-                                },
-                            },
-                        ],
-                        "type": "simple",
-                    },
-                    "template": {
-                        "secret": {
-                            "metadata": {
-                                "annotations": {
-                                   ANNOTATION_APP_NAME: app,
-                                }
-                            },
-                        }
-                    }
-                });
-
-                Ok::<_, ReconcileError>(topic)
-            },
-        )
-        .await?
-        .resource();
-
-        // done
-
-        Ok((topic, topic_name))
     }
 }
 
