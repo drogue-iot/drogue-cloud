@@ -28,31 +28,30 @@ impl CreateUser<'_> {
         config: &ControllerConfig,
         app: String,
     ) -> Result<(DynamicObject, String), ReconcileError> {
-        let topic_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
+        let user_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
+        let topic_name = make_kafka_resource_name(ResourceType::Events(app.clone()));
 
-        let topic = create_or_update_by(
+        let user = create_or_update_by(
             &kafka_users,
             Some(config.topic_namespace.clone()),
-            &topic_name,
+            &user_name,
             |meta| {
-                let mut topic = DynamicObject::new(&topic_name, &kafka_user_resource)
+                let mut user = DynamicObject::new(&topic_name, &kafka_user_resource)
                     .within(&config.topic_namespace);
-                *topic.meta_mut() = meta;
-                topic
+                *user.meta_mut() = meta;
+                user
             },
             |this, that| this.metadata == that.metadata && this.data == that.data,
-            |mut topic| {
+            |mut user| {
                 // set target cluster
-                topic
-                    .metadata
+                user.metadata
                     .labels
                     .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
-                topic
-                    .metadata
+                user.metadata
                     .annotations
                     .insert(ANNOTATION_APP_NAME.into(), app.clone());
                 // set config
-                topic.data["spec"] = json!({
+                user.data["spec"] = json!({
                     "authentication": {
                         "type": "scram-sha-512",
                     },
@@ -72,6 +71,8 @@ impl CreateUser<'_> {
                                 "operation": "Read",
                                 "resource": {
                                     "type": "group",
+                                    "name": "*",
+                                    "patternType": "literal",
                                 }
                             }
                         ],
@@ -88,7 +89,7 @@ impl CreateUser<'_> {
                     }
                 });
 
-                Ok::<_, ReconcileError>(topic)
+                Ok::<_, ReconcileError>(user)
             },
         )
         .await?
@@ -96,7 +97,7 @@ impl CreateUser<'_> {
 
         // done
 
-        Ok((topic, topic_name))
+        Ok((user, user_name))
     }
 }
 
