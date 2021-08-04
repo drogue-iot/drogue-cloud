@@ -57,9 +57,7 @@ pub async fn stream_events(
                 Default::default(),
             )
             .await
-            .map_err(|err| ServiceError::InternalError {
-                message: format!("Authorization failed: {}", err),
-            })?
+            .map_err(|err| ServiceError::InternalError(format!("Authorization failed: {}", err)))?
             .outcome
             .ensure(|| ServiceError::AuthenticationError)?;
     }

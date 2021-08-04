@@ -22,9 +22,8 @@ where
 
     let authenticator = extract(&req);
     log::debug!("Authenticator: {:?}", &authenticator);
-    let authenticator = authenticator.ok_or_else(|| ServiceError::InternalError {
-        message: "Missing authenticator instance".into(),
-    })?;
+    let authenticator = authenticator
+        .ok_or_else(|| ServiceError::InternalError("Missing authenticator instance".into()))?;
 
     match authenticator.validate_token(token).await {
         Ok(payload) => {
@@ -32,10 +31,9 @@ where
                 .insert(UserInformation::Authenticated(payload.into()));
             Ok(req)
         }
-        Err(AuthenticatorError::Missing) => Err(ServiceError::InternalError {
-            message: "Missing OpenID client".into(),
+        Err(AuthenticatorError::Missing) => {
+            Err(ServiceError::InternalError("Missing OpenID client".into()).into())
         }
-        .into()),
         Err(AuthenticatorError::Failed) => Err(ServiceError::AuthenticationError.into()),
     }
 }
