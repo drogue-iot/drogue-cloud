@@ -7,8 +7,8 @@ use thiserror::Error;
 pub enum ServiceError {
     #[error("Error processing token")]
     TokenError,
-    #[error("Internal error: {message}")]
-    InternalError { message: String },
+    #[error("Internal error: {0}")]
+    InternalError(String),
     #[error("Failed to authenticate")]
     AuthenticationError,
     #[error("Service unavailable: {0}")]
@@ -39,7 +39,7 @@ impl ResponseError for ServiceError {
                 error: "TokenError".into(),
                 message: "Failed to decode token".into(),
             }),
-            ServiceError::InternalError { message } => {
+            ServiceError::InternalError(message) => {
                 HttpResponse::InternalServerError().json(ErrorResponse {
                     error: "InternalError".into(),
                     message: message.clone(),
