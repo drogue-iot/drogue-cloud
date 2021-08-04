@@ -149,7 +149,7 @@ mod test {
     fn user(id: &str, roles: &[&str]) -> UserInformation {
         UserInformation::Authenticated(UserDetails {
             user_id: id.into(),
-            roles: roles.into_iter().map(ToString::to_string).collect(),
+            roles: roles.iter().map(ToString::to_string).collect(),
         })
     }
 

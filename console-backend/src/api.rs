@@ -14,14 +14,10 @@ pub fn spec(
 ) -> anyhow::Result<Value> {
     let mut api: Value = serde_yaml::from_str(SPEC).context("Failed to parse OpenAPI YAML")?;
 
-    let url = endpoints
-        .api
-        .as_ref()
-        .map(|s| Cow::from(s))
-        .unwrap_or_else(|| {
-            let ci = req.connection_info();
-            Cow::from(format!("{}://{}", ci.scheme(), ci.host()))
-        });
+    let url = endpoints.api.as_ref().map(Cow::from).unwrap_or_else(|| {
+        let ci = req.connection_info();
+        Cow::from(format!("{}://{}", ci.scheme(), ci.host()))
+    });
 
     // server
 

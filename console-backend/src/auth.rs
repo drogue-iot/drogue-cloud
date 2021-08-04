@@ -110,7 +110,7 @@ fn make_userinfo(client: &OpenIdClient, token: &Token<StandardClaims>) -> Option
                     .userinfo
                     .preferred_username
                     .as_ref()
-                    .unwrap_or_else(|| &payload.sub)
+                    .unwrap_or(&payload.sub)
                     .clone(),
                 full_name: payload.userinfo.name.clone(),
                 account_url: client.account_url.clone(),

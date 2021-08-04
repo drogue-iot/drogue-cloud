@@ -204,7 +204,7 @@ where
                     };
                     future::ready(Ok(result))
                 })
-                .map_err(|err| PostgresManagementServiceError::Service(err))
+                .map_err(PostgresManagementServiceError::Service)
                 .into_stream(),
         ))
     }
