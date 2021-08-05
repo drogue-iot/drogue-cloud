@@ -65,6 +65,9 @@ mod test {
         let roles = user.roles();
 
         println!("Roles: {:?}", roles);
-        assert_eq!(roles, &["drogue-user", "drogue-admin"])
+        assert_eq!(
+            roles,
+            &["drogue-user", "drogue-admin", "drogue-user", "drogue-admin"]
+        )
     }
 }
