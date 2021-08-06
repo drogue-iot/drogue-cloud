@@ -1,5 +1,7 @@
+mod shell;
 mod yaml;
 
+pub use shell::*;
 pub use yaml::*;
 
 use web_sys::Node;

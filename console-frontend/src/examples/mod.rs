@@ -49,16 +49,6 @@ impl Examples {
     }
 }
 
-pub fn shell_quote<S: ToString>(s: S) -> String {
-    s.to_string().replace('\\', "\\\\").replace('\'', "\\\'")
-}
-
-/// Escape into single-quote string
-pub fn shell_single_quote<S: ToString>(s: S) -> String {
-    let s = s.to_string().replace('\'', r#"'"'"'"#);
-    format!("'{}'", s)
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Properties)]
 pub struct Props {
     pub example: Examples,

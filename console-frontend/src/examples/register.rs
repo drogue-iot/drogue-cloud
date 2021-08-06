@@ -1,9 +1,7 @@
 use crate::{
     backend::Backend,
-    examples::{
-        data::ExampleData,
-        {shell_quote, shell_single_quote},
-    },
+    examples::data::ExampleData,
+    utils::{shell_quote, shell_single_quote},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;

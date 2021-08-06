@@ -9,5 +9,13 @@ where
     let yaml = serde_yaml::to_string(content).unwrap_or_default();
     let p: &[_] = &['-', '\n', '\r'];
     let yaml = yaml.trim_start_matches(p);
-    TextModel::create(yaml, Some("yaml"), None)
+    to_model(Some("yaml"), yaml)
+}
+
+/// Convert content to TextModel
+pub fn to_model<S>(language: Option<&str>, text: S) -> Result<TextModel, JsValue>
+where
+    S: AsRef<str>,
+{
+    TextModel::create(text.as_ref(), language, None)
 }

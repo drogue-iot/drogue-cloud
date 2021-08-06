@@ -1,6 +1,6 @@
 use crate::{
     backend::{Backend, Token},
-    utils::to_yaml_model,
+    utils::{shell_single_quote, to_model, to_yaml_model},
 };
 use bstr::ByteVec;
 use drogue_client::{
@@ -12,10 +12,12 @@ use drogue_cloud_service_api::{
     kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
 };
 use java_properties::PropertiesWriter;
+use monaco::api::TextModel;
 use monaco::{api::CodeEditorOptions, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use serde_json::json;
 use std::rc::Rc;
+use wasm_bindgen::JsValue;
 use yew::prelude::*;
 
 pub struct IntegrationDetails<'a> {
@@ -53,17 +55,10 @@ impl IntegrationDetails<'_> {
             .unwrap_or("<you>")
             .to_string();
 
-        let options = CodeEditorOptions::default()
-            .with_scroll_beyond_last_line(false)
-            .with_language("yaml".to_owned())
-            .with_builtin_theme(BuiltinTheme::VsDark);
-
-        let options = Rc::new(options);
-
         let topic = format!("app/{}", self.application.metadata.name);
 
         let outgoing = json!({
-            "type": "smallrye-mqtt",
+            "connector": "smallrye-mqtt",
             "ssl": true,
             "host": mqtt.host.clone(),
             "port": mqtt.port,
@@ -87,16 +82,30 @@ impl IntegrationDetails<'_> {
             },
         });
 
-        if let Ok(model) = to_yaml_model(&content) {
+        return html! {
+            <Tabs>
+                <Tab label="Quarkus">
+                    <div><code>{"application.yaml"}</code></div>
+                    { Self::default_editor(Some("yaml"), to_yaml_model(&content)) }
+                </Tab>
+            </Tabs>
+        };
+    }
+
+    fn default_editor(language: Option<&str>, model: Result<TextModel, JsValue>) -> Html {
+        let mut options = CodeEditorOptions::default()
+            .with_scroll_beyond_last_line(false)
+            .with_builtin_theme(BuiltinTheme::VsDark);
+
+        if let Some(language) = language {
+            options = options.with_language(language.to_owned());
+        }
+
+        let options = Rc::new(options);
+
+        if let Ok(model) = model {
             html! {
-                <>
-                <Tabs>
-                    <Tab label="Quarkus">
-                        <div><code>{"application.yaml"}</code></div>
-                        <CodeEditor model=model options=options />
-                    </Tab>
-                </Tabs>
-                </>
+                <CodeEditor model=model options=options />
             }
         } else {
             html! {
@@ -188,60 +197,146 @@ impl IntegrationDetails<'_> {
             .cloned()
             .unwrap_or_default();
 
+        let target = match self.application.kafka_target(KafkaEventType::Events) {
+            Ok(target) => target,
+            _ => return html! {},
+        };
+
+        let user = match self
+            .application
+            .section::<KafkaAppStatus>()
+            .and_then(|s| s.ok())
+            .and_then(|s| s.user)
+        {
+            Some(user) => user,
+            _ => return html! {},
+        };
+
+        return html! {
+            <Grid gutter=true>
+                <GridItem cols=[6]>{ self.render_kafka_basic(&bootstrap, &target, &user) }</GridItem>
+                <GridItem cols=[6]>{ self.render_kafka_examples(&bootstrap, &target,&user) }</GridItem>
+            </Grid>
+        };
+    }
+
+    fn render_kafka_examples(
+        &self,
+        bootstrap: &str,
+        target: &KafkaTarget,
+        user: &KafkaUserStatus,
+    ) -> Html {
+        let topic = match target {
+            KafkaTarget::Internal { topic } => topic.clone(),
+            KafkaTarget::External { config } => config.topic.clone(),
+        };
+
+        let podman = {
+            let mut command = format!(
+                r#"podman run --rm -ti docker.io/bitnami/kafka:latest kafka-console-consumer.sh
+--topic {topic}
+--bootstrap-server {bootstrap}"#,
+                topic = topic,
+                bootstrap = bootstrap,
+            );
+
+            for (k, v) in Self::consumer_properties(user) {
+                command += &format!("\n--consumer-property {}={}", k, shell_single_quote(v));
+            }
+
+            command.replace('\n', " \\\n\t")
+        };
+
+        let quarkus = {
+            let mut props = Self::consumer_properties(&user);
+            props.insert(0, ("connector".into(), "smallrye-kafka".into()));
+            props.insert(0, ("topic".into(), topic));
+            let mut props = Self::ser_properties(
+                props
+                    .into_iter()
+                    .map(|(k, v)| {
+                        (
+                            format!("mp.messaging.incoming.drogue-iot-incoming.{}", k),
+                            v,
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            );
+
+            props += r#"
+# or use "latest" to start with the most recent event
+mp.messaging.incoming.drogue-iot-incoming.auto.offset.reset=earliest"#;
+
+            props
+        };
+
+        return html! {
+                <>
+                <Tabs>
+                    <Tab label="Command line">
+                        <Clipboard
+                            code=true readonly=true variant=ClipboardVariant::Expanded
+                            value=podman/>
+                    </Tab>
+                    <Tab label="Quarkus">
+                        <div><code>{"application.properties"}</code></div>
+                        { Self::default_editor(Some("properties"), to_model(Some("properties"), &quarkus)) }
+                    </Tab>
+                </Tabs>
+                </>
+        };
+    }
+
+    fn render_kafka_basic(
+        &self,
+        bootstrap: &str,
+        target: &KafkaTarget,
+        user: &KafkaUserStatus,
+    ) -> Html {
         html! {
             <>
             <DescriptionList>
-            {
-                match self.application.kafka_target(KafkaEventType::Events) {
-                    Ok(KafkaTarget::Internal { topic }) => {
-                        html! {
-                            <>
-                            <DescriptionGroup term="Device-to-Cloud topic">
-                                <Clipboard code=true readonly=true value=topic/>
-                            </DescriptionGroup>
-                            <DescriptionGroup term="Bootstrap Servers">
-                                <Clipboard code=true readonly=true value=bootstrap/>
-                            </DescriptionGroup>
-                            </>
+                {
+                    match target {
+                        KafkaTarget::Internal { topic } => {
+                            html! {
+                                <>
+                                <DescriptionGroup term="Device-to-Cloud topic">
+                                    <Clipboard code=true readonly=true value=topic/>
+                                </DescriptionGroup>
+                                <DescriptionGroup term="Bootstrap Servers">
+                                    <Clipboard code=true readonly=true value=bootstrap/>
+                                </DescriptionGroup>
+                                </>
+                            }
+                        }
+                        KafkaTarget::External { config } => {
+                            html! {
+                                 <DescriptionGroup term="Device-to-Cloud topic">
+                                    <Clipboard code=true readonly=true value=&config.topic/>
+                                </DescriptionGroup>
+                            }
                         }
                     }
-                    Ok(KafkaTarget::External { config }) => {
-                        html! {
-                             <DescriptionGroup term="Device-to-Cloud topic">
-                                <Clipboard code=true readonly=true value=config.topic/>
-                            </DescriptionGroup>
-                        }
-                    }
-                    _ => html! {},
                 }
-            }
 
-            {
-                match self.application.section::<KafkaAppStatus>().and_then(|s| s.ok()).and_then(|s|s.user) {
-                    Some(user) => html!{
-                        <>
-                        <DescriptionGroup term="User">
-                            <Clipboard code=true readonly=true value=&user.username/>
-                        </DescriptionGroup>
-                        <DescriptionGroup term="Password">
-                            <Clipboard code=true readonly=true value=&user.password/>
-                        </DescriptionGroup>
-                        <DescriptionGroup term="Mechanism">
-                            <Clipboard code=true readonly=true value=&user.mechanism/>
-                        </DescriptionGroup>
-                        <DescriptionGroup term="JAAS Config">
-                            <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
-                                value=Self::jaas_config(&user)/>
-                        </DescriptionGroup>
-                        <DescriptionGroup term="Consumer Properties">
-                            <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
-                                value=Self::consumer_properties(&user)/>
-                        </DescriptionGroup>
-                        </>
-                    },
-                    None => html!{},
-                }
-            }
+                <DescriptionGroup term="User">
+                    <Clipboard code=true readonly=true value=&user.username/>
+                </DescriptionGroup>
+                <DescriptionGroup term="Password">
+                    <Clipboard code=true readonly=true value=&user.password/>
+                </DescriptionGroup>
+                <DescriptionGroup term="Mechanism">
+                    <Clipboard code=true readonly=true value=&user.mechanism/>
+                </DescriptionGroup>
+                <DescriptionGroup term="JAAS Config">
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
+                        value=Self::jaas_config(&user)/>
+                </DescriptionGroup>
+                <DescriptionGroup term="Consumer Properties">
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
+                        value=Self::consumer_properties_str(&user)/>
+                </DescriptionGroup>
             </DescriptionList>
             </>
         }
@@ -265,7 +360,7 @@ impl IntegrationDetails<'_> {
         )
     }
 
-    fn consumer_properties(user: &KafkaUserStatus) -> String {
+    fn consumer_properties(user: &KafkaUserStatus) -> Vec<(String, String)> {
         let mut properties: Vec<(&str, &str)> = Vec::new();
 
         let jaas = Self::jaas_config(user);
@@ -274,15 +369,22 @@ impl IntegrationDetails<'_> {
         properties.push(("sasl.mechanism", "SCRAM-SHA-512"));
         properties.push(("sasl.jaas.config", &jaas));
 
-        Self::ser_properties(properties)
+        properties
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect()
     }
 
-    fn ser_properties(properties: Vec<(&str, &str)>) -> String {
+    fn consumer_properties_str(user: &KafkaUserStatus) -> String {
+        Self::ser_properties(Self::consumer_properties(user))
+    }
+
+    fn ser_properties(properties: Vec<(String, String)>) -> String {
         let mut buf = Vec::new();
         {
             let mut p = PropertiesWriter::new(&mut buf);
             for (k, v) in properties {
-                p.write(k, v).ok();
+                p.write(&k, &v).ok();
             }
         }
         buf.into_string_lossy()
