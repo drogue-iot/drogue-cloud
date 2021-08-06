@@ -16,3 +16,6 @@ integrations:
   mqtt:
     ingress:
       port: 30002
+  websocket:
+    ingress:
+      port: 30004
