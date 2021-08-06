@@ -5,8 +5,8 @@ pub use event::*;
 
 use crate::{Event, EventError};
 use anyhow::bail;
-use drogue_cloud_event_common::config::KafkaConfig;
 use drogue_cloud_event_common::stream::{CustomAck, EventStreamConfig, Handle};
+use drogue_cloud_service_api::kafka::KafkaConfig;
 use futures::{Stream, StreamExt, TryStreamExt};
 use rdkafka::error::KafkaError;
 use serde::Deserialize;

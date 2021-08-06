@@ -812,25 +812,6 @@ dependencies = [
 
 [[package]]
 name = "cloudevents-sdk"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7c9f6054fbd2d641a2d275e44f922a3816a6cf51751fb0f72fcf26e27209dfd"
-dependencies = [
- "base64 0.12.3",
- "bitflags",
- "chrono",
- "delegate-attr",
- "hostname",
- "serde 1.0.126",
- "serde_json",
- "snafu",
- "url",
- "uuid",
- "web-sys",
-]
-
-[[package]]
-name = "cloudevents-sdk"
 version = "0.4.0"
 source = "git+https://github.com/cloudevents/sdk-rust?branch=actix-web-4.0.0-beta.8#538b3bd5b91d6a5dc64036d25137eebaffe31105"
 dependencies = [
@@ -1364,7 +1345,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=a25e416f7cefbb584b026a465d36183309e88038#a25e416f7cefbb584b026a465d36183309e88038"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=b8539b47969cb0f34aabde76dda9f60798547554#b8539b47969cb0f34aabde76dda9f60798547554"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1506,7 +1487,7 @@ dependencies = [
  "bytes",
  "bytestring",
  "chrono",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "coap",
  "coap-lite",
  "dotenv",
@@ -1536,7 +1517,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.13.0",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "config 0.10.1",
  "dotenv",
  "drogue-client 0.7.0",
@@ -1572,7 +1553,7 @@ dependencies = [
  "biscuit",
  "chrono",
  "chrono-tz",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "drogue-client 0.7.0",
  "drogue-cloud-api-key-service",
  "drogue-cloud-console-common",
@@ -1612,9 +1593,10 @@ version = "0.7.0"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
+ "bstr",
  "chrono",
  "chrono-tz",
- "cloudevents-sdk 0.3.1",
+ "cloudevents-sdk",
  "drogue-client 0.7.0",
  "drogue-cloud-console-common",
  "drogue-cloud-service-api",
@@ -1622,6 +1604,7 @@ dependencies = [
  "headers",
  "http",
  "itertools 0.9.0",
+ "java-properties",
  "js-sys",
  "log",
  "md5",
@@ -1732,7 +1715,7 @@ dependencies = [
  "async-trait",
  "base64 0.13.0",
  "chrono",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "config 0.11.0",
  "deadpool 0.8.2",
  "drogue-client 0.7.0",
@@ -1764,7 +1747,7 @@ dependencies = [
 name = "drogue-cloud-event-common"
 version = "0.7.0"
 dependencies = [
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "config 0.11.0",
  "drogue-cloud-service-api",
  "futures",
@@ -1788,7 +1771,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "config 0.10.1",
  "dotenv",
  "drogue-client 0.7.0",
@@ -1824,7 +1807,7 @@ dependencies = [
  "async-trait",
  "base64 0.13.0",
  "bytes",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "drogue-client 0.7.0",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-event-common",
@@ -1849,7 +1832,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "bytestring",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "dotenv",
  "drogue-client 0.7.0",
  "drogue-cloud-endpoint-common",
@@ -1885,7 +1868,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "bytestring",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "dotenv",
  "drogue-client 0.7.0",
  "drogue-cloud-endpoint-common",
@@ -1980,7 +1963,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "drogue-cloud-database-common",
  "drogue-cloud-event-common",
  "drogue-cloud-service-api",
@@ -2007,11 +1990,16 @@ dependencies = [
  "base64 0.13.0",
  "base64-serde",
  "chrono",
+ "config 0.11.0",
  "drogue-client 0.7.0",
  "futures",
  "indexmap",
+ "lazy_static",
  "log",
+ "md5",
  "nom 6.1.2",
+ "rdkafka",
+ "regex",
  "serde 1.0.126",
  "serde_json",
  "thiserror",
@@ -2030,7 +2018,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "chrono",
- "cloudevents-sdk 0.4.0",
+ "cloudevents-sdk",
  "config 0.10.1",
  "drogue-client 0.7.0",
  "drogue-cloud-event-common",
@@ -2043,13 +2031,10 @@ dependencies = [
  "humantime-serde",
  "k8s-openapi",
  "kube",
- "lazy_static",
  "log",
- "md5",
  "ntex",
  "openid",
  "pem",
- "regex",
  "reqwest",
  "rustls",
  "serde 1.0.126",
@@ -2225,6 +2210,70 @@ name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
+
+[[package]]
+name = "encoding"
+version = "0.2.33"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b0d943856b990d12d3b55b359144ff341533e516d94098b1d3fc1ac666d36ec"
+dependencies = [
+ "encoding-index-japanese",
+ "encoding-index-korean",
+ "encoding-index-simpchinese",
+ "encoding-index-singlebyte",
+ "encoding-index-tradchinese",
+]
+
+[[package]]
+name = "encoding-index-japanese"
+version = "1.20141219.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04e8b2ff42e9a05335dbf8b5c6f7567e5591d0d916ccef4e0b1710d32a0d0c91"
+dependencies = [
+ "encoding_index_tests",
+]
+
+[[package]]
+name = "encoding-index-korean"
+version = "1.20141219.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4dc33fb8e6bcba213fe2f14275f0963fd16f0a02c878e3095ecfdf5bee529d81"
+dependencies = [
+ "encoding_index_tests",
+]
+
+[[package]]
+name = "encoding-index-simpchinese"
+version = "1.20141219.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d87a7194909b9118fc707194baa434a4e3b0fb6a5a757c73c3adb07aa25031f7"
+dependencies = [
+ "encoding_index_tests",
+]
+
+[[package]]
+name = "encoding-index-singlebyte"
+version = "1.20141219.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3351d5acffb224af9ca265f435b859c7c01537c0849754d3db3fdf2bfe2ae84a"
+dependencies = [
+ "encoding_index_tests",
+]
+
+[[package]]
+name = "encoding-index-tradchinese"
+version = "1.20141219.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd0e20d5688ce3cab59eb3ef3a2083a5c77bf496cb798dc6fcdb75f323890c18"
+dependencies = [
+ "encoding_index_tests",
+]
+
+[[package]]
+name = "encoding_index_tests"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
 name = "encoding_rs"
@@ -2866,6 +2915,17 @@ name = "itoa"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
+
+[[package]]
+name = "java-properties"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20e9b11dedd144ceb96484add3f9088c131795e4295ce51448ef755e0ec19c07"
+dependencies = [
+ "encoding",
+ "lazy_static",
+ "regex",
+]
 
 [[package]]
 name = "jobserver"
@@ -3761,7 +3821,7 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 [[package]]
 name = "patternfly-yew"
 version = "0.0.26"
-source = "git+https://github.com/ctron/patternfly-yew?rev=067809d0153a9e6250caf69a92ce90b6cbe47d79#067809d0153a9e6250caf69a92ce90b6cbe47d79"
+source = "git+https://github.com/ctron/patternfly-yew?rev=8e3bf2f6e00f17e49499939d53d9e6a6dac83d35#8e3bf2f6e00f17e49499939d53d9e6a6dac83d35"
 dependencies = [
  "chrono",
  "js-sys",

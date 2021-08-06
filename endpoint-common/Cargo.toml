@@ -37,7 +37,7 @@ thiserror = "1"
 
 cloudevents-sdk = { version = "0.4", features = ["actix", "reqwest", "rdkafka"] }
 
-rdkafka = { version = "0.25", features = ["ssl", "sasl"]  }
+rdkafka = { version = "0.25", features = ["ssl", "sasl"] }
 deadpool = "0.8"
 
 percent-encoding = "2"
@@ -46,7 +46,7 @@ http = "0.2"
 
 openid = "0.9"
 
-drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-api = { path = "../service-api", features = ["rdkafka"] }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-event-common = { path = "../event-common" }
 drogue-client = "0.7.0"

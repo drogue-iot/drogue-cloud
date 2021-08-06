@@ -5,10 +5,8 @@ mod actix;
 pub use self::actix::*;
 
 use cloudevents::Event;
-use drogue_cloud_event_common::{
-    config::KafkaConfig,
-    stream::{self, EventStreamError},
-};
+use drogue_cloud_event_common::stream::{self, EventStreamError};
+use drogue_cloud_service_api::kafka::KafkaConfig;
 use futures::Stream;
 use std::ops::{Deref, DerefMut};
 

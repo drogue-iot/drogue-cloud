@@ -1,5 +1,4 @@
 mod controller;
-mod data;
 
 use crate::controller::{
     app::{ApplicationController, ANNOTATION_APP_NAME},

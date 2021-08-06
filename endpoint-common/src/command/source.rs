@@ -1,10 +1,12 @@
 use crate::command::{Command, CommandDispatcher};
 use async_trait::async_trait;
-use drogue_cloud_event_common::{
-    config::KafkaConfig,
-    stream::{AutoAck, EventStream, EventStreamConfig, EventStreamError},
+use drogue_cloud_event_common::stream::{
+    AutoAck, EventStream, EventStreamConfig, EventStreamError,
 };
-use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
+use drogue_cloud_service_api::{
+    health::{HealthCheckError, HealthChecked},
+    kafka::KafkaConfig,
+};
 use futures::StreamExt;
 use serde::Deserialize;
 use std::sync::Arc;

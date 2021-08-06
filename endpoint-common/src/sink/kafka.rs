@@ -7,11 +7,10 @@ use cloudevents::{
     AttributesReader,
 };
 use drogue_client::{core, registry, Translator};
-use drogue_cloud_event_common::config::KafkaClientConfig;
-use drogue_cloud_service_common::{
-    config::ConfigFromEnv,
-    kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
+use drogue_cloud_service_api::kafka::{
+    KafkaClientConfig, KafkaConfigExt, KafkaEventType, KafkaTarget,
 };
+use drogue_cloud_service_common::config::ConfigFromEnv;
 use futures::channel::oneshot;
 use rdkafka::{
     error::{KafkaError, RDKafkaErrorCode},

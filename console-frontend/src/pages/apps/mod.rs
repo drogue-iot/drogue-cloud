@@ -23,6 +23,8 @@ pub enum Pages {
 
 #[derive(Switch, Debug, Clone, PartialEq, Eq)]
 pub enum DetailsSection {
+    #[to = "integrations"]
+    Integrations,
     #[to = "yaml"]
     Yaml,
     #[end]

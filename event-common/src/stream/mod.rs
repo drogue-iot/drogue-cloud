@@ -2,8 +2,8 @@ mod error;
 
 pub use error::*;
 
-use crate::config::KafkaConfig;
 use cloudevents::{binding::rdkafka::MessageExt, AttributesReader, AttributesWriter, Data, Event};
+use drogue_cloud_service_api::kafka::KafkaConfig;
 use futures::{
     task::{Context, Poll},
     Stream, StreamExt,

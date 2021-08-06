@@ -4,17 +4,16 @@ mod user;
 use topic::*;
 use user::*;
 
-use crate::{
-    controller::{ControllerConfig, CONDITION_KAFKA_READY},
-    data::*,
-};
+use crate::controller::ControllerConfig;
 use async_trait::async_trait;
-use drogue_client::{core::v1::Conditions, meta::v1::CommonMetadataMut, registry, Translator};
+use drogue_client::{
+    core::v1::Conditions,
+    meta::v1::CommonMetadataMut,
+    registry::{self, v1::KafkaAppStatus},
+    Translator,
+};
 use drogue_cloud_operator_common::controller::{
-    base::{
-        ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, StatusSection,
-        CONDITION_RECONCILED,
-    },
+    base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
         progress::{
             self, application::ApplicationAccessor, OperationOutcome, Progressor, RunConstructor,
@@ -22,7 +21,7 @@ use drogue_cloud_operator_common::controller::{
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
-use drogue_cloud_service_common::kafka::{make_kafka_resource_name, ResourceType};
+use drogue_cloud_service_api::kafka::{make_kafka_resource_name, ResourceType};
 use k8s_openapi::api::core::v1::Secret;
 use kube::{
     api::{ApiResource, DynamicObject},
@@ -257,17 +256,6 @@ impl ApplicationAccessor for ConstructContext {
             .and_then(|s| s.ok())
             .unwrap_or_default()
             .conditions
-    }
-}
-
-impl StatusSection for KafkaAppStatus {
-    fn ready_name() -> &'static str {
-        CONDITION_KAFKA_READY
-    }
-
-    fn update_status(&mut self, conditions: Conditions, observed_generation: u64) {
-        self.conditions = conditions;
-        self.observed_generation = observed_generation;
     }
 }
 

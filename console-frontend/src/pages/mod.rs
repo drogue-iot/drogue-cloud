@@ -13,10 +13,11 @@ use patternfly_yew::*;
 use yew::prelude::*;
 
 pub trait HasReadyState {
-    fn render_state(&self) -> Html {
+    fn render_condition<S: AsRef<str>>(&self, name: S) -> Html {
+        let name = name.as_ref();
         match self
             .conditions()
-            .and_then(|c| c.0.into_iter().find(|c| c.r#type == "Ready"))
+            .and_then(|c| c.0.into_iter().find(|c| c.r#type == name))
             .as_ref()
             .map(|s| s.status.as_str())
         {
@@ -30,6 +31,10 @@ pub trait HasReadyState {
                 {Icon::QuestionCircle} <span>{" Unknown"}</span>
             </> },
         }
+    }
+
+    fn render_state(&self) -> Html {
+        self.render_condition("Ready")
     }
 
     fn conditions(&self) -> Option<core::v1::Conditions>;

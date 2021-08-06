@@ -1,57 +1,36 @@
 use crate::backend::Backend;
-use anyhow::Error;
 use drogue_cloud_service_api::endpoints::{Endpoints, MqttEndpoint};
 use patternfly_yew::*;
-use std::rc::Rc;
-use yew::{
-    format::{Json, Nothing},
-    prelude::*,
-    services::fetch::*,
-    virtual_dom::VChild,
-};
+use yew::{prelude::*, virtual_dom::VChild};
 
-pub struct Overview {
-    link: ComponentLink<Self>,
-
-    ft: Option<FetchTask>,
-    endpoints: Option<Endpoints>,
+#[derive(Clone, Properties, PartialEq, Eq)]
+pub struct Props {
+    pub endpoints: Option<Endpoints>,
 }
 
-pub enum Msg {
-    FetchOverview,
-    FetchOverviewFailed,
-    OverviewUpdate(Rc<Endpoints>),
+pub struct Overview {
+    props: Props,
 }
 
 impl Component for Overview {
-    type Message = Msg;
-    type Properties = ();
+    type Message = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::FetchOverview);
-        Self {
-            ft: None,
-            link,
-            endpoints: None,
-        }
+    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
+        Self { props }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            Msg::FetchOverview => {
-                self.ft = Some(self.fetch_overview().unwrap());
-                true
-            }
-            Msg::OverviewUpdate(e) => {
-                self.endpoints = Some((*e).clone());
-                true
-            }
-            _ => false,
-        }
-    }
-
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
         false
+    }
+
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        if self.props != props {
+            self.props = props;
+            true
+        } else {
+            false
+        }
     }
 
     fn view(&self) -> Html {
@@ -71,26 +50,8 @@ impl Component for Overview {
 }
 
 impl Overview {
-    fn fetch_overview(&self) -> Result<FetchTask, Error> {
-        Backend::request(
-            Method::GET,
-            "/api/console/v1alpha1/info",
-            Nothing,
-            self.link
-                .callback(|response: Response<Json<Result<Endpoints, Error>>>| {
-                    let parts = response.into_parts();
-                    if let (meta, Json(Ok(body))) = parts {
-                        if meta.status.is_success() {
-                            return Msg::OverviewUpdate(Rc::new(body));
-                        }
-                    }
-                    Msg::FetchOverviewFailed
-                }),
-        )
-    }
-
     fn render_overview(&self) -> Html {
-        match &self.endpoints {
+        match &self.props.endpoints {
             Some(endpoints) => self.render_endpoints(endpoints),
             None => html! {
                 <div>{"Loading..."}</div>
@@ -135,24 +96,31 @@ impl Overview {
         }
 
         return html! {
-            <Flex
-                >
-                { Self::render_cards("Services", service_cards) }
-                { Self::render_cards("Endpoints", endpoint_cards) }
-                { Self::render_cards("Integrations", integration_cards) }
-                { if !demo_cards.is_empty() {
-                    Self::render_cards("Demos", demo_cards)
-                } else {
-                    html_nested!{<Flex></Flex>}
-                } }
-            </Flex>
+            <Grid gutter=true>
+                <GridItem cols=[3]>
+                    { Self::render_cards("Services", service_cards) }
+                </GridItem>
+                <GridItem cols=[3]>
+                    { Self::render_cards("Endpoints", endpoint_cards) }
+                </GridItem>
+                <GridItem cols=[3]>
+                    { Self::render_cards("Integrations", integration_cards) }
+                </GridItem>
+                <GridItem cols=[3]>
+                    { if !demo_cards.is_empty() {
+                        Self::render_cards("Demos", demo_cards)
+                    } else {
+                        html_nested!{<Flex></Flex>}
+                    } }
+                </GridItem>
+            </Grid>
         };
     }
 
     fn render_cards(label: &str, cards: Vec<Html>) -> VChild<Flex> {
         html_nested! {
             <Flex>
-                <Flex modifiers=vec![FlexModifier::Column.all()]>
+                <Flex modifiers=vec![FlexModifier::Column.all(), FlexModifier::FullWidth.all()]>
                     <FlexItem>
                         <Title size=Size::XLarge>{label}</Title>
                     </FlexItem>

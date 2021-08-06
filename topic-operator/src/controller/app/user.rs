@@ -1,12 +1,15 @@
 use super::{condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER};
-use crate::{controller::ControllerConfig, data::*};
+use crate::controller::ControllerConfig;
 use async_trait::async_trait;
-use drogue_client::Translator;
+use drogue_client::{
+    registry::v1::{KafkaAppStatus, KafkaUserStatus},
+    Translator,
+};
 use drogue_cloud_operator_common::controller::reconciler::{
     progress::{self, OperationOutcome, ProgressOperation},
     ReconcileError,
 };
-use drogue_cloud_service_common::kafka::{make_kafka_resource_name, ResourceType};
+use drogue_cloud_service_api::kafka::{make_kafka_resource_name, ResourceType};
 use k8s_openapi::api::core::v1::Secret;
 use kube::{
     api::{ApiResource, DynamicObject},

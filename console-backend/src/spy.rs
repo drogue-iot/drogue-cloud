@@ -3,15 +3,15 @@ use actix::clock::{interval_at, Instant};
 use actix_web::{get, http::header::ContentType, web, web::Bytes, HttpResponse};
 use drogue_client::{registry, Context};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig, IntoSseStream};
-use drogue_cloud_service_api::auth::user::{
-    authz::{AuthorizationRequest, Permission},
-    UserInformation,
+use drogue_cloud_service_api::{
+    auth::user::{
+        authz::{AuthorizationRequest, Permission},
+        UserInformation,
+    },
+    kafka::{KafkaConfigExt, KafkaEventType},
 };
 use drogue_cloud_service_common::{
-    client::UserAuthClient,
-    error::ServiceError,
-    kafka::{KafkaConfigExt, KafkaEventType},
-    openid::Authenticator,
+    client::UserAuthClient, error::ServiceError, openid::Authenticator,
 };
 use futures::{stream::select, StreamExt};
 use openid::CustomClaims;

@@ -1,5 +1,8 @@
+mod config;
+
+pub use self::config::*;
+
 use drogue_client::{registry, Translator};
-use drogue_cloud_event_common::config::{KafkaClientConfig, KafkaConfig};
 use lazy_static::lazy_static;
 use regex::Regex;
 

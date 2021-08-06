@@ -42,6 +42,8 @@ pub struct EndpointConfig {
     pub device_registry_url: Option<String>,
     #[serde(default)]
     pub command_endpoint_url: Option<String>,
+    #[serde(default)]
+    kafka_bootstrap_servers: Option<String>,
 
     #[serde(default)]
     pub local_certs: bool,
@@ -155,6 +157,7 @@ impl EndpointSource for EnvEndpointSource {
             redirect_url: self.0.redirect_url.as_ref().cloned(),
             registry,
             command_url: self.0.command_endpoint_url.as_ref().cloned(),
+            kafka_bootstrap_servers: self.0.kafka_bootstrap_servers.as_ref().cloned(),
             demos: get_demos(),
             local_certs: self.0.local_certs,
         })

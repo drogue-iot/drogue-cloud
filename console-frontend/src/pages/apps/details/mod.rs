@@ -1,8 +1,21 @@
+mod integrations;
+
 use super::{ApplicationTabs, Pages};
 use crate::{
-    backend::Backend, error::error, page::AppRoute, pages::apps::DetailsSection, utils::url_encode,
+    backend::{Backend, Token},
+    error::error,
+    page::AppRoute,
+    pages::{
+        apps::{details::integrations::IntegrationDetails, DetailsSection},
+        HasReadyState,
+    },
+    utils::{to_yaml_model, url_encode},
 };
 use drogue_client::registry::v1::Application;
+use drogue_cloud_service_api::{
+    endpoints::Endpoints,
+    kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
+};
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::rc::Rc;
@@ -11,6 +24,8 @@ use yew::{format::*, prelude::*, services::fetch::*};
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
     pub backend: Backend,
+    pub token: Token,
+    pub endpoints: Endpoints,
     pub name: String,
     pub details: DetailsSection,
 }
@@ -153,10 +168,7 @@ impl Details {
 
     fn reset(&mut self) {
         if let Some(content) = &self.content {
-            let yaml = serde_yaml::to_string(content).unwrap_or_default();
-            let p: &[_] = &['-', '\n', '\r'];
-            let yaml = yaml.trim_start_matches(p);
-            self.yaml = TextModel::create(yaml, Some("yaml"), None).ok();
+            self.yaml = to_yaml_model(content).ok();
         } else {
             self.yaml = None;
         }
@@ -187,6 +199,7 @@ impl Details {
                         transformer=transformer
                         >
                         <TabRouterItem<DetailsSection> to=DetailsSection::Overview label="Overview"/>
+                        <TabRouterItem<DetailsSection> to=DetailsSection::Integrations label="Integrations"/>
                         <TabRouterItem<DetailsSection> to=DetailsSection::Yaml label="YAML"/>
                     </ApplicationTabs>
                 </PageSection>
@@ -194,6 +207,7 @@ impl Details {
                 {
                     match self.props.details {
                         DetailsSection::Overview => self.render_overview(app),
+                        DetailsSection::Integrations => self.render_integrations(app),
                         DetailsSection::Yaml => self.render_editor(),
                     }
                 }
@@ -208,25 +222,62 @@ impl Details {
                 <GridItem cols=[3]>
                     <Card
                         title={html_nested!{<>{"Details"}</>}}
-                    >
-                    <DescriptionList>
-                        <DescriptionGroup term="Name">
-                            {&app.metadata.name}
-                        </DescriptionGroup>
-                        <DescriptionGroup term="Labels">
-                            { for app.metadata.labels.iter().map(|(k,v)|
-                                if v.is_empty() {
-                                    html!{ <Label label=k.clone()/>}
-                                } else {
-                                    html!{ <Label label=format!("{}={}", k, v)/>}
+                        >
+                        <DescriptionList>
+                            <DescriptionGroup term="Name">
+                                {&app.metadata.name}
+                            </DescriptionGroup>
+                            <DescriptionGroup term="Labels">
+                                { for app.metadata.labels.iter().map(|(k,v)|
+                                    if v.is_empty() {
+                                        html!{ <Label label=k.clone()/>}
+                                    } else {
+                                        html!{ <Label label=format!("{}={}", k, v)/>}
+                                    }
+                                ) }
+                            </DescriptionGroup>
+                        </DescriptionList>
+                    </Card>
+                </GridItem>
+                <GridItem cols=[3]>
+                    <Card
+                        title={html_nested!{<>{"Kafka"}</>}}
+                        >
+                        <DescriptionList>
+                            <DescriptionGroup term="State">
+                                {app.render_condition("KafkaReady")}
+                            </DescriptionGroup>
+                            <DescriptionGroup term="Type">
+                            {
+                                match app.kafka_target(KafkaEventType::Events) {
+                                    Ok(KafkaTarget::Internal{ topic }) => html!{
+                                        {"Internal "}
+                                    },
+                                    Ok(KafkaTarget::External{..}) => html!{
+                                        {"External"}
+                                    },
+                                    Err(err) => {
+                                        log::info!("Failed to eval kafka target: {}", err);
+                                        html!{}
+                                    },
                                 }
-                            ) }
-                        </DescriptionGroup>
-                    </DescriptionList>
+                            }
+                            </DescriptionGroup>
+                        </DescriptionList>
                     </Card>
                 </GridItem>
             </Grid>
         };
+    }
+
+    fn render_integrations(&self, application: &Application) -> Html {
+        IntegrationDetails {
+            backend: &self.props.backend,
+            application,
+            token: &self.props.token,
+            endpoints: &self.props.endpoints,
+        }
+        .render()
     }
 
     fn render_editor(&self) -> Html {

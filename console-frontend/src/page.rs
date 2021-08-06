@@ -7,6 +7,7 @@ use crate::{
     spy::Spy,
     utils::url_decode,
 };
+use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
@@ -32,6 +33,7 @@ pub enum AppRoute {
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
     pub backend: Backend,
+    pub endpoints: Endpoints,
     pub token: Token,
     pub on_logout: Callback<()>,
 }
@@ -222,6 +224,7 @@ impl Component for AppPage {
             }
         }];
 
+        let endpoints = self.props.endpoints.clone();
         let backend = self.props.backend.clone();
         let token = self.props.token.clone();
 
@@ -237,12 +240,14 @@ impl Component for AppPage {
                             redirect = Router::redirect(|_|AppRoute::Overview)
                             render = Router::render(move |switch: AppRoute| {
                                 match switch {
-                                    AppRoute::Overview => html!{<pages::Overview/>},
+                                    AppRoute::Overview => html!{<pages::Overview endpoints=endpoints.clone()/>},
                                     AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index
                                         backend=backend.clone()
                                     />},
                                     AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
                                         backend=backend.clone()
+                                        token=token.clone()
+                                        endpoints=endpoints.clone()
                                         name=url_decode(&name)
                                         details=details
                                     />},

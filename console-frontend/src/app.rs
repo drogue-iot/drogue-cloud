@@ -1,3 +1,4 @@
+use crate::backend::RequestOptions;
 use crate::{
     backend::{Backend, BackendInformation, Token},
     components::placeholder::Placeholder,
@@ -9,8 +10,9 @@ use crate::{
 use anyhow::Error;
 use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::UserInfo;
+use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 use url::Url;
 use wasm_bindgen::JsValue;
 use yew::{
@@ -33,20 +35,25 @@ pub struct Main {
     app_failure: bool,
     /// We are in the process of authenticating.
     authenticating: bool,
+    endpoints: Option<Endpoints>,
 }
 
 #[derive(Debug, Clone)]
 pub enum Msg {
     /// Trigger fetching the endpoint information
-    FetchEndpoint,
+    FetchBackend,
     /// Failed to fetch endpoint information
     FetchBackendFailed,
     /// Trigger an overall application failure
     AppFailure(Toast),
     /// Set the backend information
-    Endpoint(BackendInformation),
+    Backend(BackendInformation),
+    /// Set the endpoint information
+    Endpoints(Rc<Endpoints>),
     /// Exchange the authentication code for an access token
     GetToken(String),
+    /// Share the access token using the data bridge
+    ShareAccessToken(Option<Token>),
     /// Set the access token
     SetAccessToken(Option<Token>),
     /// Callback when fetching the token failed
@@ -62,7 +69,7 @@ impl Component for Main {
     type Message = Msg;
     type Properties = ();
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::FetchEndpoint);
+        link.send_message(Msg::FetchBackend);
 
         let location = window().location();
         let url = Url::parse(&location.href().unwrap()).unwrap();
@@ -120,19 +127,22 @@ impl Component for Main {
             app_failure: false,
             authenticating: false,
             token_holder,
+            endpoints: None,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        log::info!("Message: {:?}", msg);
+
         match msg {
-            Msg::FetchEndpoint => {
+            Msg::FetchBackend => {
                 self.task = Some(
                     self.fetch_backend()
                         .expect("Failed to get backend information"),
                 );
                 true
             }
-            Msg::Endpoint(backend) => {
+            Msg::Backend(backend) => {
                 log::info!("Got backend: {:?}", backend);
                 Backend::set(Some(backend));
                 self.task = None;
@@ -153,6 +163,13 @@ impl Component for Main {
                     }
                 }
 
+                true
+            }
+            Msg::Endpoints(endpoints) => {
+                log::info!("Got endpoints: {:?}", endpoints);
+                self.endpoints =
+                    Some(Rc::try_unwrap(endpoints).unwrap_or_else(|err| (*err).clone()));
+                self.task = None;
                 true
             }
             Msg::FetchBackendFailed => {
@@ -193,6 +210,10 @@ impl Component for Main {
                     self.access_code = Some(access_code);
                 }
                 true
+            }
+            Msg::ShareAccessToken(token) => {
+                self.token_holder.set(token);
+                false
             }
             Msg::SetAccessToken(Some(token)) => {
                 log::info!("Token: {:?}", token);
@@ -240,9 +261,9 @@ impl Component for Main {
                     log::debug!("Token has no expiration set");
                 }
 
-                // announce the new token
+                // fetch endpoints
 
-                self.token_holder.set(Some(token));
+                self.task = Some(self.fetch_endpoints().expect("Failed to fetch endpoints"));
 
                 // done
 
@@ -300,6 +321,7 @@ impl Component for Main {
                             <AppPage
                                 backend=ready.0
                                 token=ready.1
+                                endpoints=ready.2
                                 on_logout=self.link.callback(|_|Msg::Logout)
                                 />
                         }
@@ -318,10 +340,17 @@ impl Component for Main {
 
 impl Main {
     /// Check if the app and backend are ready to show the application.
-    fn is_ready(&self) -> Option<(Backend, Token)> {
-        match (self.app_failure, Backend::get(), Backend::token()) {
-            (true, _, _) => None,
-            (false, Some(backend), Some(token)) => Some((backend, token)),
+    fn is_ready(&self) -> Option<(Backend, Token, Endpoints)> {
+        match (
+            self.app_failure,
+            Backend::get(),
+            Backend::token(),
+            self.endpoints.as_ref().cloned(),
+        ) {
+            (true, ..) => None,
+            (false, Some(backend), Some(token), Some(endpoints)) => {
+                Some((backend, token, endpoints))
+            }
             _ => None,
         }
     }
@@ -346,12 +375,34 @@ impl Main {
                     log::info!("Backend: {:?}", response);
                     if let (meta, Json(Ok(body))) = response.into_parts() {
                         if meta.status.is_success() {
-                            return Msg::Endpoint(body);
+                            return Msg::Backend(body);
                         }
                     }
                     Msg::FetchBackendFailed
                 },
             ),
+        )
+    }
+
+    fn fetch_endpoints(&self) -> Result<FetchTask, anyhow::Error> {
+        Backend::request_with(
+            Method::GET,
+            "/api/console/v1alpha1/info",
+            Nothing,
+            RequestOptions {
+                disable_reauth: true,
+            },
+            self.link
+                .callback(|response: Response<Json<Result<Endpoints, Error>>>| {
+                    let parts = response.into_parts();
+                    if let (meta, Json(Ok(body))) = parts {
+                        log::info!("Meta: {:?}", meta);
+                        if meta.status.is_success() {
+                            return Msg::Endpoints(Rc::new(body));
+                        }
+                    }
+                    Msg::FetchBackendFailed
+                }),
         )
     }
 
@@ -458,7 +509,7 @@ impl Main {
                 log::info!("Token: {:?}", token);
 
                 match token {
-                    Some(token) => Msg::SetAccessToken(Some(token)),
+                    Some(token) => Msg::ShareAccessToken(Some(token)),
                     None => Msg::FetchTokenFailed,
                 }
             } else {

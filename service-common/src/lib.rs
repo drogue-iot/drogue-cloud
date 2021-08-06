@@ -6,7 +6,6 @@ pub mod endpoints;
 pub mod error;
 pub mod health;
 pub mod id;
-pub mod kafka;
 pub mod kube;
 pub mod openid;
 pub mod reqwest;

@@ -21,8 +21,7 @@ use drogue_cloud_api_key_service::{
     endpoints as keys,
     service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
 };
-use drogue_cloud_event_common::config::KafkaClientConfig;
-use drogue_cloud_service_api::endpoints::Endpoints;
+use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     client::{UserAuthClient, UserAuthClientConfig},
     config::ConfigFromEnv,

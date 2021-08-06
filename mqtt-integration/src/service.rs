@@ -2,20 +2,21 @@ use crate::{error::ServerError, mqtt::*};
 use cloudevents::Data;
 use drogue_client::{registry, Context};
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
-use drogue_cloud_event_common::config::KafkaClientConfig;
 use drogue_cloud_integration_common::{
     self,
     commands::CommandOptions,
     stream::{EventStream, EventStreamConfig},
 };
-use drogue_cloud_service_api::auth::user::{
-    authn::{AuthenticationRequest, Outcome},
-    authz::{self, AuthorizationRequest, Permission},
-    UserInformation,
+use drogue_cloud_service_api::{
+    auth::user::{
+        authn::{AuthenticationRequest, Outcome},
+        authz::{self, AuthorizationRequest, Permission},
+        UserInformation,
+    },
+    kafka::{KafkaClientConfig, KafkaConfigExt, KafkaEventType},
 };
 use drogue_cloud_service_common::{
     client::UserAuthClient,
-    kafka::{KafkaConfigExt, KafkaEventType},
     openid::{Authenticator, AuthenticatorError},
 };
 use futures::StreamExt;

@@ -44,6 +44,23 @@ impl BackendInformation {
         IN: Into<Text>,
         OUT: From<Text>,
     {
+        self.request_with(method, path, payload, headers, Default::default(), callback)
+    }
+
+    pub fn request_with<S, IN, OUT: 'static>(
+        &self,
+        method: http::Method,
+        path: S,
+        payload: IN,
+        headers: Vec<(&str, &str)>,
+        options: RequestOptions,
+        callback: Callback<Response<OUT>>,
+    ) -> Result<FetchTask, anyhow::Error>
+    where
+        S: AsRef<str>,
+        IN: Into<Text>,
+        OUT: From<Text>,
+    {
         let request = http::request::Builder::new()
             .method(method)
             .uri(self.uri(path));
@@ -51,8 +68,11 @@ impl BackendInformation {
         let token = match Backend::access_token() {
             Some(token) => token,
             None => {
-                Backend::reauthenticate().ok();
-                return Err(anyhow::anyhow!("Performing re-auth"));
+                if !options.disable_reauth {
+                    Backend::reauthenticate().ok();
+                    return Err(anyhow::anyhow!("Performing re-auth"));
+                }
+                return Err(anyhow::anyhow!("Missing token"));
             }
         };
 
@@ -73,10 +93,10 @@ impl BackendInformation {
                 mode: Some(Mode::Cors),
                 ..Default::default()
             },
-            callback.reform(|response: Response<_>| {
+            callback.reform(move |response: Response<_>| {
                 log::info!("Backend response code: {}", response.status().as_u16());
                 match response.status().as_u16() {
-                    401 | 403 | 408 => {
+                    401 | 403 | 408 if !options.disable_reauth => {
                         // 408 is "sent" by yew if the request fails, which it does when CORS is in play
                         Backend::reauthenticate().ok();
                     }
@@ -89,6 +109,11 @@ impl BackendInformation {
 
         Ok(task)
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct RequestOptions {
+    pub disable_reauth: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -195,10 +220,25 @@ impl Backend {
         IN: Into<Text>,
         OUT: From<Text>,
     {
+        Self::request_with(method, path, payload, Default::default(), callback)
+    }
+
+    pub fn request_with<S, IN, OUT: 'static>(
+        method: http::Method,
+        path: S,
+        payload: IN,
+        options: RequestOptions,
+        callback: Callback<Response<OUT>>,
+    ) -> Result<FetchTask, anyhow::Error>
+    where
+        S: AsRef<str>,
+        IN: Into<Text>,
+        OUT: From<Text>,
+    {
         Self::get()
             .ok_or_else(|| anyhow::anyhow!("Missing backend"))?
             .info
-            .request(method, path, payload, vec![], callback)
+            .request_with(method, path, payload, vec![], options, callback)
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {

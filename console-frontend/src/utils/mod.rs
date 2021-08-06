@@ -1,3 +1,7 @@
+mod yaml;
+
+pub use yaml::*;
+
 use web_sys::Node;
 use yew::prelude::*;
 use yew::virtual_dom::VNode;
