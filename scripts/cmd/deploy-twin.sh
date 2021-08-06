@@ -121,6 +121,7 @@ fi
 
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=$(detect_domain)"
+HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 
 progress -n "🔨 Deploying Drogue IoT Twin ... "
 helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-twin"

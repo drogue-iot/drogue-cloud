@@ -157,6 +157,7 @@ domain=$(detect_domain)
 
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
+HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 
 echo "Helm arguments: $HELM_ARGS"
 
