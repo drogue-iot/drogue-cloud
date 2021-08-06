@@ -29,6 +29,8 @@ use drogue_cloud_service_common::openid::TokenConfig;
 use futures::TryFutureExt;
 use std::sync::Arc;
 
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "defaults::bind_addr")]
@@ -42,6 +44,9 @@ pub struct Config {
     pub health: HealthServerConfig,
 
     user_auth: UserAuthClientConfig,
+
+    #[serde(default)]
+    pub kafka: KafkaClientConfig,
 }
 
 #[get("/stream/{application}")]
@@ -72,9 +77,9 @@ pub async fn start_connection(
                         }))
                     } else {
                         log::debug!("API keys authentication disabled");
-                        Err(ServiceError::InternalError {
-                            message: "API keys authentication disabled".to_string(),
-                        })
+                        Err(ServiceError::InternalError(
+                            "API keys authentication disabled".to_string(),
+                        ))
                     }
                 }
             }?;
@@ -100,12 +105,14 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    log::info!("Starting WebSocket integration service endpoint");
-
     // Initialize config from environment variables
     let config = Config::from_env().unwrap();
 
     let enable_auth = config.enable_auth;
+
+    log::info!("Starting WebSocket integration service endpoint");
+    log::info!("Authentication enabled: {}", enable_auth);
+    log::info!("Kafka servers: {}", config.kafka.bootstrap_servers);
 
     // set up security
 

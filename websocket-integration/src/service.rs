@@ -2,15 +2,13 @@ use anyhow::Result;
 
 use actix::prelude::{Actor, Context, Handler, Recipient};
 
-use drogue_cloud_service_common::defaults;
-use serde::Deserialize;
 use std::collections::HashMap;
 
 use crate::messages::{Disconnect, Subscribe, WsEvent};
 use actix::{AsyncContext, ResponseFuture, SpawnHandle};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
 
-use drogue_cloud_service_api::events::EventTarget;
+use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfig};
 
 use futures::StreamExt;
 use uuid::Uuid;
@@ -19,7 +17,7 @@ use uuid::Uuid;
 // Read from the kafka and forwards messages to the Web socket actors
 pub struct Service {
     clients: HashMap<Uuid, Stream>,
-    config: StreamerConfig,
+    kafka_config: KafkaClientConfig,
 }
 
 impl Actor for Service {
@@ -30,24 +28,7 @@ impl Default for Service {
     fn default() -> Service {
         Service {
             clients: HashMap::new(),
-            config: StreamerConfig::default(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct StreamerConfig {
-    #[serde(default = "defaults::kafka_bootstrap_servers")]
-    pub kafka_bootstrap_servers: String,
-    #[serde(default)]
-    pub kafka_properties: HashMap<String, String>,
-}
-
-impl Default for StreamerConfig {
-    fn default() -> Self {
-        Self {
-            kafka_bootstrap_servers: defaults::kafka_bootstrap_servers(),
-            kafka_properties: Default::default(),
+            kafka_config: KafkaClientConfig::default(),
         }
     }
 }
@@ -66,11 +47,7 @@ impl Handler<Subscribe> for Service {
         let id = msg.id;
         let addr = msg.addr.clone();
         // set up a stream
-        let stream = Service::get_stream(
-            self.config.kafka_bootstrap_servers.clone(),
-            self.config.kafka_properties.clone(),
-            app.clone(),
-        );
+        let stream = Service::get_stream(self.kafka_config.clone(), app.clone());
         match stream {
             Ok(stream) => {
                 // run the stream in a subprocess
@@ -120,8 +97,7 @@ impl Handler<Disconnect> for Service {
 
 impl Service {
     fn get_stream(
-        kafka_bootstrap_servers: String,
-        kafka_properties: HashMap<String, String>,
+        kafka_client_config: KafkaClientConfig,
         application: String,
     ) -> Result<EventStream<'static>> {
         // extract the shared named, which we use as kafka consumer group id
@@ -137,9 +113,10 @@ impl Service {
 
         // create stream
         let stream = EventStream::new(EventStreamConfig {
-            bootstrap_servers: kafka_bootstrap_servers,
-            properties: kafka_properties,
-            target: EventTarget::Events(application.clone()),
+            kafka: KafkaConfig {
+                client: kafka_client_config,
+                topic: application.clone(),
+            },
             consumer_group: group_id,
         })
         .map_err(|err| {

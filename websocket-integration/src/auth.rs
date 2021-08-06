@@ -57,9 +57,7 @@ impl Credentials {
                         Context::default(),
                     )
                     .await
-                    .map_err(|e| ServiceError::InternalError {
-                        message: e.to_string(),
-                    })?;
+                    .map_err(|e| ServiceError::InternalError(e.to_string()))?;
                 match auth_response.outcome {
                     Outcome::Known(details) => Ok(UserInformation::Authenticated(details)),
                     Outcome::Unknown => {
@@ -99,9 +97,7 @@ impl Credentials {
                 Default::default(),
             )
             .await
-            .map_err(|e| ServiceError::InternalError {
-                message: e.to_string(),
-            })?;
+            .map_err(|e| ServiceError::InternalError(e.to_string()))?;
 
         log::debug!("Outcome: {:?}", response);
 
