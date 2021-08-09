@@ -111,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
     // create and start the service actor
     let service_addr = Service {
         clients: HashMap::default(),
-        kafka_config: KafkaClientConfig::default(),
+        kafka_config: config.kafka,
         registry,
     }
     .start();
