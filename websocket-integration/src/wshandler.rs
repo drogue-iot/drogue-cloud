@@ -1,4 +1,4 @@
-use crate::messages::{Disconnect, Subscribe, WsEvent};
+use crate::messages::{Disconnect, StreamError, Subscribe, WsEvent};
 use crate::service::Service;
 use actix::prelude::*;
 use actix::{
@@ -54,11 +54,13 @@ impl Actor for WsHandler {
         self.heartbeat(ctx);
 
         // Address of self, the WSHandler actor
-        let addr = ctx.address();
+        let addr: Recipient<WsEvent> = ctx.address().recipient();
+        let err_addr: Recipient<StreamError> = ctx.address().recipient();
         // Send a message to ask service to subscribe to Kafka stream.
         self.service_addr
             .send(Subscribe {
-                addr: addr.recipient(),
+                addr: addr,
+                err_addr: err_addr,
                 application: self.application.clone(),
                 id: self.id,
             })
@@ -126,5 +128,19 @@ impl Handler<WsEvent> for WsHandler {
 
     fn handle(&mut self, msg: WsEvent, ctx: &mut Self::Context) {
         ctx.text(msg.0);
+    }
+}
+
+// Handle errors from the Service
+impl Handler<StreamError> for WsHandler {
+    type Result = ();
+
+    fn handle(&mut self, msg: StreamError, ctx: &mut Self::Context) {
+        log::error!(
+            "Service encountered an error with the stream: {}",
+            msg.error
+        );
+        ctx.text(format!("{:?}", msg.error));
+        ctx.stop()
     }
 }

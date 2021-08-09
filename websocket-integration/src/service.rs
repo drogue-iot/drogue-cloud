@@ -1,76 +1,80 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
-use actix::prelude::{Actor, Context, Handler, Recipient};
+//use actix::prelude::{Actor, Context, Handler, Recipient};
+use actix::prelude::*;
 
 use std::collections::HashMap;
 
-use crate::messages::{Disconnect, Subscribe, WsEvent};
-use actix::{AsyncContext, ResponseFuture, SpawnHandle};
+use crate::messages::{Disconnect, StreamError, Subscribe, WsEvent};
+use actix::{AsyncContext, SpawnHandle, WrapFuture};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
 
-use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfig};
+use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfigExt, KafkaEventType};
 
+use drogue_client::registry::v1::Client;
+use drogue_cloud_service_common::error::ServiceError;
 use futures::StreamExt;
 use uuid::Uuid;
 
 // Service Actor.
 // Read from the kafka and forwards messages to the Web socket actors
 pub struct Service {
-    clients: HashMap<Uuid, Stream>,
-    kafka_config: KafkaClientConfig,
+    pub clients: HashMap<Uuid, Stream>,
+    pub kafka_config: KafkaClientConfig,
+    pub registry: Client,
 }
 
 impl Actor for Service {
     type Context = Context<Self>;
 }
 
-impl Default for Service {
-    fn default() -> Service {
-        Service {
-            clients: HashMap::new(),
-            kafka_config: KafkaClientConfig::default(),
-        }
-    }
-}
-
 pub struct Stream {
     application: String,
     runner: SpawnHandle,
+    err_addr: Recipient<StreamError>,
 }
 
-/// Handle incoming messages from the WsHandler actor.
+/// Handle subscribe messages from the WsHandler actor.
 impl Handler<Subscribe> for Service {
-    type Result = ResponseFuture<bool>;
+    type Result = ();
 
     fn handle(&mut self, msg: Subscribe, ctx: &mut Context<Self>) -> Self::Result {
         let app = msg.application.clone();
-        let id = msg.id;
         let addr = msg.addr.clone();
-        // set up a stream
-        let stream = Service::get_stream(self.kafka_config.clone(), app.clone());
-        match stream {
-            Ok(stream) => {
-                // run the stream in a subprocess
-                let fut = async move {
-                    // using _ because it's a while loop so a result isn't really expected
-                    let _ = Service::run_stream(stream, addr, app.clone().as_str()).await;
-                };
-                let fut = actix::fut::wrap_future::<_, Self>(fut);
-                let run_handle = ctx.spawn(fut);
+        let id = msg.id.clone();
+        let registry_client = self.registry.clone();
+        let kafka = self.kafka_config.clone();
 
-                // store the stream
-                self.clients.insert(
-                    id,
-                    Stream {
-                        application: msg.application.clone(),
-                        runner: run_handle,
-                    },
-                );
-                // subscribe was successful, respond true to the WsHandler
-                Box::pin(async move { true })
-            }
-            Err(_) => Box::pin(async move { false }),
+        let fut = async move {
+            // set up a stream
+            let stream = Service::get_stream(registry_client, &kafka, app.clone()).await;
+            // run the stream
+            let _ = match stream {
+                Ok(s) => Service::run_stream(s, addr.clone(), app.clone().as_str()).await,
+                Err(s) => Err(anyhow!(s)),
+            };
         }
+        .into_actor(self);
+        let fut = fut.map(move |_, _, ctx| {
+            // if run_stream return, it means that something went wrong
+            ctx.notify(StreamError {
+                error: ServiceError::InternalError(String::from("Stream error")),
+                id,
+            });
+        });
+
+        // spawn the future in a different thread
+        let run_handle = ctx.spawn(fut);
+
+        // store the stream
+        self.clients.insert(
+            id,
+            Stream {
+                application: msg.application.clone(),
+                runner: run_handle,
+                err_addr: msg.err_addr.clone(),
+            },
+        );
     }
 }
 
@@ -95,13 +99,38 @@ impl Handler<Disconnect> for Service {
     }
 }
 
+// if there is an error with the stream, notify the WsClient and release the stream handle
+impl Handler<StreamError> for Service {
+    type Result = ();
+
+    fn handle(&mut self, msg: StreamError, ctx: &mut Context<Self>) {
+        let stream = self.clients.remove(&msg.id);
+        match stream {
+            Some(s) => {
+                log::info!(
+                    "Dropping stream for client [id: {}, app:{}] due to stream error: {}",
+                    msg.id,
+                    s.application,
+                    msg.error
+                );
+                ctx.cancel_future(s.runner);
+
+                let _ = s.err_addr.do_send(msg);
+            }
+            None => {
+                log::warn!("Stream Error, but no client registered with it.")
+            }
+        };
+    }
+}
+
 impl Service {
-    fn get_stream(
-        kafka_client_config: KafkaClientConfig,
+    async fn get_stream(
+        registry: Client,
+        kafka_config: &KafkaClientConfig,
         application: String,
-    ) -> Result<EventStream<'static>> {
-        // extract the shared named, which we use as kafka consumer group id
-        // TODO get group id
+    ) -> Result<EventStream<'static>, ServiceError> {
+        // TODO support group id
         let group_id = None;
 
         // log the request
@@ -111,17 +140,20 @@ impl Service {
             group_id
         );
 
+        let app_res = registry
+            .get_app(application.clone(), Default::default())
+            .await
+            .map_err(|_| ServiceError::InternalError(String::from("Request to registry error")))?
+            .ok_or_else(|| ServiceError::InternalError(String::from("Cannot find application")))?;
+
         // create stream
         let stream = EventStream::new(EventStreamConfig {
-            kafka: KafkaConfig {
-                client: kafka_client_config,
-                topic: application.clone(),
-            },
+            kafka: app_res.kafka_config(KafkaEventType::Events, kafka_config)?,
             consumer_group: group_id,
         })
         .map_err(|err| {
             log::info!("Failed to subscribe to Kafka topic: {}", err);
-            err
+            ServiceError::InternalError("Failed to subscribe to Kafka topic".to_string())
         })?;
 
         // we started the stream, return it ...
@@ -148,7 +180,7 @@ impl Service {
             log::debug!("Sent message - go back to sleep");
         }
 
-        Ok(())
+        Err(anyhow!("Stream Error"))
     }
 }
 
