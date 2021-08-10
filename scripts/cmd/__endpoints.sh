@@ -11,6 +11,9 @@ MQTT_ENDPOINT_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_EN
 MQTT_INTEGRATION_HOST="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_HOST)"
 MQTT_INTEGRATION_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_PORT)"
 
+WEBSOCKET_INTEGRATION_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__WEBSOCKET_INTEGRATION_URL)"
+WEBSOCKET_INTEGRATION_HOST="$(echo "$WEBSOCKET_INTEGRATION_URL" | sed -E -e 's/:[0-9]+$//' -e 's|^https?://||' )"
+
 HTTP_ENDPOINT_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__HTTP_ENDPOINT_URL)"
 HTTP_ENDPOINT_HOST="$(echo "$HTTP_ENDPOINT_URL" | sed -E -e 's/:[0-9]+$//' -e 's|^https?://||' )"
 
@@ -32,6 +35,7 @@ if [[ -z "$SILENT" ]]; then
         echo "MQTT Endpoint:    $MQTT_ENDPOINT_HOST:$MQTT_ENDPOINT_PORT"
         echo
         echo "MQTT Integration: $MQTT_INTEGRATION_HOST:$MQTT_INTEGRATION_PORT"
+        echo "Websocket Integration: $WEBSOCKET_INTEGRATION_URL ($WEBSOCKET_INTEGRATION_HOST)"
         echo
         bold "========================================================"
         bold "  Examples"

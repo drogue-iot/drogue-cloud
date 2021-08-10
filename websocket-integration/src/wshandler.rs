@@ -112,7 +112,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
                 ctx.stop();
             }
             Ok(ws::Message::Nop) => (),
-            Ok(Text(s)) => log::debug!("Recevied text from client in websocket :\n{}", s),
+            Ok(Text(s)) => log::debug!("Received text from client {}:\n{}", self.id, s),
             Err(e) => {
                 log::error!("WebSocket Protocol Error: {}", e);
                 ctx.stop()

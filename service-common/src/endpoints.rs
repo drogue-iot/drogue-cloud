@@ -44,6 +44,8 @@ pub struct EndpointConfig {
     pub command_endpoint_url: Option<String>,
     #[serde(default)]
     kafka_bootstrap_servers: Option<String>,
+    #[serde(default)]
+    pub websocket_integration_url: Option<String>,
 
     #[serde(default)]
     pub local_certs: bool,
@@ -117,6 +119,12 @@ impl EndpointSource for EnvEndpointSource {
             .as_ref()
             .cloned()
             .map(|url| HttpEndpoint { url });
+        let websocket_integration = self
+            .0
+            .websocket_integration_url
+            .as_ref()
+            .cloned()
+            .map(|url| HttpEndpoint { url });
         let mqtt = self.0.mqtt_endpoint_host.as_ref().map(|host| MqttEndpoint {
             host: host.clone(),
             port: self.0.mqtt_endpoint_port,
@@ -150,6 +158,7 @@ impl EndpointSource for EnvEndpointSource {
             http,
             mqtt,
             mqtt_integration,
+            websocket_integration,
             sso,
             api,
             console,

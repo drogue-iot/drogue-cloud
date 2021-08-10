@@ -197,7 +197,7 @@ You will need to have `npm` installed, as it will drive parts of the build.
 You will also need `wasm-bindgen`, which can be installed locally using:
 
 ~~~
-cargo install wasm-bindgen-cli --version "=0.2.71
+cargo install wasm-bindgen-cli --version "=0.2.71"
 ~~~
 
 NOTE: The version (here `0.2.71`) must match the exact version of the version in `console-frontend/Cargo.toml`.

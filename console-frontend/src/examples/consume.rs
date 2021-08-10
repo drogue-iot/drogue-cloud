@@ -179,6 +179,35 @@ impl Component for ConsumeData {
             });
         }
 
+        if let Some(ws) = &self.props.endpoints.websocket_integration {
+            let token = match self.props.data.drg_token {
+                true => "\"$(drg token)\"".into(),
+                false => format!("\"{}\"", self.props.token.access_token),
+            };
+            let consume_websocket_cmd = format!(
+                r#"websocat {}/{} -H="Authorization: Bearer {}""#,
+                ws.url, self.props.data.app_id, token,
+            );
+            cards.push(html!{
+                <Card title=html!{"Consume device data using a Websocket"}>
+                    <div>
+                        {"The data, published by devices, can also be consumed using a websocket."}
+                    </div>
+                    <div>
+                        <Switch
+                            checked=self.props.data.drg_token
+                            label="Use 'drg token' to get the access token" label_off="Show current token in example"
+                            on_change=self.link.callback(|data| Msg::SetDrgToken(data))
+                            />
+                    </div>
+                    <div>
+                        {"Run the following command in a new terminal window:"}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=consume_websocket_cmd/>
+                </Card>
+            });
+        }
+
         let actions: Vec<Action> =
             vec![Action::new("Try it!", self.link.callback(|_| Msg::OpenSpy))];
 
