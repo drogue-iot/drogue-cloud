@@ -42,7 +42,7 @@ pub async fn start_connection(
                         }))
                     } else {
                         log::debug!("API keys authentication disabled");
-                        Err(ServiceError::InternalError(
+                        Err(ServiceError::InvalidRequest(
                             "API keys authentication disabled".to_string(),
                         ))
                     }

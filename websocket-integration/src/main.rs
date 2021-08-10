@@ -32,8 +32,8 @@ pub struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
-    #[serde(default)]
-    pub disable_api_keys: bool,
+    #[serde(default = "defaults::enable_api_keys")]
+    pub enable_api_keys: bool,
 
     #[serde(default)]
     pub health: HealthServerConfig,
@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
 
     let auth = web::Data::new(authenticator);
     let authz = web::Data::new(user_auth);
-    let enable_api_keys = web::Data::new(config.disable_api_keys);
+    let enable_api_keys = web::Data::new(config.enable_api_keys);
 
     let client = reqwest::Client::new();
     let registry = registry::v1::Client::new(
