@@ -91,6 +91,10 @@ impl Overview {
             integration_cards.push(self.render_mqtt_endpoint(&mqtt, "MQTT integration"));
         }
 
+        if let Some(ws) = &endpoints.websocket_integration {
+            integration_cards.push(self.render_card("Websocket integration", &ws.url, false));
+        }
+
         for (label, url) in &endpoints.demos {
             demo_cards.push(self.render_card(label, url, true));
         }

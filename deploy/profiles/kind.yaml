@@ -17,5 +17,6 @@ integrations:
     ingress:
       port: 30002
   websocket:
+    insecure: true
     ingress:
       port: 30004

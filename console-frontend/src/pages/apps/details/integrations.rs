@@ -9,6 +9,7 @@ use drogue_client::{
 };
 use drogue_cloud_service_api::{
     endpoints::Endpoints,
+    endpoints::HttpEndpoint,
     kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
 };
 use java_properties::PropertiesWriter;
@@ -36,6 +37,9 @@ impl IntegrationDetails<'_> {
                 </StackItem>
                 <StackItem>
                     { Self::wrap_card("MQTT", self.render_mqtt()) }
+                </StackItem>
+                <StackItem>
+                    { Self::wrap_card("Websocket", self.render_ws()) }
                 </StackItem>
             </Stack>
         };
@@ -340,6 +344,86 @@ mp.messaging.incoming.drogue-iot-incoming.auto.offset.reset=earliest"#;
             </DescriptionList>
             </>
         }
+    }
+
+    fn render_ws(&self) -> Html {
+        let ws = match &self.endpoints.websocket_integration {
+            Some(ws) => ws,
+            _ => return html! {},
+        };
+
+        return html! {
+            <Grid gutter=true>
+                <GridItem cols=[6]>{ self.render_ws_basic(ws) }</GridItem>
+                <GridItem cols=[6]>{ self.render_ws_example(ws) }</GridItem>
+            </Grid>
+        };
+    }
+
+    fn render_ws_basic(&self, ws: &HttpEndpoint) -> Html {
+        let user = self
+            .token
+            .userinfo
+            .as_ref()
+            .map(|user| user.name.as_str())
+            .unwrap_or("<you>")
+            .to_string();
+
+        return html! {
+            <DescriptionList>
+                <DescriptionGroup term="Url">
+                    <Clipboard readonly=true value=ws.url.clone() />
+                </DescriptionGroup>
+                <DescriptionGroup term="TLS required">
+                    <Switch checked=true disabled=true />
+                </DescriptionGroup>
+                <DescriptionGroup term="Credentials">
+                    <Tabs>
+                        <Tab label="OAuth2 Token">
+                            <DescriptionList>
+                                <DescriptionGroup term="Authentication token)">
+                                    <Clipboard readonly=true value=self.token.access_token.clone() />
+                                </DescriptionGroup>
+                            </DescriptionList>
+                        </Tab>
+                        <Tab label="API key">
+                            <DescriptionList>
+                                <DescriptionGroup term="Username">
+                                    <Clipboard readonly=true value=user />
+                                </DescriptionGroup>
+                                <DescriptionGroup term="Password (API key)">
+                                    <TextInput readonly=true value="<api key>" />
+                                </DescriptionGroup>
+                            </DescriptionList>
+                        </Tab>
+                    </Tabs>
+                </DescriptionGroup>
+                <DescriptionGroup term="Application events subscription">
+                    <Clipboard readonly=true value=self.application.metadata.name.clone() />
+                </DescriptionGroup>
+            </DescriptionList>
+        };
+    }
+
+    fn render_ws_example(&self, ws: &HttpEndpoint) -> Html {
+        let websocat = format!(
+            r#"websocat {}/{} -H="Authorization: Bearer {}""#,
+            ws.url.clone(),
+            self.application.metadata.name,
+            self.token.access_token.clone(),
+        );
+
+        return html! {
+                <>
+                <Tabs>
+                    <Tab label="Command line">
+                        <Clipboard
+                            code=true readonly=true variant=ClipboardVariant::Expanded
+                            value=websocat/>
+                    </Tab>
+                </Tabs>
+                </>
+        };
     }
 
     fn wrap_card(title: &str, html: Html) -> Html {

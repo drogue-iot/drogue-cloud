@@ -14,7 +14,7 @@ use drogue_cloud_service_common::client::UserAuthClient;
 use drogue_cloud_service_common::error::ServiceError;
 use drogue_cloud_service_common::openid::Authenticator;
 
-#[get("/stream/{application}")]
+#[get("/{application}")]
 pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
