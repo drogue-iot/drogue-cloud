@@ -6,6 +6,11 @@ pub fn enable_auth() -> bool {
 }
 
 #[inline]
+pub fn enable_api_keys() -> bool {
+    true
+}
+
+#[inline]
 pub fn realm() -> String {
     "drogue".into()
 }
