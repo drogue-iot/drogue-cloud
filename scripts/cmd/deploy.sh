@@ -244,7 +244,7 @@ fi
 # wait for other Knative services
 
 progress -n "⏳ Waiting for Knative services to become ready ... "
-wait_for_ksvc influxdb-pusher
+wait_for_ksvc timescaledb-pusher
 progress "done!"
 
 # wait for the rest of the deployments
