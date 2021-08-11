@@ -42,7 +42,6 @@ drogue-ttn = "0.5"
 
 dotenv = "0.15.0"
 config = "0.10"
-jsonwebtokens = "1.0.0-alpha.13"
 mime = "0.3"
 
 tokio = { version = "1", features = ["full"] }

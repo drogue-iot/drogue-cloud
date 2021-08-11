@@ -2000,7 +2000,6 @@ dependencies = [
  "futures-core",
  "futures-util",
  "http",
- "jsonwebtokens",
  "log",
  "mime",
  "openid",
