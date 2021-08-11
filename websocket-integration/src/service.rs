@@ -44,10 +44,12 @@ impl Handler<Subscribe> for Service {
         let id = msg.id.clone();
         let registry_client = self.registry.clone();
         let kafka = self.kafka_config.clone();
+        let consumer_group = msg.consumer_group.clone();
 
         let fut = async move {
             // set up a stream
-            let stream = Service::get_stream(registry_client, &kafka, app.clone()).await;
+            let stream =
+                Service::get_stream(registry_client, &kafka, app.clone(), consumer_group).await;
             // run the stream
             let _ = match stream {
                 Ok(s) => Service::run_stream(s, addr.clone(), app.clone().as_str()).await,
@@ -129,10 +131,8 @@ impl Service {
         registry: Client,
         kafka_config: &KafkaClientConfig,
         application: String,
+        group_id: Option<String>,
     ) -> Result<EventStream<'static>, ServiceError> {
-        // TODO support group id
-        let group_id = None;
-
         // log the request
         log::debug!(
             "Request to attach to app stream: {} (group: {:?})",
