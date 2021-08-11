@@ -33,11 +33,11 @@ members = [
 [patch.crates-io]
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "fe51e06fb2c44b1d3e3fd627cedea3fd582487ef" }
 
-patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "8e3bf2f6e00f17e49499939d53d9e6a6dac83d35" }
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "8e3bf2f6e00f17e49499939d53d9e6a6dac83d35" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }
 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
-#drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "1898ac0a6af51dc3a99c9f291049e3fd993c69c6"}
+drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
 drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "b8539b47969cb0f34aabde76dda9f60798547554" }
 operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "b2b0fc88beca2deb07bad6a963d0d5322c9ddff8" }
