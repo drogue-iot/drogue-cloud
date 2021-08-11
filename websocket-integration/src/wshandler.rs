@@ -17,6 +17,8 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct WsHandler {
     // the topic to listen to
     application: String,
+    // the optional consumer group
+    group_id: Option<String>,
     // to exit the actor if the client was disconnected
     heartbeat: Instant,
     service_addr: Addr<Service>,
@@ -24,9 +26,10 @@ pub struct WsHandler {
 }
 
 impl WsHandler {
-    pub fn new(app: String, service_addr: Addr<Service>) -> WsHandler {
+    pub fn new(app: String, group_id: Option<String>, service_addr: Addr<Service>) -> WsHandler {
         WsHandler {
             application: app,
+            group_id,
             heartbeat: Instant::now(),
             service_addr,
             id: Uuid::new_v4(),
@@ -62,6 +65,7 @@ impl Actor for WsHandler {
                 addr: addr,
                 err_addr: err_addr,
                 application: self.application.clone(),
+                consumer_group: self.group_id.clone(),
                 id: self.id,
             })
             // We need to access the context when handling the future so we wrap it into an ActorFuture

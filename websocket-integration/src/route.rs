@@ -8,11 +8,17 @@ use actix_web::{get, web, Either, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use actix_web_httpauth::extractors::basic::BasicAuth;
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use serde::Deserialize;
 use std::sync::Arc;
 
 use drogue_cloud_service_common::client::UserAuthClient;
 use drogue_cloud_service_common::error::ServiceError;
 use drogue_cloud_service_common::openid::Authenticator;
+
+#[derive(Deserialize, Debug)]
+pub struct GroupId {
+    group_id: Option<String>,
+}
 
 #[get("/{application}")]
 pub async fn start_connection(
@@ -24,6 +30,7 @@ pub async fn start_connection(
     authorize_api_keys: web::Data<bool>,
     application: web::Path<String>,
     service_addr: web::Data<Addr<Service>>,
+    web::Query(group_id): web::Query<GroupId>,
 ) -> Result<HttpResponse, Error> {
     let application = application.into_inner();
 
@@ -60,7 +67,11 @@ pub async fn start_connection(
     }
 
     // launch web socket actor
-    let ws = WsHandler::new(application, service_addr.get_ref().clone());
+    let ws = WsHandler::new(
+        application,
+        group_id.group_id,
+        service_addr.get_ref().clone(),
+    );
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)
 }

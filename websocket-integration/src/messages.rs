@@ -15,6 +15,7 @@ pub struct Subscribe {
     pub addr: Recipient<WsEvent>,
     pub err_addr: Recipient<StreamError>,
     pub application: String,
+    pub consumer_group: Option<String>,
     pub id: Uuid,
 }
 
