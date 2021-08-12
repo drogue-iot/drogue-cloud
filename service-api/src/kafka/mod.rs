@@ -11,6 +11,7 @@ pub enum ResourceType {
     Events(String),
     Commands(String),
     Users(String),
+    Passwords(String),
 }
 
 impl ResourceType {
@@ -19,6 +20,7 @@ impl ResourceType {
             Self::Commands(app) => app.as_str(),
             Self::Events(app) => app.as_str(),
             Self::Users(app) => app.as_str(),
+            Self::Passwords(app) => app.as_str(),
         }
     }
 }
@@ -120,6 +122,7 @@ pub fn make_kafka_resource_name(target: ResourceType) -> String {
     let name = match &target {
         ResourceType::Events(app) => resource_name("events", "evt", app),
         ResourceType::Users(app) => resource_name("user", "usr", app),
+        ResourceType::Passwords(app) => resource_name("password", "pwd", app),
         ResourceType::Commands(_) => return "iot-commands".to_string(),
     };
 

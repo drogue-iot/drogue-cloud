@@ -191,8 +191,9 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                 config: &self.config,
             }),
             Box::new(CreateUser {
-                api: &self.kafka_users,
-                resource: &self.kafka_user_resource,
+                users_api: &self.kafka_users,
+                users_resource: &self.kafka_user_resource,
+                secrets_api: &self.secrets,
                 config: &self.config,
             }),
             Box::new(UserReady {
@@ -216,6 +217,9 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
         let user_name =
             make_kafka_resource_name(ResourceType::Users(ctx.app.metadata.name.clone()));
 
+        let password_name =
+            make_kafka_resource_name(ResourceType::Passwords(ctx.app.metadata.name.clone()));
+
         // remove topic
 
         self.kafka_topics
@@ -223,6 +227,9 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             .await?;
         self.kafka_users
             .delete_optionally(&user_name, &Default::default())
+            .await?;
+        self.secrets
+            .delete_optionally(&password_name, &Default::default())
             .await?;
 
         // TODO: wait for resources to be actually deleted, then remove the finalizer

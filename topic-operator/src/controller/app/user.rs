@@ -2,7 +2,7 @@ use super::{condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL
 use crate::controller::ControllerConfig;
 use async_trait::async_trait;
 use drogue_client::{
-    registry::v1::{KafkaAppStatus, KafkaUserStatus},
+    registry::v1::{Application, DownstreamSpec, KafkaAppStatus, KafkaUserStatus},
     Translator,
 };
 use drogue_cloud_operator_common::controller::reconciler::{
@@ -10,37 +10,43 @@ use drogue_cloud_operator_common::controller::reconciler::{
     ReconcileError,
 };
 use drogue_cloud_service_api::kafka::{make_kafka_resource_name, ResourceType};
-use k8s_openapi::api::core::v1::Secret;
+use k8s_openapi::{api::core::v1::Secret, ByteString};
 use kube::{
     api::{ApiResource, DynamicObject},
     Api, Resource,
 };
-use operator_framework::process::create_or_update_by;
+use operator_framework::{
+    install::Delete,
+    process::{create_or_update, create_or_update_by},
+};
 use serde_json::json;
 
+const KEY_PASSWORD: &str = "password";
+
 pub struct CreateUser<'o> {
-    pub api: &'o Api<DynamicObject>,
-    pub resource: &'o ApiResource,
+    pub users_api: &'o Api<DynamicObject>,
+    pub users_resource: &'o ApiResource,
+    pub secrets_api: &'o Api<Secret>,
     pub config: &'o ControllerConfig,
 }
 
 impl CreateUser<'_> {
     async fn ensure_kafka_user(
-        kafka_users: &Api<DynamicObject>,
-        kafka_user_resource: &ApiResource,
-        config: &ControllerConfig,
+        &self,
         app: String,
+        password: Option<String>,
     ) -> Result<(DynamicObject, String), ReconcileError> {
         let user_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
         let topic_name = make_kafka_resource_name(ResourceType::Events(app.clone()));
+        let password_name = make_kafka_resource_name(ResourceType::Passwords(app.clone()));
 
         let user = create_or_update_by(
-            &kafka_users,
-            Some(config.topic_namespace.clone()),
+            &self.users_api,
+            Some(self.config.topic_namespace.clone()),
             &user_name,
             |meta| {
-                let mut user = DynamicObject::new(&topic_name, &kafka_user_resource)
-                    .within(&config.topic_namespace);
+                let mut user = DynamicObject::new(&topic_name, &self.users_resource)
+                    .within(&self.config.topic_namespace);
                 *user.meta_mut() = meta;
                 user
             },
@@ -49,10 +55,23 @@ impl CreateUser<'_> {
                 // set target cluster
                 user.metadata
                     .labels
-                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
+                    .insert(LABEL_KAFKA_CLUSTER.into(), self.config.cluster_name.clone());
                 user.metadata
                     .annotations
                     .insert(ANNOTATION_APP_NAME.into(), app.clone());
+
+                let password = match password.is_some() {
+                    true => Some(json!({
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "name": password_name,
+                                "key": KEY_PASSWORD,
+                            }
+                        }
+                    })),
+                    false => None,
+                };
+
                 // set config
                 user.data["spec"] = json!({
                     "authentication": {
@@ -92,11 +111,43 @@ impl CreateUser<'_> {
                     }
                 });
 
+                if let Some(password) = password {
+                    user.data["spec"]["authentication"]["password"] = password;
+                }
+
                 Ok::<_, ReconcileError>(user)
             },
         )
         .await?
         .resource();
+
+        // reconcile password
+
+        if let Some(password) = password {
+            // create/update secret
+            create_or_update(
+                self.secrets_api,
+                Some(&self.config.topic_namespace),
+                password_name,
+                |mut secret| {
+                    secret
+                        .metadata
+                        .annotations
+                        .insert(ANNOTATION_APP_NAME.into(), app.clone());
+                    secret.data.clear();
+                    secret
+                        .data
+                        .insert(KEY_PASSWORD.into(), ByteString(password.into_bytes()));
+                    Ok::<_, ReconcileError>(secret)
+                },
+            )
+            .await?;
+        } else {
+            // delete secret
+            self.secrets_api
+                .delete_optionally(&password_name, &Default::default())
+                .await?;
+        }
 
         // done
 
@@ -115,13 +166,10 @@ impl<'o> ProgressOperation<ConstructContext> for CreateUser<'o> {
         mut ctx: ConstructContext,
     ) -> drogue_cloud_operator_common::controller::reconciler::progress::Result<ConstructContext>
     {
-        let (user, user_name) = Self::ensure_kafka_user(
-            &self.api,
-            &self.resource,
-            &self.config,
-            ctx.app.metadata.name.clone(),
-        )
-        .await?;
+        let password = find_user_password(&ctx.app);
+        let (user, user_name) = self
+            .ensure_kafka_user(ctx.app.metadata.name.clone(), password)
+            .await?;
 
         ctx.app_user = Some(user);
         ctx.app_user_name = Some(user_name);
@@ -164,7 +212,7 @@ impl<'o> ProgressOperation<ConstructContext> for UserReady<'o> {
             ctx.app_user_name.as_ref().cloned(),
             app_user_secret.and_then(|s| {
                 s.data
-                    .get("password")
+                    .get(KEY_PASSWORD)
                     .and_then(|s| String::from_utf8(s.0.clone()).ok())
             }),
         ) {
@@ -192,4 +240,15 @@ impl<'o> ProgressOperation<ConstructContext> for UserReady<'o> {
             false => retry(ctx),
         }
     }
+}
+
+/// Find a configured Kafka user password from an application.
+fn find_user_password(app: &Application) -> Option<String> {
+    app.section::<DownstreamSpec>()
+        .and_then(|s| s.ok())
+        .and_then(|spec| match spec {
+            DownstreamSpec::Internal(spec) => Some(spec),
+            _ => None,
+        })
+        .and_then(|spec| spec.password)
 }
