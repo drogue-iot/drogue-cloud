@@ -52,10 +52,10 @@ echo
 echo "Data published by devices can be received via MQTT. Possibly start this in another terminal."
 echo
 echo "Structured content mode (MQTT v3.1.1 and v5):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'"
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'"
 echo
 echo "Binary content mode (MQTT v5 only):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg token)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'" -up content-mode=binary
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'" -up content-mode=binary
 echo
 bold "Publish data:"
 bold "---------------"
@@ -91,7 +91,7 @@ fi
 echo
 echo "Then, send a command to that device from another terminal window:"
 echo
-echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg token\)\"
+echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg whoami -t\)\"
 echo
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then

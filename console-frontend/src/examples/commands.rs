@@ -172,7 +172,7 @@ impl Component for CommandAndControl {
                 _ => InputState::Default,
             };
             let token = match self.props.data.drg_token {
-                true => "$(drg token)",
+                true => "$(drg whoami -t)",
                 false => self.props.token.access_token.as_str(),
             };
             let send_command_cmd = format!(
@@ -209,7 +209,7 @@ impl Component for CommandAndControl {
                         <FormGroup>
                             <Switch
                                 checked=self.props.data.drg_token
-                                label="Use 'drg token' to get the access token" label_off="Show current token in example"
+                                label="Use 'drg' to get the access token" label_off="Show current token in example"
                                 on_change=self.link.callback(|data| Msg::SetDrgToken(data))
                                 />
                         </FormGroup>

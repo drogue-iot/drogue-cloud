@@ -115,7 +115,7 @@ impl Component for ConsumeData {
                 }
             };
             let token = match self.props.data.drg_token {
-                true => "\"$(drg token)\"".into(),
+                true => "\"$(drg whoami -t)\"".into(),
                 false => format!("\"{}\"", self.props.token.access_token),
             };
             let consume_mqtt_cmd = format!(
@@ -144,7 +144,7 @@ impl Component for ConsumeData {
                     <div>
                         <Switch
                             checked=self.props.data.drg_token
-                            label="Use 'drg token' to get the access token" label_off="Show current token in example"
+                            label="Use 'drg' to get the access token" label_off="Show current token in example"
                             on_change=self.link.callback(|data| Msg::SetDrgToken(data))
                             />
                     </div>
@@ -181,7 +181,7 @@ impl Component for ConsumeData {
 
         if let Some(ws) = &self.props.endpoints.websocket_integration {
             let token = match self.props.data.drg_token {
-                true => "\"$(drg token)\"".into(),
+                true => "\"$(drg whoami -t)\"".into(),
                 false => format!("\"{}\"", self.props.token.access_token),
             };
             let consume_websocket_cmd = format!(
@@ -204,7 +204,7 @@ impl Component for ConsumeData {
                     <div>
                         <Switch
                             checked=self.props.data.drg_token
-                            label="Use 'drg token' to get the access token" label_off="Show current token in example"
+                            label="Use 'drg' to get the access token" label_off="Show current token in example"
                             on_change=self.link.callback(|data| Msg::SetDrgToken(data))
                             />
                     </div>
