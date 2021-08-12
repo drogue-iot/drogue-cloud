@@ -181,8 +181,8 @@ impl Component for ConsumeData {
 
         if let Some(ws) = &self.props.endpoints.websocket_integration {
             let token = match self.props.data.drg_token {
-                true => "\"$(drg whoami -t)\"".into(),
-                false => format!("\"{}\"", self.props.token.access_token),
+                true => "$(drg whoami -t)".into(),
+                false => self.props.token.access_token.clone(),
             };
             let consume_websocket_cmd = format!(
                 r#"websocat {}/{} -H="Authorization: Bearer {}""#,
@@ -195,11 +195,11 @@ impl Component for ConsumeData {
                         {"The data, published by devices, can also be consumed using a websocket."}
                     </div>
                     <div>
-                        {"Drg allows to easily get the stream:"}
+                        {"'drg' allows to easily get the stream:"}
                     </div>
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=drg_cmd/>
                     <div>
-                        {"With a websocket client like websocat:"}
+                        {"With a websocket client like 'websocat':"}
                     </div>
                     <div>
                         <Switch
