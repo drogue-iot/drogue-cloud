@@ -52,7 +52,7 @@ impl Credentials {
                     .authenticate_api_key(
                         AuthenticationRequest {
                             user_id: creds.username.clone(),
-                            api_key: creds.key.clone().unwrap(),
+                            api_key: creds.key.clone().unwrap_or_default(),
                         },
                         Context::default(),
                     )
