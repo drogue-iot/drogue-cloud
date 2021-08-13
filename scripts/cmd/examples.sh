@@ -57,6 +57,9 @@ echo
 echo "Binary content mode (MQTT v5 only):"
 echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'" -up content-mode=binary
 echo
+echo "You can also subscribe to data using WebSockets, receiving Cloud Events:"
+echo "  websocat  -H=\"Authorization: Bearer \$(drg whoami -t)\" $WEBSOCKET_INTEGRATION_URL/example-app"
+echo
 bold "Publish data:"
 bold "---------------"
 echo
