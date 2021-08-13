@@ -147,9 +147,11 @@ if [[ -f $BASEDIR/local-values.yaml ]]; then
     HELM_ARGS="$HELM_ARGS --values $BASEDIR/local-values.yaml"
 fi
 if [[ "$HELM_PROFILE" ]]; then
+    progress "💡 Adding profile values file ($BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml)"
     HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml"
 fi
 if [[ -f $BASEDIR/../deploy/profiles/${CLUSTER}.yaml ]]; then
+    progress "💡 Adding cluster type values file ($BASEDIR/../deploy/profiles/${CLUSTER}.yaml)"
     HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${CLUSTER}.yaml"
 fi
 
@@ -159,7 +161,11 @@ HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 
-echo "Helm arguments: $HELM_ARGS"
+HELM_EX_ARGS="$HELM_ARGS"
+HELM_EX_ARGS="$HELM_EX_ARGS --set grafana.keycloak.enabled=true --set grafana.keycloak.client.create=true"
+
+echo "Helm arguments (core): $HELM_ARGS"
+echo "Helm arguments (examples): $HELM_EX_ARGS"
 
 # install Drogue IoT
 
@@ -172,7 +178,7 @@ progress "done!"
 progress -n "🔨 Deploying Drogue IoT Examples ... "
 helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples"
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples" --install $HELM_EX_ARGS
 progress "done!"
 
 # Remove the wrong host entry for keycloak ingress
