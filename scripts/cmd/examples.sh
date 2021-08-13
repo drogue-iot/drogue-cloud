@@ -44,7 +44,7 @@ bold "Create an initial application and device:"
 bold "------------------------------"
 echo
 echo "  drg create app example-app"
-echo "  drg create device --app example-app device_id --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  drg create device --app example-app device1 --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
 echo
 bold "Subscribe to device data:"
 bold "---------------------------"
@@ -63,11 +63,11 @@ echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
 if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  http --auth device_id@example-app:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@example-app -pw foobar -s --cafile build/certs/endpoints/root-cert.pem -t temp -m '{\"temp\":42}'"
+  echo "  http --auth device1@example-app:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw foobar -s --cafile build/certs/endpoints/root-cert.pem -t temp -m '{\"temp\":42}'"
 else
-  echo "  http --auth device_id@example-app:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@example-app -pw foobar -s -t temp -m '{\"temp\":42}'"
+  echo "  http --auth device1@example-app:foobar POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw foobar -s -t temp -m '{\"temp\":42}'"
 fi
 echo
 bold "Send commands to the device:"
@@ -76,22 +76,22 @@ echo
 echo "Publish data from the device and specify how long will you wait for a command with 'ct' parameter (in seconds):"
 echo
 if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  http --auth device_id@example-app:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
+  echo "  http --auth device1@example-app:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 else
-  echo "  http --auth device_id@example-app:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
+  echo "  http --auth device1@example-app:foobar POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 fi
 echo
 echo "Or, subscribe with the MQTT device:"
 echo
 if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@example-app -pw foobar -i device_id -s --cafile build/certs/endpoints/root-cert.pem -t command/inbox/#"
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw foobar -i device1 -s --cafile build/certs/endpoints/root-cert.pem -t command/inbox/#"
 else
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device_id@example-app -pw foobar -i device_id -s -t command/inbox/#"
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw foobar -i device1 -s -t command/inbox/#"
 fi
 echo
 echo "Then, send a command to that device from another terminal window:"
 echo
-echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device_id command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg whoami -t\)\"
+echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device1 command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg whoami -t\)\"
 echo
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
@@ -122,24 +122,24 @@ echo "Create a new device:"
 echo "-----------------------"
 echo
 echo "  drg create app example-app"
-echo "  drg create device --app example-app device_id --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
-echo "  cat FirstTestDevice.json | http --auth ditto:ditto PUT $TWIN_API/api/2/things/example-app:device_id"
+echo "  drg create device --app example-app device1 --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  cat FirstTestDevice.json | http --auth ditto:ditto PUT $TWIN_API/api/2/things/example-app:device1"
 echo
 echo "Publish some data:"
 echo "-----------------------"
 echo
 echo "System default certificates (or none):"
 echo
-echo "  http --auth device_id@example-app:foobar POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
+echo "  http --auth device1@example-app:foobar POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
 echo
 echo "Local test certificates:"
 echo
-echo "  http --auth device_id@example-app:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
+echo "  http --auth device1@example-app:foobar --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
 echo
 echo "Check the twin status:"
 echo "-----------------------"
 echo
-echo "  http --auth ditto:ditto $TWIN_API/api/2/things/example-app:device_id"
+echo "  http --auth ditto:ditto $TWIN_API/api/2/things/example-app:device1"
 echo
 
 fi
