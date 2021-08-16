@@ -1,16 +1,107 @@
 = Managing applications and devices
 
+The following sections will guide you through the basic management capabilities of Drogue Cloud.
+
+All management operations are available through the API. However, for an easier getting started experience,
+the following examples will use the command line tool `drg` for performing the operations.
+
+NOTE: All following examples require that you are already logged in to a Drogue Cloud cluster using the command line
+tool `drg`.
+
 == Applications
 
+An application is the container for devices. A user can have multiple applications, but each device belongs to
+a single application.
+
 === Creating a new application
+
+Create a new application using the following command:
+
+[source,bash]
+----
+drg create app my-app
+----
+
+This will create a new application named `my-app`. If the application name is already used, you will receive an
+error, as application names are unique.
+
 === Modifying an application
+
+Applications are defined by a JSON structure. It is possible to edit this structure in YAML format (for easier editing)
+using the following command:
+
+[source,bash]
+----
+drg edit app my-app
+----
+
+This will open an editor, and allow you to make modifications to the YAML source. When you close the editor, the change
+will be sent to the server for updating.
+
 === Deleting an application
+
+An existing application can be deleted using the following command:
+
+[source,bash]
+----
+drg delete app my-app
+----
+
+NOTE: Deleting an application me be delayed, as first all devices which require to be cleaned up will be processes. Once
+this is finished, the application might require cleanup too. Only once all resources are properly cleaned up, the
+application will be actually deleted.
 
 == Devices
 
+As devices belong to an application, you need to create an application first.
+
+The following commands will explicitly select the application by providing the `--app <app name>` argument. You can
+however use `drg config set-default-app`, to set a default application and omit the `--app` argument.
+
 === Create a new device
+
+A new device is being created using the following command:
+
+[source,bash]
+----
+drg create device --app my-app my-device-1
+----
+
+This will create `my-device-1` as part of `my-app`.
+
+In most cases a device will require additional information, like access credentials or gateway assignments. You can
+provide initial configuration using the `--spec <json>` argument:
+
+[source,bash]
+----
+drg create device --app my-app my-device-1 --spec '{"credentials": {"credentials":[{ "pass": "foobar" }]}}'
+----
+
+The `--spec` argument accepts a JSON string of the full "spec" section of the device.
+
 === Modifying a device
+
+You can edit the device configuration in YAML the same as the application:
+
+[source,bash]
+----
+drg edit device --app my-app my-device-1
+----
+
+This will open an editor, and allow you to make modifications to the YAML source. When you close the editor, the change
+will be sent to the server for updating.
+
 === Deleting a device
+
+An existing device can be deleted using the following command:
+
+[source,bash]
+----
+drg delete device --app my-app my-device-1
+----
+
+NOTE: If a device requires any cleanup, the device will be first marked as deleted, the cleanup will be processed,
+and then the device will be deleted.
 
 === Setting password credentials
 === Setting X.509 client certificate credentials
