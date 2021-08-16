@@ -288,7 +288,7 @@ spec:
   # consumerGroup: replace with your own Kafka consumer group
   consumerGroup: my-group
   
-  # consumer: increase if you need more than one pod consuming events
+  # consumers: increase if you need more than one pod consuming events
   consumers: 1
   
   net:
