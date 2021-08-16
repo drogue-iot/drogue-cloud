@@ -104,7 +104,7 @@ fn params(
         .get_option(CoapOption::UriPath)
         .map(|paths| path_parser(paths).ok())
         .flatten()
-        .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?; // TODO: see how this behaves, should you put in separate function?
+        .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?;
     let queries = request
         .message
         .get_option(CoapOption::UriQuery)
@@ -127,17 +127,17 @@ where
     S: Sink + Send,
     <S as Sink>::Error: Send,
 {
-    let path_segments: Vec<String>;
-    let queries: Option<&Vec<u8>>;
-    let auth: &Vec<u8>;
+    let mut path_segments: Vec<String> = Vec::new();
+    let mut queries: Option<&Vec<u8>> = None;
+    let mut auth: &Vec<u8> = &Vec::new();
 
     if let Ok((p, q, a)) = params(&request) {
         path_segments = p;
         queries = q;
         auth = a;
-    } else {
+    } else if let Err(e) = params(&request) {
         let ret = Err(CoapEndpointError(EndpointError::InvalidRequest {
-            details: "Invalid Path".to_string(),
+            details: e.to_string(),
         }))
         .respond_to(&mut request);
         return ret;
@@ -177,7 +177,7 @@ where
         .respond_to(&mut request),
 
         _ => Err(CoapEndpointError(EndpointError::InvalidRequest {
-            details: "Invalid Path".to_string(),
+            details: "Invalid number of path arguments".to_string(),
         }))
         .respond_to(&mut request),
     }
@@ -213,7 +213,7 @@ async fn main() -> anyhow::Result<()> {
 
     let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
-    futures::try_join!(health.run(), device_to_endpoint.err_into(),)?;
+    futures::try_join!(health.run(), device_to_endpoint.err_into())?;
     Ok(())
 }
 
