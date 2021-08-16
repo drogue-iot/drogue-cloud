@@ -1,4 +1,4 @@
-* Integrations
+* System Integrations
 ** The Things Network
 *** xref:ttn:index.adoc[Overview]
 *** xref:ttn:app.adoc[Managing applications]
