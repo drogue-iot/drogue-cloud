@@ -8,9 +8,9 @@
 
 Drogue IoT Cloud is an IoT/Edge connectivity layer that allows IoT devices to communicate with a cloud platform over
 various protocols. It acts both as data ingestion plane, and as control plane. In short, Drogue IoT Cloud takes
-care of the data on the cloud side :grin:.
+care of the data on the cloud side.
 
-![Overview diagram](docs/modules/ROOT/images/architecture.svg)
+![Overview diagram](docs/modules/ROOT/images/overview.svg)
 
 It offers:
 * IoT friendly protocol endpoints and APIs
@@ -21,22 +21,31 @@ It offers:
 It is built on top of:
 * *Kubernetes* – For running workloads
 * *Cloud Events* - For normalizing transport protocols
-* *Knative (eventing)* – For streaming data
 * *Apache Kafka* – For persisting events
 * *Keycloak* - For single-sign-on
 
 You can learn more about the [architecture](https://book.drogue.io/drogue-cloud/dev/architecture/index.html) in
 our [documentation](https://book.drogue.io/).
 
-## Protocol Endpoint Support
+## Protocol Support
 
-| Protocols                  |     Endpoint    |
-| -------------------------- | :-------------: |
-| HTTP                       |        ✓        |
-| MQTT v3/v5                 |        ✓        |
-| CoAP                       |        ✓*       |
+<table>
+<tr><th>Device endpoints</th><th>Integration APIs</th></tr>
+<tr><td>
 
-_\* - has no DTLS support, authentication done using [custom CoAP options](https://github.com/drogue-iot/rfcs/blob/main/active/0007-cloudevent-to-coap-options.md#mappings-of-drogue-iot-extension-attributes-to-coap-option-numbers)(no encryption)_ 
+* HTTP
+  * Generic HTTP
+  * The Things Network v2/v3
+* MQTT v3.1.1/v5
+* CoAP
+
+</td><td>
+
+* Kafka
+* WebSocket
+* MQTT v3.1.1/v5
+
+</td></tr></table>
 
 ## Installation
 
