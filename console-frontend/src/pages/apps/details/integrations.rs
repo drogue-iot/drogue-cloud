@@ -8,18 +8,26 @@ use drogue_client::{
     Translator,
 };
 use drogue_cloud_service_api::{
-    endpoints::Endpoints,
-    endpoints::HttpEndpoint,
+    endpoints::{Endpoints, HttpEndpoint, MqttEndpoint},
     kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
 };
 use java_properties::PropertiesWriter;
-use monaco::api::TextModel;
-use monaco::{api::CodeEditorOptions, sys::editor::BuiltinTheme, yew::CodeEditor};
+use monaco::{
+    api::{CodeEditorOptions, TextModel},
+    sys::editor::BuiltinTheme,
+    yew::CodeEditor,
+};
 use patternfly_yew::*;
 use serde_json::json;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use yew::prelude::*;
+
+struct KafkaInfo {
+    pub bootstrap: String,
+    pub target: KafkaTarget,
+    pub user: KafkaUserStatus,
+}
 
 pub struct IntegrationDetails<'a> {
     pub backend: &'a Backend,
@@ -30,27 +38,30 @@ pub struct IntegrationDetails<'a> {
 
 impl IntegrationDetails<'_> {
     pub fn render(&self) -> Html {
+        let mut items: Vec<Html> = Vec::new();
+
+        if let Some(kafka) = self.kafka_info() {
+            items.push(Self::wrap_card("Apache Kafka™", self.render_kafka(&kafka)));
+        }
+
+        if let Some(mqtt) = &self.endpoints.mqtt_integration {
+            items.push(Self::wrap_card("MQTT", self.render_mqtt(mqtt)));
+        }
+
+        if let Some(ws) = &self.endpoints.websocket_integration {
+            items.push(Self::wrap_card("Websocket", self.render_ws(&ws)));
+        }
+
         return html! {
             <Stack gutter=true>
-                <StackItem>
-                    { Self::wrap_card("Apache Kafka™", self.render_kafka()) }
-                </StackItem>
-                <StackItem>
-                    { Self::wrap_card("MQTT", self.render_mqtt()) }
-                </StackItem>
-                <StackItem>
-                    { Self::wrap_card("Websocket", self.render_ws()) }
-                </StackItem>
+                {
+                    for items.into_iter().map(|item|html!{<StackItem> {item} </StackItem>})
+                }
             </Stack>
         };
     }
 
-    fn render_mqtt_quarkus(&self) -> Html {
-        let mqtt = match &self.endpoints.mqtt_integration {
-            Some(mqtt) => mqtt,
-            _ => return html! {},
-        };
-
+    fn render_mqtt_quarkus(&self, mqtt: &MqttEndpoint) -> Html {
         let user = self
             .token
             .userinfo
@@ -118,21 +129,16 @@ impl IntegrationDetails<'_> {
         }
     }
 
-    fn render_mqtt(&self) -> Html {
+    fn render_mqtt(&self, mqtt: &MqttEndpoint) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[6]>{ self.render_mqtt_basic() }</GridItem>
-                <GridItem cols=[6]>{ self.render_mqtt_quarkus() }</GridItem>
+                <GridItem cols=[6]>{ self.render_mqtt_basic(mqtt) }</GridItem>
+                <GridItem cols=[6]>{ self.render_mqtt_quarkus(mqtt) }</GridItem>
             </Grid>
         };
     }
 
-    fn render_mqtt_basic(&self) -> Html {
-        let mqtt = match &self.endpoints.mqtt_integration {
-            Some(mqtt) => mqtt,
-            _ => return html! {},
-        };
-
+    fn render_mqtt_basic(&self, mqtt: &MqttEndpoint) -> Html {
         let user = self
             .token
             .userinfo
@@ -193,44 +199,38 @@ impl IntegrationDetails<'_> {
         };
     }
 
-    fn render_kafka(&self) -> Html {
-        let bootstrap = self
-            .endpoints
-            .kafka_bootstrap_servers
-            .as_ref()
-            .cloned()
-            .unwrap_or_default();
+    fn kafka_info(&self) -> Option<KafkaInfo> {
+        let bootstrap = self.endpoints.kafka_bootstrap_servers.as_ref().cloned();
 
-        let target = match self.application.kafka_target(KafkaEventType::Events) {
-            Ok(target) => target,
-            _ => return html! {},
-        };
+        let target = self.application.kafka_target(KafkaEventType::Events);
 
-        let user = match self
+        let user = self
             .application
             .section::<KafkaAppStatus>()
             .and_then(|s| s.ok())
-            .and_then(|s| s.user)
-        {
-            Some(user) => user,
-            _ => return html! {},
-        };
+            .and_then(|s| s.user);
 
+        match (bootstrap, target, user) {
+            (Some(bootstrap), Ok(target), Some(user)) => Some(KafkaInfo {
+                bootstrap,
+                target,
+                user,
+            }),
+            _ => None,
+        }
+    }
+
+    fn render_kafka(&self, info: &KafkaInfo) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[6]>{ self.render_kafka_basic(&bootstrap, &target, &user) }</GridItem>
-                <GridItem cols=[6]>{ self.render_kafka_examples(&bootstrap, &target,&user) }</GridItem>
+                <GridItem cols=[6]>{ self.render_kafka_basic(&info) }</GridItem>
+                <GridItem cols=[6]>{ self.render_kafka_examples(&info) }</GridItem>
             </Grid>
         };
     }
 
-    fn render_kafka_examples(
-        &self,
-        bootstrap: &str,
-        target: &KafkaTarget,
-        user: &KafkaUserStatus,
-    ) -> Html {
-        let topic = match target {
+    fn render_kafka_examples(&self, info: &KafkaInfo) -> Html {
+        let topic = match &info.target {
             KafkaTarget::Internal { topic } => topic.clone(),
             KafkaTarget::External { config } => config.topic.clone(),
         };
@@ -241,10 +241,10 @@ impl IntegrationDetails<'_> {
 --topic {topic}
 --bootstrap-server {bootstrap}"#,
                 topic = topic,
-                bootstrap = bootstrap,
+                bootstrap = info.bootstrap,
             );
 
-            for (k, v) in Self::consumer_properties(user) {
+            for (k, v) in Self::consumer_properties(&info.user) {
                 command += &format!("\n--consumer-property {}={}", k, shell_single_quote(v));
             }
 
@@ -252,7 +252,7 @@ impl IntegrationDetails<'_> {
         };
 
         let quarkus = {
-            let mut props = Self::consumer_properties(&user);
+            let mut props = Self::consumer_properties(&info.user);
             props.insert(0, ("connector".into(), "smallrye-kafka".into()));
             props.insert(0, ("topic".into(), topic));
             let mut props = Self::ser_properties(
@@ -274,6 +274,69 @@ mp.messaging.incoming.drogue-iot-incoming.auto.offset.reset=earliest"#;
             props
         };
 
+        let knative = {
+            let yaml = format!(
+                r#"---
+apiVersion: sources.knative.dev/v1beta1
+kind: KafkaSource
+metadata:
+  name: drogue-iot-source
+spec:
+  bootstrapServers:
+    - {server}
+  
+  # consumerGroup: replace with your own Kafka consumer group
+  consumerGroup: my-group
+  
+  # consumer: increase if you need more than one pod consuming events
+  consumers: 1
+  
+  net:
+    sasl:
+      enable: true
+      type:
+        secretKeyRef:
+          name: drogue-iot-source-secret
+          key: mechanism
+      user:
+        secretKeyRef:
+          name: drogue-iot-source-secret
+          key: user
+      password:
+        secretKeyRef:
+          name: drogue-iot-source-secret
+          key: password
+    tls:
+      caCert: {{}}
+      cert: {{}}
+      key: {{}}
+  sink:
+    # Define a reference to a Service receiving the CloudEvents.
+    # This is a service that you have to provide.
+    # Also see: https://knative.dev/docs/developer/eventing/sinks/ 
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: my-service
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: drogue-iot-source-secret
+stringData:
+  mechanism: {mechanism}
+  user: {user}
+  password: {password}
+"#,
+                server = &info.bootstrap,
+                mechanism = &info.user.mechanism,
+                user = &info.user.username,
+                password = &info.user.password,
+            );
+
+            yaml
+        };
+
         return html! {
                 <>
                 <Tabs>
@@ -286,22 +349,21 @@ mp.messaging.incoming.drogue-iot-incoming.auto.offset.reset=earliest"#;
                         <div><code>{"application.properties"}</code></div>
                         { Self::default_editor(Some("properties"), to_model(Some("properties"), &quarkus)) }
                     </Tab>
+                    <Tab label="Knative">
+                        <div><code>{"kafka-source.yaml"}</code></div>
+                        { Self::default_editor(Some("yaml"), to_model(Some("yaml"), &knative)) }
+                    </Tab>
                 </Tabs>
                 </>
         };
     }
 
-    fn render_kafka_basic(
-        &self,
-        bootstrap: &str,
-        target: &KafkaTarget,
-        user: &KafkaUserStatus,
-    ) -> Html {
+    fn render_kafka_basic(&self, info: &KafkaInfo) -> Html {
         html! {
             <>
             <DescriptionList>
                 {
-                    match target {
+                    match &info.target {
                         KafkaTarget::Internal { topic } => {
                             html! {
                                 <>
@@ -309,7 +371,7 @@ mp.messaging.incoming.drogue-iot-incoming.auto.offset.reset=earliest"#;
                                     <Clipboard code=true readonly=true value=topic/>
                                 </DescriptionGroup>
                                 <DescriptionGroup term="Bootstrap Servers">
-                                    <Clipboard code=true readonly=true value=bootstrap/>
+                                    <Clipboard code=true readonly=true value=&info.bootstrap/>
                                 </DescriptionGroup>
                                 </>
                             }
@@ -325,33 +387,28 @@ mp.messaging.incoming.drogue-iot-incoming.auto.offset.reset=earliest"#;
                 }
 
                 <DescriptionGroup term="User">
-                    <Clipboard code=true readonly=true value=&user.username/>
+                    <Clipboard code=true readonly=true value=&info.user.username/>
                 </DescriptionGroup>
                 <DescriptionGroup term="Password">
-                    <Clipboard code=true readonly=true value=&user.password/>
+                    <Clipboard code=true readonly=true value=&info.user.password/>
                 </DescriptionGroup>
                 <DescriptionGroup term="Mechanism">
-                    <Clipboard code=true readonly=true value=&user.mechanism/>
+                    <Clipboard code=true readonly=true value=&info.user.mechanism/>
                 </DescriptionGroup>
                 <DescriptionGroup term="JAAS Config">
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
-                        value=Self::jaas_config(&user)/>
+                        value=Self::jaas_config(&info.user)/>
                 </DescriptionGroup>
                 <DescriptionGroup term="Consumer Properties">
                     <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
-                        value=Self::consumer_properties_str(&user)/>
+                        value=Self::consumer_properties_str(&info.user)/>
                 </DescriptionGroup>
             </DescriptionList>
             </>
         }
     }
 
-    fn render_ws(&self) -> Html {
-        let ws = match &self.endpoints.websocket_integration {
-            Some(ws) => ws,
-            _ => return html! {},
-        };
-
+    fn render_ws(&self, ws: &HttpEndpoint) -> Html {
         return html! {
             <Grid gutter=true>
                 <GridItem cols=[6]>{ self.render_ws_basic(ws) }</GridItem>
