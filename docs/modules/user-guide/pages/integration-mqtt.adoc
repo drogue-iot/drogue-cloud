@@ -1,0 +1,4 @@
+= MQTT integration
+
+The MQTT integration allows consuming device events and send commands to the devices using an MQTT based API.
+Events are encoded as CloudEvents.

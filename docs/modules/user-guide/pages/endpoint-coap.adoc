@@ -1,0 +1,6 @@
+= CoAP protocol endpoint
+
+The CoAP protocol endpoint is a device facing service offering connectivity using a CoAP based API.
+
+NOTE: Currently, the endpoint does not support DTLS. It is not recommended using this in production or
+to transfer any sensitive data over public networks.

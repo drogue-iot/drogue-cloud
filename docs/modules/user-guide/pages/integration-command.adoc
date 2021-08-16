@@ -1,0 +1,3 @@
+= Command HTTP integration
+
+The command HTTP integration provides a simple HTTP based API to send commands to devices.

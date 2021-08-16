@@ -1,0 +1,4 @@
+= WebSocket integration
+
+The WebSocket integration allows consuming device events using a simple WebSockets based protocol.Events are
+encoded as CloudEvents.

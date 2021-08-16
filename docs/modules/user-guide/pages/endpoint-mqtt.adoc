@@ -1,0 +1,4 @@
+= MQTT protocol endpoint
+
+The MQTT protocol endpoint is a device facing service offering connectivity using a simple MQTT v3.1.1 and v5
+based protocol.

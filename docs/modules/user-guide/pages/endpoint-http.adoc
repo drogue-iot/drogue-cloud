@@ -1,0 +1,9 @@
+= HTTP protocol endpoint
+
+The HTTP protocol endpoint is a device facing service offering connectivity using different HTTP based APIs.
+
+== Simple HTTP API
+
+== The Things Network v2
+
+== The Things Network v3

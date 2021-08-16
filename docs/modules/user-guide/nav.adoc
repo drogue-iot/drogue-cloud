@@ -2,7 +2,7 @@
 ** xref:index.adoc[Overview]
 ** xref:management.adoc[Management]
 ** Endpoints
-*** xref:endpoint-http.adoc[CoAP Endpoint]
+*** xref:endpoint-coap.adoc[CoAP Endpoint]
 *** xref:endpoint-http.adoc[HTTP Endpoint]
 *** xref:endpoint-mqtt.adoc[MQTT Endpoint]
 ** Integrations
