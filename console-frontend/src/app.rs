@@ -263,7 +263,9 @@ impl Component for Main {
 
                 // fetch endpoints
 
-                self.task = Some(self.fetch_endpoints().expect("Failed to fetch endpoints"));
+                if self.endpoints.is_none() {
+                    self.task = Some(self.fetch_endpoints().expect("Failed to fetch endpoints"));
+                }
 
                 // done
 
