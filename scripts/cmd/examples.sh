@@ -44,7 +44,7 @@ bold "Create an initial application and device:"
 bold "------------------------------"
 echo
 echo "  drg create app example-app"
-echo "  drg create device --app example-app device1 --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  drg create device --app example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
 echo
 bold "Subscribe to device data:"
 bold "---------------------------"
@@ -125,7 +125,7 @@ echo "Create a new device:"
 echo "-----------------------"
 echo
 echo "  drg create app example-app"
-echo "  drg create device --app example-app device1 --data '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
+echo "  drg create device --app example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
 echo "  cat FirstTestDevice.json | http --auth ditto:ditto PUT $TWIN_API/api/2/things/example-app:device1"
 echo
 echo "Publish some data:"
