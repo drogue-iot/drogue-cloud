@@ -1,14 +1,26 @@
 
-all: build
-
-.PHONY: clean build
+all: check build
 
 EBASE ?= endpoints
 EGEN ?= $(EBASE)/generated
 
+.PHONY: clean
 clean:
 	rm -fR $(EGEN)
 
+.PHONY: info
+info:
+	@echo CERT_ALTNAMES: $(CERT_ALTNAMES)
+	@echo EBASE: $(EBASE)
+	@echo EGEN: $(EGEN)
+
+.PHONY: check
+check: info
+ifeq ($(CERT_ALTNAMES), )
+	@$(error Missing variable CERT_ALTNAMES)
+endif
+
+.PHONY: build
 build: $(EGEN)
 build: $(EGEN)/ca-bundle.pem
 build: $(EGEN)/ca-key.pem $(EGEN)/ca-cert.pem
