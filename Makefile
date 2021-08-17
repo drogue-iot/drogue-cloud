@@ -43,7 +43,8 @@ ALL_IMAGES=\
 	mqtt-integration \
 	ttn-operator \
 	topic-operator \
-    websocket-integration \
+	websocket-integration \
+
 
 #
 # Active images to build
@@ -206,7 +207,7 @@ webpack-build: cargo-build
 #
 build-images: build-image($(IMAGES))
 build-image($(IMAGES)):
-	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t $%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t localhost/$%:$(IMAGE_TAG)
 
 
 #
@@ -214,7 +215,7 @@ build-image($(IMAGES)):
 #
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && $(CONTAINER) tag $% $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) tag localhost/$%:$(IMAGE_TAG) $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
@@ -231,7 +232,7 @@ push-image($(IMAGES)): require-container-registry
 save-images:
 	mkdir -p "$(TOP_DIR)/build/images"
 	rm -Rf "$(TOP_DIR)/build/images/all.tar"
-	$(CONTAINER) save -o "$(TOP_DIR)/build/images/all.tar" $(addsuffix :latest, $(IMAGES))
+	$(CONTAINER) save -o "$(TOP_DIR)/build/images/all.tar" $(addprefix localhost/, $(addsuffix :latest, $(IMAGES)))
 
 
 #
