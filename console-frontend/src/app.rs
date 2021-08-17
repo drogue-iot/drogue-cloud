@@ -9,8 +9,7 @@ use crate::{
 };
 use anyhow::Error;
 use chrono::{DateTime, Utc};
-use drogue_cloud_console_common::UserInfo;
-use drogue_cloud_service_api::endpoints::Endpoints;
+use drogue_cloud_console_common::{EndpointInformation, UserInfo};
 use patternfly_yew::*;
 use std::{rc::Rc, time::Duration};
 use url::Url;
@@ -35,7 +34,7 @@ pub struct Main {
     app_failure: bool,
     /// We are in the process of authenticating.
     authenticating: bool,
-    endpoints: Option<Endpoints>,
+    endpoints: Option<EndpointInformation>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,7 +48,7 @@ pub enum Msg {
     /// Set the backend information
     Backend(BackendInformation),
     /// Set the endpoint information
-    Endpoints(Rc<Endpoints>),
+    Endpoints(Rc<EndpointInformation>),
     /// Exchange the authentication code for an access token
     GetToken(String),
     /// Share the access token using the data bridge
@@ -342,7 +341,7 @@ impl Component for Main {
 
 impl Main {
     /// Check if the app and backend are ready to show the application.
-    fn is_ready(&self) -> Option<(Backend, Token, Endpoints)> {
+    fn is_ready(&self) -> Option<(Backend, Token, EndpointInformation)> {
         match (
             self.app_failure,
             Backend::get(),
@@ -394,8 +393,8 @@ impl Main {
             RequestOptions {
                 disable_reauth: true,
             },
-            self.link
-                .callback(|response: Response<Json<Result<Endpoints, Error>>>| {
+            self.link.callback(
+                |response: Response<Json<Result<EndpointInformation, Error>>>| {
                     let parts = response.into_parts();
                     if let (meta, Json(Ok(body))) = parts {
                         log::info!("Meta: {:?}", meta);
@@ -404,7 +403,8 @@ impl Main {
                         }
                     }
                     Msg::FetchBackendFailed
-                }),
+                },
+            ),
         )
     }
 

@@ -48,8 +48,6 @@ pub struct Endpoints {
     pub registry: Option<RegistryEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub command_url: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub demos: Vec<(String, String)>,
     #[serde(default, skip_serializing_if = "is_default")]
     pub local_certs: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -72,7 +70,6 @@ impl Endpoints {
             registry: self.registry.clone(),
             command_url: None,
             kafka_bootstrap_servers: None,
-            demos: Vec::new(),
             local_certs: false,
         }
     }

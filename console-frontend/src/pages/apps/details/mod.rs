@@ -12,10 +12,8 @@ use crate::{
     utils::{to_yaml_model, url_encode},
 };
 use drogue_client::registry::v1::Application;
-use drogue_cloud_service_api::{
-    endpoints::Endpoints,
-    kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
-};
+use drogue_cloud_console_common::EndpointInformation;
+use drogue_cloud_service_api::kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget};
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::rc::Rc;
@@ -25,7 +23,7 @@ use yew::{format::*, prelude::*, services::fetch::*};
 pub struct Props {
     pub backend: Backend,
     pub token: Token,
-    pub endpoints: Endpoints,
+    pub endpoints: EndpointInformation,
     pub name: String,
     pub details: DetailsSection,
 }

@@ -1,6 +1,7 @@
 mod admin;
 mod api;
 mod auth;
+mod demos;
 mod info;
 mod spy;
 
@@ -32,6 +33,8 @@ use drogue_cloud_service_common::{
     openid_auth,
 };
 use futures::TryFutureExt;
+use k8s_openapi::api::core::v1::ConfigMap;
+use kube::Api;
 use serde::Deserialize;
 use url::Url;
 
@@ -80,6 +83,14 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let config = Config::from_env()?;
+
+    // kube
+
+    let kube = kube::client::Client::try_default()
+        .await
+        .context("Failed to create Kubernetes client")?;
+
+    let config_maps = Api::<ConfigMap>::default_namespaced(kube.clone());
 
     // the endpoint source we choose
 
@@ -206,6 +217,7 @@ async fn main() -> anyhow::Result<()> {
 
         let app = app.app_data(keycloak_service.clone());
         let app = app.app_data(web::Data::new(registry.clone()));
+        let app = app.app_data(web::Data::new(config_maps.clone()));
 
         let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(

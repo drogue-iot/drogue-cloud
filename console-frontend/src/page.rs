@@ -7,7 +7,7 @@ use crate::{
     spy::Spy,
     utils::url_decode,
 };
-use drogue_cloud_service_api::endpoints::Endpoints;
+use drogue_cloud_console_common::EndpointInformation;
 use patternfly_yew::*;
 use yew::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
@@ -33,7 +33,7 @@ pub enum AppRoute {
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
     pub backend: Backend,
-    pub endpoints: Endpoints,
+    pub endpoints: EndpointInformation,
     pub token: Token,
     pub on_logout: Callback<()>,
 }

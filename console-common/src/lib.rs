@@ -1,3 +1,7 @@
+mod info;
+
+pub use info::*;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

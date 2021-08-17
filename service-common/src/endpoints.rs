@@ -49,9 +49,6 @@ pub struct EndpointConfig {
 
     #[serde(default)]
     pub local_certs: bool,
-
-    #[serde(default)]
-    pub demos: Option<String>,
 }
 
 pub async fn eval_endpoints() -> anyhow::Result<Endpoints> {
@@ -77,28 +74,6 @@ fn amend_global_sso(mut endpoints: EndpointConfig) -> EndpointConfig {
         endpoints.sso_url = super::openid::global_sso();
     }
     endpoints
-}
-
-/// Split demo entries
-///
-/// Format: ENV=Label of Demo=target;Next demo=target2
-fn split_demos(str: &str) -> Vec<(String, String)> {
-    let mut demos = Vec::new();
-
-    for demo in str.split(';') {
-        if let [label, target] = demo.splitn(2, '=').collect::<Vec<&str>>().as_slice() {
-            demos.push((label.to_string(), target.to_string()))
-        }
-    }
-
-    demos
-}
-
-fn get_demos() -> Vec<(String, String)> {
-    match std::env::var("DEMOS") {
-        Ok(value) => split_demos(&value),
-        _ => vec![],
-    }
 }
 
 #[derive(Debug)]
@@ -167,7 +142,6 @@ impl EndpointSource for EnvEndpointSource {
             registry,
             command_url: self.0.command_endpoint_url.as_ref().cloned(),
             kafka_bootstrap_servers: self.0.kafka_bootstrap_servers.as_ref().cloned(),
-            demos: get_demos(),
             local_certs: self.0.local_certs,
         })
     }

@@ -1,11 +1,12 @@
 use crate::backend::Backend;
-use drogue_cloud_service_api::endpoints::{Endpoints, MqttEndpoint};
+use drogue_cloud_console_common::EndpointInformation;
+use drogue_cloud_service_api::endpoints::MqttEndpoint;
 use patternfly_yew::*;
 use yew::{prelude::*, virtual_dom::VChild};
 
 #[derive(Clone, Properties, PartialEq, Eq)]
 pub struct Props {
-    pub endpoints: Option<Endpoints>,
+    pub endpoints: Option<EndpointInformation>,
 }
 
 pub struct Overview {
@@ -59,7 +60,7 @@ impl Overview {
         }
     }
 
-    fn render_endpoints(&self, endpoints: &Endpoints) -> Html {
+    fn render_endpoints(&self, endpoints: &EndpointInformation) -> Html {
         let mut service_cards = Vec::new();
         let mut endpoint_cards = Vec::new();
         let mut integration_cards = Vec::new();
