@@ -70,11 +70,11 @@ impl Handler<Subscribe> for Service {
 
         // store the stream
         self.clients.insert(
-            id,
+            msg.id,
             Stream {
                 application: msg.application.clone(),
                 runner: run_handle,
-                err_addr: msg.err_addr.clone(),
+                err_addr: msg.err_addr,
             },
         );
     }

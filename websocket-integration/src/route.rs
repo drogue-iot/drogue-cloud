@@ -24,7 +24,7 @@ pub struct GroupId {
 pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
-    auth: web::Either<BearerAuth, BasicAuth>,
+    auth: Option<web::Either<BearerAuth, BasicAuth>>,
     auth_client: web::Data<Option<Authenticator>>,
     authz_client: web::Data<Option<Arc<UserAuthClient>>>,
     authorize_api_keys: web::Data<bool>,
@@ -37,12 +37,12 @@ pub async fn start_connection(
     let auth_client = auth_client.get_ref().clone();
     let authz_client = authz_client.get_ref().clone();
 
-    match (auth_client, authz_client) {
-        (Some(auth_client), Some(authz_client)) => {
-            let credentials = match auth {
+    if let (Some(auth_client), Some(authz_client)) = (auth_client, authz_client) {
+        let credentials = match auth {
+            Some(either) => match either {
                 Either::Left(bearer) => Ok(Credentials::Token(bearer.token().to_string())),
                 Either::Right(basic) => {
-                    if authorize_api_keys.get_ref().clone() {
+                    if *authorize_api_keys.get_ref() {
                         Ok(Credentials::ApiKey(UsernameAndApiKey {
                             username: basic.user_id().to_string(),
                             key: basic.password().map(|k| k.to_string()),
@@ -54,17 +54,16 @@ pub async fn start_connection(
                         ))
                     }
                 }
-            }?;
+            },
+            None => Ok(Credentials::Anonymous),
+        }?;
 
-            // authentication
-            credentials
-                .authenticate_and_authorize(application.clone(), &authz_client, auth_client)
-                .await
-                .or(Err(ServiceError::AuthenticationError))?;
-        }
-        // authentication disabled
-        _ => {}
-    }
+        // authentication
+        credentials
+            .authenticate_and_authorize(application.clone(), &authz_client, auth_client)
+            .await
+            .or(Err(ServiceError::AuthenticationError))?;
+    };
 
     // launch web socket actor
     let ws = WsHandler::new(

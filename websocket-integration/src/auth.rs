@@ -10,9 +10,11 @@ use std::sync::Arc;
 // Credentials can either be
 //  - username + API key
 //  - openID token
+//  - Anonymous
 pub enum Credentials {
     Token(String),
     ApiKey(UsernameAndApiKey),
+    Anonymous,
 }
 
 pub struct UsernameAndApiKey {
@@ -62,7 +64,7 @@ impl Credentials {
                     Outcome::Known(details) => Ok(UserInformation::Authenticated(details)),
                     Outcome::Unknown => {
                         log::debug!("Unknown API key");
-                        return Err(ServiceError::AuthenticationError);
+                        Err(ServiceError::AuthenticationError)
                     }
                 }
             }
@@ -70,6 +72,7 @@ impl Credentials {
                 Ok(token) => Ok(UserInformation::Authenticated(token.into())),
                 Err(_) => Err(ServiceError::AuthenticationError),
             },
+            Credentials::Anonymous => Ok(UserInformation::Anonymous),
         }
     }
 

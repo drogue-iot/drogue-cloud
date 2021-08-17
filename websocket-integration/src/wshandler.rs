@@ -62,8 +62,8 @@ impl Actor for WsHandler {
         // Send a message to ask service to subscribe to Kafka stream.
         self.service_addr
             .send(Subscribe {
-                addr: addr,
-                err_addr: err_addr,
+                addr,
+                err_addr,
                 application: self.application.clone(),
                 consumer_group: self.group_id.clone(),
                 id: self.id,
