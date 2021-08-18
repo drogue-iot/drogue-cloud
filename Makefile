@@ -243,6 +243,7 @@ kind-load: require-container-registry
 		kind load docker-image $(CONTAINER_REGISTRY)/$${i}:$(IMAGE_TAG); \
 	done
 
+
 #
 # Tag and push images.
 #

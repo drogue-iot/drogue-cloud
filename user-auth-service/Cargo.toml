@@ -33,7 +33,7 @@ sha2 = "0.9"
 rustls = { version = "0.19" }
 
 dotenv = "0.15"
-config = "0.10"
+config = "0.11"
 
 thiserror = "1"
 deadpool = "0.7"

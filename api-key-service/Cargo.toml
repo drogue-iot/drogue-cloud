@@ -40,7 +40,7 @@ crc = "1"
 base62 = "1"
 
 dotenv = "0.15"
-config = "0.10"
+config = "0.11"
 
 thiserror = "1"
 

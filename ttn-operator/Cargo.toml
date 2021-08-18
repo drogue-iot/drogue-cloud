@@ -14,7 +14,7 @@ tokio = "1"
 futures = "0.3"
 
 anyhow = "1"
-config = "0.10"
+config = "0.11"
 dotenv = "0.15"
 env_logger = "0.7"
 humantime = "2"
