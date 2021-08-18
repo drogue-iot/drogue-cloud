@@ -203,11 +203,11 @@ webpack-build: cargo-build
 #
 # Build images.
 #
-# You might want to consider doing a `build` first, but we don't force that.
+# You might want to consider doing a `build` first, but we don't enforce that.
 #
 build-images: build-image($(IMAGES))
 build-image($(IMAGES)):
-	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t localhost/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t localhost/$%:latest
 
 
 #
@@ -215,7 +215,7 @@ build-image($(IMAGES)):
 #
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && $(CONTAINER) tag localhost/$%:$(IMAGE_TAG) $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && $(CONTAINER) tag localhost/$%:latest $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
