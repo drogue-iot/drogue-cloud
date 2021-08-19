@@ -487,6 +487,7 @@ where
         let content_mode = stream.content_mode;
 
         log::debug!("Running stream - content-mode: {:?}", content_mode);
+        let sub_id = stream.id.map(|id| vec![id]);
 
         // run event stream
         while let Some(event) = stream.event_stream.next().await {
@@ -511,6 +512,7 @@ where
                             p.content_type =
                                 Some("application/cloudevents+json; charset=utf-8".into());
                             p.is_utf8_payload = Some(true);
+                            p.subscription_ids = sub_id.clone();
                         })
                         .send_at_most_once()
                 }
@@ -535,6 +537,7 @@ where
                                 p.user_properties.push((k.into(), v.to_string().into()));
                             }
                             p.content_type = content_type.map(Into::into);
+                            p.subscription_ids = sub_id.clone();
                         })
                         // ... and send
                         .send_at_most_once()

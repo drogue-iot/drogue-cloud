@@ -1465,19 +1465,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "deadpool"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef82259c587bceda08349f28ff00f69ae4c897898f254140af6021eb218e8232"
-dependencies = [
- "async-trait",
- "config 0.11.0",
- "num_cpus",
- "serde 1.0.126",
- "tokio 1.9.0",
-]
-
-[[package]]
 name = "deadpool-postgres"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1485,7 +1472,7 @@ checksum = "5452506f60a0ceca624c4becc948f9f0ae67f35fc0ae471b9dcb841d110cf70a"
 dependencies = [
  "async-trait",
  "config 0.10.1",
- "deadpool 0.7.0",
+ "deadpool",
  "futures",
  "log",
  "serde 1.0.126",
@@ -1705,7 +1692,7 @@ dependencies = [
  "bcrypt",
  "chrono",
  "config 0.11.0",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-client",
@@ -1897,7 +1884,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "criterion",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "drogue-client",
  "drogue-cloud-service-api",
@@ -1931,7 +1918,7 @@ dependencies = [
  "bytes 1.0.1",
  "chrono",
  "config 0.11.0",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-client",
@@ -1980,7 +1967,6 @@ dependencies = [
  "chrono",
  "cloudevents-sdk",
  "config 0.11.0",
- "deadpool 0.8.2",
  "drogue-client",
  "drogue-cloud-event-common",
  "drogue-cloud-service-api",
@@ -2171,7 +2157,7 @@ dependencies = [
  "async-std",
  "async-trait",
  "chrono",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "drogue-client",
  "drogue-cloud-database-common",
@@ -2198,7 +2184,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "config 0.11.0",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-database-common",
@@ -2312,7 +2298,7 @@ name = "drogue-cloud-test-common"
 version = "0.7.0"
 dependencies = [
  "anyhow",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "log",
  "serde 1.0.126",
@@ -2407,7 +2393,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "config 0.11.0",
- "deadpool 0.7.0",
+ "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-api-key-service",
