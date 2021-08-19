@@ -17,6 +17,8 @@ Options:
   -n <namespace>     The namespace to install to (default: $DROGUE_NS)
   -s <key>=<value>   Set a Helm option, can be repeated:
                        -s foo=bar -s bar=baz -s foo.bar=baz
+  -S <key>=<value>   Set a Helm option (as string), can be repeated:
+                       -S foo=bar -S bar=baz -S foo.bar=baz
   -k                 Don't install dependencies
   -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
   -h                 Show this help
@@ -49,6 +51,10 @@ while [[ $# -gt 0 ]]; do
         ;;
     -s)
         HELM_ARGS="$HELM_ARGS --set $2"
+        shift 2
+        ;;
+    -S)
+        HELM_ARGS="$HELM_ARGS --set-string $2"
         shift 2
         ;;
     -d)
