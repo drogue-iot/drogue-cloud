@@ -26,7 +26,7 @@ Options:
 EOF
 }
 
-opts=$(getopt -o "mhkp:c:n:d:s:" -- "$@")
+opts=$(getopt -o "mhkp:c:n:d:s:S:" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
