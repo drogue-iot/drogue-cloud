@@ -1,7 +1,11 @@
 use anyhow::anyhow;
 use chrono::Duration;
 use drogue_client::openid::Expires;
-use openid::{Client, Jws};
+use drogue_cloud_service_common::openid::ExtendedClaims;
+use openid::{
+    biscuit::{self, jws::Compact},
+    Client, CustomClaims, Jws,
+};
 use url::Url;
 
 #[tokio::main]
@@ -41,15 +45,17 @@ async fn main() -> anyhow::Result<()> {
     );
     println!("Expires (1h): {}", token.expires_before(Duration::hours(1)));
 
-    let mut token = Jws::new_encoded(&token.access_token);
+    // let mut token = Jws::new_encoded(&token.access_token);
+    let token: Compact<ExtendedClaims, biscuit::Empty> = Jws::new_encoded(&token.access_token);
+    let payload = token.unverified_payload().unwrap();
 
-    client.decode_token(&mut token)?;
+    // client.decode_token(&mut token)?;
+    // let payload = token.payload()?;
 
-    let payload = token.payload()?;
-    println!("Token: {:#?}", payload);
+    println!("Access Token: {:#?}", payload);
 
-    println!("Audiences: {:?}", payload.aud);
-    println!("azp: {:?}", payload.azp);
+    println!("Audiences: {:?}", payload.standard_claims().aud);
+    println!("azp: {:?}", payload.standard_claims().azp);
 
     Ok(())
 }
