@@ -31,6 +31,14 @@ impl From<ExtendedClaims> for UserDetails {
     fn from(claims: ExtendedClaims) -> Self {
         // TODO: This currently on works for Keycloak
         let mut roles = Vec::new();
+
+        // realm access
+
+        let r = &claims.extended_claims["realm_access"]["roles"];
+        if let Some(r) = r.as_array() {
+            roles.extend(r.iter().filter_map(|v| v.as_str()).map(Into::into));
+        }
+
         for client in ["services", "drogue"] {
             let r = &claims.extended_claims["resource_access"][client]["roles"];
             if let Some(r) = r.as_array() {
