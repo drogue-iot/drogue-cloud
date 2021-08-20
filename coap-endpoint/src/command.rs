@@ -28,7 +28,8 @@ pub async fn wait_for_command(
                     // Construct response
                     Ok(req.response.map(|mut v| {
                         v.set_status(ResponseType::Content);
-                        v.message.add_option(HEADER_COMMAND, cmd.command.as_bytes().to_vec());
+                        v.message
+                            .add_option(HEADER_COMMAND, cmd.command.as_bytes().to_vec());
                         v.message.payload = cmd.payload.unwrap_or_default();
                         v
                     }))
