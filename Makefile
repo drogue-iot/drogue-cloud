@@ -277,7 +277,7 @@ frontend: host-build
 deploy: CONTAINER_REGISTRY ?= "ghcr.io/drogue-iot"
 deploy:
 	test -d deploy/helm/charts || git submodule update --init
-	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:latest ./scripts/drgadm deploy \
+	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:$(IMAGE_TAG) ./scripts/drgadm deploy \
 		-s defaults.images.repository=$(CONTAINER_REGISTRY) \
 		-s defaults.images.tag=latest
 
