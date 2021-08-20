@@ -26,6 +26,7 @@ use tokio_postgres::{
 };
 use uuid::Uuid;
 
+#[derive(Debug)]
 /// An application entity record.
 pub struct Application {
     pub uid: Uuid,

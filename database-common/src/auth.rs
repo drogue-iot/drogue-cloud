@@ -9,9 +9,10 @@ use drogue_cloud_service_api::auth::user::{
     UserInformation,
 };
 use indexmap::map::IndexMap;
+use std::fmt::Debug;
 
 /// A resource that can be checked.
-pub trait Resource {
+pub trait Resource: Debug {
     fn owner(&self) -> Option<&str>;
     fn members(&self) -> &IndexMap<String, MemberEntry>;
 }
@@ -27,8 +28,16 @@ pub fn authorize(
     identity: &UserInformation,
     permission: Permission,
 ) -> Outcome {
+    log::debug!(
+        "authorizing - resource: {:?}, identity: {:?}, permission: {:?}",
+        resource,
+        identity,
+        permission
+    );
+
     // if we are "admin", grant access
     if identity.is_admin() {
+        log::debug!("Granting access as user is admin");
         return Outcome::Allow;
     }
 
@@ -104,6 +113,7 @@ mod test {
     use super::*;
     use drogue_cloud_service_api::auth::user::UserDetails;
 
+    #[derive(Debug)]
     struct MockResource {
         owner: String,
         members: IndexMap<String, MemberEntry>,
