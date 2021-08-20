@@ -143,6 +143,55 @@ impl Component for CommandAndControl {
             });
         }
 
+        if let Some(coap) = &self.props.endpoints.coap {
+            let payload = match self.props.data.cmd_empty_message {
+                true => "".into(),
+                false => format!(
+                    "echo {payload} | ",
+                    payload = shell_single_quote(&self.props.data.payload)
+                ),
+            };
+            let publish_http_cmd = format!(
+                r#"{payload}coap POST -O '4209,Basic {auth}' {url}/v1/foo?ct=30"#,
+                payload = payload,
+                url = coap.url,
+                auth = shell_quote(base64::encode_config(
+                    format!(
+                        "{device_id}@{app_id}:{password}",
+                        app_id = self.props.data.app_id,
+                        device_id = url_encode(&self.props.data.device_id),
+                        password = &self.props.data.password,
+                    ),
+                    base64::STANDARD_NO_PAD
+                )),
+            );
+            cards.push(html!{
+                <Card title={html!{"Receive commands using CoAP long-polling"}}>
+                    <div>
+                        {r#"
+                        A device can receive commands using CoAP long-polling, when it publishes data to the cloud. To do this, a device needs to inform the CoAP endpoint,
+                        that it will wait for some seconds for the cloud to receive a command message, which then gets reported in the response of the publish message.
+                        "#}
+                    </div>
+                    <div>
+                        <Switch
+                            checked=self.props.data.cmd_empty_message
+                            label="Send empty message" label_off="Send example payload"
+                            on_change=self.link.callback(|data| Msg::SetCommandEmptyMessage(data))
+                            />
+                    </div>
+                    <Alert title="Hurry up!" inline=true>
+                        {r#"
+                        This example will wait 30 seconds for the cloud side to send a command. If you don't execute the "send command" step before this timeout
+                        expires, the device will stop waiting and return with an empty response.
+                        "#}
+                    </Alert>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
+                    {note_local_certs(local_certs)}
+                </Card>
+            });
+        }
+
         if let Some(mqtt) = &self.props.endpoints.mqtt {
             let publish_mqtt_cmd = format!(
                 r#"mqtt sub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t command/inbox/#"#,

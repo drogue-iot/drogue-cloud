@@ -71,6 +71,32 @@ impl Component for PublishData {
             });
         }
 
+        if let Some(coap) = &self.props.endpoints.coap {
+            let publish_coap_cmd = format!(
+                "echo '{payload}' | coap POST -O '4209,Basic {auth}' {url}/v1/foo",
+                payload = shell_quote(&self.props.data.payload),
+                url = coap.url,
+                auth = shell_quote(base64::encode_config(
+                    format!(
+                        "{device_id}@{app_id}:{password}",
+                        app_id = self.props.data.app_id,
+                        device_id = url_encode(&self.props.data.device_id),
+                        password = &self.props.data.password,
+                    ),
+                    base64::STANDARD_NO_PAD
+                )),
+            );
+            cards.push(html!{
+                <Card title={html!{"Publish data using CoAP"}}>
+                    <div>
+                        {"You can now publish data to the cloud using CoAP."}
+                    </div>
+                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_coap_cmd/>
+                    {note_local_certs(local_certs)}
+                </Card>
+            });
+        }
+
         if let Some(mqtt) = &self.props.endpoints.mqtt {
             let publish_mqtt_cmd = format!(
                 r#"mqtt pub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t temp -m {payload}"#,

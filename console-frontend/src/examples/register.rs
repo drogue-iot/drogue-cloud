@@ -49,7 +49,8 @@ impl Component for RegisterDevices {
                 <p>
                     {"The following examples assume that you have the "}
                     <a href="https://github.com/drogue-iot/drg" target="_blank">{"Drogue Command Line Client"}</a>{", "}
-                    <a href="https://httpie.io" target="_blank">{"HTTPie"}</a> {", and the "}
+                    <a href="https://httpie.io" target="_blank">{"HTTPie"}</a> {", "}
+                    <a href="https://www.npmjs.com/package/coap-cli" target="_blank">{"CoAP-CLI"}</a> {", and the "}
                     <a href="https://hivemq.github.io/hivemq-mqtt-client/" target="_blank">{"MQTT client"}</a>
                     {" installed. The commands are also expected to be executed in a Bash like shell."}
                 </p>
