@@ -144,8 +144,7 @@ where
         None => device.metadata.name,
     };
 
-    // publish
-
+    // Create Publish Object
     let publish = sender::Publish {
         channel,
         application: &application,
@@ -162,6 +161,7 @@ where
         },
     };
 
+    // Send response
     sender
         .publish_and_await(publish, commands, opts.ct, req.message.payload.clone(), req)
         .await

@@ -28,12 +28,12 @@ use telemetry::PublishOptions;
 
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
 //
-// Option Number 4209 corresponds to the auth header, which contains
-// HTTP-like authorization information
-const HEADER_AUTH: CoapOption = CoapOption::Unknown(4209);
+// Option Number 4209 corresponds to the option assigned to carry authorization information
+// in the request, which contains HTTP-like authorization information 
+const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
 //
-// Option Number 4210 correspons to the command header,
-// which is meant for commands to be sent back to the device
+// Option Number 4210 correspons to the option assigned to carry command information,
+// which is meant for commands to be sent back to the device in the response
 const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
 
 #[derive(Clone, Debug, Deserialize)]
@@ -58,8 +58,12 @@ where
 }
 
 fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
+    // UriPath can be deserialized as a linked list
     let mut linked_list = ll.iter();
+    // Construct vector with channel and optional subject
     let mut option_values = Vec::new();
+    
+    // Check if first path argument is v1 
     linked_list
         .next()
         .map(|x| String::from_utf8(x.clone()).ok())
@@ -68,7 +72,8 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
         .ok_or_else(|| EndpointError::InvalidRequest {
             details: "incorrect version number".to_string(),
         })?;
-
+    
+    // Get channel value
     let channel = linked_list
         .next()
         .map(|x| String::from_utf8(x.clone()).ok())
@@ -79,6 +84,7 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
 
     option_values.push(channel);
 
+    // Get optional subject
     let mut subject = String::new();
     for i in linked_list {
         subject.push_str(std::str::from_utf8(i).map_err(|err| {
@@ -89,33 +95,42 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
         subject.push('/');
     }
 
+    // pop trailing '/' in subject and push subject into vector
     if !subject.is_empty() {
         subject.pop();
         option_values.push(subject);
     }
+
     Ok(option_values)
 }
 
 fn params(
     request: &CoapRequest<SocketAddr>,
 ) -> Result<(Vec<String>, Option<&Vec<u8>>, &Vec<u8>), anyhow::Error> {
+
+    // Get path values and extract channel and subject
     let path_segments = request
         .message
         .get_option(CoapOption::UriPath)
         .map(|paths| path_parser(paths).ok())
         .flatten()
         .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?;
+
+    // Get optional query values
     let queries = request
         .message
         .get_option(CoapOption::UriQuery)
         .map(|x| (x.front()))
         .flatten();
+
+    // Get authentication information
     let auth = request
         .message
-        .get_option(HEADER_AUTH)
+        .get_option(AUTH_OPTION)
         .map(|x| x.front())
         .flatten()
-        .ok_or_else(|| anyhow::Error::msg("Error parsing auth"))?;
+        .ok_or_else(|| anyhow::Error::msg("Error parsing authentication information"))?;
+
     Ok((path_segments, queries, auth))
 }
 
@@ -131,6 +146,8 @@ where
     let mut queries: Option<&Vec<u8>> = None;
     let mut auth: &Vec<u8> = &Vec::new();
 
+    // Obtain vec[channel,subject] via 'p', optional query string via 'q'
+    // and authorization information via 'a'
     if let Ok((p, q, a)) = params(&request) {
         path_segments = p;
         queries = q;
@@ -143,12 +160,14 @@ where
         return ret;
     }
 
+    // Deserialize optional queries into PublishOptions
     let options = queries
         .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
         .flatten()
         .unwrap_or_default();
 
     match path_segments.len() {
+        // If only channel is present
         1 => telemetry::publish_plain(
             app.downstream,
             app.authenticator,
@@ -161,6 +180,7 @@ where
         .await
         .respond_to(&mut request),
 
+        // If both channel and subject are present 
         2 => telemetry::publish_tail(
             app.downstream,
             app.authenticator,
@@ -176,6 +196,7 @@ where
         .await
         .respond_to(&mut request),
 
+        // If number of path arguments don't meet requirements
         _ => Err(CoapEndpointError(EndpointError::InvalidRequest {
             details: "Invalid number of path arguments".to_string(),
         }))
@@ -183,7 +204,6 @@ where
     }
 }
 
-// Health server uses actix_web to run
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -206,11 +226,9 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
-
+ 
     let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
-
     let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
-
     let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
     futures::try_join!(health.run(), device_to_endpoint.err_into())?;
