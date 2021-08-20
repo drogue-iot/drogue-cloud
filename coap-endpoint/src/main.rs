@@ -29,7 +29,7 @@ use telemetry::PublishOptions;
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
 //
 // Option Number 4209 corresponds to the option assigned to carry authorization information
-// in the request, which contains HTTP-like authorization information 
+// in the request, which contains HTTP-like authorization information
 const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
 //
 // Option Number 4210 correspons to the option assigned to carry command information,
@@ -62,8 +62,8 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     let mut linked_list = ll.iter();
     // Construct vector with channel and optional subject
     let mut option_values = Vec::new();
-    
-    // Check if first path argument is v1 
+
+    // Check if first path argument is v1
     linked_list
         .next()
         .map(|x| String::from_utf8(x.clone()).ok())
@@ -72,7 +72,7 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
         .ok_or_else(|| EndpointError::InvalidRequest {
             details: "incorrect version number".to_string(),
         })?;
-    
+
     // Get channel value
     let channel = linked_list
         .next()
@@ -107,7 +107,6 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
 fn params(
     request: &CoapRequest<SocketAddr>,
 ) -> Result<(Vec<String>, Option<&Vec<u8>>, &Vec<u8>), anyhow::Error> {
-
     // Get path values and extract channel and subject
     let path_segments = request
         .message
@@ -180,7 +179,7 @@ where
         .await
         .respond_to(&mut request),
 
-        // If both channel and subject are present 
+        // If both channel and subject are present
         2 => telemetry::publish_tail(
             app.downstream,
             app.authenticator,
@@ -226,7 +225,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
- 
+
     let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
     let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
     let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
