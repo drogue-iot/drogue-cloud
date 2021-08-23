@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 use drogue_client::{meta, registry};
 use drogue_cloud_service_api::labels::LabelSelector;
 use futures::{future, Stream, TryStreamExt};
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use std::pin::Pin;
 use tokio_postgres::types::{ToSql, Type};
@@ -68,6 +68,9 @@ impl From<Device> for registry::v1::Device {
 pub trait DeviceAccessor {
     /// Lookup a device by alias.
     async fn lookup(&self, app: &str, alias: &str) -> Result<Option<Device>, ServiceError>;
+
+    /// Get aliases for a device.
+    async fn reverse_lookup(&self, app: &str, id: &str) -> Result<Vec<TypedAlias>, ServiceError>;
 
     /// Delete a device.
     async fn delete(&self, app: &str, device: &str) -> Result<(), ServiceError>;
@@ -219,6 +222,44 @@ WHERE
             .transpose()?;
 
         Ok(result)
+    }
+
+    async fn reverse_lookup(
+        &self,
+        app: &str,
+        device_id: &str,
+    ) -> Result<Vec<TypedAlias>, ServiceError> {
+        let sql = r#"
+SELECT
+    TYPE,
+    ALIAS
+FROM
+        DEVICE_ALIASES
+WHERE
+        APP = $1 AND DEVICE = $2 AND TYPE = $3
+"#;
+
+        let stmt = self
+            .client
+            .prepare_typed(sql, &[Type::VARCHAR, Type::VARCHAR, Type::VARCHAR])
+            .await?;
+
+        let results: Vec<Row> = self
+            .client
+            .query_raw(&stmt, &[&app, &device_id, &"alias"])
+            .await
+            .map_err(|err| {
+                log::debug!("Failed to get: {}", err);
+                err
+            })?
+            .try_collect()
+            .await
+            .map_err(ServiceError::Database)?;
+
+        results
+            .into_iter()
+            .map(|row| TypedAlias::from_row(row).map_err(ServiceError::Database))
+            .collect()
     }
 
     async fn delete(&self, app: &str, device: &str) -> Result<(), ServiceError> {
@@ -448,5 +489,12 @@ AND
             })?;
 
         Ok(count.try_get::<_, i64>("COUNT")? as u64)
+    }
+}
+
+impl Device {
+    pub fn inject_aliases(mut self, aliases: Vec<String>) -> Self {
+        self.data["alias"] = json!(aliases);
+        self
     }
 }

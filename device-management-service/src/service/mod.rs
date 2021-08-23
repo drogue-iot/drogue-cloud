@@ -151,6 +151,13 @@ where
 
         aliases.insert(TypedAlias("name".into(), device.metadata.name.clone()));
 
+        if let Some(Ok(aliases_spec)) = device.section::<registry::v1::DeviceSpecAliases>() {
+            for alias in aliases_spec.aliases {
+                aliases.insert(TypedAlias("alias".into(), alias));
+            }
+        }
+
+        // extract credentials
         if let Some(Ok(credentials)) = device.section::<registry::v1::DeviceSpecCredentials>() {
             for credential in credentials.credentials {
                 match credential {

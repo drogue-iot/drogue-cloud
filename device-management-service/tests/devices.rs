@@ -180,6 +180,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
 
 #[actix_rt::test]
 #[serial]
+//FIXME !
 async fn test_crud_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
@@ -217,6 +218,9 @@ async fn test_crud_device() -> anyhow::Result<()> {
                         {"pass": "foo"},
                         {"user": {"username": "foo", "password": "bar"}}
                     ]
+                },
+                "alias": {
+                    "aliases": ["baz", "42", "waldo"]
                 }
             }
         })).send_request(&app).await;
@@ -259,6 +263,9 @@ async fn test_crud_device() -> anyhow::Result<()> {
                         {"pass": "foo"},
                         {"user": {"username": "foo", "password": "bar"}}
                     ]
+                },
+                "alias": {
+                    "aliases": ["baz", "42", "waldo"]
                 }
             }
         }));
