@@ -1,4 +1,3 @@
-mod auth;
 mod messages;
 mod route;
 mod service;
@@ -19,10 +18,11 @@ use crate::service::Service;
 use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
 use drogue_cloud_service_common::openid::TokenConfig;
 use futures::TryFutureExt;
-use std::sync::Arc;
 
 use drogue_client::registry;
+use drogue_cloud_service_api::auth::user::authz::Permission;
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::actix_auth::Auth;
 use std::collections::HashMap;
 use url::Url;
 
@@ -69,6 +69,7 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env().unwrap();
 
     let enable_auth = config.enable_auth;
+    let enable_api_keys = config.enable_api_keys;
 
     log::info!("Starting WebSocket integration service endpoint");
     log::info!("Authentication enabled: {}", enable_auth);
@@ -79,22 +80,16 @@ async fn main() -> anyhow::Result<()> {
     let (authenticator, user_auth) = if enable_auth {
         let client = reqwest::Client::new();
         let authenticator = Authenticator::new().await?;
-        let user_auth = Arc::new(
-            UserAuthClient::from_config(
-                client,
-                config.user_auth,
-                TokenConfig::from_env_prefix("USER_AUTH")?.amend_with_env(),
-            )
-            .await?,
-        );
+        let user_auth = UserAuthClient::from_config(
+            client,
+            config.user_auth,
+            TokenConfig::from_env_prefix("USER_AUTH")?.amend_with_env(),
+        )
+        .await?;
         (Some(authenticator), Some(user_auth))
     } else {
         (None, None)
     };
-
-    let auth = web::Data::new(authenticator);
-    let authz = web::Data::new(user_auth);
-    let enable_api_keys = web::Data::new(config.enable_api_keys);
 
     let client = reqwest::Client::new();
     let registry = registry::v1::Client::new(
@@ -126,12 +121,17 @@ async fn main() -> anyhow::Result<()> {
     let main = HttpServer::new(move || {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
-            //.wrap(Condition::new(enable_auth, bearer_auth.clone()))
             .app_data(service_addr.clone())
-            .app_data(auth.clone())
-            .app_data(authz.clone())
-            .app_data(enable_api_keys.clone())
-            .service(route::start_connection)
+            .service(
+                web::scope("/{application}")
+                    .wrap(Auth {
+                        auth_n: authenticator.clone(),
+                        auth_z: user_auth.clone(),
+                        permission: Permission::Read,
+                        enable_api_key: enable_api_keys,
+                    })
+                    .service(route::start_connection),
+            )
     })
     .bind(config.bind_addr)?
     .run();

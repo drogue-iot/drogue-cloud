@@ -2258,6 +2258,7 @@ dependencies = [
 name = "drogue-cloud-service-common"
 version = "0.7.0"
 dependencies = [
+ "actix",
  "actix-rt 2.2.0",
  "actix-service 2.0.0",
  "actix-web",
@@ -2274,6 +2275,7 @@ dependencies = [
  "env_logger 0.8.4",
  "failure",
  "futures",
+ "futures-util",
  "http",
  "humantime 2.1.0",
  "humantime-serde",
