@@ -97,6 +97,12 @@ impl AsRef<str> for Lock {
     }
 }
 
+impl TypedAlias {
+    fn from_row(row: Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(TypedAlias(row.try_get("TYPE")?, row.try_get("ALIAS")?))
+    }
+}
+
 pub trait Resource {
     fn resource_version(&self) -> Uuid;
     fn uid(&self) -> Uuid;
