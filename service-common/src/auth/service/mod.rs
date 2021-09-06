@@ -67,7 +67,14 @@ mod test {
         println!("Roles: {:?}", roles);
         assert_eq!(
             roles,
-            &["drogue-user", "drogue-admin", "drogue-user", "drogue-admin"]
+            &[
+                "offline_access",
+                "uma_authorization",
+                "drogue-user",
+                "drogue-admin",
+                "drogue-user",
+                "drogue-admin"
+            ]
         )
     }
 }
