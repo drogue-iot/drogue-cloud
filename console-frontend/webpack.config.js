@@ -170,17 +170,19 @@ module.exports = (env, argv) => {
             hints: false
         },
         plugins: [
-            new CopyWebpackPlugin([
-                { from: './static', to: distPath },
-                // copy over images
-                { from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'), to: path.resolve(distPath, "images") },
-                {
-                    // Copy the Swagger OAuth2 redirect file to the project root;
-                    // that file handles the OAuth2 redirect after authenticating the end-user.
-                    from: 'node_modules/swagger-ui/dist/oauth2-redirect.html',
-                    to: './'
-                }
-            ]),
+            new CopyWebpackPlugin({
+                patterns: [
+                    { from: './static', to: distPath },
+                    // copy over images
+                    { from: path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'), to: path.resolve(distPath, "images") },
+                    {
+                        // Copy the Swagger OAuth2 redirect file to the project root;
+                        // that file handles the OAuth2 redirect after authenticating the end-user.
+                        from: 'node_modules/swagger-ui/dist/oauth2-redirect.html',
+                        to: './'
+                    }
+                ]
+            }),
             new WasmPackPlugin({
                 crateDirectory: ".",
                 extraArgs: "--no-typescript --mode=no-install",
