@@ -59,6 +59,9 @@ async fn test_create_device() -> anyhow::Result<()> {
                     "credentials": [
                         { "pass": "foo" }
                     ]
+                },
+                "alias": {
+                    "aliases": ["baz", "42", "waldo"]
                 }
             },
         })).send_request(&app).await;
@@ -180,7 +183,6 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
 
 #[actix_rt::test]
 #[serial]
-//FIXME !
 async fn test_crud_device() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
 
@@ -281,6 +283,9 @@ async fn test_crud_device() -> anyhow::Result<()> {
                     "credentials": [
                         {"pass": "foo"},
                     ]
+                },
+                "alias": {
+                    "aliases": ["baz"]
                 }
             }
         })).send_request(&app).await;
@@ -288,7 +293,16 @@ async fn test_crud_device() -> anyhow::Result<()> {
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // an event must have been fired
-        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![Event::Device {
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![
+        Event::Device {
+            instance: "drogue-instance".into(),
+            application: "app1".into(),
+            device: "device1".into(),
+            uid: "".into(),
+            path: ".spec.alias".into(),
+            generation: 0,
+        },
+        Event::Device {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             device: "device1".into(),
@@ -325,6 +339,9 @@ async fn test_crud_device() -> anyhow::Result<()> {
                     "credentials": [
                         {"pass": "foo"},
                     ]
+                },
+                "alias": {
+                    "aliases": ["baz"]
                 }
             }
         }));

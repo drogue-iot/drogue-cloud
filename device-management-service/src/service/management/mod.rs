@@ -423,15 +423,6 @@ where
             .get(app_id, device_id, Lock::None)
             .await?;
 
-        let aliases = PostgresDeviceAccessor::new(&c)
-            .reverse_lookup(app_id, device_id)
-            .await?
-            .into_iter()
-            .map(|alias| alias.1)
-            .collect();
-
-        let device = device.map(|d| d.inject_aliases(aliases));
-
         Ok(device.map(Into::into))
     }
 
