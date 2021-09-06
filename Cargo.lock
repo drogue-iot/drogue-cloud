@@ -1591,7 +1591,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=974cf3cb42a726f4dcbec18e70f6faecc81143ba#974cf3cb42a726f4dcbec18e70f6faecc81143ba"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=b47421c91b1c297616d738d855017ec513f60d48#b47421c91b1c297616d738d855017ec513f60d48"
 dependencies = [
  "async-std",
  "async-trait",
