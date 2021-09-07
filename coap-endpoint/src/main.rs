@@ -223,7 +223,7 @@ async fn main() -> anyhow::Result<()> {
         commands: coap_server_commands,
     };
 
-    println!("Server up on {}", addr);
+    log::info!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
 
     let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));

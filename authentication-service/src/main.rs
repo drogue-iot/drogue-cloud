@@ -18,9 +18,6 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize config from environment variables
     let config = Config::from_env().context("Failed to read configuration")?;
-
-    println!("Config: {:#?}", config);
-
     let max_json_payload_size = config.max_json_payload_size;
     let enable_auth = config.enable_auth;
 
