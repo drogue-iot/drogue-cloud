@@ -67,13 +67,14 @@ impl Overview {
         let mut demo_cards = Vec::new();
 
         if let Some(backend) = Backend::get() {
-            service_cards.push(self.render_card("API", backend.current_url(), false));
+            service_cards.push(self.render_linked_card(
+                "API",
+                backend.current_url(),
+                Some(("/api", "Interactive API")),
+            ));
         }
         if let Some(sso) = &endpoints.sso {
             service_cards.push(self.render_card("Single sign-on", sso, true));
-        }
-        if let Some(registry) = &endpoints.registry {
-            service_cards.push(self.render_card("Device registry", &registry.url, false));
         }
         if let Some(coap) = &endpoints.coap {
             endpoint_cards.push(self.render_card("CoAP endpoint", &coap.url, false));
@@ -135,10 +136,15 @@ impl Overview {
         }
     }
 
-    fn render_card<S: AsRef<str>>(&self, label: &str, url: S, link: bool) -> Html {
+    fn render_linked_card<S: AsRef<str>>(
+        &self,
+        label: &str,
+        url: S,
+        link: Option<(&str, &str)>,
+    ) -> Html {
         let footer = {
-            if link {
-                html! { <a class="pf-c-button pf-m-link pf-m-inline" href=url.as_ref() target="_blank"> { label }</a> }
+            if let Some(link) = link {
+                html! { <a class="pf-c-button pf-m-link pf-m-inline" href=link.0 target="_blank"> { link.1 }</a> }
             } else {
                 html! {}
             }
@@ -152,6 +158,15 @@ impl Overview {
                 <Clipboard readonly=true value=url.as_ref()/>
             </Card>
         }
+    }
+
+    fn render_card<S: AsRef<str>>(&self, label: &str, url: S, link: bool) -> Html {
+        let url = url.as_ref();
+        let link = match link {
+            false => None,
+            true => Some((url, label)),
+        };
+        self.render_linked_card(label, url, link)
     }
 
     fn render_mqtt_endpoint(&self, mqtt: &MqttEndpoint, label: &str) -> Html {
