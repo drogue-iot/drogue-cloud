@@ -428,7 +428,7 @@ stringData:
 
         return html! {
             <DescriptionList>
-                <DescriptionGroup term="Url">
+                <DescriptionGroup term="URL">
                     <Clipboard readonly=true value=ws.url.clone() />
                 </DescriptionGroup>
                 <DescriptionGroup term="TLS required">
@@ -438,7 +438,7 @@ stringData:
                     <Tabs>
                         <Tab label="OAuth2 Token">
                             <DescriptionList>
-                                <DescriptionGroup term="Authentication token)">
+                                <DescriptionGroup term="Bearer token">
                                     <Clipboard readonly=true value=self.token.access_token.clone() />
                                 </DescriptionGroup>
                             </DescriptionList>
