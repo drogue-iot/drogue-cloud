@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Authentication enabled: {}", enable_auth);
     log::info!("Kafka servers: {}", config.kafka.bootstrap_servers);
 
-    // set up security
+    // set up authentication
 
     let (authenticator, user_auth) = if enable_auth {
         let client = reqwest::Client::new();

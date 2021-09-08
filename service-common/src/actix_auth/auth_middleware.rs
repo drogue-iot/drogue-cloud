@@ -75,9 +75,8 @@ where
                 // bearer auth is present
                 (Err(_), Ok(bearer)) => Ok(Credentials::Token(bearer.token().to_string())),
                 // No headers (or both are invalid)
-                // fixme : how to differentiate between invalid request and None was provided ???
                 (Err(err_basic), Err(err_bearer)) => Ok(Credentials::Anonymous),
-                // both headers provided and valid
+                // both headers provided and valid -> This never happens, the NGINX load balencer sends back 400 Bad request.
                 (Ok(_), Ok(_)) => Err(ServiceError::InvalidRequest(
                     "Both Basic and Bearer headers are present".to_string(),
                 )),
