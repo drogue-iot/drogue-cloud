@@ -43,7 +43,7 @@ pub struct EndpointConfig {
     #[serde(default)]
     pub command_endpoint_url: Option<String>,
     #[serde(default)]
-    kafka_bootstrap_servers: Option<String>,
+    pub kafka_bootstrap_servers: Option<String>,
     #[serde(default)]
     pub websocket_integration_url: Option<String>,
 
