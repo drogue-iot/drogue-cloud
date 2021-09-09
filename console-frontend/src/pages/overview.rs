@@ -76,6 +76,10 @@ impl Overview {
         if let Some(sso) = &endpoints.sso {
             service_cards.push(self.render_card("Single sign-on", sso, true));
         }
+        if let Some(kafka) = &endpoints.kafka_bootstrap_servers {
+            service_cards.push(self.render_card("Kafka bootstrap servers", &kafka, false));
+        }
+
         if let Some(coap) = &endpoints.coap {
             endpoint_cards.push(self.render_card("CoAP endpoint", &coap.url, false));
         }
@@ -92,7 +96,6 @@ impl Overview {
         if let Some(mqtt) = &endpoints.mqtt_integration {
             integration_cards.push(self.render_mqtt_endpoint(&mqtt, "MQTT integration"));
         }
-
         if let Some(ws) = &endpoints.websocket_integration {
             integration_cards.push(self.render_card("Websocket integration", &ws.url, false));
         }
