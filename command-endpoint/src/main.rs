@@ -124,18 +124,15 @@ async fn main() -> anyhow::Result<()> {
             .app_data(web::Data::new(client.clone()))
             .service(index)
             .service(
-                web::scope("/api/command/v1alpha1")
+                web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
+                    .wrap(Auth {
+                        auth_n: authenticator.clone(),
+                        auth_z: user_auth.clone(),
+                        permission: Permission::Write,
+                        enable_api_key: enable_api_keys,
+                    })
                     .wrap(Cors::permissive())
-                    .service(
-                        web::scope("/apps/{application}/devices/{deviceId}")
-                            .wrap(Auth {
-                                auth_n: authenticator.clone(),
-                                auth_z: user_auth.clone(),
-                                permission: Permission::Write,
-                                enable_api_key: enable_api_keys,
-                            })
-                            .route("", web::post().to(v1alpha1::command::<KafkaSink>)),
-                    ),
+                    .route("", web::post().to(v1alpha1::command::<KafkaSink>)),
             )
     })
     .bind(config.bind_addr)?

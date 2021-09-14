@@ -74,9 +74,9 @@ where
                 })),
                 // bearer auth is present
                 (Err(_), Ok(bearer)) => Ok(Credentials::Token(bearer.token().to_string())),
-                // No headers (or both are invalid)
-                (Err(err_basic), Err(err_bearer)) => Ok(Credentials::Anonymous),
-                // both headers provided and valid -> This never happens, the NGINX load balencer sends back 400 Bad request.
+                // No headers (or both are invalid, but both invalid should be met with a Bad request anyway)
+                (Err(_basic), Err(_bearer)) => Ok(Credentials::Anonymous),
+                // both headers provided and valid -> This never happens, the NGINX load balancer sends back 400 Bad request.
                 (Ok(_), Ok(_)) => Err(ServiceError::InvalidRequest(
                     "Both Basic and Bearer headers are present".to_string(),
                 )),
