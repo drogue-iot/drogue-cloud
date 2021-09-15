@@ -43,7 +43,7 @@ impl TryFrom<Event> for Command {
     fn try_from(mut event: Event) -> Result<Self, Self::Error> {
         let id = Id::from_event(&event).ok_or(ParseCommandError::Missing("ID"))?;
 
-        let payload = if let (Some(data), ..) = event.take_data() {
+        let payload = if let (_, _, Some(data)) = event.take_data() {
             Some(data.try_into().map_err(|_| ParseCommandError::Payload)?)
         } else {
             None
