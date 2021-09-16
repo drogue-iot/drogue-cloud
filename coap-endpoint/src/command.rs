@@ -39,6 +39,7 @@ pub async fn wait_for_command(
                     commands.unsubscribe(&id).await;
                     Ok(req.response.map(|mut v| {
                         v.set_status(ResponseType::Changed);
+                        v.message.payload = vec![];
                         v
                     }))
                 }
@@ -46,6 +47,7 @@ pub async fn wait_for_command(
         }
         _ => Ok(req.response.map(|mut v| {
             v.set_status(ResponseType::Changed);
+            v.message.payload = vec![];
             v
         })),
     }
