@@ -14,16 +14,13 @@ use drogue_cloud_service_common::Id;
 
 #[async_trait]
 pub trait CoapCommandSender {
-    async fn publish_and_await<'a, B>(
+    async fn publish_and_await<'a>(
         &self,
         publish: Publish<'a>,
         commands: Commands,
         ttd: Option<u64>,
-        body: B,
         req: CoapRequest<SocketAddr>,
-    ) -> Result<Option<CoapResponse>, CoapEndpointError>
-    where
-        B: AsRef<[u8]> + Send + Sync;
+    ) -> Result<Option<CoapResponse>, CoapEndpointError>;
 }
 
 #[async_trait]
@@ -32,19 +29,15 @@ where
     S: Sink + Send + Sync,
     <S as Sink>::Error: Send,
 {
-    async fn publish_and_await<'a, B>(
+    async fn publish_and_await<'a>(
         &self,
         publish: Publish<'a>,
         commands: Commands,
         ttd: Option<u64>,
-        body: B,
         req: CoapRequest<SocketAddr>,
-    ) -> Result<Option<CoapResponse>, CoapEndpointError>
-    where
-        B: AsRef<[u8]> + Send + Sync,
-    {
+    ) -> Result<Option<CoapResponse>, CoapEndpointError> {
         let id = Id::new(&publish.application.metadata.name, &publish.device_id);
-        match self.publish(publish, body).await {
+        match self.publish(publish, &req.message.payload).await {
             // ok, and accepted
             Ok(PublishOutcome::Accepted) => wait_for_command(req, commands, id, ttd).await,
 

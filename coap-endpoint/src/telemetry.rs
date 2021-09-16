@@ -163,6 +163,6 @@ where
 
     // Send response
     sender
-        .publish_and_await(publish, commands, opts.ct, req.message.payload.clone(), req)
+        .publish_and_await(publish, commands, opts.ct, req)
         .await
 }
