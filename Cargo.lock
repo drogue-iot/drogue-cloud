@@ -4270,7 +4270,7 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 [[package]]
 name = "patternfly-yew"
 version = "0.0.26"
-source = "git+https://github.com/ctron/patternfly-yew?rev=8e3bf2f6e00f17e49499939d53d9e6a6dac83d35#8e3bf2f6e00f17e49499939d53d9e6a6dac83d35"
+source = "git+https://github.com/ctron/patternfly-yew?rev=ef94cc590a55ed4e3094de1b43e7676cc70e290e#ef94cc590a55ed4e3094de1b43e7676cc70e290e"
 dependencies = [
  "chrono",
  "js-sys",

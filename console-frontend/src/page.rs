@@ -213,6 +213,7 @@ impl Component for AppPage {
                     <AppLauncherItem onclick=self.link.callback(|_|Msg::About)>{"About"}</AppLauncherItem>
                 </AppLauncher>
                 <Dropdown
+                    id="user-dropdown"
                     plain=true
                     position=Position::Right
                     toggle_style="display: flex;"
