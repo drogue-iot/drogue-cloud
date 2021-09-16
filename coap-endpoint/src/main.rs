@@ -141,6 +141,8 @@ where
     S: Sink + Send,
     <S as Sink>::Error: Send,
 {
+    log::debug!("CoAP request: {:?}", request);
+
     let mut path_segments: Vec<String> = Vec::new();
     let mut queries: Option<&Vec<u8>> = None;
     let mut auth: &Vec<u8> = &Vec::new();
@@ -226,7 +228,14 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Server up on {}", addr);
     let mut server = Server::new(addr).unwrap();
 
-    let device_to_endpoint = server.run(move |request| publish_handler(request, app.clone()));
+    let device_to_endpoint = server.run(move |request| {
+        let app = app.clone();
+        async move {
+            let response = publish_handler(request, app.clone()).await;
+            log::debug!("Returning response: {:?}", response);
+            response
+        }
+    });
     let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
     let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
