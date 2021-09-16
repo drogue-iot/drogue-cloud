@@ -73,7 +73,7 @@ impl Component for PublishData {
 
         if let Some(coap) = &self.props.endpoints.coap {
             let publish_coap_cmd = format!(
-                "echo '{payload}' | coap POST -O '4209,Basic {auth}' {url}/v1/foo",
+                "echo '{payload}' | coap post -O '4209,Basic {auth}' {url}/v1/foo",
                 payload = shell_quote(&self.props.data.payload),
                 url = coap.url,
                 auth = shell_quote(base64::encode_config(
