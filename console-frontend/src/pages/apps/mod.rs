@@ -29,6 +29,8 @@ pub enum DetailsSection {
     Yaml,
     #[end]
     Overview,
+    #[to = "administration"]
+    Administration,
 }
 
 pub type ApplicationTabs = TabsRouter<AppRoute, DetailsSection>;
