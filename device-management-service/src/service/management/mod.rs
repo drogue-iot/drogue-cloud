@@ -262,7 +262,9 @@ where
         }?;
 
         if current.deletion_timestamp.is_some() {
-            return Ok(());
+            return Err(PostgresManagementServiceError::Service(
+                ServiceError::NotFound,
+            ));
         }
 
         ensure(&current, identity, Permission::Admin)?;
@@ -576,7 +578,9 @@ where
         }?;
 
         if current.deletion_timestamp.is_some() {
-            return Ok(());
+            return Err(PostgresManagementServiceError::Service(
+                ServiceError::NotFound,
+            ));
         }
 
         // check if the user has access to the device, we can do this after some initial checks
