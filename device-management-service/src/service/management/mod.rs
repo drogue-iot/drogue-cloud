@@ -256,7 +256,7 @@ where
         let accessor = PostgresApplicationAccessor::new(&t);
 
         // get current state for diffing
-        let mut current = match accessor.get(&id, Lock::ForUpdate).await? {
+        let mut current = match accessor.get(id, Lock::ForUpdate).await? {
             Some(device) => Ok(device),
             None => Err(ServiceError::NotFound),
         }?;
@@ -275,7 +275,7 @@ where
         // next, we need to delete the application
 
         // first, delete all devices ...
-        let remaining_devices = PostgresDeviceAccessor::new(&t).delete_app(&id).await?;
+        let remaining_devices = PostgresDeviceAccessor::new(&t).delete_app(id).await?;
 
         // ...and count the once we can only soft-delete
         if remaining_devices > 0 {
@@ -454,7 +454,7 @@ where
                 .list(app_id, None, labels, limit, offset, Lock::None)
                 .await?
                 .map_ok(|device| device.into())
-                .map_err(|err| PostgresManagementServiceError::Service(err))
+                .map_err(PostgresManagementServiceError::Service)
                 .into_stream(),
         ))
     }
@@ -572,7 +572,7 @@ where
         let accessor = PostgresDeviceAccessor::new(&t);
 
         // get current state for diffing
-        let mut current = match accessor.get(&application, &device, Lock::ForUpdate).await? {
+        let mut current = match accessor.get(application, device, Lock::ForUpdate).await? {
             Some(device) => Ok(device),
             None => Err(ServiceError::NotFound),
         }?;

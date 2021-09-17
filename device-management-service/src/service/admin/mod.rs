@@ -39,7 +39,7 @@ where
         // retrieve app
 
         let app = accessor.get(&app_id, Lock::ForUpdate).await?;
-        let app = app.ok_or_else(|| ServiceError::NotFound)?;
+        let app = app.ok_or(ServiceError::NotFound)?;
 
         // ensure we are permitted to do the change
 
@@ -73,7 +73,7 @@ where
         // retrieve app
 
         let app = accessor.get(&app_id, Lock::ForUpdate).await?;
-        let app = app.ok_or_else(|| ServiceError::NotFound)?;
+        let app = app.ok_or(ServiceError::NotFound)?;
 
         // ensure we are permitted to do the change
 
@@ -103,7 +103,7 @@ where
         // retrieve app
 
         let app = accessor.get(&app_id, Lock::ForUpdate).await?;
-        let app = app.ok_or_else(|| ServiceError::NotFound)?;
+        let app = app.ok_or(ServiceError::NotFound)?;
 
         log::debug!(
             "Transfer - transfer owner: {:?}, identity: {:?}",
@@ -141,7 +141,7 @@ where
         // retrieve app
 
         let app = accessor.get(&app_id, Lock::None).await?;
-        let app = app.ok_or_else(|| ServiceError::NotFound)?;
+        let app = app.ok_or(ServiceError::NotFound)?;
 
         // ensure we are permitted to perform the operation
 
@@ -173,7 +173,7 @@ where
         // retrieve app
 
         let app = accessor.get(&app_id, Lock::ForUpdate).await?;
-        let app = app.ok_or_else(|| ServiceError::NotFound)?;
+        let app = app.ok_or(ServiceError::NotFound)?;
 
         if let Some(expected_version) = &members.resource_version {
             if expected_version != &app.resource_version.to_string() {
