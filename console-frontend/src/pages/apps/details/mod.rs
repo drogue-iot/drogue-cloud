@@ -1,6 +1,8 @@
+mod admin;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
+use crate::pages::apps::details::admin::{Admin, RoleEntry};
 use crate::{
     backend::{Backend, Token},
     error::error,
@@ -12,6 +14,7 @@ use crate::{
     utils::{to_yaml_model, url_encode},
 };
 use drogue_client::registry::v1::Application;
+use drogue_cloud_admin_service::apps::Members;
 use drogue_cloud_console_common::EndpointInformation;
 use drogue_cloud_service_api::kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget};
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
@@ -30,8 +33,10 @@ pub struct Props {
 
 pub enum Msg {
     Load,
+    LoadMembers,
     Reset,
     SetData(Application),
+    SetMembers(Members),
     Error(String),
     SaveEditor,
 }
@@ -44,6 +49,7 @@ pub struct Details {
 
     content: Option<Application>,
     yaml: Option<TextModel>,
+    members: Option<Members>,
 }
 
 impl Component for Details {
@@ -52,6 +58,7 @@ impl Component for Details {
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Msg::Load);
+        link.send_message(Msg::LoadMembers);
 
         Self {
             props,
@@ -59,6 +66,7 @@ impl Component for Details {
             content: None,
             yaml: None,
             fetch_task: None,
+            members: None,
         }
     }
 
@@ -68,8 +76,17 @@ impl Component for Details {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to load", err),
             },
+            Msg::LoadMembers => match self.load_permisisons() {
+                Ok(task) => self.fetch_task = Some(task),
+                Err(err) => error("Failed to load", err),
+            },
             Msg::SetData(content) => {
                 self.content = Some(content);
+                self.reset();
+                self.fetch_task = None;
+            }
+            Msg::SetMembers(content) => {
+                self.members = Some(content);
                 self.reset();
                 self.fetch_task = None;
             }
@@ -141,6 +158,27 @@ impl Details {
         )
     }
 
+    fn load_permisisons(&self) -> Result<FetchTask, anyhow::Error> {
+        self.props.backend.info.request(
+            Method::GET,
+            format!(
+                "/api/admin/v1alpha1/apps/{}/members",
+                url_encode(&self.props.name)
+            ),
+            Nothing,
+            vec![],
+            self.link.callback(
+                move |response: Response<Json<Result<Members, anyhow::Error>>>| match response
+                    .into_body()
+                    .0
+                {
+                    Ok(content) => Msg::SetRoles(content),
+                    Err(err) => Msg::Error(err.to_string()),
+                },
+            ),
+        )
+    }
+
     fn update(&self, app: Application) -> Result<FetchTask, anyhow::Error> {
         self.props.backend.info.request(
             Method::PUT,
@@ -199,6 +237,7 @@ impl Details {
                         <TabRouterItem<DetailsSection> to=DetailsSection::Overview label="Overview"/>
                         <TabRouterItem<DetailsSection> to=DetailsSection::Integrations label="Integrations"/>
                         <TabRouterItem<DetailsSection> to=DetailsSection::Yaml label="YAML"/>
+                        <TabRouterItem<DetailsSection> to=DetailsSection::Administration label="Administration"/>
                     </ApplicationTabs>
                 </PageSection>
                 <PageSection>
@@ -207,6 +246,7 @@ impl Details {
                         DetailsSection::Overview => self.render_overview(app),
                         DetailsSection::Integrations => self.render_integrations(app),
                         DetailsSection::Yaml => self.render_editor(),
+                        DetailsSection::Administration => self.render_admin(app),
                     }
                 }
                 </PageSection>
@@ -266,6 +306,10 @@ impl Details {
                 </GridItem>
             </Grid>
         };
+    }
+
+    fn render_admin(&self, app: &Application) -> Html {
+        Admin::from(self.members.unwrap()).render()
     }
 
     fn render_integrations(&self, application: &Application) -> Html {

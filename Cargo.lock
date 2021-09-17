@@ -1870,6 +1870,7 @@ dependencies = [
  "chrono-tz",
  "cloudevents-sdk",
  "drogue-client",
+ "drogue-cloud-admin-service",
  "drogue-cloud-console-common",
  "drogue-cloud-service-api",
  "env_logger 0.7.1",

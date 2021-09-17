@@ -12,6 +12,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1"
 
+drogue-cloud-admin-service = { path = "../admin-service" }
 drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-client = { version = "0.7.1", default-features = false }
