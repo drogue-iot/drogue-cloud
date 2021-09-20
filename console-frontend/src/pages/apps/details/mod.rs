@@ -2,7 +2,7 @@ mod admin;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
-use crate::pages::apps::details::admin::{Admin, RoleEntry};
+use crate::pages::apps::details::admin::Admin;
 use crate::{
     backend::{Backend, Token},
     error::error,
@@ -172,7 +172,7 @@ impl Details {
                     .into_body()
                     .0
                 {
-                    Ok(content) => Msg::SetRoles(content),
+                    Ok(content) => Msg::SetMembers(content),
                     Err(err) => Msg::Error(err.to_string()),
                 },
             ),
@@ -309,7 +309,7 @@ impl Details {
     }
 
     fn render_admin(&self, app: &Application) -> Html {
-        Admin::from(self.members.unwrap()).render()
+        Admin::from(self.members.clone().unwrap()).render()
     }
 
     fn render_integrations(&self, application: &Application) -> Html {
