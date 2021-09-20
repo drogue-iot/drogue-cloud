@@ -44,7 +44,7 @@ cloudevents-sdk = "0.4"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-client = "0.7"
+drogue-client = "0.7.0"
 
 [dependencies.open-ssl]
 version = "0.10"

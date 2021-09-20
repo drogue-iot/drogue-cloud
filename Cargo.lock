@@ -1606,7 +1606,8 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-client"
 version = "0.7.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=b47421c91b1c297616d738d855017ec513f60d48#b47421c91b1c297616d738d855017ec513f60d48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cccee6dce0386bca818366aca7be1650fc1ccdb092dadaa560d526ead8bbcc60"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2468,7 +2469,8 @@ dependencies = [
 [[package]]
 name = "drogue-ttn"
 version = "0.5.0"
-source = "git+https://github.com/drogue-iot/drogue-ttn?rev=cf0338a344309815f0f05e0d7d76acb712445175#cf0338a344309815f0f05e0d7d76acb712445175"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68046af04fea9efb268dc5afc313efa0ac5468e71ea9c0ffd303900c088747b7"
 dependencies = [
  "base64 0.13.0",
  "base64-serde",
@@ -4177,7 +4179,8 @@ dependencies = [
 [[package]]
 name = "operator-framework"
 version = "0.5.0"
-source = "git+https://github.com/ctron/operator-framework?rev=b2b0fc88beca2deb07bad6a963d0d5322c9ddff8#b2b0fc88beca2deb07bad6a963d0d5322c9ddff8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "304d556d254993abbc80965e723e1d31629d9185b9102b99046865cd74d0acd7"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4270,7 +4273,8 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 [[package]]
 name = "patternfly-yew"
 version = "0.0.26"
-source = "git+https://github.com/ctron/patternfly-yew?rev=ef94cc590a55ed4e3094de1b43e7676cc70e290e#ef94cc590a55ed4e3094de1b43e7676cc70e290e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ccfad473ceee6bf1c3ac915e22641bc5487ada530f763789826bc93dc9ffe10"
 dependencies = [
  "chrono",
  "js-sys",
