@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-coap-endpoint"
-version = "0.1.0"
+version = "0.7.0"
 authors = ["Pranav <adpranavb2000@gmail.com>"]
 edition = "2018"
 
@@ -11,8 +11,8 @@ anyhow = "1"
 async-trait = "0.1"
 bytes = "1"
 bytestring = "1"
-coap = "0.10"
-coap-lite = "0.4"
+coap = "0.11"
+coap-lite = "0.7"
 cloudevents-sdk = "0.4"
 chrono = "0.4"
 dotenv = "0.15"

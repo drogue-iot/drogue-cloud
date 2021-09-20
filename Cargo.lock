@@ -1094,9 +1094,9 @@ dependencies = [
 
 [[package]]
 name = "coap"
-version = "0.10.0"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f81d3a631b71e85e6af642e22169738d1b258a7ead4d486b01781f321d56d69"
+checksum = "4a4ef1b5546f6ba554509aa8eab047d71088e79f908dbd4a5d6dcf9610b616de"
 dependencies = [
  "bytes 1.1.0",
  "coap-lite",
@@ -1114,9 +1114,9 @@ dependencies = [
 
 [[package]]
 name = "coap-lite"
-version = "0.4.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d15e8642b7913b70e905e3d9bc1e01ff25ddcb650344d83e90ebbba9d2a4e03b"
+checksum = "2911526fe9fc3bb90ff13ff52bd5454e93da0685ba8ed105f06bfc0e898fd950"
 
 [[package]]
 name = "concurrent-queue"
@@ -1739,7 +1739,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-coap-endpoint"
-version = "0.1.0"
+version = "0.7.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-web",
