@@ -9,7 +9,7 @@ pub struct TransferOwnership {
     pub new_user: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Members {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -18,7 +18,7 @@ pub struct Members {
     pub members: IndexMap<String, MemberEntry>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MemberEntry {
     pub role: Role,

@@ -1,10 +1,7 @@
-use drogue_cloud_service_api::auth::user::authz::Permission;
-
 use patternfly_yew::*;
 use yew::prelude::*;
 use yew::{Html, *};
 
-use drogue_client::registry::v1::Application;
 use drogue_cloud_admin_service::apps::{Members, Role};
 
 pub struct Admin {
