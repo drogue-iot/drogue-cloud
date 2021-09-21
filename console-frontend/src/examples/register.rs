@@ -75,7 +75,7 @@ impl Component for RegisterDevices {
 
         let create_app_cmd = format!(r#"drg create app {name}"#, name = self.props.data.app_id);
         let create_device_cmd = format!(
-            r#"drg create device --app {app} {device} --data {spec}"#,
+            r#"drg create device --app {app} {device} --spec {spec}"#,
             app = self.props.data.app_id,
             device = shell_quote(&self.props.data.device_id),
             spec = shell_single_quote(json!({"credentials": {"credentials":[
