@@ -30,7 +30,7 @@ serde_json = "1"
 
 url = "2"
 
-drogue-client = "0.7.0"
+drogue-client = "0.7.1"
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-integration-common = { path = "../integration-common" }
 drogue-cloud-service-api = { path = "../service-api" }
