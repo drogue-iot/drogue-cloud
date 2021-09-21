@@ -60,9 +60,7 @@ async fn test_create_device() -> anyhow::Result<()> {
                         { "pass": "foo" }
                     ]
                 },
-                "alias": {
-                    "aliases": ["baz", "42", "waldo"]
-                }
+                "alias": ["baz", "42", "waldo"]
             },
         })).send_request(&app).await;
 
@@ -221,9 +219,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                         {"user": {"username": "foo", "password": "bar"}}
                     ]
                 },
-                "alias": {
-                    "aliases": ["baz", "42", "waldo"]
-                }
+                "alias": ["baz", "42", "waldo"]
             }
         })).send_request(&app).await;
 
@@ -266,9 +262,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                         {"user": {"username": "foo", "password": "bar"}}
                     ]
                 },
-                "alias": {
-                    "aliases": ["baz", "42", "waldo"]
-                }
+                "alias": ["baz", "42", "waldo"]
             }
         }));
 
@@ -284,9 +278,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                         {"pass": "foo"},
                     ]
                 },
-                "alias": {
-                    "aliases": ["baz"]
-                }
+                "alias": ["baz"]
             }
         })).send_request(&app).await;
 
@@ -340,9 +332,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
                         {"pass": "foo"},
                     ]
                 },
-                "alias": {
-                    "aliases": ["baz"]
-                }
+                "alias": ["baz"]
             }
         }));
 

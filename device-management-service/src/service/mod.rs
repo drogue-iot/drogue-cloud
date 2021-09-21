@@ -152,7 +152,7 @@ where
         aliases.insert(TypedAlias("name".into(), device.metadata.name.clone()));
 
         if let Some(Ok(aliases_spec)) = device.section::<registry::v1::DeviceSpecAliases>() {
-            for alias in aliases_spec.aliases {
+            for alias in aliases_spec.0 {
                 aliases.insert(TypedAlias("alias".into(), alias));
             }
         }
