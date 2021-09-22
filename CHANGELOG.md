@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased](https://github.com/drogue-iot/drogue-cloud/compare/v0.7.0...HEAD) (2021-09-21)
+## [Unreleased](https://github.com/drogue-iot/drogue-cloud/compare/v0.7.0...HEAD) (2021-09-22)
+
+### Features
+
+* Try using conventional commits 67e5b69
 
 
 ## [v0.7.0](https://github.com/drogue-iot/drogue-cloud/compare/v0.6.0...v0.7.0) (2021-09-21)
