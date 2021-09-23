@@ -1697,7 +1697,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-authentication-service"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-service 2.0.0",
