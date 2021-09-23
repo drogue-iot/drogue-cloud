@@ -1,10 +1,15 @@
 # Changelog
 
-## [Unreleased](https://github.com/drogue-iot/drogue-cloud/compare/v0.7.0...HEAD) (2021-09-22)
+## [Unreleased](https://github.com/drogue-iot/drogue-cloud/compare/v0.7.0...HEAD) (2021-09-23)
 
 ### Features
 
 * Try using conventional commits 67e5b69
+
+### Fixes
+
+* **frontend:** Add the missing topic field to the Knative example f09639b
+* **auth:** Fix the crate version ff42898
 
 
 ## [v0.7.0](https://github.com/drogue-iot/drogue-cloud/compare/v0.6.0...v0.7.0) (2021-09-21)
