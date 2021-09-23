@@ -254,7 +254,7 @@ impl IntegrationDetails<'_> {
         let quarkus = {
             let mut props = Self::consumer_properties(&info.user);
             props.insert(0, ("connector".into(), "smallrye-kafka".into()));
-            props.insert(0, ("topic".into(), topic));
+            props.insert(0, ("topic".into(), topic.clone()));
             let mut props = Self::ser_properties(
                 props
                     .into_iter()
@@ -282,15 +282,19 @@ kind: KafkaSource
 metadata:
   name: drogue-iot-source
 spec:
+
   bootstrapServers:
     - {server}
-  
+
+  topics:
+    - {topic}
+
   # consumerGroup: replace with your own Kafka consumer group
   consumerGroup: my-group
-  
+
   # consumers: increase if you need more than one pod consuming events
   consumers: 1
-  
+
   net:
     sasl:
       enable: true
@@ -310,6 +314,7 @@ spec:
       caCert: {{}}
       cert: {{}}
       key: {{}}
+
   sink:
     # Define a reference to a Service receiving the CloudEvents.
     # This is a service that you have to provide.
@@ -318,6 +323,7 @@ spec:
       apiVersion: v1
       kind: Service
       name: my-service
+
 ---
 apiVersion: v1
 kind: Secret
@@ -327,11 +333,13 @@ stringData:
   mechanism: {mechanism}
   user: {user}
   password: {password}
+
 "#,
                 server = &info.bootstrap,
                 mechanism = &info.user.mechanism,
                 user = &info.user.username,
                 password = &info.user.password,
+                topic = &topic
             );
 
             yaml
