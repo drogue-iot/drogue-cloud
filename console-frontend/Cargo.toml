@@ -12,7 +12,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1"
 
-drogue-cloud-admin-service = { path = "../admin-service" }
 drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-client = { version = "0.7.1", default-features = false }
@@ -59,6 +58,9 @@ pretty-hex = "0.2"
 base64 = "0.13"
 itertools = "0.9"
 percent-encoding = "2.1"
+
+indexmap = "1.7.0"
+uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
 
 [dev-dependencies]
 env_logger = "0.7"

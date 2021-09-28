@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use core::pin::Pin;
 use drogue_client::{meta, registry};
-use drogue_cloud_service_api::{auth::user::UserInformation, labels::LabelSelector};
+use drogue_cloud_service_api::{admin::Role, auth::user::UserInformation, labels::LabelSelector};
 use futures::{future, Stream, TryStreamExt};
 use indexmap::map::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -62,17 +62,6 @@ impl Resource for Application {
     fn members(&self) -> &IndexMap<String, MemberEntry> {
         &self.members
     }
-}
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Role {
-    /// Allow everything, including changing members
-    Admin,
-    /// Allow reading and writing, but not changing members.
-    Manager,
-    /// Allow reading only.
-    Reader,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

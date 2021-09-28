@@ -1,6 +1,6 @@
 use crate::service::{error::PostgresManagementServiceError, PostgresManagementService};
 use async_trait::async_trait;
-use drogue_cloud_admin_service::apps::{AdminService, MemberEntry, Members, TransferOwnership};
+use drogue_cloud_admin_service::apps::AdminService;
 use drogue_cloud_database_common::{
     auth::ensure_with,
     error::ServiceError,
@@ -10,6 +10,7 @@ use drogue_cloud_database_common::{
     },
 };
 use drogue_cloud_registry_events::EventSender;
+use drogue_cloud_service_api::admin::{MemberEntry, Members, TransferOwnership};
 use drogue_cloud_service_api::auth::user::{authz::Permission, UserInformation};
 
 #[async_trait]
