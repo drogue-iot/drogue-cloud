@@ -1,9 +1,7 @@
 //! Common authn/authz logic
 
-use crate::{
-    error::ServiceError,
-    models::app::{MemberEntry, Role},
-};
+use crate::{error::ServiceError, models::app::MemberEntry};
+use drogue_cloud_service_api::admin::Role;
 use drogue_cloud_service_api::auth::user::{
     authz::{Outcome, Permission},
     UserInformation,

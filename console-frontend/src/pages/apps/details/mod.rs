@@ -14,7 +14,6 @@ use crate::{
     utils::{to_yaml_model, url_encode},
 };
 use drogue_client::registry::v1::Application;
-use drogue_cloud_admin_service::apps::Members;
 use drogue_cloud_console_common::EndpointInformation;
 use drogue_cloud_service_api::kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget};
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
@@ -31,12 +30,11 @@ pub struct Props {
     pub details: DetailsSection,
 }
 
+#[derive(Debug)]
 pub enum Msg {
     Load,
-    LoadMembers,
     Reset,
     SetData(Application),
-    SetMembers(Members),
     Error(String),
     SaveEditor,
 }
@@ -49,7 +47,6 @@ pub struct Details {
 
     content: Option<Application>,
     yaml: Option<TextModel>,
-    members: Option<Members>,
 }
 
 impl Component for Details {
@@ -58,7 +55,6 @@ impl Component for Details {
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         link.send_message(Msg::Load);
-        link.send_message(Msg::LoadMembers);
 
         Self {
             props,
@@ -66,7 +62,6 @@ impl Component for Details {
             content: None,
             yaml: None,
             fetch_task: None,
-            members: None,
         }
     }
 
@@ -76,17 +71,8 @@ impl Component for Details {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to load", err),
             },
-            Msg::LoadMembers => match self.load_permisisons() {
-                Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to load", err),
-            },
             Msg::SetData(content) => {
                 self.content = Some(content);
-                self.reset();
-                self.fetch_task = None;
-            }
-            Msg::SetMembers(content) => {
-                self.members = Some(content);
                 self.reset();
                 self.fetch_task = None;
             }
@@ -152,27 +138,6 @@ impl Details {
                     .0
                 {
                     Ok(content) => Msg::SetData(content),
-                    Err(err) => Msg::Error(err.to_string()),
-                },
-            ),
-        )
-    }
-
-    fn load_permisisons(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
-            Method::GET,
-            format!(
-                "/api/admin/v1alpha1/apps/{}/members",
-                url_encode(&self.props.name)
-            ),
-            Nothing,
-            vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Members, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(content) => Msg::SetMembers(content),
                     Err(err) => Msg::Error(err.to_string()),
                 },
             ),
@@ -246,7 +211,7 @@ impl Details {
                         DetailsSection::Overview => self.render_overview(app),
                         DetailsSection::Integrations => self.render_integrations(app),
                         DetailsSection::Yaml => self.render_editor(),
-                        DetailsSection::Administration => self.render_admin(app),
+                        DetailsSection::Administration => self.render_admin(),
                     }
                 }
                 </PageSection>
@@ -308,8 +273,17 @@ impl Details {
         };
     }
 
-    fn render_admin(&self, app: &Application) -> Html {
-        Admin::from(self.members.clone().unwrap()).render()
+    fn render_admin(&self) -> Html {
+        // create the Admin component, using a copy of the same props.
+        return html! {
+            <Admin
+                backend={self.props.backend.clone()}
+                token={self.props.token.clone()}
+                endpoints={self.props.endpoints.clone()}
+                name={self.props.name.clone()}
+                details={self.props.details.clone()}
+            />
+        };
     }
 
     fn render_integrations(&self, application: &Application) -> Html {
