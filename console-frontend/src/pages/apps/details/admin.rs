@@ -99,7 +99,6 @@ impl Component for Admin {
         }
     }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        log::warn!("UPDATE msg is : {:?}", msg);
         match msg {
             Msg::LoadMembers => match self.load() {
                 Ok(task) => self.fetch = Some(task),
@@ -279,7 +278,7 @@ impl Admin {
                             </>},
                             r#type: Type::Success,
                             timeout: Some(Duration::from_secs(3)),
-                            actions: Vec::new(),
+                            ..Default::default()
                         });
                         Msg::LoadMembers
                     }
@@ -342,10 +341,8 @@ impl Users {
     }
 
     pub fn delete(&mut self, id: String) {
-        log::debug!("deleting {}", id);
         self.readers.retain(|u| *u.id != id);
         self.managers.retain(|u| *u.id != id);
-        log::debug!("deleted ? {:?}", self.readers)
     }
 
     pub fn add(&mut self, id: String, role: Role, link: &ComponentLink<Admin>) -> Result<()> {
