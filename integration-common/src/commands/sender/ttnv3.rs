@@ -41,11 +41,13 @@ impl Sender for TtnV3Sender {
 
             (
                 1, // FIXME: need to make this configurable
-                serde_json::to_string(&json!({
-                  "command": command.command,
-                  "command_payload": payload,
-                }))
-                .map_err(|err| Error::Payload(format!("Failed to encode payload: {}", err)))?,
+                base64::encode(
+                    serde_json::to_string(&json!({
+                      "command": command.command,
+                      "command_payload": payload,
+                    }))
+                    .map_err(|err| Error::Payload(format!("Failed to encode payload: {}", err)))?,
+                ),
             )
         };
 
