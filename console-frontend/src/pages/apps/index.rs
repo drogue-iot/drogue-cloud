@@ -1,3 +1,4 @@
+use crate::utils::url_encode;
 use crate::{
     backend::Backend,
     error::error,
@@ -58,6 +59,7 @@ pub enum Msg {
     Error(String),
 
     ShowOverview(String),
+    Delete(String),
 }
 
 pub struct Index {
@@ -101,6 +103,10 @@ impl Component for Index {
                     details: DetailsSection::Overview,
                 }))),
             ),
+            Msg::Delete(name) => match self.delete(name) {
+                Ok(task) => self.fetch_task = Some(task),
+                Err(err) => error("Failed to delete", err),
+            },
         };
         true
     }
@@ -153,13 +159,16 @@ impl Index {
                                 .into_iter()
                                 .map(move |app| {
                                     let name = app.metadata.name.clone();
+                                    let name_copy = app.metadata.name.clone();
+
                                     let on_overview =
                                         link.callback_once(move |_| Msg::ShowOverview(name));
 
                                     ApplicationEntry {
                                         app,
                                         on_overview,
-                                        on_delete: Default::default(),
+                                        on_delete: link
+                                            .callback_once(move |_| Msg::Delete(name_copy)),
                                     }
                                 })
                                 .collect();
@@ -169,6 +178,20 @@ impl Index {
                     }
                 },
             ),
+        )
+    }
+
+    fn delete(&self, name: String) -> Result<FetchTask, anyhow::Error> {
+        self.props.backend.info.request(
+            Method::DELETE,
+            format!("/api/registry/v1alpha1/apps/{}", url_encode(name)),
+            Nothing,
+            vec![],
+            self.link
+                .callback(move |response: Response<Text>| match response.status() {
+                    StatusCode::NO_CONTENT => Msg::Load,
+                    status => Msg::Error(format!("Cannot delete application : {}", status)),
+                }),
         )
     }
 }
