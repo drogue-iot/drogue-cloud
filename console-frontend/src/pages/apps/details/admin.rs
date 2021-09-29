@@ -268,7 +268,7 @@ impl Admin {
             vec![("Content-Type", "application/json")],
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
-                    status if status.is_success() => {
+                    StatusCode::NO_CONTENT => {
                         ToastDispatcher::default().toast(Toast {
                             title: "Success !".into(),
                             body: html! {<>
