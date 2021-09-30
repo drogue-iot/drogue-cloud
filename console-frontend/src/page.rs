@@ -262,7 +262,11 @@ impl Component for AppPage {
                                         name=url_decode(&name)
                                         details=details
                                     />},
-                                    AppRoute::Spy => html!{<Spy/>},
+                                    AppRoute::Spy => html!{<Spy
+                                        backend=backend.clone()
+                                        token=token.clone()
+                                        endpoints=endpoints.clone()
+                                    />},
                                     AppRoute::ApiKeys => html!{<pages::ApiKeys
                                         backend=backend.clone()
                                     />},

@@ -1,19 +1,30 @@
+use crate::backend::Token;
 use crate::{backend::Backend, error::error};
 use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
 };
+use drogue_cloud_console_common::EndpointInformation;
 use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE};
 use itertools::Itertools;
 use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
-use wasm_bindgen::{closure::Closure, JsValue};
-use web_sys::{EventSource, EventSourceInit};
+use url::Url;
+use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use web_sys::{MessageEvent, WebSocket};
 use yew::prelude::*;
 
+#[derive(Clone, Debug, Properties, PartialEq)]
+pub struct Props {
+    pub backend: Backend,
+    pub token: Token,
+    pub endpoints: EndpointInformation,
+}
+
 pub struct Spy {
+    props: Props,
     link: ComponentLink<Self>,
-    source: Option<EventSource>,
+    ws: Option<WebSocket>,
     events: SharedTableModel<Entry>,
 
     application: String,
@@ -81,13 +92,14 @@ impl Entry {
 
 impl Component for Spy {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         Self {
+            props,
             events: Default::default(),
             link,
-            source: None,
+            ws: None,
             running: false,
             total_received: 0,
             application: String::new(),
@@ -118,7 +130,7 @@ impl Component for Spy {
                 error("Failed to process event", err);
             }
             Msg::Failed => {
-                error("Source error", "Failed to connect to the event source");
+                error("Source error", "Failed to connect to the websocket service");
                 self.running = false;
             }
             Msg::SetApplication(application) => {
@@ -211,8 +223,8 @@ impl Component for Spy {
     }
 
     fn destroy(&mut self) {
-        if let Some(source) = self.source.take() {
-            source.close();
+        if let Some(ws) = self.ws.take() {
+            ws.close();
         }
     }
 }
@@ -227,52 +239,60 @@ impl Spy {
     }
 
     fn start(&mut self, app_id: Option<String>) {
-        let mut url = Backend::url("/api/console/v1alpha1/spy").unwrap();
+        let ws_endpoint = &self.props.endpoints.endpoints.websocket_integration;
 
-        // add optional filter
+        let url = match (ws_endpoint, app_id) {
+            (Some(ws), Some(app)) => {
+                let mut url = Url::parse(ws.url.as_str()).unwrap();
+                url.path_segments_mut().unwrap().push(app.as_str());
+                Some(url)
+            }
+            _ => None,
+        };
 
-        if let Some(app_id) = &app_id {
-            url.query_pairs_mut().append_pair("app", app_id);
+        if let Some(mut url) = url {
+            // TODO pass the token as a Authentication Header on the request
+            // url.query_pairs_mut()
+            //     .append_pair("token", &Backend::access_token().unwrap_or_default());
+
+            let ws = WebSocket::new(url.as_str()).unwrap();
+
+            // setup on_message callback
+            let link = self.link.clone();
+            let onmessage_callback = Closure::wrap(Box::new(move |event: &MessageEvent| {
+                // web_sys::console::debug_2(&JsValue::from("event: "), msg);
+
+                let msg = match serde_json::from_str(&event.data().as_string().unwrap()) {
+                    Ok(event) => Msg::Event(event),
+                    Err(e) => Msg::Error(e.to_string()),
+                };
+
+                link.send_message(msg);
+            }) as Box<dyn FnMut(&MessageEvent)>);
+
+            // set message event handler on WebSocket
+            ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
+            // forget the callback to keep it alive
+            onmessage_callback.forget();
+
+            // setup onerror
+            let link = self.link.clone();
+            let on_error = Closure::wrap(Box::new(move |e: ErrorEvent| {
+                log::warn!("error event: {:?}", e);
+                link.send_message(Msg::Failed);
+            }) as Box<dyn FnMut(ErrorEvent)>);
+            ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+            on_error.forget();
+
+            // store result
+            self.running = true;
+            self.ws = Some(ws);
         }
-
-        // EventSource doesn't support passing headers, so we cannot send
-        // the bearer token the normal way
-
-        url.query_pairs_mut()
-            .append_pair("token", &Backend::access_token().unwrap_or_default());
-
-        // create source
-
-        let source =
-            EventSource::new_with_event_source_init_dict(&url.to_string(), &EventSourceInit::new())
-                .unwrap();
-
-        // setup onmessage
-
-        let link = self.link.clone();
-        let on_message = Closure::wrap(Box::new(move |msg: &JsValue| {
-            let msg = extract_event(msg);
-            link.send_message(msg);
-        }) as Box<dyn FnMut(&JsValue)>);
-        source.set_onmessage(Some(&on_message.into_js_value().into()));
-
-        // setup onerror
-
-        let link = self.link.clone();
-        let on_error = Closure::wrap(Box::new(move || {
-            link.send_message(Msg::Failed);
-        }) as Box<dyn FnMut()>);
-        source.set_onerror(Some(&on_error.into_js_value().into()));
-
-        // store result
-
-        self.running = true;
-        self.source = Some(source);
     }
 
     fn stop(&mut self) {
-        if let Some(source) = self.source.take() {
-            source.close();
+        if let Some(ws) = self.ws.take() {
+            ws.close();
         }
         self.running = false
     }
@@ -292,20 +312,6 @@ impl Spy {
             </Bullseye>
             </div>
         };
-    }
-}
-
-fn extract_event(msg: &JsValue) -> Msg {
-    // web_sys::console::debug_2(&JsValue::from("event: "), msg);
-
-    let data: String = js_sys::Reflect::get(msg, &JsValue::from("data"))
-        .unwrap()
-        .as_string()
-        .unwrap();
-
-    match serde_json::from_str(&data) {
-        Ok(event) => Msg::Event(event),
-        Err(e) => Msg::Error(e.to_string()),
     }
 }
 
