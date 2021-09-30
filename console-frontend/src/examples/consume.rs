@@ -188,7 +188,7 @@ impl Component for ConsumeData {
                 r#"websocat {}/{} -H="Authorization: Bearer {}""#,
                 ws.url, self.props.data.app_id, token,
             );
-            let drg_cmd = format!("drg stream --app {}", self.props.data.app_id,);
+            let drg_cmd = format!("drg stream {}", self.props.data.app_id,);
             cards.push(html!{
                 <Card title=html!{"Consume device data using a Websocket"}>
                     <div>
