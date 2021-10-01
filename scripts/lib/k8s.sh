@@ -21,7 +21,7 @@ function wait_for_ksvc() {
     shift
 
     while ((timeout > $(date +%s))); do
-        if ! kubectl -n "$DROGUE_NS" wait --timeout=60s --for=condition=Ready "ksvc/${resource}"; then
+        if ! kubectl -n "$DROGUE_NS" wait --timeout=180s --for=condition=Ready "ksvc/${resource}"; then
             kubectl -n "$DROGUE_NS" delete deploy -l "serving.knative.dev/service=${resource}"
         else
             break
