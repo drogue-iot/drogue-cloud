@@ -16,7 +16,7 @@ function detect_domain() {
     local domain
     case $CLUSTER in
     kind)
-        domain=.$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}').nip.io
+        domain=.$(kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == "InternalIP")].address}' | awk '// { print $1 }').nip.io
         ;;
     minikube)
         domain=.$(minikube ip).nip.io

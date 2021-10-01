@@ -27,7 +27,7 @@ kubernetes)
     ;;
 kind)
     curl -s -L https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml | sed -e 's/LoadBalancer/NodePort/g' | kubectl apply -f -
-    INGRESS_COMMAND="kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == \"InternalIP\")].address}'"
+    INGRESS_COMMAND="kubectl get node kind-control-plane -o jsonpath='{.status.addresses[?(@.type == \"InternalIP\")].address}' | awk '// {print \$1}'"
     ;;
 minikube)
     kubectl apply -f https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml
@@ -64,6 +64,7 @@ while [ -z "$INGRESS_HOST" ]; do
         ;;
     esac
 
+    # shellcheck disable=SC2086
     INGRESS_HOST=$(eval $INGRESS_COMMAND)
 done
 
