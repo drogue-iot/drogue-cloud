@@ -212,7 +212,7 @@ if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)
     progress "🔐 Deploying certificates ..."
     progress -n "  📝 Ensure existence of certificates ... "
     if [ -z "$TLS_KEY" ] || [ -z "$TLS_CRT" ]; then
-        CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$MQTT_INTEGRATION_HOST, DNS:$HTTP_ENDPOINT_HOST" #, DNS:$COAP_ENDPOINT_HOST"
+        CERT_ALTNAMES="$CERT_ALTNAMES DNS:$MQTT_ENDPOINT_HOST, DNS:$MQTT_INTEGRATION_HOST, DNS:$HTTP_ENDPOINT_HOST, DNS:$COAP_ENDPOINT_HOST"
         echo "  Alternative names: $CERT_ALTNAMES"
         OUT="${BASEDIR}/../build/certs/endpoints"
         echo "  Output: $OUT"
