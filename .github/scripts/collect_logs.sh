@@ -54,6 +54,8 @@ gather "services"
 gather "deployments"
 gather "secrets"
 gather "configmaps"
+gather "jobs"
+gather "ingress"
 
 # Keycloak
 
