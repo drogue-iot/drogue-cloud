@@ -10,7 +10,7 @@ use itertools::Itertools;
 use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
-use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{MessageEvent, WebSocket};
 use yew::prelude::*;
 
@@ -224,7 +224,7 @@ impl Component for Spy {
 
     fn destroy(&mut self) {
         if let Some(ws) = self.ws.take() {
-            ws.close();
+            let _ = ws.close();
         }
     }
 }
@@ -251,9 +251,8 @@ impl Spy {
         };
 
         if let Some(mut url) = url {
-            // TODO pass the token as a Authentication Header on the request
-            // url.query_pairs_mut()
-            //     .append_pair("token", &Backend::access_token().unwrap_or_default());
+            url.query_pairs_mut()
+                .append_pair("token", &Backend::access_token().unwrap_or_default());
 
             let ws = WebSocket::new(url.as_str()).unwrap();
 
@@ -292,7 +291,7 @@ impl Spy {
 
     fn stop(&mut self) {
         if let Some(ws) = self.ws.take() {
-            ws.close();
+            let _ = ws.close();
         }
         self.running = false
     }
