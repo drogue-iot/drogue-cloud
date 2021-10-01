@@ -3,7 +3,6 @@ mod api;
 mod auth;
 mod demos;
 mod info;
-mod spy;
 
 #[cfg(feature = "forward")]
 mod forward;
@@ -246,7 +245,6 @@ async fn main() -> anyhow::Result<()> {
                             .wrap(Condition::new(enable_auth, auth.clone()))
                             .route(web::get().to(info::get_info)),
                     )
-                    .service(spy::stream_events) // this one is special, SSE doesn't support authorization headers
                     .service(auth::login)
                     .service(auth::logout)
                     .service(auth::code)
