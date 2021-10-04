@@ -23,7 +23,6 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::{
     config::ConfigFromEnv,
-    defaults,
     health::{HealthServer, HealthServerConfig},
 };
 use futures::TryFutureExt;
@@ -39,8 +38,6 @@ pub struct Config {
     pub key_file: Option<String>,
     #[serde(default)]
     pub bind_addr_mqtt: Option<String>,
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr_http: String,
 
     #[serde(default)]
     pub health: HealthServerConfig,
