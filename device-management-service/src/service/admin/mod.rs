@@ -152,11 +152,16 @@ where
         // get operation
         let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
         for (k, v) in &app.members {
-            match self.keycloak.username_from_id(k).await {
-                Ok(u) => members.insert(u, MemberEntry { role: v.role }),
-                // If the id does not exist in keycloak we skip it
-                Err(_) => None,
-            };
+            // empty values are allowed. (e.g. to share an app with the whole word)
+            if k.is_empty() {
+                members.insert(k.clone(), MemberEntry { role: v.role });
+            } else {
+                match self.keycloak.username_from_id(k).await {
+                    Ok(u) => members.insert(u, MemberEntry { role: v.role }),
+                    // If the id does not exist in keycloak we skip it
+                    Err(_) => None,
+                };
+            }
         }
 
         Ok(Members {
@@ -209,6 +214,9 @@ where
                         .into());
                     }
                 };
+                // empty values are allowed. (e.g. to share an app with the whole word)
+            } else {
+                id_members.insert(k.clone(), app::MemberEntry { role: v.role });
             }
         }
 

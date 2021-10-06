@@ -25,7 +25,7 @@ pub struct Users {
     app: String,
     managers: Vec<User>,
     readers: Vec<User>,
-    admin: String,
+    admin: Vec<User>,
     resource_version: String,
 }
 
@@ -59,7 +59,6 @@ impl TableRenderer for User {
     fn render(&self, column: ColumnIndex) -> Html {
         match column.index {
             0 => self.clone().id.into(),
-            1 => self.clone().id.into(),
             // 3 => html! { <Button
             //              icon=Icon::ExclamationCircle
             //              variant=Variant::Link
@@ -164,7 +163,6 @@ impl Component for Admin {
                                     header={html_nested!{
                                         <TableHeader>
                                             <TableColumn label="User name"/>
-                                            <TableColumn label="UserId"/>
                                         </TableHeader>
                                     }}
                                 >
@@ -176,7 +174,17 @@ impl Component for Admin {
                             header={html_nested!{
                                 <TableHeader>
                                     <TableColumn label="User name"/>
-                                    <TableColumn label="UserId"/>
+                                </TableHeader>
+                            }}
+                        >
+                        </Table<SimpleTableModel<User>>>
+                    </Card>
+                    <Card title={html!{"Application administrators"}}>
+                        <Table<SimpleTableModel<User>>
+                            entries=SimpleTableModel::from(m.admin.clone())
+                            header={html_nested!{
+                                <TableHeader>
+                                    <TableColumn label="User name"/>
                                 </TableHeader>
                             }}
                         >
@@ -196,11 +204,12 @@ impl Component for Admin {
                                 <Divider/>
                                 <DropdownItem onclick=self.link.callback(|_|Msg::NewMemberRole(Role::Manager))>{"Manager"}</DropdownItem>
                                 <Divider/>
+                                <DropdownItem onclick=self.link.callback(|_|Msg::NewMemberRole(Role::Admin))>{"Admin"}</DropdownItem>
+                                <Divider/>
                             </Dropdown>
                         </ToolbarItem>
                         <ToolbarItem>
                             <Button
-                                    disabled=self.new_member_id.is_empty()
                                     label="Add"
                                     icon=Icon::PlusCircleIcon
                                     onclick=self.link.callback(|_|Msg::AddMember)
@@ -298,11 +307,14 @@ impl Users {
     pub fn from(members: Members, app: String, link: &ComponentLink<Admin>) -> Self {
         let mut readers: Vec<User> = Vec::new();
         let mut managers: Vec<User> = Vec::new();
-        let mut admin = String::new();
+        let mut admin: Vec<User> = Vec::new();
 
         for (user, role) in members.members {
             match role.role {
-                Role::Admin => admin = user,
+                Role::Admin => admin.push(User {
+                    id: user.clone(),
+                    on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
+                }),
                 Role::Manager => managers.push(User {
                     id: user.clone(),
                     on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
@@ -338,7 +350,9 @@ impl Users {
         for u in &self.readers {
             members.insert(u.id.clone(), MemberEntry { role: Role::Reader });
         }
-        members.insert(self.admin.clone(), MemberEntry { role: Role::Admin });
+        for u in &self.admin {
+            members.insert(u.id.clone(), MemberEntry { role: Role::Admin });
+        }
 
         Members {
             members,
@@ -364,8 +378,7 @@ impl Users {
             match role {
                 Role::Reader => self.readers.push(user),
                 Role::Manager => self.managers.push(user),
-                // To change the admin, you should transfer the app.
-                Role::Admin => {}
+                Role::Admin => self.admin.push(user),
             }
             Ok(())
         }
@@ -376,6 +389,8 @@ impl Users {
             id: id.clone(),
             on_delete: Default::default(),
         };
-        return self.readers.contains(user) || self.managers.contains(user) || self.admin == id;
+        return self.readers.contains(user)
+            || self.managers.contains(user)
+            || self.admin.contains(user);
     }
 }
