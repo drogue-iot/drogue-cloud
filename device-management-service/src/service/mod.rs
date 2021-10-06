@@ -7,6 +7,7 @@ mod x509;
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::{registry, Translator};
+use drogue_cloud_api_key_service::service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig};
 use drogue_cloud_database_common::{
     auth::ensure,
     error::ServiceError,
@@ -35,6 +36,8 @@ use uuid::Uuid;
 pub struct PostgresManagementServiceConfig {
     pub pg: deadpool_postgres::Config,
     pub instance: String,
+
+    pub keycloak: KeycloakApiKeyServiceConfig,
 }
 
 impl<S> DatabaseService for PostgresManagementService<S>
@@ -66,6 +69,8 @@ where
     pool: Pool,
     sender: S,
     instance: String,
+
+    keycloak: KeycloakApiKeyService,
 }
 
 impl<S> PostgresManagementService<S>
@@ -77,6 +82,7 @@ where
             pool: config.pg.create_pool(NoTls)?,
             instance: config.instance,
             sender,
+            keycloak: KeycloakApiKeyService::new(config.keycloak)?,
         })
     }
 

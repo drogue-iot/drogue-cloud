@@ -40,6 +40,7 @@ pub enum Msg {
     NewMemberRole(Role),
     NewMemberId(String),
     Error(String),
+    Reset,
 }
 
 #[derive(Clone, Debug)]
@@ -135,6 +136,10 @@ impl Component for Admin {
 
             Msg::Error(msg) => {
                 error("Error", msg);
+                self.reset();
+            }
+            Msg::Reset => {
+                self.reset();
             }
         }
         true
@@ -150,16 +155,6 @@ impl Component for Admin {
     }
 
     fn view(&self) -> Html {
-        let uuid_check = |value: &str| match value {
-            "" => InputState::Default,
-            _ => match uuid::Uuid::parse_str(value) {
-                Err(_) => InputState::Error,
-                _ => InputState::Default,
-            },
-        };
-
-        let username_is_valid = uuid::Uuid::parse_str(self.new_member_id.as_str()).is_ok();
-
         if let Some(m) = &self.members {
             return html! {
                 <PageSection>
@@ -192,7 +187,6 @@ impl Component for Admin {
                     <ToolbarItem>
                         <TextInput
                                 disabled=self.fetch.is_some()
-                                validator=Validator::from(uuid_check)
                                 onchange=self.link.callback(|id|Msg::NewMemberId(id))
                                 placeholder="User id"/>
                         </ToolbarItem>
@@ -206,7 +200,7 @@ impl Component for Admin {
                         </ToolbarItem>
                         <ToolbarItem>
                             <Button
-                                    disabled=!username_is_valid
+                                    disabled=self.new_member_id.is_empty()
                                     label="Add"
                                     icon=Icon::PlusCircleIcon
                                     onclick=self.link.callback(|_|Msg::AddMember)
@@ -216,7 +210,7 @@ impl Component for Admin {
                     <Form>
                         <ActionGroup>
                             <Button disabled=self.fetch.is_some() label="Save" variant=Variant::Primary onclick=self.link.callback(|_|Msg::SaveMembers)/>
-                            <Button disabled=self.fetch.is_some() label="Reload" variant=Variant::Secondary onclick=self.link.callback(|_|Msg::LoadMembers)/>
+                            <Button disabled=self.fetch.is_some() label="Reload" variant=Variant::Secondary onclick=self.link.callback(|_|Msg::Reset)/>
                         </ActionGroup>
                     </Form>
                  </Card>
@@ -282,9 +276,21 @@ impl Admin {
                         });
                         Msg::LoadMembers
                     }
-                    status => Msg::Error(format!("Failed to perform update: {}", status)),
+                    status => Msg::Error(format!(
+                        "Failed to perform update: Code {}. {}",
+                        status,
+                        response
+                            .body()
+                            .as_ref()
+                            .unwrap_or(&"Unknown error.".to_string())
+                    )),
                 }),
         )
+    }
+
+    fn reset(&mut self) {
+        self.fetch = None;
+        self.link.send_message(Msg::LoadMembers);
     }
 }
 
