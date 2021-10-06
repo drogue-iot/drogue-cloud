@@ -16,6 +16,8 @@ pub enum Error {
     Client(#[from] KeycloakError),
     #[error("Not authorized")]
     NotAuthorized,
+    #[error("User not found")]
+    NotFound,
 }
 
 impl Error {
@@ -59,6 +61,10 @@ impl ResponseError for Error {
             Self::Serialization(err) => HttpResponse::InternalServerError().json(ErrorResponse {
                 error: "InternalError".into(),
                 message: err.to_string(),
+            }),
+            Self::NotFound => HttpResponse::NotFound().json(ErrorResponse {
+                error: "NotFound".into(),
+                message: "User not found".into(),
             }),
         }
     }

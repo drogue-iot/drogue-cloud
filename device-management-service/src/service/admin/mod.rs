@@ -12,6 +12,7 @@ use drogue_cloud_database_common::{
 use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::admin::{MemberEntry, Members, TransferOwnership};
 use drogue_cloud_service_api::auth::user::{authz::Permission, UserInformation};
+use indexmap::map::IndexMap;
 
 #[async_trait]
 impl<S> AdminService for PostgresManagementService<S>
@@ -149,14 +150,18 @@ where
         ensure_with(&app, identity, Permission::Admin, || ServiceError::NotFound)?;
 
         // get operation
+        let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
+        for (k, v) in &app.members {
+            match self.keycloak.username_from_id(k).await {
+                Ok(u) => members.insert(u, MemberEntry { role: v.role }),
+                // If the id does not exist in keycloak we skip it
+                Err(_) => None,
+            };
+        }
 
         Ok(Members {
             resource_version: Some(app.resource_version.to_string()),
-            members: app
-                .members
-                .into_iter()
-                .map(|(k, v)| (k, MemberEntry { role: v.role }))
-                .collect(),
+            members,
         })
     }
 
@@ -186,17 +191,31 @@ where
 
         ensure_with(&app, identity, Permission::Admin, || ServiceError::NotFound)?;
 
+        // get users id from usernames
+
+        let mut id_members: IndexMap<String, app::MemberEntry> = IndexMap::new();
+        for (k, v) in &members.members {
+            if !k.is_empty() {
+                match self.keycloak.id_from_username(k.as_str()).await {
+                    Ok(u) => {
+                        id_members.insert(u, app::MemberEntry { role: v.role });
+                    }
+                    // If the username does not exist in keycloak it's an error !
+                    Err(_) => {
+                        return Err(ServiceError::BadRequest(format!(
+                            "Username {} does not exist",
+                            k
+                        ))
+                        .into());
+                    }
+                };
+            }
+        }
+
         // set operation
 
         accessor
-            .set_members(
-                &app_id,
-                members
-                    .members
-                    .into_iter()
-                    .map(|(k, v)| (k, app::MemberEntry { role: v.role }))
-                    .collect(),
-            )
+            .set_members(&app_id, id_members)
             .await
             .map(|_| ())?;
 

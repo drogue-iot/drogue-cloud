@@ -1947,6 +1947,7 @@ dependencies = [
  "dotenv",
  "drogue-client",
  "drogue-cloud-admin-service",
+ "drogue-cloud-api-key-service",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",

@@ -55,7 +55,7 @@ pub struct KeycloakApiKeyServiceConfig {
 pub struct KeycloakApiKeyService {
     client: reqwest::Client,
     url: String,
-    realm: String,
+    pub realm: String,
     admin_username: String,
     admin_password: String,
 }
@@ -93,7 +93,7 @@ impl KeycloakApiKeyService {
         .await?)
     }
 
-    async fn admin<'a>(&self) -> Result<KeycloakAdmin<'a>, Error> {
+    pub async fn admin<'a>(&self) -> Result<KeycloakAdmin<'a>, Error> {
         let token = self.token().await?;
         Ok(KeycloakAdmin::new(&self.url, token, self.client.clone()))
     }
@@ -125,6 +125,47 @@ impl KeycloakApiKeyService {
                 || Err(Error::NotAuthorized),
                 |str| Ok(serde_json::from_str::<ApiKeyData>(str)?),
             )
+    }
+
+    pub async fn username_from_id(&self, id: &str) -> Result<String, Error> {
+        match self
+            .admin()
+            .await?
+            .realm_users_with_id_get(&self.realm, id)
+            .await
+        {
+            // fixme Is the unwrap unsafe ? The user should always have a username
+            Ok(user) => Ok(user.username.unwrap().to_string()),
+            Err(_) => Err(Error::NotFound),
+        }
+    }
+
+    pub async fn id_from_username(&self, username: &str) -> Result<String, Error> {
+        match self
+            .admin()
+            .await?
+            .realm_users_get(
+                &self.realm,
+                None,
+                None,
+                None,
+                Some(true),
+                Some(true),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(username),
+            )
+            .await?
+            .pop()
+        {
+            Some(user) => Ok(user.id.unwrap().to_string()),
+            None => Err(Error::NotFound),
+        }
     }
 }
 
