@@ -130,7 +130,7 @@ impl Component for Spy {
                 error("Failed to process event", err);
             }
             Msg::Failed => {
-                error("Source error", "Failed to connect to the websocket service");
+                error("Source error", "Connection to the websocket service failed");
                 self.running = false;
             }
             Msg::SetApplication(application) => {
