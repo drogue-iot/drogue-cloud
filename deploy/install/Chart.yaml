@@ -1,0 +1,31 @@
+apiVersion: v2
+name: install
+description: Installer wrapper
+keywords:
+  - IoT
+home: https://drogue.io
+icon: https://blog.drogue.io/favicon.svg
+
+maintainers:
+  - name: ctron
+    email: ctron@dentrassi.de
+    url: https://dentrassi.de
+
+type: application
+
+version: 0.3.0
+
+kubeVersion: ">= 1.19.0"
+
+dependencies:
+  - name: drogue-cloud-common
+    version: ^0.3.0
+    repository: file://../helm/charts/drogue-cloud-common
+  - name: drogue-cloud-core
+    version: ^0.3.0
+    alias: drogueCloudCore
+    repository: file://../helm/charts/drogue-cloud-core
+  - name: drogue-cloud-examples
+    version: ^0.3.0
+    alias: drogueCloudExamples
+    repository: file://../helm/charts/drogue-cloud-examples

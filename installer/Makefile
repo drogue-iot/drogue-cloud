@@ -32,10 +32,13 @@ drogue-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(she
 	rm -Rf $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/.github
 	rm $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/.gitignore
 	rm $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/README.md
-	# inject release version to cert script
+	# inject release version to the charts
 	sed -i 's/appVersion: .*$$/appVersion: "$(VERSION)"/' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-common/Chart.yaml
 	sed -i 's/appVersion: .*$$/appVersion: "$(VERSION)"/' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-core/Chart.yaml
 	sed -i 's/appVersion: .*$$/appVersion: "$(VERSION)"/' $(OUTDIR)/stage/$(INSTALLER)/deploy/helm/charts/drogue-cloud-examples/Chart.yaml
+	# update the charts for the install wrapper
+	helm dep up $(OUTDIR)/stage/$(INSTALLER)/deploy/install
+	# inject release version to the scripts
 	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
 	sed -i 's/CLUSTER:=minikube/CLUSTER:=$*/' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
 	# zip it up

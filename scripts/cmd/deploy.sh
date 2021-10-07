@@ -166,28 +166,19 @@ domain=$(detect_domain)
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
+HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.grafana.keycloak.enabled=true --set drogueCloudExamples.grafana.keycloak.client.create=true"
 
-HELM_EX_ARGS="$HELM_ARGS"
-HELM_EX_ARGS="$HELM_EX_ARGS --set grafana.keycloak.enabled=true --set grafana.keycloak.client.create=true"
-
-echo "Helm arguments (core): $HELM_ARGS"
-echo "Helm arguments (examples): $HELM_EX_ARGS"
+echo "Helm arguments: $HELM_ARGS"
 
 # install Drogue IoT
 
-progress -n "🔨 Deploying Drogue IoT Core ... "
-helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-core"
+progress -n "🔨 Deploying Drogue IoT ... "
+helm dependency update "$BASEDIR/../deploy/install"
 # shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/helm/charts/drogue-cloud-core" --install $HELM_ARGS
+helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/install" --install $HELM_ARGS
 progress "done!"
 
-progress -n "🔨 Deploying Drogue IoT Examples ... "
-helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples"
-# shellcheck disable=SC2086
-helm -n "$DROGUE_NS" upgrade drogue-iot-examples "$BASEDIR/../deploy/helm/charts/drogue-cloud-examples" --install $HELM_EX_ARGS
-progress "done!"
-
-# Remove the wrong host entry for keycloak ingress
+# wait for the Keycloak ingress resource
 
 case $CLUSTER in
     openshift)
@@ -206,7 +197,7 @@ esac
 
 SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 
-# Provide TLS certificates for endpoints
+# provide TLS certificates for endpoints
 
 if [ "$(kubectl -n "$DROGUE_NS" get secret mqtt-endpoint-tls --ignore-not-found)" == "" ] || [ "$(kubectl -n "$DROGUE_NS" get secret http-endpoint-tls --ignore-not-found)" == "" ] || [ "$(kubectl -n "$DROGUE_NS" get secret coap-endpoint-tls --ignore-not-found)" == "" ]; then
     progress "🔐 Deploying certificates ..."

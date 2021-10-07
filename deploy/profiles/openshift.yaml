@@ -1,15 +1,16 @@
-endpoints:
-  coap:
-    ingress:
-      port: 443
-  mqtt:
-    ingress:
-      port: 443
-  http:
-    ingress:
-      port: 443
+drogueCloudCore:
+  endpoints:
+    coap:
+      ingress:
+        port: 443
+    mqtt:
+      ingress:
+        port: 443
+    http:
+      ingress:
+        port: 443
 
-integrations:
-  mqtt:
-    ingress:
-      port: 443
+  integrations:
+    mqtt:
+      ingress:
+        port: 443

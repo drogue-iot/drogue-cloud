@@ -1,36 +1,38 @@
 
 # Ports might seem a bit off, but they must be in the range of 30000-32767
 
-endpoints:
-  coap:
-    ingress:
-      port: 30003
-  mqtt:
-    ingress:
-      port: 30001
-  http:
-    ingress:
-      port: 30443
+drogueCloudCore:
 
-integrations:
-  mqtt:
-    ingress:
-      port: 30002
-  websocket:
-    insecure: true
-    ingress:
-      port: 30004
+  endpoints:
+    coap:
+      ingress:
+        port: 30003
+    mqtt:
+      ingress:
+        port: 30001
+    http:
+      ingress:
+        port: 30443
 
-defaults:
-  ingress:
-    className: nginx
+  integrations:
+    mqtt:
+      ingress:
+        port: 30002
+    websocket:
+      insecure: true
+      ingress:
+        port: 30004
 
-services:
-  sso:
+  defaults:
     ingress:
-      annotations:
-        nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-        nginx.ingress.kubernetes.io/server-snippet: |2-
-                            location ~* "^/auth/realms/master/metrics" {
-                                return 301 /auth/realms/master;
-                            }
+      className: nginx
+
+  services:
+    sso:
+      ingress:
+        annotations:
+          nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+          nginx.ingress.kubernetes.io/server-snippet: |2-
+                              location ~* "^/auth/realms/master/metrics" {
+                                  return 301 /auth/realms/master;
+                              }
