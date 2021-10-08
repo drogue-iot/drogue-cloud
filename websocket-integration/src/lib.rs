@@ -11,6 +11,7 @@ use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator};
 use serde::Deserialize;
 
 use crate::service::Service;
+use anyhow::Context;
 use drogue_cloud_service_common::client::{RegistryConfig, UserAuthClient, UserAuthClientConfig};
 use futures::TryFutureExt;
 
@@ -30,13 +31,14 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
-    user_auth: UserAuthClientConfig,
+    #[serde(default)]
+    pub user_auth: Option<UserAuthClientConfig>,
 
     #[serde(default)]
     pub kafka: KafkaClientConfig,
 
     #[serde(default)]
-    pub registry: RegistryConfig,
+    pub registry: Option<RegistryConfig>,
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
@@ -47,15 +49,21 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // set up authentication
 
-    let (authenticator, user_auth) = {
+    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
         let client = reqwest::Client::new();
         let authenticator = Authenticator::new().await?;
-        let user_auth = UserAuthClient::from_config(client, config.user_auth).await?;
+        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
         (Some(authenticator), Some(user_auth))
+    } else {
+        (None, None)
     };
 
     let client = reqwest::Client::new();
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config
+        .registry
+        .context("no registry configured")?
+        .into_client(client.clone())
+        .await?;
 
     // create and start the service actor
     let service_addr = Service {

@@ -1,12 +1,18 @@
 use dotenv::dotenv;
-use drogue_cloud_service_common::config::ConfigFromEnv;
+use drogue_cloud_service_common::{
+    client::{RegistryConfig, UserAuthClientConfig},
+    config::ConfigFromEnv,
+};
 use drogue_cloud_websocket_integration::{run, Config};
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
-    let config = Config::from_env().unwrap();
+
+    let mut config = Config::from_env().unwrap();
+    config.user_auth = Some(UserAuthClientConfig::from_env().unwrap());
+    config.registry = Some(RegistryConfig::from_env().unwrap());
 
     run(config).await
 }
