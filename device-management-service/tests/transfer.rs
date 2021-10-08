@@ -4,6 +4,7 @@ use crate::common::{call_http, create_app, init, user};
 use actix_cors::Cors;
 use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
 use drogue_cloud_admin_service::apps;
+use drogue_cloud_device_management_service::crud;
 use drogue_cloud_device_management_service::{
     app, endpoints,
     service::{self},
@@ -13,7 +14,6 @@ use drogue_cloud_registry_events::mock::MockEventSender;
 use drogue_cloud_test_common::{client, db};
 use serde_json::json;
 use serial_test::serial;
-use drogue_cloud_device_management_service::crud;
 
 #[actix_rt::test]
 #[serial]
