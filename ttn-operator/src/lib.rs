@@ -6,7 +6,6 @@ mod utils;
 use crate::controller::{app::ApplicationController, device::DeviceController};
 use anyhow::anyhow;
 use async_std::sync::Mutex;
-use drogue_client::registry;
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
 };
@@ -15,11 +14,10 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
-    config::ConfigFromEnv,
+    client::RegistryConfig,
     defaults,
     endpoints::create_endpoint_source,
     health::{HealthServer, HealthServerConfig},
-    openid::TokenConfig,
 };
 use futures::TryFutureExt;
 use serde::Deserialize;
@@ -43,20 +41,6 @@ pub struct Config {
     pub work_queue: WorkQueueConfig,
 
     pub kafka_source: KafkaStreamConfig,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct RegistryConfig {
-    #[serde(default = "defaults::registry_url")]
-    pub url: Url,
-}
-
-impl Default for RegistryConfig {
-    fn default() -> Self {
-        Self {
-            url: defaults::registry_url(),
-        }
-    }
 }
 
 fn is_app_relevant(event: &Event) -> Option<String> {
@@ -99,16 +83,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let client = reqwest::Client::new();
 
-    let registry = registry::v1::Client::new(
-        client.clone(),
-        config.registry.url,
-        Some(
-            TokenConfig::from_env_prefix("REGISTRY")?
-                .amend_with_env()
-                .discover_from(client.clone())
-                .await?,
-        ),
-    );
+    let registry = config.registry.into_client(client.clone()).await?;
 
     let app_processor = BaseController::new(
         config.work_queue.clone(),

@@ -6,8 +6,6 @@ use drogue_cloud_websocket_integration::{run, Config};
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
-
-    // Initialize config from environment variables
     let config = Config::from_env().unwrap();
 
     run(config).await
