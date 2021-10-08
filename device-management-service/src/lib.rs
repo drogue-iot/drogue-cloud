@@ -3,9 +3,19 @@ pub mod service;
 pub mod utils;
 
 use crate::service::management::ManagementService;
+use actix_cors::Cors;
+use actix_web::{middleware::Condition, web, App, HttpServer};
+use anyhow::Context;
+use drogue_cloud_admin_service::apps;
+use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig;
-use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv, health::HealthServer, openid::Authenticator, openid_auth,
+};
+use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
+use futures::TryFutureExt;
 use serde::Deserialize;
+use service::PostgresManagementServiceConfig;
 
 #[derive(Debug)]
 pub struct WebData<S: ManagementService> {
@@ -21,7 +31,7 @@ pub struct Config {
     pub enable_auth: bool,
 
     #[serde(default)]
-    pub health: HealthServerConfig,
+    pub health: Option<HealthServerConfig>,
 
     pub kafka_sender: KafkaSenderConfig,
 }
@@ -80,21 +90,9 @@ macro_rules! app {
                 .wrap(Condition::new($enable_auth, $auth.clone()))
                 .wrap(Cors::permissive());
 
-            let scope = drogue_cloud_device_management_service::crud!(
-                $sender,
-                scope,
-                "",
-                endpoints::apps,
-                app
-            );
+            let scope = crud!($sender, scope, "", endpoints::apps, app);
 
-            let scope = drogue_cloud_device_management_service::crud!(
-                $sender,
-                scope,
-                "apps/{app}/",
-                endpoints::devices,
-                device
-            );
+            let scope = crud!($sender, scope, "apps/{app}/", endpoints::devices, device);
 
             app.service(scope)
         };
@@ -137,4 +135,65 @@ macro_rules! app {
 
         app
     }};
+}
+
+pub async fn run(config: Config) -> anyhow::Result<()> {
+    log::info!("Running device management service!");
+
+    let enable_auth = config.enable_auth;
+
+    let authenticator = if enable_auth {
+        Some(Authenticator::new().await?)
+    } else {
+        None
+    };
+
+    let sender = KafkaEventSender::new(config.kafka_sender)
+        .context("Unable to create Kafka event sender")?;
+
+    let max_json_payload_size = 64 * 1024;
+
+    let service = service::PostgresManagementService::new(
+        PostgresManagementServiceConfig::from_env()?,
+        sender,
+    )?;
+
+    let data = web::Data::new(WebData {
+        authenticator,
+        service: service.clone(),
+    });
+
+    // main server
+
+    let db_service = service.clone();
+    let main = HttpServer::new(move || {
+        let auth = openid_auth!(req -> {
+            req
+            .app_data::<web::Data<WebData<service::PostgresManagementService<KafkaEventSender>>>>()
+            .as_ref()
+            .and_then(|d|d.authenticator.as_ref())
+        });
+        app!(KafkaEventSender, enable_auth, max_json_payload_size, auth)
+            // for the management service
+            .app_data(data.clone())
+            // for the admin service
+            .app_data(web::Data::new(apps::WebData {
+                service: db_service.clone(),
+            }))
+    })
+    .bind(config.bind_addr)?
+    .run();
+
+    // run
+
+    if let Some(health) = config.health {
+        let health = HealthServer::new(health, vec![Box::new(service)]);
+        futures::try_join!(health.run(), main.err_into())?;
+    } else {
+        futures::try_join!(main)?;
+    }
+
+    // exiting
+
+    Ok(())
 }
