@@ -10,9 +10,9 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    let mut config = Config::from_env().unwrap();
-    config.user_auth = Some(UserAuthClientConfig::from_env().unwrap());
-    config.registry = Some(RegistryConfig::from_env().unwrap());
+    let mut config = Config::from_env()?;
+    config.user_auth = Some(UserAuthClientConfig::from_env()?);
+    config.registry = Some(RegistryConfig::from_env()?);
 
     run(config).await
 }

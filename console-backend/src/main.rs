@@ -11,10 +11,10 @@ use drogue_cloud_service_common::{
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let mut config = Config::from_env().unwrap();
+    let mut config = Config::from_env()?;
 
-    config.user_auth = Some(UserAuthClientConfig::from_env().unwrap());
-    config.registry = Some(RegistryConfig::from_env().unwrap());
+    config.user_auth = Some(UserAuthClientConfig::from_env()?);
+    config.registry = Some(RegistryConfig::from_env()?);
     config.console_token_config = TokenConfig::from_env_prefix("UI")
         .context("Failed to find console token config")?
         .amend_with_env();

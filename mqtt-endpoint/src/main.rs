@@ -6,6 +6,6 @@ use drogue_cloud_service_common::config::ConfigFromEnv;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
     dotenv().ok();
-    let config = Config::from_env().unwrap();
+    let config = Config::from_env()?;
     run(config).await
 }

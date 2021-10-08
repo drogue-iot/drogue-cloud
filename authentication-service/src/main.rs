@@ -8,12 +8,8 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // Initialize config from environment variables
-    let config = Config::from_env()
-        .map(|mut c| {
-            c.auth_service_config = AuthenticationServiceConfig::from_env().unwrap();
-            c
-        })
-        .unwrap();
+    let mut config = Config::from_env()?;
+    config.auth_service_config = Some(AuthenticationServiceConfig::from_env()?);
 
     run(config).await
 }

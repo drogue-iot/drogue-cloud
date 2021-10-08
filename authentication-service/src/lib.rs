@@ -3,6 +3,7 @@ pub mod service;
 
 use crate::service::PostgresAuthenticationService;
 use actix_web::{web, App, HttpServer};
+use anyhow::Context;
 use drogue_cloud_service_api::health::HealthChecked;
 use drogue_cloud_service_common::openid_auth;
 use drogue_cloud_service_common::{
@@ -31,7 +32,8 @@ pub struct Config {
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
 
-    pub auth_service_config: AuthenticationServiceConfig,
+    #[serde(default)]
+    pub auth_service_config: Option<AuthenticationServiceConfig>,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -67,9 +69,12 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         None
     };
 
+    let auth_service_config = config
+        .auth_service_config
+        .context("database config not found")?;
     let data = web::Data::new(WebData {
         authenticator,
-        service: service::PostgresAuthenticationService::new(config.auth_service_config)?,
+        service: service::PostgresAuthenticationService::new(auth_service_config)?,
     });
 
     let data_service = data.service.clone();
