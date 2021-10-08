@@ -11,9 +11,9 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // Initialize config from environment variables
-    let mut config = Config::from_env().unwrap();
-    config.user_auth = Some(UserAuthClientConfig::from_env().unwrap());
-    config.registry = Some(RegistryConfig::from_env().unwrap());
+    let mut config = Config::from_env()?;
+    config.user_auth = Some(UserAuthClientConfig::from_env()?);
+    config.registry = Some(RegistryConfig::from_env()?);
 
     run(config).await
 }
