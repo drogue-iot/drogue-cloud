@@ -13,6 +13,7 @@ use drogue_cloud_registry_events::mock::MockEventSender;
 use drogue_cloud_test_common::{client, db};
 use serde_json::json;
 use serial_test::serial;
+use drogue_cloud_device_management_service::crud;
 
 #[actix_rt::test]
 #[serial]
