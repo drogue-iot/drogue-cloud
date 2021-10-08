@@ -1,4 +1,4 @@
-use crate::{defaults, openid::TokenConfig};
+use crate::{config::ConfigFromEnv, defaults, openid::TokenConfig};
 use drogue_client::{
     error::ClientError,
     openid::{OpenIdTokenProvider, TokenInjector},
@@ -9,7 +9,7 @@ use drogue_cloud_service_api::auth::user::{
     authz::{AuthorizationRequest, AuthorizationResponse},
 };
 use reqwest::{Response, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use url::Url;
 
 /// A client for authorizing user requests.
@@ -21,16 +21,22 @@ pub struct UserAuthClient {
     token_provider: Option<OpenIdTokenProvider>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct UserAuthClientConfig {
     #[serde(default = "defaults::user_auth_url")]
     pub url: Url,
+
+    #[serde(default)]
+    pub token_config: Option<TokenConfig>,
 }
 
 impl Default for UserAuthClientConfig {
     fn default() -> Self {
         Self {
             url: defaults::user_auth_url(),
+            token_config: TokenConfig::from_env_prefix("USER_AUTH")
+                .map(|v| v.amend_with_env())
+                .ok(),
         }
     }
 }
@@ -53,13 +59,13 @@ impl UserAuthClient {
     pub async fn from_config(
         client: reqwest::Client,
         config: UserAuthClientConfig,
-        provider_config: TokenConfig,
     ) -> anyhow::Result<Self> {
-        Self::new(
-            client.clone(),
-            config.url,
-            Some(provider_config.discover_from(client).await?),
-        )
+        let token_provider = if let Some(config) = config.token_config {
+            Some(config.discover_from(client.clone()).await?)
+        } else {
+            None
+        };
+        Self::new(client, config.url, token_provider)
     }
 
     pub async fn authenticate_api_key(

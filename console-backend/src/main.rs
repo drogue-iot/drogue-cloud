@@ -1,11 +1,18 @@
+use anyhow::Context;
 use drogue_cloud_console_backend::{run, Config};
-use drogue_cloud_service_common::{config::ConfigFromEnv, endpoints::create_endpoint_source};
+use drogue_cloud_service_common::{
+    config::ConfigFromEnv, endpoints::create_endpoint_source, openid::TokenConfig,
+};
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let config = Config::from_env().unwrap();
+    let mut config = Config::from_env().unwrap();
+
+    config.console_token_config = TokenConfig::from_env_prefix("UI")
+        .context("Failed to find console token config")?
+        .amend_with_env();
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;

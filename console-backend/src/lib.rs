@@ -10,21 +10,18 @@ mod forward;
 use crate::auth::OpenIdClient;
 use actix_cors::Cors;
 use actix_web::{
-    get,
-    middleware::{self, Condition},
+    get, middleware,
     web::{self},
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
-use anyhow::{anyhow, Context};
-use drogue_client::registry;
+use anyhow::Context;
 use drogue_cloud_api_key_service::{
     endpoints as keys,
     service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
 };
 use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
-    client::{UserAuthClient, UserAuthClientConfig},
-    config::ConfigFromEnv,
+    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
     openid::{Authenticator, TokenConfig},
@@ -34,7 +31,6 @@ use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
 use serde::Deserialize;
-use url::Url;
 
 #[get("/")]
 async fn index(
@@ -57,9 +53,15 @@ pub struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::health_bind_addr")]
     pub health_bind_addr: String,
-    #[serde(default = "defaults::enable_auth")]
-    pub enable_auth: bool,
+
     pub kafka: KafkaClientConfig,
+
+    pub keycloak: KeycloakApiKeyServiceConfig,
+
+    #[serde(default)]
+    pub health: Option<HealthServerConfig>,
+
+    pub console_token_config: TokenConfig,
 
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
@@ -67,10 +69,8 @@ pub struct Config {
     #[serde(default)]
     pub user_auth: UserAuthClientConfig,
 
-    pub keycloak: KeycloakApiKeyServiceConfig,
-
     #[serde(default)]
-    pub health: Option<HealthServerConfig>,
+    pub registry: RegistryConfig,
 
     #[serde(default)]
     pub disable_account_url: bool,
@@ -88,24 +88,16 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     // OpenIdConnect
 
-    let enable_auth = config.enable_auth;
     let app_config = config.clone();
 
-    log::info!("Authentication enabled: {}", enable_auth);
-
-    let (openid_client, user_auth, authenticator) = if enable_auth {
+    let (openid_client, user_auth, authenticator) = {
         let client = reqwest::Client::new();
-        let ui_client = TokenConfig::from_env_prefix("UI")?
-            .amend_with_env()
+        let ui_client = config
+            .console_token_config
             .into_client(client.clone(), endpoints.redirect_url.clone())
             .await?;
 
-        let user_auth = UserAuthClient::from_config(
-            client,
-            config.user_auth,
-            TokenConfig::from_env_prefix("USER_AUTH")?.amend_with_env(),
-        )
-        .await?;
+        let user_auth = UserAuthClient::from_config(client, config.user_auth).await?;
 
         let account_url = match config.disable_account_url {
             true => None,
@@ -131,8 +123,6 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             Some(web::Data::new(user_auth)),
             Some(web::Data::new(Authenticator::new().await?)),
         )
-    } else {
-        (None, None, None)
     };
 
     let openid_client = openid_client.map(web::Data::new);
@@ -145,23 +135,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let client = reqwest::Client::new();
 
-    let registry = registry::v1::Client::new(
-        client.clone(),
-        Url::parse(
-            &endpoints
-                .registry
-                .as_ref()
-                .map(|r| &r.url)
-                .ok_or_else(|| anyhow!("Missing registry URL"))?,
-        )?,
-        Some(
-            TokenConfig::from_env_prefix("REGISTRY")?
-                .amend_with_env()
-                .discover_from(client.clone())
-                .await
-                .context("Failed to create registry client")?,
-        ),
-    );
+    let registry = config.registry.into_client(client.clone()).await?;
 
     // upstream API url
     #[cfg(feature = "forward")]
@@ -206,7 +180,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(
                 web::scope("/api/keys/v1alpha1")
-                    .wrap(Condition::new(enable_auth, auth.clone()))
+                    .wrap(auth.clone())
                     .service(
                         web::resource("")
                             .route(web::post().to(keys::create::<KeycloakApiKeyService>))
@@ -219,7 +193,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             )
             .service(
                 web::scope("/api/admin/v1alpha1")
-                    .wrap(Condition::new(enable_auth, auth.clone()))
+                    .wrap(auth.clone())
                     .service(web::resource("/user/whoami").route(web::get().to(admin::whoami))),
             )
             // everything from here on is unauthenticated or not using the middleware
@@ -227,7 +201,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                 web::scope("/api/console/v1alpha1")
                     .service(
                         web::resource("/info")
-                            .wrap(Condition::new(enable_auth, auth.clone()))
+                            .wrap(auth.clone())
                             .route(web::get().to(info::get_info)),
                     )
                     .service(auth::login)

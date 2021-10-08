@@ -1,9 +1,11 @@
 //! Clients for services.
 
 mod device_auth;
+mod registry_auth;
 mod user_auth;
 
 pub use device_auth::*;
+pub use registry_auth::*;
 pub use user_auth::*;
 
 use drogue_client::error::{ClientError, ErrorInformation};
