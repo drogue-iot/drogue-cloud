@@ -14,6 +14,7 @@ use actix_web::{
     test, web, App, Error,
 };
 use drogue_cloud_admin_service::apps;
+use drogue_cloud_device_management_service::crud;
 use drogue_cloud_device_management_service::{
     app, endpoints,
     service::{self},

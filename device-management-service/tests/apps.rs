@@ -18,6 +18,7 @@ use maplit::hashmap;
 use serde_json::json;
 use serial_test::serial;
 use std::collections::HashMap;
+use drogue_cloud_device_management_service::crud;
 
 #[actix_rt::test]
 #[serial]
