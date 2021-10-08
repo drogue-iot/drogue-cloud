@@ -32,5 +32,5 @@ url = "2"
 
 drogue-client = "0.7.1"
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-cloud-integration-common = { path = "../integration-common" }
+drogue-cloud-integration-common = { path = "../integration-common", features = ["actix-web"] }
 drogue-cloud-service-api = { path = "../service-api" }

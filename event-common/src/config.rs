@@ -50,7 +50,7 @@ impl Deref for KafkaConfig {
 
 #[inline]
 pub fn kafka_bootstrap_servers() -> String {
-    "drogue-iot-kafka-bootstrap:9092".into()
+    "127.0.0.1:9092".into()
 }
 
 #[cfg(test)]
