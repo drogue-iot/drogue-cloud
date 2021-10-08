@@ -9,10 +9,8 @@ use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig;
-use drogue_cloud_service_common::{
-    config::ConfigFromEnv, health::HealthServer, openid::Authenticator, openid_auth,
-};
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
+use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator, openid_auth};
 use futures::TryFutureExt;
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;

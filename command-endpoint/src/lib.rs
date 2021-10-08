@@ -2,6 +2,7 @@ mod v1alpha1;
 
 use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
+use anyhow::Context;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_common::{
     defaults,
@@ -27,13 +28,13 @@ pub struct Config {
     pub enable_api_keys: bool,
 
     #[serde(default)]
-    pub registry: RegistryConfig,
+    pub registry: Option<RegistryConfig>,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
     #[serde(default)]
-    pub user_auth: UserAuthClientConfig,
+    pub user_auth: Option<UserAuthClientConfig>,
 }
 
 #[derive(Debug)]
@@ -57,15 +58,21 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // set up authentication
 
-    let (authenticator, user_auth) = {
+    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
         let client = reqwest::Client::new();
         let authenticator = Authenticator::new().await?;
-        let user_auth = UserAuthClient::from_config(client, config.user_auth).await?;
+        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
         (Some(authenticator), Some(user_auth))
+    } else {
+        (None, None)
     };
 
     let client = reqwest::Client::new();
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config
+        .registry
+        .context("no registry configured")?
+        .into_client(client.clone())
+        .await?;
 
     // main server
 

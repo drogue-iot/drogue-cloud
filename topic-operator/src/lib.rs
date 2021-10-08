@@ -37,7 +37,7 @@ pub struct Config {
     pub bind_addr: String,
 
     #[serde(default)]
-    pub registry: RegistryConfig,
+    pub registry: Option<RegistryConfig>,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -96,8 +96,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // client
 
     let client = reqwest::Client::new();
-
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config
+        .registry
+        .context("no registry configured")?
+        .into_client(client.clone())
+        .await?;
 
     // controller
 

@@ -4,7 +4,7 @@ pub mod service;
 use crate::service::PostgresAuthenticationService;
 use actix_web::{web, App, HttpServer};
 use drogue_cloud_service_api::health::HealthChecked;
-use drogue_cloud_service_common::{config::ConfigFromEnv, openid_auth};
+use drogue_cloud_service_common::openid_auth;
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
@@ -30,6 +30,8 @@ pub struct Config {
     pub max_json_payload_size: usize,
     #[serde(default = "defaults::enable_auth")]
     pub enable_auth: bool,
+
+    pub auth_service_config: AuthenticationServiceConfig,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -67,9 +69,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let data = web::Data::new(WebData {
         authenticator,
-        service: service::PostgresAuthenticationService::new(
-            AuthenticationServiceConfig::from_env()?,
-        )?,
+        service: service::PostgresAuthenticationService::new(config.auth_service_config)?,
     });
 
     let data_service = data.service.clone();

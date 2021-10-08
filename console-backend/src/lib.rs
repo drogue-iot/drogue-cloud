@@ -67,10 +67,10 @@ pub struct Config {
     pub scopes: String,
 
     #[serde(default)]
-    pub user_auth: UserAuthClientConfig,
+    pub user_auth: Option<UserAuthClientConfig>,
 
     #[serde(default)]
-    pub registry: RegistryConfig,
+    pub registry: Option<RegistryConfig>,
 
     #[serde(default)]
     pub disable_account_url: bool,
@@ -90,14 +90,14 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let app_config = config.clone();
 
-    let (openid_client, user_auth, authenticator) = {
+    let (openid_client, user_auth, authenticator) = if let Some(user_auth) = config.user_auth {
         let client = reqwest::Client::new();
         let ui_client = config
             .console_token_config
             .into_client(client.clone(), endpoints.redirect_url.clone())
             .await?;
 
-        let user_auth = UserAuthClient::from_config(client, config.user_auth).await?;
+        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
 
         let account_url = match config.disable_account_url {
             true => None,
@@ -123,6 +123,8 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             Some(web::Data::new(user_auth)),
             Some(web::Data::new(Authenticator::new().await?)),
         )
+    } else {
+        (None, None, None)
     };
 
     let openid_client = openid_client.map(web::Data::new);
@@ -134,8 +136,11 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
     });
 
     let client = reqwest::Client::new();
-
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config
+        .registry
+        .context("no registry configured")?
+        .into_client(client.clone())
+        .await?;
 
     // upstream API url
     #[cfg(feature = "forward")]

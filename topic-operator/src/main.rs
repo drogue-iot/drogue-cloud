@@ -1,5 +1,5 @@
 use dotenv::dotenv;
-use drogue_cloud_service_common::config::ConfigFromEnv;
+use drogue_cloud_service_common::{client::RegistryConfig, config::ConfigFromEnv};
 use drogue_cloud_topic_operator::{run, Config};
 
 #[actix::main]
@@ -8,7 +8,8 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // Initialize config from environment variables
-    let config = Config::from_env().unwrap();
+    let mut config = Config::from_env().unwrap();
+    config.registry = Some(RegistryConfig::from_env().unwrap());
 
     run(config).await
 }
