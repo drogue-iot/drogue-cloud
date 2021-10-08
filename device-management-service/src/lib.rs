@@ -31,6 +31,9 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
+    #[serde(default)]
+    pub database_config: Option<PostgresManagementServiceConfig>,
+
     pub kafka_sender: KafkaSenderConfig,
 }
 
@@ -152,7 +155,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let max_json_payload_size = 64 * 1024;
 
     let service = service::PostgresManagementService::new(
-        PostgresManagementServiceConfig::from_env()?,
+        config
+            .database_config
+            .context("unable to find database config")?,
         sender,
     )?;
 
