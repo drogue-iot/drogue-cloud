@@ -163,10 +163,6 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         ),
     );
 
-    // health server
-
-    let health = HealthServer::new(config.health, vec![]);
-
     // upstream API url
     #[cfg(feature = "forward")]
     let forward_url = std::env::var("UPSTREAM_API_URL")
