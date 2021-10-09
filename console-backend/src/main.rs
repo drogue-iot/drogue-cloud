@@ -15,9 +15,11 @@ async fn main() -> anyhow::Result<()> {
 
     config.user_auth = Some(UserAuthClientConfig::from_env()?);
     config.registry = Some(RegistryConfig::from_env()?);
-    config.console_token_config = TokenConfig::from_env_prefix("UI")
-        .context("Failed to find console token config")?
-        .amend_with_env();
+    config.console_token_config = Some(
+        TokenConfig::from_env_prefix("UI")
+            .context("Failed to find console token config")?
+            .amend_with_env(),
+    );
 
     // the endpoint source we choose
     let endpoint_source = create_endpoint_source()?;

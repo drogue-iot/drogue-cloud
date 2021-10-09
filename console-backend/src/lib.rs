@@ -51,8 +51,6 @@ async fn index(
 pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[serde(default = "defaults::health_bind_addr")]
-    pub health_bind_addr: String,
 
     pub kafka: KafkaClientConfig,
 
@@ -61,7 +59,8 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
-    pub console_token_config: TokenConfig,
+    #[serde(default)]
+    pub console_token_config: Option<TokenConfig>,
 
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
@@ -92,8 +91,10 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let (openid_client, user_auth, authenticator) = if let Some(user_auth) = config.user_auth {
         let client = reqwest::Client::new();
-        let ui_client = config
+        let console_token_config = config
             .console_token_config
+            .context("unable to find console token config")?;
+        let ui_client = console_token_config
             .into_client(client.clone(), endpoints.redirect_url.clone())
             .await?;
 
