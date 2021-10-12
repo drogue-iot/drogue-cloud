@@ -20,8 +20,6 @@ pub enum Pages {
     },
     #[to = "/"]
     Index,
-    #[to = "/transfer/{name}/"]
-    Ownership(String),
 }
 
 #[derive(Switch, Debug, Clone, PartialEq, Eq)]
