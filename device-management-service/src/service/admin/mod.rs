@@ -47,14 +47,27 @@ where
 
         ensure_with(&app, identity, Permission::Owner, || ServiceError::NotFound)?;
 
+        // retrieve the new user ID from keycloak
+        let new_user = match self
+            .keycloak
+            .id_from_username(transfer.new_user.as_str())
+            .await
+        {
+            Ok(u) => u,
+            // If the username does not exist in keycloak it's an error !
+            Err(_) => {
+                return Err(ServiceError::BadRequest(format!(
+                    "Username {} does not exist",
+                    transfer.new_user
+                ))
+                .into());
+            }
+        };
+
         // make the change
 
         accessor
-            .update_transfer(
-                app.name,
-                identity.user_id().map(Into::into),
-                Some(transfer.new_user),
-            )
+            .update_transfer(app.name, identity.user_id().map(Into::into), Some(new_user))
             .await?;
 
         // commit
