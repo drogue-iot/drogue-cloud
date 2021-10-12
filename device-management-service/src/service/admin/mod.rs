@@ -64,6 +64,12 @@ where
             }
         };
 
+        log::debug!(
+            "Initiate transfer - new transfer owner: {}, identity: {:?}",
+            &new_user,
+            identity.user_id()
+        );
+
         // make the change
 
         accessor

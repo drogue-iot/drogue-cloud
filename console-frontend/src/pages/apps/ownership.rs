@@ -6,6 +6,9 @@ use crate::{
     pages::apps::{DetailsSection, Pages},
 };
 use patternfly_yew::*;
+use std::time::Duration;
+use yew::services::timeout::TimeoutTask;
+use yew::services::TimeoutService;
 use yew::{format::*, prelude::*, services::fetch::*};
 use yew_router::{agent::RouteRequest, prelude::*};
 
@@ -18,6 +21,7 @@ pub struct Props {
 pub enum Msg {
     Load,
     Error(String),
+    Success,
     Done,
 }
 
@@ -26,6 +30,7 @@ pub struct Ownership {
     link: ComponentLink<Self>,
 
     fetch_task: Option<FetchTask>,
+    timeout: Option<TimeoutTask>,
 }
 
 impl Component for Ownership {
@@ -38,6 +43,7 @@ impl Component for Ownership {
             props,
             link,
             fetch_task: None,
+            timeout: None,
         }
     }
 
@@ -56,6 +62,26 @@ impl Component for Ownership {
                     details: DetailsSection::Overview,
                 })),
             )),
+            Msg::Success => {
+                ToastDispatcher::default().toast(Toast {
+                    title: "Success !".into(),
+                    body: html! {<>
+                        <Content>
+                        <p>{"Ownership transfer completed. You are now the owner of this app."}</p>
+                        </Content>
+                    </>},
+                    r#type: Type::Success,
+                    ..Default::default()
+                });
+
+                // Set a timeout before leaving the page.
+                let handle = TimeoutService::spawn(
+                    Duration::from_secs(3),
+                    self.link.callback(|_| Msg::Done),
+                );
+                // Keep the task or timer will be cancelled
+                self.timeout = Some(handle);
+            }
         };
         true
     }
@@ -78,27 +104,18 @@ impl Component for Ownership {
 }
 
 impl Ownership {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
+    fn load(&mut self) -> Result<FetchTask, anyhow::Error> {
         self.props.backend.info.request(
             Method::PUT,
-            url_encode(
-            format!("/api/admin/v1alpha1/apps/{}/accept-ownership", self.props.name)),
+            format!(
+                "/api/admin/v1alpha1/apps/{}/accept-ownership",
+                url_encode(&self.props.name)
+            ),
             Nothing,
             vec![],
-            self.link.callback( move |response: Response<Text>| match response.status() {
-                    StatusCode::NO_CONTENT => {
-                        ToastDispatcher::default().toast(Toast {
-                            title: "Success !".into(),
-                            body: html! {<>
-                                <Content>
-                                <p>{"Ownership transfer completed. You are now the owner of this app."}</p>
-                                </Content>
-                            </>},
-                            r#type: Type::Success,
-                            ..Default::default()
-                        });
-                        Msg::Done
-                    }
+            self.link
+                .callback(move |response: Response<Text>| match response.status() {
+                    StatusCode::NO_CONTENT => Msg::Success,
                     status => Msg::Error(format!(
                         "Failed to submit: Code {}. {}",
                         status,
@@ -107,8 +124,7 @@ impl Ownership {
                             .as_ref()
                             .unwrap_or(&"Unknown error.".to_string())
                     )),
-                },
-            ),
+                }),
         )
     }
 }

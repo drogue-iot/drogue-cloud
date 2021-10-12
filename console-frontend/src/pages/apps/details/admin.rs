@@ -22,6 +22,8 @@ pub struct Admin {
     new_member_role: Role,
 
     new_owner: String,
+
+    stop: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -47,6 +49,7 @@ pub enum Msg {
     TransferOwner,
     Error(String),
     Reset,
+    Stop(String),
 }
 
 #[derive(Clone, Debug)]
@@ -103,6 +106,7 @@ impl Component for Admin {
             new_member_id: Default::default(),
             new_member_role: Role::Reader,
             new_owner: Default::default(),
+            stop: false,
         }
     }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -153,12 +157,19 @@ impl Component for Admin {
             Msg::Reset => {
                 self.reset();
             }
+            Msg::Stop(msg) => {
+                error("Error", msg);
+                self.stop = true;
+                return false;
+            }
         }
         true
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
+        if self.stop {
+            true
+        } else if self.props != props {
             self.props = props;
             true
         } else {
@@ -275,11 +286,16 @@ impl Admin {
             vec![],
             self.link.callback(
                 move |response: Response<Json<Result<Members, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
+                    .status()
                 {
-                    Ok(content) => Msg::SetMembers(content),
-                    Err(err) => Msg::Error(err.to_string()),
+                    StatusCode::OK => match response.into_body().0 {
+                        Ok(content) => Msg::SetMembers(content),
+                        Err(err) => Msg::Error(err.to_string()),
+                    },
+                    StatusCode::NOT_FOUND => {
+                        Msg::Stop("You are not an administrator for this app".to_string())
+                    }
+                    status => Msg::Error(format!("Failed to fetch members. {}", status)),
                 },
             ),
         )
@@ -335,7 +351,7 @@ impl Admin {
             .endpoints
             .console
             .clone()
-            .map(|console| format!("{}/apps/transfer/{}", console, self.props.name))
+            .map(|console| format!("{}/transfer/{}", console, self.props.name))
             .unwrap_or_else(|| "Error while creating the link".into());
 
         self.props.backend.info.request(
@@ -407,7 +423,7 @@ impl Users {
             managers,
             readers,
             admin,
-            resource_version: members.resource_version.unwrap().clone(),
+            resource_version: members.resource_version.unwrap_or_default(),
         }
     }
 

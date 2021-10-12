@@ -22,6 +22,8 @@ pub enum AppRoute {
     ApiKeys,
     #[to = "/token"]
     CurrentToken,
+    #[to = "/transfer/{name}"]
+    Ownership(String),
     #[to = "/apps{*}"]
     Applications(pages::apps::Pages),
     #[to = "/devices{*}"]
@@ -252,9 +254,9 @@ impl Component for AppPage {
                                         name=url_decode(&name)
                                         details=details
                                     />},
-                                    AppRoute::Applications(pages::apps::Pages::Ownership(name)) => html!{<pages::apps::ownership::Ownership
+                                    AppRoute::Ownership(id) => html!{<pages::apps::ownership::Ownership
                                         backend=backend.clone()
-                                        name=url_decode(&name)
+                                        name=url_decode(&id)
                                     />},
                                     AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
                                         app=app.to_string()
