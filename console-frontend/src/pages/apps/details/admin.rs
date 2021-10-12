@@ -10,6 +10,8 @@ use indexmap::IndexMap;
 use patternfly_yew::*;
 use yew::{format::*, prelude::*, services::fetch::*, Html};
 
+use serde_json::json;
+
 pub struct Admin {
     props: Props,
     fetch: Option<FetchTask>,
@@ -18,6 +20,8 @@ pub struct Admin {
     members: Option<Users>,
     new_member_id: String,
     new_member_role: Role,
+
+    new_owner: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -39,6 +43,8 @@ pub enum Msg {
     SaveMembers,
     NewMemberRole(Role),
     NewMemberId(String),
+    NewOwner(String),
+    TransferOwner,
     Error(String),
     Reset,
 }
@@ -96,6 +102,7 @@ impl Component for Admin {
             members: None,
             new_member_id: Default::default(),
             new_member_role: Role::Reader,
+            new_owner: Default::default(),
         }
     }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -132,6 +139,12 @@ impl Component for Admin {
 
             Msg::NewMemberId(id) => self.new_member_id = id,
             Msg::NewMemberRole(role) => self.new_member_role = role,
+
+            Msg::NewOwner(id) => self.new_owner = id,
+            Msg::TransferOwner => match self.transfer() {
+                Ok(task) => self.fetch = Some(task),
+                Err(err) => error("Failed to transfer app", err),
+            },
 
             Msg::Error(msg) => {
                 error("Error", msg);
@@ -223,12 +236,25 @@ impl Component for Admin {
                         </ActionGroup>
                     </Form>
                  </Card>
-                // <Card title={html!{"Transfer Ownership"}}>
-                    // TODO
-                    // open a modal ? Or simply a form ?
-                    // think about how we accept incoming requests.
-                    // Need a new API call to list pending requests.
-                // </Card>
+                <Card title={html!{"Transfer application ownership"}}>
+                   <Toolbar>
+                        <ToolbarGroup>
+                            <ToolbarItem>
+                                <TextInput
+                                    onchange=self.link.callback(|user|Msg::NewOwner(user))
+                                    placeholder="Username"/>
+                            </ToolbarItem>
+                            <ToolbarItem>
+                                    <Button
+                                            label="Transfer"
+                                            icon=Icon::CheckCircle
+                                            variant=Variant::Primary
+                                            onclick=self.link.callback(|_|Msg::TransferOwner)
+                                    />
+                            </ToolbarItem>
+                        </ToolbarGroup>
+                </Toolbar>
+                </Card>
                 </PageSection>
             };
         } else {
@@ -300,6 +326,56 @@ impl Admin {
     fn reset(&mut self) {
         self.fetch = None;
         self.link.send_message(Msg::LoadMembers);
+    }
+
+    fn transfer(&self) -> Result<FetchTask, anyhow::Error> {
+        let payload = json!({ "newUser": self.new_owner });
+        let link = self
+            .props
+            .endpoints
+            .console
+            .clone()
+            .map(|console| format!("{}/apps/transfer/{}", console, self.props.name))
+            .unwrap_or_else(|| "Error while creating the link".into());
+
+        self.props.backend.info.request(
+            Method::PUT,
+            format!(
+                "/api/admin/v1alpha1/apps/{}/transfer-ownership",
+                url_encode(&self.props.name)
+            ),
+            Json(&payload),
+            vec![("Content-Type", "application/json")],
+            self.link
+                .callback(move |response: Response<Text>| match response.status() {
+                    StatusCode::ACCEPTED => {
+                        ToastDispatcher::default().toast(Toast {
+                            title: "Success !".into(),
+                            body: html! {<>
+                                <Content>
+                                <p>{"Ownership transfer initiated. Share this link with the user:"}</p>
+                                <p>
+                                    <Clipboard value=link.clone()
+                                        readonly=true
+                                    />
+                                </p>
+                                </Content>
+                            </>},
+                            r#type: Type::Success,
+                            ..Default::default()
+                        });
+                        Msg::Reset
+                    }
+                    status => Msg::Error(format!(
+                        "Failed to submit: Code {}. {}",
+                        status,
+                        response
+                            .body()
+                            .as_ref()
+                            .unwrap_or(&"Unknown error.".to_string())
+                    )),
+                }),
+        )
     }
 }
 

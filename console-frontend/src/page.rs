@@ -252,6 +252,10 @@ impl Component for AppPage {
                                         name=url_decode(&name)
                                         details=details
                                     />},
+                                    AppRoute::Applications(pages::apps::Pages::Ownership(name)) => html!{<pages::apps::ownership::Ownership
+                                        backend=backend.clone()
+                                        name=url_decode(&name)
+                                    />},
                                     AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
                                         app=app.to_string()
                                         backend=backend.clone()
