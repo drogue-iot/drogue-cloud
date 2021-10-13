@@ -39,18 +39,18 @@ impl Auth {
         credentials: Credentials,
     ) -> Result<UserInformation, ServiceError> {
         if let (Some(_), Some(_)) = (&self.auth_n, &self.auth_z) {
-            let authentication_result = self.authenticate(credentials).await?;
+            let authentication_result = self.authenticate(credentials).await;
 
-            // if no permission is specified, we skip the AuthZ process
-            if let Some(permission) = self.permission {
-                self.authorize(application, &authentication_result, permission)
-                    .await
-                    .map(|_| authentication_result)
-            } else {
-                Ok(authentication_result)
+            match self.permission {
+                Some(permission) => {
+                    self.authorize(application, authentication_result?, permission)
+                        .await
+                }
+                // no permission is specified, skip the AuthZ process
+                None => authentication_result,
             }
 
-            //authentication disabled
+        //authentication disabled
         } else {
             Ok(UserInformation::Anonymous)
         }
@@ -110,9 +110,9 @@ impl Auth {
     async fn authorize(
         &self,
         application: String,
-        user: &UserInformation,
+        user: UserInformation,
         permission: Permission,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<UserInformation, ServiceError> {
         log::debug!(
             "Authorizing - user: {:?}, app: {}, permission: {:?}",
             user,
@@ -139,7 +139,7 @@ impl Auth {
         log::debug!("Outcome: {:?}", response);
 
         match response.outcome {
-            authz::Outcome::Allow => Ok(()),
+            authz::Outcome::Allow => Ok(user),
             authz::Outcome::Deny => Err(ServiceError::InvalidRequest(String::from("Unauthorized"))),
         }
     }
