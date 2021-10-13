@@ -54,7 +54,7 @@ macro_rules! test {
         let $outbox = outbox;
 
         let $app = actix_web::test::init_service(
-            app!(MockEventSender, false, 16 * 1024, auth)
+            app!(MockEventSender, 16 * 1024, auth)
                 // for the management service
                 .app_data(data.clone())
                 // for the admin service

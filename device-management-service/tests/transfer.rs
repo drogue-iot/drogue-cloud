@@ -2,7 +2,7 @@ mod common;
 
 use crate::common::{call_http, create_app, init, user};
 use actix_cors::Cors;
-use actix_web::{http::StatusCode, middleware::Condition, test, web, App};
+use actix_web::{http::StatusCode, test, web, App};
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_device_management_service::crud;
 use drogue_cloud_device_management_service::{

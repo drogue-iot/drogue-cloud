@@ -10,7 +10,6 @@ use actix_web::{
     body::MessageBody,
     dev::{Service, ServiceResponse},
     http::StatusCode,
-    middleware::Condition,
     test, web, App, Error,
 };
 use drogue_cloud_admin_service::apps;
