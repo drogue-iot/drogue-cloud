@@ -153,19 +153,17 @@ jobs:
     needs: [check, build]
     env:
       CLUSTER: "kind"
+      VERSION_HELM: "v3.6.4"
     steps:
 
       - uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: Install Helm binary
-        run: |
-          mkdir -p "$HOME/.local/bin"
-          curl -sL https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz -o helm.tar.gz
-          tar xzf helm.tar.gz
-          mv linux-amd64/helm "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Set up Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: ${{ env.VERSION_HELM }}
 
       - name: Fetch container images
         uses: actions/download-artifact@v2
