@@ -4,13 +4,15 @@ pub mod utils;
 
 use crate::service::management::ManagementService;
 use actix_cors::Cors;
-use actix_web::{middleware::Condition, web, App, HttpServer};
+use actix_web::{web, App, HttpServer};
 use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig;
+use drogue_cloud_service_common::actix_auth::Auth;
+use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
-use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator, openid_auth};
+use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator};
 use futures::TryFutureExt;
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;
@@ -25,11 +27,15 @@ pub struct WebData<S: ManagementService> {
 pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-    #[serde(default = "defaults::enable_auth")]
-    pub enable_auth: bool,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
+
+    #[serde(default = "defaults::enable_api_keys")]
+    pub enable_api_keys: bool,
+
+    #[serde(default)]
+    pub user_auth: Option<UserAuthClientConfig>,
 
     #[serde(default)]
     pub database_config: Option<PostgresManagementServiceConfig>,
@@ -81,14 +87,14 @@ macro_rules! crud {
 
 #[macro_export]
 macro_rules! app {
-    ($sender:ty, $enable_auth:expr, $max_json_payload_size:expr, $auth:expr) => {{
+    ($sender:ty, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::JsonConfig::default().limit($max_json_payload_size));
 
         let app = {
             let scope = web::scope("/api/registry/v1alpha1")
-                .wrap(Condition::new($enable_auth, $auth.clone()))
+                .wrap($auth.clone())
                 .wrap(Cors::permissive());
 
             let scope = crud!($sender, scope, "", endpoints::apps, app);
@@ -101,7 +107,7 @@ macro_rules! app {
         let app =
             {
                 let scope = web::scope("/api/admin/v1alpha1")
-                    .wrap(Condition::new($enable_auth, $auth))
+                    .wrap($auth)
                     .wrap(Cors::permissive());
 
                 let scope = scope.service(
@@ -141,12 +147,17 @@ macro_rules! app {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Running device management service!");
 
-    let enable_auth = config.enable_auth;
+    let enable_api_keys = config.enable_api_keys;
 
-    let authenticator = if enable_auth {
-        Some(Authenticator::new().await?)
+    // set up authentication
+
+    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
+        let client = reqwest::Client::new();
+        let authenticator = Authenticator::new().await?;
+        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
+        (Some(authenticator), Some(user_auth))
     } else {
-        None
+        (None, None)
     };
 
     let sender = KafkaEventSender::new(config.kafka_sender)
@@ -162,7 +173,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     )?;
 
     let data = web::Data::new(WebData {
-        authenticator,
+        authenticator: authenticator.clone(),
         service: service.clone(),
     });
 
@@ -170,13 +181,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let db_service = service.clone();
     let main = HttpServer::new(move || {
-        let auth = openid_auth!(req -> {
-            req
-            .app_data::<web::Data<WebData<service::PostgresManagementService<KafkaEventSender>>>>()
-            .as_ref()
-            .and_then(|d|d.authenticator.as_ref())
-        });
-        app!(KafkaEventSender, enable_auth, max_json_payload_size, auth)
+        let auth = Auth {
+            auth_n: authenticator.clone(),
+            auth_z: user_auth.clone(),
+            permission: None,
+            enable_api_key: enable_api_keys,
+        };
+        app!(KafkaEventSender, max_json_payload_size, auth)
             // for the management service
             .app_data(data.clone())
             // for the admin service

@@ -27,7 +27,7 @@ pub struct UsernameAndApiKey {
 pub struct Auth {
     pub auth_n: Option<Authenticator>,
     pub auth_z: Option<UserAuthClient>,
-    pub permission: Permission,
+    pub permission: Option<Permission>,
     pub enable_api_key: bool,
 }
 
@@ -37,15 +37,22 @@ impl Auth {
         &self,
         application: String,
         credentials: Credentials,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<UserInformation, ServiceError> {
         if let (Some(_), Some(_)) = (&self.auth_n, &self.auth_z) {
             let authentication_result = self.authenticate(credentials).await?;
 
-            self.authorize(application, &authentication_result).await
+            // if no permission is specified, we skip the AuthZ process
+            if let Some(permission) = self.permission {
+                self.authorize(application, &authentication_result, permission)
+                    .await
+                    .map(|_| authentication_result)
+            } else {
+                Ok(authentication_result)
+            }
 
             //authentication disabled
         } else {
-            Ok(())
+            Ok(UserInformation::Anonymous)
         }
     }
 
@@ -104,12 +111,13 @@ impl Auth {
         &self,
         application: String,
         user: &UserInformation,
+        permission: Permission,
     ) -> Result<(), ServiceError> {
         log::debug!(
             "Authorizing - user: {:?}, app: {}, permission: {:?}",
             user,
             application,
-            self.permission
+            permission
         );
 
         let response = self
@@ -119,7 +127,7 @@ impl Auth {
             .authorize(
                 AuthorizationRequest {
                     application,
-                    permission: self.permission.clone(),
+                    permission,
                     user_id: user.user_id().map(ToString::to_string),
                     roles: user.roles().clone(),
                 },
