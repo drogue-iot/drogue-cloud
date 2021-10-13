@@ -52,11 +52,21 @@ $(EGEN)/ca-bundle.pem: $(EGEN)/ca-cert.pem $(EGEN)/root-cert.pem
 	chmod a+r $@
 
 $(EGEN)/root-key.pem $(EGEN)/root-cert.pem: $(EBASE)/ca.cnf
-	openssl req -x509 -config "$(EBASE)/ca.cnf" -nodes -newkey rsa:4096 -keyout "$(EGEN)/root-key.pem" -out "$(EGEN)/root-cert.pem" -days 3650 -subj "/O=Drogue IoT/OU=Cloud/CN=Test Authority"
+	# Generate root key and convert to PKCS8
+	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/root-key-ec.pem" 
+	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/root-key-ec.pem" -out "$(EGEN)/root-key.pem"
+
+	# Generate root certificate
+	openssl req -x509 -config "$(EBASE)/ca.cnf" -nodes -new -key "$(EBASE)/root-key.pem" -out "$(EGEN)/root-cert.pem" -days 3650 -subj "/O=Drogue IoT/OU=Cloud/CN=Test Authority"
 	chmod a+r $(EGEN)/root-key.pem $(EGEN)/root-cert.pem
 
 $(EGEN)/ca-cert.req: $(EBASE)/ca.cnf
-	openssl req -config "$(EBASE)/ca.cnf" -reqexts intermediate_ext -nodes -newkey rsa:4096 -keyout "$(EGEN)/ca-key.pem" -subj "/O=Drogue IoT/OU=Cloud/CN=Application" > $(EGEN)/ca-cert.req
+	# Generate CA key and convert to PKCS8
+	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/ca-key-ec.pem" 
+	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/root-key-ec.pem" -out "$(EGEN)/ca-key.pem"
+
+	# Generate CA certificate
+	openssl req -config "$(EBASE)/ca.cnf" -key "$(EBASE)/ca-key.pem" -reqexts intermediate_ext -nodes -subj "/O=Drogue IoT/OU=Cloud/CN=Application" > $(EGEN)/ca-cert.req
 	chmod a+r $@
 
 $(EGEN)/ca-cert.pem: $(EBASE)/ca.cnf $(EGEN)/ca-cert.req $(EGEN)/root-cert.pem $(EGEN)/root-key.pem
@@ -66,7 +76,12 @@ $(EGEN)/ca-cert.pem: $(EBASE)/ca.cnf $(EGEN)/ca-cert.req $(EGEN)/root-cert.pem $
 # endpoint cert
 
 $(EGEN)/%-endpoint.key $(EGEN)/%-endpoint.req: $(EBASE)/ca.cnf
-	openssl req -nodes -newkey rsa:4096 -keyout "$(EGEN)/$*-endpoint.key" -subj "/O=Drogue IoT/OU=Cloud/CN=$* endpoint" -addext "subjectAltName = $(CERT_ALTNAMES)" > $(EGEN)/$*-endpoint.req
+	# Generate key and convert to PKCS8
+	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/$*-endpoint-ec.key"
+	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/$*-endpoint-ec.key" -out "$(EGEN)/$*-endpoint.key"
+
+	# Generate certificate request
+	openssl req -nodes -new -key "$(EGEN)/$*-endpoint.key" -subj "/O=Drogue IoT/OU=Cloud/CN=$* endpoint" -addext "subjectAltName = $(CERT_ALTNAMES)" > $(EGEN)/$*-endpoint.req
 	chmod a+r $(EGEN)/$*-endpoint.key $(EGEN)/$*-endpoint.req
 
 $(EGEN)/%-endpoint.crt: $(EBASE)/ca.cnf $(EGEN)/%-endpoint.key $(EGEN)/%-endpoint.req
