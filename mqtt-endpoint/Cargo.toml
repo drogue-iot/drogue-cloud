@@ -41,6 +41,7 @@ webpki = "0.21"
 
 cloudevents-sdk = "0.4"
 
+drogue-cloud-mqtt-common = { path = "../mqtt-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }

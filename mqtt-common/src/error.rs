@@ -1,4 +1,15 @@
+use ntex::util::ByteString;
 use ntex_mqtt::{v3, v5};
+
+#[derive(Debug, Clone)]
+pub enum PublishError {
+    InternalError(String),
+    QuotaExceeded,
+    NotAuthorized,
+    UnsupportedOperation,
+    PayloadFormatInvalid,
+    UnspecifiedError,
+}
 
 #[derive(Debug)]
 pub enum ServerError {
@@ -6,6 +17,13 @@ pub enum ServerError {
     UnsupportedOperation,
     AuthenticationFailed,
     NotAuthorized,
+    PublishError(PublishError),
+}
+
+impl From<PublishError> for ServerError {
+    fn from(err: PublishError) -> Self {
+        ServerError::PublishError(err)
+    }
 }
 
 impl std::convert::TryFrom<ServerError> for v5::PublishAck {
@@ -20,21 +38,27 @@ pub trait MqttResponse<F, T> {
     fn ack(&self, ack: F) -> T;
 }
 
-impl MqttResponse<v5::PublishAck, v5::PublishAck> for ServerError {
+impl MqttResponse<v5::PublishAck, v5::PublishAck> for PublishError {
     fn ack(&self, ack: v5::PublishAck) -> v5::PublishAck {
         match self {
             Self::InternalError(msg) => ack
-                .reason(msg.clone().into())
+                .reason(msg.as_str().into())
+                .reason_code(v5::codec::PublishAckReason::UnspecifiedError),
+            Self::UnspecifiedError => ack
+                .reason(ByteString::from_static("Unspecified error"))
                 .reason_code(v5::codec::PublishAckReason::UnspecifiedError),
             Self::UnsupportedOperation => ack
-                .reason("Unsupported operation".into())
-                .reason_code(v5::codec::PublishAckReason::ImplementationSpecificError),
-            Self::AuthenticationFailed => ack
-                .reason("Authentication failed".into())
+                .reason(ByteString::from_static("Unsupported operation"))
                 .reason_code(v5::codec::PublishAckReason::ImplementationSpecificError),
             Self::NotAuthorized => ack
-                .reason("Not authorized".into())
+                .reason(ByteString::from_static("Not authorized"))
                 .reason_code(v5::codec::PublishAckReason::NotAuthorized),
+            Self::QuotaExceeded => ack
+                .reason(ByteString::from_static("Quota exceeded"))
+                .reason_code(v5::codec::PublishAckReason::QuotaExceeded),
+            Self::PayloadFormatInvalid => ack
+                .reason(ByteString::from_static("Payload format invalid"))
+                .reason_code(v5::codec::PublishAckReason::PayloadFormatInvalid),
         }
     }
 }
