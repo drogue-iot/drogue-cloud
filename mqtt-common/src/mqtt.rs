@@ -1,4 +1,4 @@
-use crate::error::{MqttResponse, ServerError};
+use crate::error::{MqttResponse, PublishError, ServerError};
 use async_trait::async_trait;
 use ntex::router::Path;
 use ntex::util::{ByteString, Bytes};
@@ -23,14 +23,14 @@ where
 
 #[async_trait(?Send)]
 pub trait Session {
-    async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError>;
+    async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError>;
     async fn subscribe(&self, subscribe: Subscribe<'_>) -> Result<(), ServerError>;
     async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError>;
     async fn closed(&self) -> Result<(), ServerError>;
 }
 
 pub async fn connect_v3<A, Io, S>(
-    connect: v3::Handshake<Io>,
+    mut connect: v3::Handshake<Io>,
     app: A,
 ) -> Result<v3::HandshakeAck<Io, S>, ServerError>
 where
@@ -38,14 +38,14 @@ where
     S: Session,
     Io: Sync + Send,
 {
-    match app.connect(Connect::V3(&connect)).await {
+    match app.connect(Connect::V3(&mut connect)).await {
         Ok(session) => Ok(connect.ack(session, false)),
         Err(_) => Ok(connect.bad_username_or_pwd()),
     }
 }
 
 pub async fn connect_v5<A, Io, S>(
-    connect: v5::Handshake<Io>,
+    mut connect: v5::Handshake<Io>,
     app: A,
 ) -> Result<v5::HandshakeAck<Io, S>, ServerError>
 where
@@ -53,7 +53,7 @@ where
     S: Session,
     Io: Sync + Send,
 {
-    match app.connect(Connect::V5(&connect)).await {
+    match app.connect(Connect::V5(&mut connect)).await {
         Ok(session) => Ok(connect.ack(session).with(|ack| {
             ack.retain_available = Some(false);
             ack.shared_subscription_available = Some(true);
@@ -68,7 +68,9 @@ pub async fn publish_v3<S>(session: v3::Session<S>, publish: v3::Publish) -> Res
 where
     S: Session,
 {
-    session.publish(Publish::V3(&publish)).await
+    // for v3, we ignore the publish error and return a server error
+    session.publish(Publish::V3(&publish)).await?;
+    Ok(())
 }
 
 pub async fn publish_v5<S>(
@@ -157,12 +159,25 @@ impl Sink {
     }
 }
 
+impl From<v3::MqttSink> for Sink {
+    fn from(sink: v3::MqttSink) -> Self {
+        Self::V3(sink)
+    }
+}
+
+impl From<v5::MqttSink> for Sink {
+    fn from(sink: v5::MqttSink) -> Self {
+        Self::V5(sink)
+    }
+}
+
+#[derive(Debug)]
 pub enum Connect<'a, Io>
 where
     Io: Sync + Send,
 {
-    V3(&'a v3::Handshake<Io>),
-    V5(&'a v5::Handshake<Io>),
+    V3(&'a mut v3::Handshake<Io>),
+    V5(&'a mut v5::Handshake<Io>),
 }
 
 impl<'a, Io> Connect<'a, Io>
@@ -204,8 +219,16 @@ where
             Self::V5(connect) => &connect.packet().client_id,
         }
     }
+
+    pub fn io(&mut self) -> &mut Io {
+        match self {
+            Self::V3(connect) => connect.io(),
+            Self::V5(connect) => connect.io(),
+        }
+    }
 }
 
+#[derive(Debug)]
 pub enum Publish<'a> {
     V3(&'a v3::Publish),
     V5(&'a v5::Publish),
@@ -227,6 +250,7 @@ impl<'a> Publish<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum Subscribe<'a> {
     V3(&'a mut v3::control::Subscribe),
     V5(&'a mut v5::control::Subscribe),
@@ -278,6 +302,7 @@ impl<'a> Iterator for SubscriptionIter<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum Subscription<'a> {
     V3(v3::control::Subscription<'a>),
     V5(v5::control::Subscription<'a>),
@@ -314,6 +339,7 @@ impl<'a> Subscription<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum Unsubscribe<'a> {
     V3(&'a v3::control::Unsubscribe),
     V5(&'a mut v5::control::Unsubscribe),
@@ -351,6 +377,7 @@ impl<'a> Iterator for UnsubscriptionIter<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum Unsubscription<'a> {
     V3(&'a ByteString),
     V5(v5::control::UnsubscribeItem<'a>),

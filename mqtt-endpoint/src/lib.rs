@@ -1,28 +1,24 @@
 #![type_length_limit = "6000000"]
 
 mod auth;
-mod error;
-mod mqtt;
 mod server;
+mod service;
 mod x509;
 
 use crate::{
     auth::DeviceAuthenticator,
     server::{build, build_tls},
+    service::App,
 };
-use bytes::Bytes;
-use bytestring::ByteString;
 use drogue_cloud_endpoint_common::{
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
-    error::EndpointError,
     sender::DownstreamSender,
-    sink::{KafkaSink, Sink},
-    x509::ClientCertificateChain,
+    sink::KafkaSink,
 };
-use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
 use futures::TryFutureExt;
 use serde::Deserialize;
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -39,51 +35,6 @@ pub struct Config {
     pub health: Option<HealthServerConfig>,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
-}
-
-#[derive(Clone, Debug)]
-pub struct App<S>
-where
-    S: Sink,
-{
-    pub downstream: DownstreamSender<S>,
-    pub authenticator: DeviceAuthenticator,
-    pub commands: Commands,
-}
-
-impl<S> App<S>
-where
-    S: Sink,
-{
-    /// authenticate a client
-    async fn authenticate(
-        &self,
-        username: &Option<ByteString>,
-        password: &Option<Bytes>,
-        client_id: &ByteString,
-        certs: Option<ClientCertificateChain>,
-    ) -> Result<AuthOutcome, EndpointError> {
-        let password = password
-            .as_ref()
-            .map(|p| String::from_utf8(p.to_vec()))
-            .transpose()
-            .map_err(|err| {
-                log::debug!("Failed to convert password: {}", err);
-                EndpointError::AuthenticationError
-            })?;
-
-        Ok(self
-            .authenticator
-            .authenticate_mqtt(username.as_ref(), password, &client_id, certs)
-            .await
-            .map_err(|err| {
-                log::debug!("Failed to call authentication service: {}", err);
-                EndpointError::AuthenticationServiceError {
-                    source: Box::new(err),
-                }
-            })?
-            .outcome)
-    }
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {

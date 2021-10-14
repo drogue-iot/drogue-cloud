@@ -8,7 +8,7 @@ use drogue_cloud_integration_common::{
     stream::{EventStream, EventStreamConfig},
 };
 use drogue_cloud_mqtt_common::{
-    error::ServerError,
+    error::{PublishError, ServerError},
     mqtt::{self, *},
 };
 use drogue_cloud_service_api::{
@@ -466,12 +466,12 @@ impl<S> mqtt::Session for Session<S>
 where
     S: SenderSink,
 {
-    async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError> {
+    async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
         let topic = publish.topic().path().split('/').collect::<Vec<_>>();
 
         if topic.len() != 4 || !topic[0].eq_ignore_ascii_case("command") {
             log::info!("Invalid topic name {:?}", topic);
-            Err(ServerError::UnsupportedOperation)
+            Err(PublishError::UnsupportedOperation)
         } else {
             let (app, device, command) = (topic[1], topic[2], topic[3]);
 
@@ -485,7 +485,7 @@ where
             if let Some(user_auth) = &self.user_auth {
                 self.authorize(app.to_string(), user_auth, Permission::Write)
                     .await
-                    .map_err(|_| ServerError::NotAuthorized)?;
+                    .map_err(|_| PublishError::NotAuthorized)?;
             }
 
             let response = futures::try_join!(
@@ -517,17 +517,17 @@ where
                         Ok(_) => Ok(()),
                         Err(e) => {
                             log::info!("Error sending command {:?}", e);
-                            Err(ServerError::InternalError(format!(
+                            Err(PublishError::InternalError(format!(
                                 "Error sending command {:?}",
                                 e
                             )))
                         }
                     }
                 }
-                Ok(_) => Err(ServerError::NotAuthorized),
+                Ok(_) => Err(PublishError::NotAuthorized),
                 Err(e) => {
                     log::info!("Error looking up registry info {:?}", e);
-                    Err(ServerError::InternalError(format!(
+                    Err(PublishError::InternalError(format!(
                         "Error looking up registry info {:?}",
                         e
                     )))

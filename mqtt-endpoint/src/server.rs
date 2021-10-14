@@ -1,23 +1,31 @@
-use crate::{
-    auth::AcceptAllClientCertVerifier,
-    error::ServerError,
-    mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
-    App, Config,
-};
+use crate::{auth::AcceptAllClientCertVerifier, App, Config};
 use anyhow::Context;
+use async_trait::async_trait;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::{command::Commands, sender::DownstreamSender, sink::Sink};
+use drogue_cloud_endpoint_common::{
+    command::{Command, Commands},
+    sender::{self, DownstreamSender, PublishOutcome, Publisher},
+    sink::Sink,
+};
+use drogue_cloud_mqtt_common::{
+    error::{PublishError, ServerError},
+    mqtt::{self, *},
+};
 use drogue_cloud_service_common::Id;
 use futures::future::ok;
 use ntex::{
     fn_factory_with_config, fn_service,
     server::{rustls::Acceptor, ServerBuilder},
+    util::{ByteString, Bytes},
 };
-use ntex_mqtt::{v3, v5, MqttError, MqttServer};
+use ntex_mqtt::{types::QoS, v3, v5, MqttError, MqttServer};
 use ntex_service::pipeline_factory;
 use pem::parse_many;
 use rust_tls::{internal::pemfile::certs, PrivateKey, ServerConfig};
 use std::{fs::File, io::BufReader, sync::Arc};
+
+const TOPIC_COMMAND_INBOX: &str = "command/inbox";
+const TOPIC_COMMAND_INBOX_PATTERN: &str = "command/inbox/#";
 
 #[derive(Clone)]
 pub struct Session<S>
@@ -28,6 +36,7 @@ where
     pub application: registry::v1::Application,
     pub device_id: Id,
     pub commands: Commands,
+    sink: mqtt::Sink,
 }
 
 impl<S> Session<S>
@@ -36,16 +45,122 @@ where
 {
     pub fn new(
         sender: DownstreamSender<S>,
+        sink: mqtt::Sink,
         application: registry::v1::Application,
         device_id: Id,
         commands: Commands,
     ) -> Self {
-        Session {
+        Self {
             sender,
+            sink,
             application,
             device_id,
             commands,
         }
+    }
+
+    async fn run_commands(&self) {
+        let device_id = self.device_id.clone();
+        let mut rx = self.commands.subscribe(device_id.clone()).await;
+        let sink = self.sink.clone();
+
+        ntex::rt::spawn(async move {
+            while let Some(cmd) = rx.recv().await {
+                match Self::send_command(&sink, cmd).await {
+                    Ok(_) => {
+                        log::debug!("Command sent to device subscription {:?}", device_id);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to send a command to device subscription {:?}", e);
+                    }
+                }
+            }
+        });
+    }
+
+    async fn send_command(sink: &mqtt::Sink, cmd: Command) -> Result<(), String> {
+        let topic = ByteString::from(format!("{}/{}", TOPIC_COMMAND_INBOX, cmd.command));
+
+        let payload = match cmd.payload {
+            Some(payload) => Bytes::from(payload),
+            None => Bytes::new(),
+        };
+
+        match sink {
+            mqtt::Sink::V3(sink) => match sink.publish(topic, payload).send_at_least_once().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(e.to_string()),
+            },
+            mqtt::Sink::V5(sink) => match sink.publish(topic, payload).send_at_least_once().await {
+                Ok(_) => Ok(()),
+                Err(e) => Err(e.to_string()),
+            },
+        }
+    }
+}
+
+#[async_trait(?Send)]
+impl<S> mqtt::Session for Session<S>
+where
+    S: Sink,
+{
+    async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
+        let channel = publish.topic().path();
+        let id = self.device_id.clone();
+
+        match self
+            .sender
+            .publish(
+                sender::Publish {
+                    channel: channel.into(),
+                    application: &self.application,
+                    device_id: id.device_id,
+                    options: Default::default(),
+                },
+                publish.payload(),
+            )
+            .await
+        {
+            Ok(PublishOutcome::Accepted) => Ok(()),
+            Ok(PublishOutcome::Rejected) => Err(PublishError::UnspecifiedError),
+            Ok(PublishOutcome::QueueFull) => Err(PublishError::QuotaExceeded),
+            Err(err) => Err(PublishError::InternalError(err.to_string())),
+        }
+    }
+
+    async fn subscribe(
+        &self,
+        sub: Subscribe<'_>,
+    ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+        for mut sub in sub {
+            if sub.topic() == TOPIC_COMMAND_INBOX_PATTERN {
+                self.run_commands().await;
+                log::debug!(
+                    "Device '{:?}' subscribed to receive commands",
+                    self.device_id
+                );
+                sub.confirm(QoS::AtLeastOnce);
+            } else {
+                log::info!("Subscribing to topic {:?} not allowed", sub.topic());
+                sub.fail(v5::codec::SubscribeAckReason::UnspecifiedError);
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn unsubscribe(
+        &self,
+        _unsubscribe: Unsubscribe<'_>,
+    ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+        // FIXME: any unsubscribe get we, we treat as disconnecting from the command inbox
+        self.commands.unsubscribe(&self.device_id).await;
+        Ok(())
+    }
+
+    async fn closed(&self) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+        self.commands.unsubscribe(&self.device_id).await;
+        Ok(())
     }
 }
 
@@ -166,11 +281,7 @@ where
 
     Ok(builder.bind("mqtt", addr, move || {
         pipeline_factory(tls_acceptor.clone())
-            .map_err(|err| {
-                MqttError::Service(ServerError {
-                    msg: err.to_string(),
-                })
-            })
+            .map_err(|err| MqttError::Service(ServerError::InternalError(err.to_string())))
             .and_then(create_server!(app))
     })?)
 }
