@@ -20,6 +20,7 @@ members = [
     "outbox-controller",
     "user-auth-service",
     "integration-common",
+    "mqtt-common",
     "mqtt-integration",
     "operator-common",
     "ttn-operator",

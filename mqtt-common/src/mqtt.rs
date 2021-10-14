@@ -1,8 +1,5 @@
-use crate::{
-    error::{MqttResponse, ServerError},
-    service::{App, Session},
-};
-use drogue_cloud_endpoint_common::sink::Sink as DownstreamSink;
+use crate::error::{MqttResponse, ServerError};
+use async_trait::async_trait;
 use ntex::router::Path;
 use ntex::util::{ByteString, Bytes};
 use ntex_mqtt::{
@@ -15,12 +12,31 @@ use ntex_mqtt::{
 };
 use std::{fmt::Debug, num::NonZeroU32};
 
-pub async fn connect_v3<Io, S>(
-    connect: v3::Handshake<Io>,
-    app: App<S>,
-) -> Result<v3::HandshakeAck<Io, Session<S>>, ServerError>
+#[async_trait(?Send)]
+pub trait Service<Io, S>
 where
-    S: DownstreamSink,
+    S: Session,
+    Io: Sync + Send,
+{
+    async fn connect(&self, connect: Connect<'_, Io>) -> Result<S, ServerError>;
+}
+
+#[async_trait(?Send)]
+pub trait Session {
+    async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError>;
+    async fn subscribe(&self, subscribe: Subscribe<'_>) -> Result<(), ServerError>;
+    async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError>;
+    async fn closed(&self) -> Result<(), ServerError>;
+}
+
+pub async fn connect_v3<A, Io, S>(
+    connect: v3::Handshake<Io>,
+    app: A,
+) -> Result<v3::HandshakeAck<Io, S>, ServerError>
+where
+    A: Service<Io, S>,
+    S: Session,
+    Io: Sync + Send,
 {
     match app.connect(Connect::V3(&connect)).await {
         Ok(session) => Ok(connect.ack(session, false)),
@@ -28,12 +44,14 @@ where
     }
 }
 
-pub async fn connect_v5<Io, S>(
+pub async fn connect_v5<A, Io, S>(
     connect: v5::Handshake<Io>,
-    app: App<S>,
-) -> Result<v5::HandshakeAck<Io, Session<S>>, ServerError>
+    app: A,
+) -> Result<v5::HandshakeAck<Io, S>, ServerError>
 where
-    S: DownstreamSink,
+    A: Service<Io, S>,
+    S: Session,
+    Io: Sync + Send,
 {
     match app.connect(Connect::V5(&connect)).await {
         Ok(session) => Ok(connect.ack(session).with(|ack| {
@@ -46,22 +64,19 @@ where
     }
 }
 
-pub async fn publish_v3<S>(
-    session: v3::Session<Session<S>>,
-    publish: v3::Publish,
-) -> Result<(), ServerError>
+pub async fn publish_v3<S>(session: v3::Session<S>, publish: v3::Publish) -> Result<(), ServerError>
 where
-    S: DownstreamSink,
+    S: Session,
 {
     session.publish(Publish::V3(&publish)).await
 }
 
 pub async fn publish_v5<S>(
-    session: v5::Session<Session<S>>,
+    session: v5::Session<S>,
     publish: v5::Publish,
 ) -> Result<v5::PublishAck, ServerError>
 where
-    S: DownstreamSink,
+    S: Session,
 {
     match session.publish(Publish::V5(&publish)).await {
         Ok(_) => Ok(publish.ack()),
@@ -70,11 +85,11 @@ where
 }
 
 pub async fn control_v3<S>(
-    session: v3::Session<Session<S>>,
+    session: v3::Session<S>,
     control: v3::ControlMessage,
 ) -> Result<v3::ControlResult, ServerError>
 where
-    S: DownstreamSink,
+    S: Session,
 {
     match control {
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
@@ -97,11 +112,11 @@ where
 }
 
 pub async fn control_v5<E: Debug, S>(
-    session: v5::Session<Session<S>>,
+    session: v5::Session<S>,
     control: v5::ControlMessage<E>,
 ) -> Result<v5::ControlResult, ServerError>
 where
-    S: DownstreamSink,
+    S: Session,
 {
     match control {
         v5::ControlMessage::Auth(a) => {
@@ -142,12 +157,18 @@ impl Sink {
     }
 }
 
-pub enum Connect<'a, Io> {
+pub enum Connect<'a, Io>
+where
+    Io: Sync + Send,
+{
     V3(&'a v3::Handshake<Io>),
     V5(&'a v5::Handshake<Io>),
 }
 
-impl<'a, Io> Connect<'a, Io> {
+impl<'a, Io> Connect<'a, Io>
+where
+    Io: Sync + Send,
+{
     /// Return "clean session" for v3 and "clean start" for v5.
     pub fn clean_session(&self) -> bool {
         match self {

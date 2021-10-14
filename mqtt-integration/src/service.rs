@@ -1,4 +1,4 @@
-use crate::{error::ServerError, mqtt::*};
+use async_trait::async_trait;
 use cloudevents::Data;
 use drogue_client::{registry, Context};
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
@@ -6,6 +6,10 @@ use drogue_cloud_integration_common::{
     self,
     commands::CommandOptions,
     stream::{EventStream, EventStreamConfig},
+};
+use drogue_cloud_mqtt_common::{
+    error::ServerError,
+    mqtt::{self, *},
 };
 use drogue_cloud_service_api::{
     auth::user::{
@@ -95,7 +99,10 @@ where
         &self,
         connect: &Connect<'_, Io>,
         auth: &Authenticator,
-    ) -> Result<UserInformation, anyhow::Error> {
+    ) -> Result<UserInformation, anyhow::Error>
+    where
+        Io: Sync + Send,
+    {
         let user = match (connect.credentials(), &self.user_auth) {
             ((Some(username), Some(password)), Some(user_auth)) => {
                 log::debug!("Authenticate with username and password");
@@ -147,8 +154,15 @@ where
 
         Ok(user)
     }
+}
 
-    pub async fn connect<Io>(&self, connect: Connect<'_, Io>) -> Result<Session<S>, ServerError> {
+#[async_trait(?Send)]
+impl<S, Io> mqtt::Service<Io, Session<S>> for App<S>
+where
+    S: SenderSink,
+    Io: Sync + Send,
+{
+    async fn connect(&self, connect: Connect<'_, Io>) -> Result<Session<S>, ServerError> {
         log::debug!("Processing connect request");
 
         if !connect.clean_session() {
@@ -344,145 +358,6 @@ where
         Ok(QoS::AtMostOnce)
     }
 
-    pub async fn subscribe(&self, subscribe: Subscribe<'_>) -> Result<(), ServerError> {
-        let id = subscribe.id();
-        log::debug!("Subscription ID: {:?}", id);
-
-        let user_properties = subscribe.user_properties();
-
-        // evaluate the content mode
-
-        let content_mode = {
-            let value = user_properties.and_then(|props| {
-                props
-                    .iter()
-                    .find(|(k, _)| k == "content-mode")
-                    .map(|(_, v)| v.to_string())
-            });
-            match value.as_deref() {
-                None | Some("structured") => ContentMode::Structured,
-                Some("binary") => ContentMode::Binary,
-                Some(other) => {
-                    log::info!("Unknown content mode: {}", other);
-                    return Err(ServerError::UnsupportedOperation);
-                }
-            }
-        };
-
-        log::debug!("Content mode: {:?}", content_mode);
-
-        for mut sub in subscribe {
-            let res = self
-                .subscribe_to(id, sub.topic().to_string(), content_mode)
-                .await;
-            log::debug!("Subscribing to: {:?} -> {:?}", sub.topic(), res);
-            match res {
-                Ok(qos) => sub.confirm(qos),
-                Err(reason) => sub.fail(reason),
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError> {
-        for unsub in unsubscribe {
-            log::debug!("Unsubscribe: {:?}", unsub.topic());
-            if !self.detach(unsub.topic().as_ref()) {
-                // failed to unsubscribe
-                match unsub {
-                    Unsubscription::V3(_) => {
-                        // for v3 we do nothing, as no subscription existed
-                    }
-                    Unsubscription::V5(mut unsub) => {
-                        unsub.fail(v5::codec::UnsubscribeAckReason::NoSubscriptionExisted)
-                    }
-                }
-            } else {
-                match unsub {
-                    Unsubscription::V3(_) => {}
-                    Unsubscription::V5(mut unsub) => unsub.success(),
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError> {
-        let topic = publish.topic().path().split('/').collect::<Vec<_>>();
-
-        if topic.len() != 4 || !topic[0].eq_ignore_ascii_case("command") {
-            log::info!("Invalid topic name {:?}", topic);
-            Err(ServerError::UnsupportedOperation)
-        } else {
-            let (app, device, command) = (topic[1], topic[2], topic[3]);
-
-            log::info!(
-                "Request to send command {:?} to {:?}/{:?}",
-                command,
-                app,
-                device
-            );
-
-            if let Some(user_auth) = &self.user_auth {
-                self.authorize(app.to_string(), user_auth, Permission::Write)
-                    .await
-                    .map_err(|_| ServerError::NotAuthorized)?;
-            }
-
-            let response = futures::try_join!(
-                self.registry.get_app(&app, Context::default()),
-                self.registry
-                    .get_device_and_gateways(&app, &device, Context::default())
-            );
-
-            match response {
-                Ok((Some(application), Some(device_gateways))) => {
-                    let opts = CommandOptions {
-                        application: app.to_string(),
-                        device: device.to_string(),
-                        command: command.to_string(),
-                    };
-
-                    match drogue_cloud_integration_common::commands::process_command(
-                        application,
-                        device_gateways.0,
-                        device_gateways.1,
-                        &self.sender,
-                        self.client.clone(),
-                        None,
-                        opts,
-                        publish.payload().clone(),
-                    )
-                    .await
-                    {
-                        Ok(_) => Ok(()),
-                        Err(e) => {
-                            log::info!("Error sending command {:?}", e);
-                            Err(ServerError::InternalError(format!(
-                                "Error sending command {:?}",
-                                e
-                            )))
-                        }
-                    }
-                }
-                Ok(_) => Err(ServerError::NotAuthorized),
-                Err(e) => {
-                    log::info!("Error looking up registry info {:?}", e);
-                    Err(ServerError::InternalError(format!(
-                        "Error looking up registry info {:?}",
-                        e
-                    )))
-                }
-            }
-        }
-    }
-
-    pub async fn closed(&self) -> Result<(), ServerError> {
-        Ok(())
-    }
-
     async fn run_stream(mut stream: Stream<'_>, sink: &mut Sink) -> Result<(), anyhow::Error> {
         let content_mode = stream.content_mode;
 
@@ -583,6 +458,152 @@ where
         } else {
             false
         }
+    }
+}
+
+#[async_trait(?Send)]
+impl<S> mqtt::Session for Session<S>
+where
+    S: SenderSink,
+{
+    async fn publish(&self, publish: Publish<'_>) -> Result<(), ServerError> {
+        let topic = publish.topic().path().split('/').collect::<Vec<_>>();
+
+        if topic.len() != 4 || !topic[0].eq_ignore_ascii_case("command") {
+            log::info!("Invalid topic name {:?}", topic);
+            Err(ServerError::UnsupportedOperation)
+        } else {
+            let (app, device, command) = (topic[1], topic[2], topic[3]);
+
+            log::info!(
+                "Request to send command {:?} to {:?}/{:?}",
+                command,
+                app,
+                device
+            );
+
+            if let Some(user_auth) = &self.user_auth {
+                self.authorize(app.to_string(), user_auth, Permission::Write)
+                    .await
+                    .map_err(|_| ServerError::NotAuthorized)?;
+            }
+
+            let response = futures::try_join!(
+                self.registry.get_app(&app, Context::default()),
+                self.registry
+                    .get_device_and_gateways(&app, &device, Context::default())
+            );
+
+            match response {
+                Ok((Some(application), Some(device_gateways))) => {
+                    let opts = CommandOptions {
+                        application: app.to_string(),
+                        device: device.to_string(),
+                        command: command.to_string(),
+                    };
+
+                    match drogue_cloud_integration_common::commands::process_command(
+                        application,
+                        device_gateways.0,
+                        device_gateways.1,
+                        &self.sender,
+                        self.client.clone(),
+                        None,
+                        opts,
+                        publish.payload().clone(),
+                    )
+                    .await
+                    {
+                        Ok(_) => Ok(()),
+                        Err(e) => {
+                            log::info!("Error sending command {:?}", e);
+                            Err(ServerError::InternalError(format!(
+                                "Error sending command {:?}",
+                                e
+                            )))
+                        }
+                    }
+                }
+                Ok(_) => Err(ServerError::NotAuthorized),
+                Err(e) => {
+                    log::info!("Error looking up registry info {:?}", e);
+                    Err(ServerError::InternalError(format!(
+                        "Error looking up registry info {:?}",
+                        e
+                    )))
+                }
+            }
+        }
+    }
+
+    async fn subscribe(&self, subscribe: Subscribe<'_>) -> Result<(), ServerError> {
+        let id = subscribe.id();
+        log::debug!("Subscription ID: {:?}", id);
+
+        let user_properties = subscribe.user_properties();
+
+        // evaluate the content mode
+
+        let content_mode = {
+            let value = user_properties.and_then(|props| {
+                props
+                    .iter()
+                    .find(|(k, _)| k == "content-mode")
+                    .map(|(_, v)| v.to_string())
+            });
+            match value.as_deref() {
+                None | Some("structured") => ContentMode::Structured,
+                Some("binary") => ContentMode::Binary,
+                Some(other) => {
+                    log::info!("Unknown content mode: {}", other);
+                    return Err(ServerError::UnsupportedOperation);
+                }
+            }
+        };
+
+        log::debug!("Content mode: {:?}", content_mode);
+
+        for mut sub in subscribe {
+            let res = self
+                .subscribe_to(id, sub.topic().to_string(), content_mode)
+                .await;
+            log::debug!("Subscribing to: {:?} -> {:?}", sub.topic(), res);
+            match res {
+                Ok(qos) => sub.confirm(qos),
+                Err(reason) => sub.fail(reason),
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError> {
+        for unsub in unsubscribe.into_iter() {
+            let topic = unsub.topic();
+            log::debug!("Unsubscribe: {:?}", topic);
+            if !self.detach(topic.as_ref()) {
+                // failed to unsubscribe
+                match unsub {
+                    Unsubscription::V3(_) => {
+                        // for v3 we do nothing, as no subscription existed
+                    }
+                    Unsubscription::V5(mut unsub) => {
+                        unsub.fail(v5::codec::UnsubscribeAckReason::NoSubscriptionExisted)
+                    }
+                }
+            } else {
+                match unsub {
+                    Unsubscription::V3(_) => {}
+                    Unsubscription::V5(mut unsub) => unsub.success(),
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn closed(&self) -> Result<(), ServerError> {
+        Ok(())
     }
 }
 

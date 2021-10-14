@@ -1,11 +1,13 @@
 use crate::{
-    error::ServerError,
-    mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
     service::{App, Session},
     Config,
 };
 use anyhow::Context;
 use drogue_cloud_endpoint_common::sink::Sink;
+use drogue_cloud_mqtt_common::{
+    error::ServerError,
+    mqtt::{connect_v3, connect_v5, control_v3, control_v5, publish_v3, publish_v5},
+};
 use futures::future::ok;
 use ntex::{
     fn_factory_with_config, fn_service,

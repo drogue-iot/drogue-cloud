@@ -2089,6 +2089,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-mqtt-common"
+version = "0.7.0"
+dependencies = [
+ "async-trait",
+ "ntex",
+ "ntex-mqtt",
+]
+
+[[package]]
 name = "drogue-cloud-mqtt-endpoint"
 version = "0.7.0"
 dependencies = [
@@ -2138,6 +2147,7 @@ dependencies = [
  "drogue-cloud-endpoint-common",
  "drogue-cloud-event-common",
  "drogue-cloud-integration-common",
+ "drogue-cloud-mqtt-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "env_logger 0.7.1",
