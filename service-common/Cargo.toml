@@ -29,7 +29,7 @@ webpki = { version = "0.21", optional = true }
 
 failure = "0.1" # required for converting error away from failure
 url = "2"
-pem = "0.8"
+pem = "1"
 chrono = "0.4"
 humantime = "2"
 humantime-serde = "1"

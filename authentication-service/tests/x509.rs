@@ -242,7 +242,7 @@ fn device1_json() -> Value {
 
 /// Decode PEM certificate chain from string and return as byte array.
 fn from_pem(pem: &str) -> anyhow::Result<Vec<Vec<u8>>> {
-    let pems = pem::parse_many(pem);
+    let pems = pem::parse_many(pem)?;
     let mut result = Vec::with_capacity(pems.len());
     for pem in pems {
         result.push(pem.contents);

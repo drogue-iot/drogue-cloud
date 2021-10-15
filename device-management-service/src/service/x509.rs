@@ -41,7 +41,7 @@ pub fn process_anchors(
 }
 
 fn process_anchor(certs: &[u8]) -> Result<registry::v1::ApplicationStatusTrustAnchorEntry, String> {
-    let pems = pem::parse_many(&certs);
+    let pems = pem::parse_many(&certs).map_err(|err| format!("Failed to parse PEM: {}", err))?;
 
     for pem in pems {
         if pem.tag == "CERTIFICATE" {
