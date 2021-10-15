@@ -92,12 +92,14 @@ where
 
 pub async fn control_v3<S>(
     session: v3::Session<S>,
-    control: v3::ControlMessage,
+    control: v3::ControlMessage<ServerError>,
 ) -> Result<v3::ControlResult, ServerError>
 where
     S: Session,
 {
     match control {
+        v3::ControlMessage::Error(err) => Ok(err.ack()),
+        v3::ControlMessage::ProtocolError(err) => Ok(err.ack()),
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
         v3::ControlMessage::Subscribe(mut s) => {
