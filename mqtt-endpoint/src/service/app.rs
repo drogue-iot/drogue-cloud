@@ -1,7 +1,5 @@
 use crate::{auth::DeviceAuthenticator, service::session::Session};
 use async_trait::async_trait;
-use bytes::Bytes;
-use bytestring::ByteString;
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
@@ -34,9 +32,9 @@ where
     /// authenticate a client
     pub async fn authenticate(
         &self,
-        username: Option<&ByteString>,
-        password: Option<&Bytes>,
-        client_id: &ByteString,
+        username: Option<&str>,
+        password: Option<&[u8]>,
+        client_id: &str,
         certs: Option<ClientCertificateChain>,
     ) -> Result<AuthOutcome, EndpointError> {
         let password = password
@@ -83,7 +81,12 @@ where
         let (username, password) = connect.credentials();
 
         match self
-            .authenticate(username, password, connect.client_id(), certs)
+            .authenticate(
+                username.map(|u| u.as_ref()),
+                password.map(|p| p.as_ref()),
+                connect.client_id().as_ref(),
+                certs,
+            )
             .await
         {
             Ok(AuthOutcome::Pass {

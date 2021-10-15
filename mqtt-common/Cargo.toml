@@ -12,9 +12,9 @@ log = "0.4"
 async-trait = "0.1"
 futures = "0.3"
 
-ntex = "0.3"
-ntex-mqtt = "0.6"
-ntex-service = "0.1"
+ntex = "0.4"
+ntex-mqtt = "0.7"
+ntex-service = "0.2"
 
 pem = "1"
 
