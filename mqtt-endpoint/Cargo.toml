@@ -36,7 +36,6 @@ env_logger = "0.7"
 dotenv = "0.15"
 log = "0.4"
 
-pem = "0.8"
 webpki = "0.21"
 
 cloudevents-sdk = "0.4"

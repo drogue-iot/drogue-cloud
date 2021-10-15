@@ -1,14 +1,9 @@
-#![type_length_limit = "6000000"]
-
-mod server;
 mod service;
 
-use crate::{
-    server::{build, build_tls},
-    service::ServiceConfig,
-};
+use crate::service::ServiceConfig;
 use anyhow::Context;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
+use drogue_cloud_mqtt_common::server::{build, TlsConfig};
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     health::{HealthServer, HealthServerConfig},
@@ -47,6 +42,20 @@ pub struct Config {
     pub health: Option<HealthServerConfig>,
 }
 
+impl TlsConfig for Config {
+    fn is_disabled(&self) -> bool {
+        self.disable_tls
+    }
+
+    fn key_file(&self) -> Option<&str> {
+        self.key_file.as_deref()
+    }
+
+    fn cert_bundle_file(&self) -> Option<&str> {
+        self.cert_bundle_file.as_deref()
+    }
+}
+
 #[derive(Clone)]
 pub struct OpenIdClient {
     pub client: openid::Client,
@@ -83,6 +92,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let registry = config
         .registry
+        .as_ref()
+        .cloned()
         .context("no registry configured")?
         .into_client(client.clone())
         .await?;
@@ -100,26 +111,21 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         registry,
     };
 
-    // start building the server
+    // create server
 
-    let builder = ntex::server::Server::build();
     let addr = config.bind_addr_mqtt.as_deref();
-
-    let builder = if !config.disable_tls {
-        build_tls(addr, builder, app, &app_config)?
-    } else {
-        build(addr, builder, app, &app_config)?
-    };
+    let srv = build(addr, app, &app_config)?.run();
 
     log::info!("Starting server");
 
     // run
+
     if let Some(health) = config.health {
         // health server
         let health = HealthServer::new(health, vec![]);
-        futures::try_join!(health.run_ntex(), builder.run().err_into(),)?;
+        futures::try_join!(health.run_ntex(), srv.err_into(),)?;
     } else {
-        futures::try_join!(builder.run())?;
+        futures::try_join!(srv)?;
     }
 
     // exiting

@@ -6,6 +6,28 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
+anyhow = "1"
+log = "0.4"
+
 async-trait = "0.1"
+futures = "0.3"
+
 ntex = "0.3"
 ntex-mqtt = "0.6"
+ntex-service = "0.1"
+
+pem = "0.8"
+
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+
+[dependencies.rust-tls]
+version = "0.19"
+optional = true
+package = "rustls"
+# "dangerous" is required in order to implement ther ClientCertVerified trait
+# see: https://github.com/ctz/rustls/issues/467
+features = ["dangerous_configuration"]
+
+[features]
+default = ["rustls"]
+rustls = ["rust-tls", "ntex/rustls"]

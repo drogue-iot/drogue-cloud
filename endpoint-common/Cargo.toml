@@ -10,6 +10,7 @@ license = "Apache-2.0"
 actix-web = "=4.0.0-beta.8" # we need v4 as we need tokio 1
 actix-broker = "0.4.0"
 actix-tls = { version = "=3.0.0-beta.5", optional = true }
+
 reqwest = { version = "0.11", features = ["json"] }
 
 anyhow = "1"
@@ -53,3 +54,10 @@ drogue-client = "0.7.1"
 x509-parser = "0.9"
 
 tokio = { version = "1", features = ["full"] }
+tokio-openssl = { version = "0.6", optional = true }
+tokio-rustls = { version = "0.22", optional = true }
+
+[features]
+default = ["rustls", "openssl"]
+rustls = ["tokio-rustls"]
+openssl = ["tokio-openssl"]

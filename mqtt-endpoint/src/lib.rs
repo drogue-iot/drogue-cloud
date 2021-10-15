@@ -1,13 +1,8 @@
-#![type_length_limit = "6000000"]
-
 mod auth;
-mod server;
 mod service;
-mod x509;
 
 use crate::{
-    auth::DeviceAuthenticator,
-    server::{build, build_tls},
+    auth::{AcceptAllClientCertVerifier, DeviceAuthenticator},
     service::App,
 };
 use drogue_cloud_endpoint_common::{
@@ -15,10 +10,12 @@ use drogue_cloud_endpoint_common::{
     sender::DownstreamSender,
     sink::KafkaSink,
 };
+use drogue_cloud_mqtt_common::server::{build, TlsConfig};
 use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
 use futures::TryFutureExt;
+use rust_tls::ClientCertVerifier;
 use serde::Deserialize;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -37,6 +34,26 @@ pub struct Config {
     pub command_source_kafka: KafkaCommandSourceConfig,
 }
 
+impl TlsConfig for Config {
+    fn is_disabled(&self) -> bool {
+        self.disable_tls
+    }
+
+    fn verifier(&self) -> Arc<dyn ClientCertVerifier> {
+        // This seems dangerous, as we simply accept all client certificates. However,
+        // we validate them later during the "connect" packet validation.
+        Arc::new(AcceptAllClientCertVerifier)
+    }
+
+    fn key_file(&self) -> Option<&str> {
+        self.key_file.as_deref()
+    }
+
+    fn cert_bundle_file(&self) -> Option<&str> {
+        self.cert_bundle_file.as_deref()
+    }
+}
+
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let commands = Commands::new();
 
@@ -48,14 +65,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         commands: commands.clone(),
     };
 
-    let builder = ntex::server::Server::build();
     let addr = config.bind_addr_mqtt.as_deref();
-
-    let builder = if !config.disable_tls {
-        build_tls(addr, builder, app.clone(), &config)?
-    } else {
-        build(addr, builder, app.clone())?
-    };
+    let srv = build(addr, app, &config)?.run();
 
     log::info!("Starting web server");
 
@@ -67,9 +78,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     if let Some(health) = config.health {
         // health server
         let health = HealthServer::new(health, vec![Box::new(command_source)]);
-        futures::try_join!(health.run_ntex(), builder.run().err_into(),)?;
+        futures::try_join!(health.run_ntex(), srv.err_into(),)?;
     } else {
-        futures::try_join!(builder.run())?;
+        futures::try_join!(srv)?;
     }
 
     // exiting
