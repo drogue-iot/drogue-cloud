@@ -39,7 +39,6 @@ log = "0.4"
 
 openid = "0.9"
 
-pem = "0.8"
 webpki = "0.21"
 
 cloudevents-sdk = "0.4"

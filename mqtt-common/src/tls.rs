@@ -26,7 +26,7 @@ mod rustls {
         let mut keys = Vec::new();
 
         let pems = std::fs::read(key)?;
-        for pem in parse_many(pems) {
+        for pem in parse_many(pems)? {
             if pem.tag.contains("PRIVATE KEY") {
                 keys.push(PrivateKey(pem.contents));
             }

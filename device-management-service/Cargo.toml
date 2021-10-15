@@ -33,7 +33,7 @@ uuid = "0.8"
 bytes = "1"
 
 chrono = { version = "0.4", features = ["serde"] }
-pem = "0.8"
+pem = "1"
 x509-parser = "0.9"
 reqwest = "0.11"
 

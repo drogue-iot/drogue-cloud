@@ -13,7 +13,7 @@ pub fn add_service_cert(
         let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;
 
-        let pems = pem::parse_many(buf);
+        let pems = pem::parse_many(buf)?;
         let pems = pems
             .into_iter()
             .map(|pem| {
