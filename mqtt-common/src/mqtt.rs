@@ -1,7 +1,10 @@
 use crate::error::{MqttResponse, PublishError, ServerError};
 use async_trait::async_trait;
-use ntex::router::Path;
-use ntex::util::{ByteString, Bytes};
+use drogue_cloud_endpoint_common::x509::ClientCertificateRetriever;
+use ntex::{
+    router::Path,
+    util::{ByteString, Bytes},
+};
 use ntex_mqtt::{
     types::QoS,
     v3,
@@ -13,12 +16,13 @@ use ntex_mqtt::{
 use std::{fmt::Debug, num::NonZeroU32};
 
 #[async_trait(?Send)]
-pub trait Service<Io, S>
+pub trait Service<S>
 where
     S: Session,
-    Io: Sync + Send,
 {
-    async fn connect(&self, connect: Connect<'_, Io>) -> Result<S, ServerError>;
+    async fn connect<'a, Io>(&'a self, connect: Connect<'a, Io>) -> Result<S, ServerError>
+    where
+        Io: ClientCertificateRetriever + Sync + Send + Debug;
 }
 
 #[async_trait(?Send)]
@@ -34,9 +38,9 @@ pub async fn connect_v3<A, Io, S>(
     app: A,
 ) -> Result<v3::HandshakeAck<Io, S>, ServerError>
 where
-    A: Service<Io, S>,
+    A: Service<S>,
     S: Session,
-    Io: Sync + Send,
+    Io: Sync + Send + ClientCertificateRetriever + Debug,
 {
     match app.connect(Connect::V3(&mut connect)).await {
         Ok(session) => Ok(connect.ack(session, false)),
@@ -49,9 +53,9 @@ pub async fn connect_v5<A, Io, S>(
     app: A,
 ) -> Result<v5::HandshakeAck<Io, S>, ServerError>
 where
-    A: Service<Io, S>,
+    A: Service<S>,
     S: Session,
-    Io: Sync + Send,
+    Io: Sync + Send + ClientCertificateRetriever + Debug,
 {
     match app.connect(Connect::V5(&mut connect)).await {
         Ok(session) => Ok(connect.ack(session).with(|ack| {

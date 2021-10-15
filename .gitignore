@@ -8,8 +8,8 @@ target/
 
 # TLS
 
-tls.*
-tls_tmp.*
+/tls.*
+/tls_tmp.*
 tmp/
 
 # Build

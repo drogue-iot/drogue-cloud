@@ -1,6 +1,5 @@
-use crate::ClientCertificateRetriever;
 use actix_rt::net::TcpStream;
-use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
+use drogue_cloud_endpoint_common::x509::{ClientCertificateChain, ClientCertificateRetriever};
 use std::any::Any;
 
 pub fn from_socket(con: &dyn Any) -> Option<ClientCertificateChain> {

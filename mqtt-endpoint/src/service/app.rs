@@ -1,10 +1,13 @@
-use crate::{auth::DeviceAuthenticator, server::Session, x509::ClientCertificateRetriever};
+use crate::{auth::DeviceAuthenticator, service::session::Session};
 use async_trait::async_trait;
 use bytes::Bytes;
 use bytestring::ByteString;
 use drogue_cloud_endpoint_common::{
-    command::Commands, error::EndpointError, sender::DownstreamSender, sink::Sink,
-    x509::ClientCertificateChain,
+    command::Commands,
+    error::EndpointError,
+    sender::DownstreamSender,
+    sink::Sink,
+    x509::{ClientCertificateChain, ClientCertificateRetriever},
 };
 use drogue_cloud_mqtt_common::{
     error::ServerError,
@@ -59,12 +62,17 @@ where
 }
 
 #[async_trait(?Send)]
-impl<Io, S> Service<Io, Session<S>> for App<S>
+impl<S> Service<Session<S>> for App<S>
 where
-    Io: ClientCertificateRetriever + Sync + Send + Debug + 'static,
     S: Sink,
 {
-    async fn connect(&self, mut connect: Connect<'_, Io>) -> Result<Session<S>, ServerError> {
+    async fn connect<'a, Io>(
+        &'a self,
+        mut connect: Connect<'a, Io>,
+    ) -> Result<Session<S>, ServerError>
+    where
+        Io: ClientCertificateRetriever + Sync + Send + Debug + 'a,
+    {
         log::info!("new connection: {:?}", connect);
 
         if !connect.clean_session() {

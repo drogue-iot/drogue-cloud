@@ -25,17 +25,6 @@ use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
 
-drogue_cloud_endpoint_common::retriever!();
-
-#[cfg(feature = "rustls")]
-drogue_cloud_endpoint_common::retriever_rustls!(actix_tls::connect::ssl::rustls::TlsStream<T>);
-
-#[cfg(feature = "openssl")]
-drogue_cloud_endpoint_common::retriever_openssl!(actix_tls::connect::ssl::openssl::SslStream<T>);
-
-#[cfg(feature = "ntex")]
-retriever_none!(ntex::rt::net::TcpStream);
-
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "defaults::max_json_payload_size")]

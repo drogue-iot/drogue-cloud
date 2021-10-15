@@ -2004,6 +2004,8 @@ dependencies = [
  "snafu",
  "thiserror",
  "tokio 1.11.0",
+ "tokio-openssl",
+ "tokio-rustls",
  "uuid",
  "x509-parser",
 ]
@@ -2092,9 +2094,16 @@ dependencies = [
 name = "drogue-cloud-mqtt-common"
 version = "0.7.0"
 dependencies = [
+ "anyhow",
  "async-trait",
+ "drogue-cloud-endpoint-common",
+ "futures",
+ "log",
  "ntex",
  "ntex-mqtt",
+ "ntex-service",
+ "pem",
+ "rustls",
 ]
 
 [[package]]
@@ -2124,7 +2133,6 @@ dependencies = [
  "ntex-rt",
  "ntex-service",
  "openssl",
- "pem",
  "reqwest",
  "rustls",
  "serde 1.0.130",
