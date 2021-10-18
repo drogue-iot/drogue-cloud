@@ -66,7 +66,7 @@ $(EGEN)/ca-cert.req: $(EBASE)/ca.cnf
 	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/ca-key-ec.pem" -out "$(EGEN)/ca-key.pem"
 
 	# Generate CA certificate
-	openssl req -config "$(EBASE)/ca.cnf" -key "$(EBASE)/ca-key.pem" -reqexts intermediate_ext -nodes -subj "/O=Drogue IoT/OU=Cloud/CN=Application" > $(EGEN)/ca-cert.req
+	openssl req -config "$(EBASE)/ca.cnf" -key "$(EGEN)/ca-key.pem" -reqexts intermediate_ext -nodes -subj "/O=Drogue IoT/OU=Cloud/CN=Application" > $(EGEN)/ca-cert.req
 	chmod a+r $@
 
 $(EGEN)/ca-cert.pem: $(EBASE)/ca.cnf $(EGEN)/ca-cert.req $(EGEN)/root-cert.pem $(EGEN)/root-key.pem
