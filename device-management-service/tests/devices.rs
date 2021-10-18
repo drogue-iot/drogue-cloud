@@ -21,6 +21,8 @@ use drogue_cloud_device_management_service::{
 };
 use drogue_cloud_registry_events::{mock::MockEventSender, Event};
 use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_common::keycloak::mock::KeycloakAdminMock;
+use drogue_cloud_service_common::keycloak::{KeycloakAdminClientConfig, KeycloakClient};
 use drogue_cloud_test_common::{client, db};
 use http::{header, HeaderValue};
 use maplit::hashmap;

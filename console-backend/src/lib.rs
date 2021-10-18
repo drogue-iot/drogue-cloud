@@ -15,15 +15,13 @@ use actix_web::{
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use anyhow::Context;
-use drogue_cloud_api_key_service::{
-    endpoints as keys,
-    service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
-};
+use drogue_cloud_api_key_service::{endpoints as keys, service::KeycloakApiKeyService};
 use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
+    keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{Authenticator, AuthenticatorConfig, TokenConfig},
     openid_auth,
 };
@@ -54,7 +52,7 @@ pub struct Config {
 
     pub kafka: KafkaClientConfig,
 
-    pub keycloak: KeycloakApiKeyServiceConfig,
+    pub keycloak: KeycloakAdminClientConfig,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -138,8 +136,11 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let bind_addr = config.bind_addr.clone();
 
+    let keycloak_admin_client = KeycloakAdminClient::new(config.keycloak)?;
     let keycloak_service = web::Data::new(keys::WebData {
-        service: KeycloakApiKeyService::new(config.keycloak)?,
+        service: KeycloakApiKeyService {
+            client: keycloak_admin_client,
+        },
     });
 
     let registry = config.registry.into_client(client.clone()).await?;
@@ -190,12 +191,12 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                     .wrap(auth.clone())
                     .service(
                         web::resource("")
-                            .route(web::post().to(keys::create::<KeycloakApiKeyService>))
-                            .route(web::get().to(keys::list::<KeycloakApiKeyService>)),
+                            .route(web::post().to(keys::create::<KeycloakApiKeyService<KeycloakAdminClient>>))
+                            .route(web::get().to(keys::list::<KeycloakApiKeyService<KeycloakAdminClient>>)),
                     )
                     .service(
                         web::resource("/{prefix}")
-                            .route(web::delete().to(keys::delete::<KeycloakApiKeyService>)),
+                            .route(web::delete().to(keys::delete::<KeycloakApiKeyService<KeycloakAdminClient>>)),
                     ),
             )
             .service(

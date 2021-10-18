@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use drogue_cloud_service_common::config::ConfigFromEnv;
+use drogue_cloud_service_common::keycloak::client::KeycloakAdminClient;
 use drogue_cloud_user_auth_service::{run, Config};
 
 #[actix_web::main]
@@ -10,5 +11,5 @@ async fn main() -> anyhow::Result<()> {
     // Initialize config from environment variables
     let config = Config::from_env()?;
 
-    run(config).await
+    run::<KeycloakAdminClient>(config).await
 }

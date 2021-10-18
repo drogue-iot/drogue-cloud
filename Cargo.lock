@@ -1685,7 +1685,6 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
- "keycloak",
  "log",
  "native-tls",
  "rand 0.8.4",
@@ -2305,6 +2304,7 @@ name = "drogue-cloud-service-common"
 version = "0.8.0"
 dependencies = [
  "actix",
+ "actix-http 3.0.0-beta.8",
  "actix-rt 2.2.0",
  "actix-service 2.0.0",
  "actix-web",
@@ -2326,6 +2326,7 @@ dependencies = [
  "humantime 2.1.0",
  "humantime-serde",
  "k8s-openapi",
+ "keycloak",
  "kube",
  "log",
  "ntex",

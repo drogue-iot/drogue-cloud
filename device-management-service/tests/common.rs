@@ -30,6 +30,10 @@ macro_rules! test {
         init();
 
         let cli = client();
+
+        let keycloak_config = KeycloakAdminClientConfig::mock();
+        let keycloak = KeycloakAdminMock::new(keycloak_config).unwrap();
+
         let db = db(&cli, |pg| service::PostgresManagementServiceConfig {
             pg,
             instance: "drogue-instance".to_string(),
@@ -43,7 +47,7 @@ macro_rules! test {
 
         let auth = drogue_cloud_service_common::mock_auth!();
 
-        let service = service::PostgresManagementService::new(db.config.clone(), sender.clone()).unwrap();
+        let service = service::PostgresManagementService::new(db.config.clone(), sender.clone(), keycloak.clone()).unwrap();
 
         let data = web::Data::new(WebData {
             authenticator: None,
@@ -54,7 +58,7 @@ macro_rules! test {
         let $outbox = outbox;
 
         let $app = actix_web::test::init_service(
-            app!(MockEventSender, 16 * 1024, auth)
+            app!(MockEventSender, KeycloakAdminMock, 16 * 1024, auth)
                 // for the management service
                 .app_data(data.clone())
                 // for the admin service

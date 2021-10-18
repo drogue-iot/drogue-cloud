@@ -3,12 +3,14 @@ pub mod service;
 
 use actix_web::{web, App, HttpServer};
 use drogue_cloud_api_key_service::{
-    endpoints::WebData as KeycloakWebData,
-    service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
+    endpoints::WebData as KeycloakWebData, service::KeycloakApiKeyService,
 };
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
+    keycloak::client::KeycloakAdminClient,
+    keycloak::KeycloakAdminClientConfig,
+    keycloak::KeycloakClient,
     openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
@@ -34,7 +36,7 @@ pub struct Config {
 
     pub oauth: AuthenticatorConfig,
 
-    pub keycloak: KeycloakApiKeyServiceConfig,
+    pub keycloak: KeycloakAdminClientConfig,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -64,7 +66,9 @@ macro_rules! app {
     };
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run<K: 'static + KeycloakClient + std::marker::Send + std::marker::Sync>(
+    config: Config,
+) -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
 
     let authenticator = config.oauth.into_client().await?;
@@ -75,8 +79,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         service: service::PostgresAuthorizationService::new(config.service)?,
     });
 
+    let keycloak_client = KeycloakAdminClient::new(config.keycloak)?;
     let api_key = web::Data::new(KeycloakWebData {
-        service: KeycloakApiKeyService::new(config.keycloak)?,
+        service: KeycloakApiKeyService {
+            client: keycloak_client,
+        },
     });
 
     let data_service = data.service.clone();
@@ -92,7 +99,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         });
         app!(
             data,
-            KeycloakApiKeyService,
+            KeycloakApiKeyService<K>,
             api_key,
             max_json_payload_size,
             enable_auth,

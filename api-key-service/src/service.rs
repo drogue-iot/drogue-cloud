@@ -1,4 +1,3 @@
-use crate::error::Error;
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
@@ -6,15 +5,9 @@ use drogue_cloud_service_api::{
     api::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions, ApiKeyData},
     auth::user::{UserDetails, UserInformation},
 };
-use drogue_cloud_service_common::{
-    defaults,
-    reqwest::{add_service_cert, make_insecure},
-};
-use keycloak::{KeycloakAdmin, KeycloakAdminToken};
-use serde::Deserialize;
+use drogue_cloud_service_common::keycloak::{error::Error, KeycloakClient};
 use serde_json::Value;
 use std::{borrow::Cow, collections::HashMap};
-use url::Url;
 
 const ATTR_PREFIX: &str = "api_key_";
 
@@ -37,67 +30,12 @@ pub trait ApiKeyService: Clone {
     ) -> Result<Option<UserDetails>, Self::Error>;
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct KeycloakApiKeyServiceConfig {
-    #[serde(default = "defaults::keycloak_url")]
-    pub url: Url,
-    #[serde(default = "defaults::realm")]
-    pub realm: String,
-
-    pub admin_username: String,
-    pub admin_password: String,
-
-    #[serde(default)]
-    pub tls_noverify: bool,
-}
-
 #[derive(Clone)]
-pub struct KeycloakApiKeyService {
-    client: reqwest::Client,
-    url: String,
-    pub realm: String,
-    admin_username: String,
-    admin_password: String,
+pub struct KeycloakApiKeyService<K: KeycloakClient> {
+    pub client: K,
 }
 
-impl KeycloakApiKeyService {
-    pub fn new(config: KeycloakApiKeyServiceConfig) -> anyhow::Result<Self> {
-        let mut client = reqwest::ClientBuilder::new();
-
-        if config.tls_noverify {
-            client = make_insecure(client);
-        }
-
-        client = add_service_cert(client)?;
-
-        Ok(Self {
-            client: client.build()?,
-            url: {
-                let url: String = config.url.into();
-                url.trim_end_matches('/').into()
-            },
-            realm: config.realm,
-            admin_username: config.admin_username,
-            admin_password: config.admin_password,
-        })
-    }
-
-    async fn token<'a>(&self) -> Result<KeycloakAdminToken<'a>, Error> {
-        // FIXME: should cache and refresh token
-        Ok(KeycloakAdminToken::acquire(
-            &self.url,
-            &self.admin_username,
-            &self.admin_password,
-            &self.client,
-        )
-        .await?)
-    }
-
-    pub async fn admin<'a>(&self) -> Result<KeycloakAdmin<'a>, Error> {
-        let token = self.token().await?;
-        Ok(KeycloakAdmin::new(&self.url, token, self.client.clone()))
-    }
-
+impl<K: KeycloakClient> KeycloakApiKeyService<K> {
     fn insert_entry(
         attributes: &mut HashMap<Cow<str>, Value>,
         prefix: String,
@@ -126,51 +64,12 @@ impl KeycloakApiKeyService {
                 |str| Ok(serde_json::from_str::<ApiKeyData>(str)?),
             )
     }
-
-    pub async fn username_from_id(&self, id: &str) -> Result<String, Error> {
-        match self
-            .admin()
-            .await?
-            .realm_users_with_id_get(&self.realm, id)
-            .await
-        {
-            // fixme Is the unwrap unsafe ? The user should always have a username
-            Ok(user) => Ok(user.username.unwrap().to_string()),
-            Err(_) => Err(Error::NotFound),
-        }
-    }
-
-    pub async fn id_from_username(&self, username: &str) -> Result<String, Error> {
-        match self
-            .admin()
-            .await?
-            .realm_users_get(
-                &self.realm,
-                None,
-                None,
-                None,
-                Some(true),
-                Some(true),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(username),
-            )
-            .await?
-            .pop()
-        {
-            Some(user) => Ok(user.id.unwrap().to_string()),
-            None => Err(Error::NotFound),
-        }
-    }
 }
 
 #[async_trait]
-impl ApiKeyService for KeycloakApiKeyService {
+impl<K: KeycloakClient + std::marker::Sync + std::marker::Send> ApiKeyService
+    for KeycloakApiKeyService<K>
+{
     type Error = Error;
 
     async fn create(
@@ -184,9 +83,11 @@ impl ApiKeyService for KeycloakApiKeyService {
         };
 
         let key = crate::rng::generate_api_key();
-        let admin = self.admin().await?;
+        let admin = self.client.admin().await?;
 
-        let mut user = admin.realm_users_with_id_get(&self.realm, user_id).await?;
+        let mut user = admin
+            .realm_users_with_id_get(&self.client.realm(), user_id)
+            .await?;
 
         let insert = ApiKeyData {
             hashed_key: key.1,
@@ -205,7 +106,7 @@ impl ApiKeyService for KeycloakApiKeyService {
         }
 
         admin
-            .realm_users_with_id_put(&self.realm, user_id, user)
+            .realm_users_with_id_put(&self.client.realm(), user_id, user)
             .await?;
 
         Ok(key.0)
@@ -217,9 +118,11 @@ impl ApiKeyService for KeycloakApiKeyService {
             None => return Err(Error::NotAuthorized),
         };
 
-        let admin = self.admin().await?;
+        let admin = &self.client.admin().await?;
 
-        let mut user = admin.realm_users_with_id_get(&self.realm, user_id).await?;
+        let mut user = admin
+            .realm_users_with_id_get(&self.client.realm(), user_id)
+            .await?;
 
         let changed = if let Some(ref mut attributes) = user.attributes {
             let key = Self::make_key(prefix);
@@ -230,7 +133,7 @@ impl ApiKeyService for KeycloakApiKeyService {
 
         if changed {
             admin
-                .realm_users_with_id_put(&self.realm, user_id, user)
+                .realm_users_with_id_put(&self.client.realm(), user_id, user)
                 .await?;
         }
 
@@ -243,9 +146,11 @@ impl ApiKeyService for KeycloakApiKeyService {
             None => return Err(Error::NotAuthorized),
         };
 
-        let admin = self.admin().await?;
+        let admin = self.client.admin().await?;
 
-        let user = admin.realm_users_with_id_get(&self.realm, user_id).await?;
+        let user = admin
+            .realm_users_with_id_get(&self.client.realm(), user_id)
+            .await?;
 
         let keys = if let Some(attributes) = user.attributes {
             let mut keys = Vec::new();
@@ -288,10 +193,10 @@ impl ApiKeyService for KeycloakApiKeyService {
 
         // load the user
 
-        let admin = self.admin().await?;
+        let admin = self.client.admin().await?;
         let user = admin
             .realm_users_get(
-                &self.realm,
+                &self.client.realm(),
                 None,
                 None,
                 None,
