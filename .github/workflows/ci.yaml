@@ -250,6 +250,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: ${{ env.VERSION_HELM }}
+
       - name: Create installer archives
         run: |
           make -C installer VERSION=$VERSION
