@@ -11,6 +11,9 @@ use drogue_cloud_device_management_service::{
     WebData,
 };
 use drogue_cloud_registry_events::mock::MockEventSender;
+use drogue_cloud_service_common::keycloak::{
+    mock::KeycloakAdminMock, KeycloakAdminClientConfig, KeycloakClient,
+};
 use drogue_cloud_test_common::{client, db};
 use serde_json::json;
 use serial_test::serial;

@@ -7,7 +7,6 @@ mod x509;
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::{registry, Translator};
-use drogue_cloud_api_key_service::service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig};
 use drogue_cloud_database_common::{
     auth::ensure,
     error::ServiceError,
@@ -26,6 +25,7 @@ use drogue_cloud_service_api::{
     auth::user::{authz::Permission, UserInformation},
     health::{HealthCheckError, HealthChecked},
 };
+use drogue_cloud_service_common::keycloak::KeycloakClient;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
@@ -36,13 +36,12 @@ use uuid::Uuid;
 pub struct PostgresManagementServiceConfig {
     pub pg: deadpool_postgres::Config,
     pub instance: String,
-
-    pub keycloak: KeycloakApiKeyServiceConfig,
 }
 
-impl<S> DatabaseService for PostgresManagementService<S>
+impl<S, K> DatabaseService for PostgresManagementService<S, K>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     fn pool(&self) -> &Pool {
         &self.pool
@@ -50,9 +49,10 @@ where
 }
 
 #[async_trait::async_trait]
-impl<S> HealthChecked for PostgresManagementService<S>
+impl<S, K> HealthChecked for PostgresManagementService<S, K>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     async fn is_ready(&self) -> Result<(), HealthCheckError> {
         Ok(DatabaseService::is_ready(self)
@@ -62,27 +62,33 @@ where
 }
 
 #[derive(Clone)]
-pub struct PostgresManagementService<S>
+pub struct PostgresManagementService<S, K>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     pool: Pool,
     sender: S,
     instance: String,
 
-    keycloak: KeycloakApiKeyService,
+    keycloak: K,
 }
 
-impl<S> PostgresManagementService<S>
+impl<S, K> PostgresManagementService<S, K>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
-    pub fn new(config: PostgresManagementServiceConfig, sender: S) -> anyhow::Result<Self> {
+    pub fn new(
+        config: PostgresManagementServiceConfig,
+        sender: S,
+        keycloak: K,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             pool: config.pg.create_pool(NoTls)?,
             instance: config.instance,
             sender,
-            keycloak: KeycloakApiKeyService::new(config.keycloak)?,
+            keycloak,
         })
     }
 

@@ -12,7 +12,11 @@ use drogue_cloud_registry_events::sender::KafkaSenderConfig;
 use drogue_cloud_service_common::actix_auth::authentication::AuthN;
 use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
 use drogue_cloud_service_common::openid::AuthenticatorConfig;
-use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
+use drogue_cloud_service_common::{
+    defaults,
+    health::HealthServerConfig,
+    keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
+};
 use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator};
 use futures::TryFutureExt;
 use serde::Deserialize;
@@ -44,11 +48,13 @@ pub struct Config {
     pub database_config: PostgresManagementServiceConfig,
 
     pub kafka_sender: KafkaSenderConfig,
+
+    pub keycloak: KeycloakAdminClientConfig,
 }
 
 #[macro_export]
 macro_rules! crud {
-    ($sender:ty, $scope:ident, $base:literal, $module:path, $name:ident) => {{
+    ($sender:ty, $keycloak:ty, $scope:ident, $base:literal, $module:path, $name:ident) => {{
         $scope
             .service({
                 let resource = concat!($base, stringify!($name), "s");
@@ -57,12 +63,12 @@ macro_rules! crud {
                     // create resources
                     .route(web::post().to({
                         use $module as m;
-                        m::create::<$sender>
+                        m::create::<$sender, $keycloak>
                     }))
                     // list resources
                     .route(web::get().to({
                         use $module as m;
-                        m::list::<$sender>
+                        m::list::<$sender, $keycloak>
                     }))
             })
             .service({
@@ -74,15 +80,15 @@ macro_rules! crud {
                     // "use" is required due to: https://github.com/rust-lang/rust/issues/48067
                     .route(web::get().to({
                         use $module as m;
-                        m::read::<$sender>
+                        m::read::<$sender, $keycloak>
                     }))
                     .route(web::put().to({
                         use $module as m;
-                        m::update::<$sender>
+                        m::update::<$sender, $keycloak>
                     }))
                     .route(web::delete().to({
                         use $module as m;
-                        m::delete::<$sender>
+                        m::delete::<$sender, $keycloak>
                     }))
             })
     }};
@@ -90,7 +96,7 @@ macro_rules! crud {
 
 #[macro_export]
 macro_rules! app {
-    ($sender:ty, $max_json_payload_size:expr, $auth:expr) => {{
+    ($sender:ty, $keycloak:ty, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::JsonConfig::default().limit($max_json_payload_size));
@@ -100,48 +106,54 @@ macro_rules! app {
                 .wrap($auth.clone())
                 .wrap(Cors::permissive());
 
-            let scope = crud!($sender, scope, "", endpoints::apps, app);
+            let scope = crud!($sender, $keycloak, scope, "", endpoints::apps, app);
 
-            let scope = crud!($sender, scope, "apps/{app}/", endpoints::devices, device);
+            let scope = crud!(
+                $sender,
+                $keycloak,
+                scope,
+                "apps/{app}/",
+                endpoints::devices,
+                device
+            );
 
             app.service(scope)
         };
 
-        let app =
-            {
-                let scope = web::scope("/api/admin/v1alpha1")
-                    .wrap($auth)
-                    .wrap(Cors::permissive());
+        let app = {
+            let scope = web::scope("/api/admin/v1alpha1")
+                .wrap($auth)
+                .wrap(Cors::permissive());
 
-                let scope = scope.service(
-                    web::resource("/apps/{appId}/transfer-ownership")
-                        .route(
-                            web::put()
-                                .to(apps::transfer::<service::PostgresManagementService<$sender>>),
-                        )
-                        .route(
-                            web::delete()
-                                .to(apps::cancel::<service::PostgresManagementService<$sender>>),
-                        ),
-                );
+            let scope = scope.service(
+                web::resource("/apps/{appId}/transfer-ownership")
+                    .route(web::put().to(apps::transfer::<
+                        service::PostgresManagementService<$sender, $keycloak>,
+                    >))
+                    .route(web::delete().to(apps::cancel::<
+                        service::PostgresManagementService<$sender, $keycloak>,
+                    >)),
+            );
 
-                let scope = scope.service(web::resource("/apps/{appId}/accept-ownership").route(
-                    web::put().to(apps::accept::<service::PostgresManagementService<$sender>>),
-                ));
+            let scope = scope.service(
+                web::resource("/apps/{appId}/accept-ownership")
+                    .route(web::put().to(apps::accept::<
+                        service::PostgresManagementService<$sender, $keycloak>,
+                    >)),
+            );
 
-                let scope =
-                    scope.service(
-                        web::resource("/apps/{appId}/members")
-                            .route(web::get().to(apps::get_members::<
-                                service::PostgresManagementService<$sender>,
-                            >))
-                            .route(web::put().to(apps::set_members::<
-                                service::PostgresManagementService<$sender>,
-                            >)),
-                    );
+            let scope = scope.service(
+                web::resource("/apps/{appId}/members")
+                    .route(web::get().to(apps::get_members::<
+                        service::PostgresManagementService<$sender, $keycloak>,
+                    >))
+                    .route(web::put().to(apps::set_members::<
+                        service::PostgresManagementService<$sender, $keycloak>,
+                    >)),
+            );
 
-                app.service(scope)
-            };
+            app.service(scope)
+        };
 
         app
     }};
@@ -168,7 +180,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let max_json_payload_size = 64 * 1024;
 
-    let service = service::PostgresManagementService::new(config.database_config, sender)?;
+    let keycloak_admin_client = KeycloakAdminClient::new(config.keycloak)?;
+
+    let service = service::PostgresManagementService::new(
+        config.database_config,
+        sender,
+        keycloak_admin_client,
+    )?;
 
     let data = web::Data::new(WebData {
         authenticator: authenticator.as_ref().cloned(),
@@ -184,13 +202,18 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             token: user_auth.clone(),
             enable_api_key: enable_api_keys,
         };
-        app!(KafkaEventSender, max_json_payload_size, auth)
-            // for the management service
-            .app_data(data.clone())
-            // for the admin service
-            .app_data(web::Data::new(apps::WebData {
-                service: db_service.clone(),
-            }))
+        app!(
+            KafkaEventSender,
+            KeycloakAdminClient,
+            max_json_payload_size,
+            auth
+        )
+        // for the management service
+        .app_data(data.clone())
+        // for the admin service
+        .app_data(web::Data::new(apps::WebData {
+            service: db_service.clone(),
+        }))
     })
     .bind(config.bind_addr)?
     .run();

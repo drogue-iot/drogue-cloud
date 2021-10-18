@@ -12,12 +12,14 @@ use drogue_cloud_database_common::{
 use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::admin::{MemberEntry, Members, TransferOwnership};
 use drogue_cloud_service_api::auth::user::{authz::Permission, UserInformation};
+use drogue_cloud_service_common::keycloak::KeycloakClient;
 use indexmap::map::IndexMap;
 
 #[async_trait]
-impl<S> AdminService for PostgresManagementService<S>
+impl<S, K> AdminService for PostgresManagementService<S, K>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     type Error = PostgresManagementServiceError<S::Error>;
 

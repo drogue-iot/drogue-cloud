@@ -23,6 +23,7 @@ use drogue_cloud_service_api::{
     auth::user::{authz::Permission, UserInformation},
     labels::LabelSelector,
 };
+use drogue_cloud_service_common::keycloak::KeycloakClient;
 use futures::{future, Stream, TryStreamExt};
 use tokio_postgres::error::SqlState;
 use uuid::Uuid;
@@ -100,9 +101,10 @@ pub trait ManagementService: Clone {
 }
 
 #[async_trait]
-impl<S> ManagementService for PostgresManagementService<S>
+impl<S, K> ManagementService for PostgresManagementService<S, K>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     type Error = PostgresManagementServiceError<S::Error>;
 

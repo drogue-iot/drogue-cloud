@@ -9,16 +9,18 @@ use drogue_client::registry;
 use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::{auth::user::UserInformation, labels::ParserError};
 use drogue_cloud_service_common::error::ServiceError;
+use drogue_cloud_service_common::keycloak::KeycloakClient;
 use std::convert::TryInto;
 
-pub async fn create<S>(
-    data: web::Data<WebData<PostgresManagementService<S>>>,
+pub async fn create<S, K>(
+    data: web::Data<WebData<PostgresManagementService<S, K>>>,
     app: Json<registry::v1::Application>,
     user: UserInformation,
     req: HttpRequest,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     log::debug!("Creating application: '{:?}'", app);
 
@@ -37,14 +39,15 @@ where
     Ok(response)
 }
 
-pub async fn update<S>(
-    data: web::Data<WebData<PostgresManagementService<S>>>,
+pub async fn update<S, K>(
+    data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<String>,
     app: Json<registry::v1::Application>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     let app_id = path.into_inner();
 
@@ -63,14 +66,15 @@ where
     Ok(HttpResponse::NoContent().finish())
 }
 
-pub async fn delete<S>(
-    data: web::Data<WebData<PostgresManagementService<S>>>,
+pub async fn delete<S, K>(
+    data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<String>,
     params: Option<web::Json<DeleteParams>>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     let app = path.into_inner();
 
@@ -87,13 +91,14 @@ where
     Ok(HttpResponse::NoContent().finish())
 }
 
-pub async fn read<S>(
-    data: web::Data<WebData<PostgresManagementService<S>>>,
+pub async fn read<S, K>(
+    data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<String>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     let app_id = path.into_inner();
     log::debug!("Reading app: '{}'", app_id);
@@ -110,13 +115,14 @@ where
     })
 }
 
-pub async fn list<S>(
-    data: web::Data<WebData<PostgresManagementService<S>>>,
+pub async fn list<S, K>(
+    data: web::Data<WebData<PostgresManagementService<S, K>>>,
     params: web::Query<ListParams>,
     user: UserInformation,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: EventSender + Clone,
+    K: KeycloakClient + Send + Sync,
 {
     log::debug!("Listing apps");
 
