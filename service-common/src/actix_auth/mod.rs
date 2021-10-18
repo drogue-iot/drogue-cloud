@@ -27,7 +27,7 @@ pub struct UsernameAndApiKey {
 pub struct Auth {
     pub auth_n: Option<Authenticator>,
     pub auth_z: Option<UserAuthClient>,
-    pub permission: Permission,
+    pub permission: Option<Permission>,
     pub enable_api_key: bool,
 }
 
@@ -37,15 +37,22 @@ impl Auth {
         &self,
         application: String,
         credentials: Credentials,
-    ) -> Result<(), ServiceError> {
+    ) -> Result<UserInformation, ServiceError> {
         if let (Some(_), Some(_)) = (&self.auth_n, &self.auth_z) {
-            let authentication_result = self.authenticate(credentials).await?;
+            let authentication_result = self.authenticate(credentials).await;
 
-            self.authorize(application, &authentication_result).await
+            match self.permission {
+                Some(permission) => {
+                    self.authorize(application, authentication_result?, permission)
+                        .await
+                }
+                // no permission is specified, skip the AuthZ process
+                None => authentication_result,
+            }
 
-            //authentication disabled
+        //authentication disabled
         } else {
-            Ok(())
+            Ok(UserInformation::Anonymous)
         }
     }
 
@@ -103,13 +110,14 @@ impl Auth {
     async fn authorize(
         &self,
         application: String,
-        user: &UserInformation,
-    ) -> Result<(), ServiceError> {
+        user: UserInformation,
+        permission: Permission,
+    ) -> Result<UserInformation, ServiceError> {
         log::debug!(
             "Authorizing - user: {:?}, app: {}, permission: {:?}",
             user,
             application,
-            self.permission
+            permission
         );
 
         let response = self
@@ -119,7 +127,7 @@ impl Auth {
             .authorize(
                 AuthorizationRequest {
                     application,
-                    permission: self.permission.clone(),
+                    permission,
                     user_id: user.user_id().map(ToString::to_string),
                     roles: user.roles().clone(),
                 },
@@ -131,7 +139,7 @@ impl Auth {
         log::debug!("Outcome: {:?}", response);
 
         match response.outcome {
-            authz::Outcome::Allow => Ok(()),
+            authz::Outcome::Allow => Ok(user),
             authz::Outcome::Deny => Err(ServiceError::InvalidRequest(String::from("Unauthorized"))),
         }
     }

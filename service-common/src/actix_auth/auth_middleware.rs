@@ -2,7 +2,7 @@ use actix_service::{Service, Transform};
 use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
     web::Query,
-    Error,
+    Error, HttpMessage,
 };
 
 use crate::actix_auth::{Auth, Credentials, UsernameAndApiKey};
@@ -103,7 +103,12 @@ where
             };
 
             match auth_result {
-                Ok(_) => srv.call(req).await,
+                Ok(u) => {
+                    // insert the UserInformation in the request
+                    req.extensions_mut().insert(u);
+                    // then forward it to the next service
+                    srv.call(req).await
+                }
                 Err(e) => Err(e.into()),
             }
         })

@@ -85,7 +85,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .wrap(Auth {
                         auth_n: authenticator.clone(),
                         auth_z: user_auth.clone(),
-                        permission: Permission::Read,
+                        permission: Some(Permission::Read),
                         enable_api_key: enable_api_keys,
                     })
                     .service(route::start_connection),

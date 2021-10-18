@@ -89,7 +89,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .wrap(Auth {
                         auth_n: authenticator.clone(),
                         auth_z: user_auth.clone(),
-                        permission: Permission::Write,
+                        permission: Some(Permission::Write),
                         enable_api_key: enable_api_keys,
                     })
                     .wrap(Cors::permissive())
