@@ -115,6 +115,7 @@ impl Component for ApiKeys {
                         <Clipboard
                             value=key.key
                             readonly=true
+                            name="api-key"
                             />
                         </p>
                         <p>{"When you close this alert, you won't have any chance to get the access key ever again. Be sure to copy is somewhere safe."}</p>
@@ -151,6 +152,7 @@ impl Component for ApiKeys {
                                     label="Create key"
                                     variant=Variant::Primary
                                     onclick=self.link.callback(|_|Msg::Create)
+                                    id="create-key"
                                 />
                             </ToolbarItem>
                         </ToolbarGroup>
