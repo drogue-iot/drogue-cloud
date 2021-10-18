@@ -63,7 +63,7 @@ $(EGEN)/root-key.pem $(EGEN)/root-cert.pem: $(EBASE)/ca.cnf
 $(EGEN)/ca-cert.req: $(EBASE)/ca.cnf
 	# Generate CA key and convert to PKCS8
 	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/ca-key-ec.pem" 
-	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/root-key-ec.pem" -out "$(EGEN)/ca-key.pem"
+	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/ca-key-ec.pem" -out "$(EGEN)/ca-key.pem"
 
 	# Generate CA certificate
 	openssl req -config "$(EBASE)/ca.cnf" -key "$(EBASE)/ca-key.pem" -reqexts intermediate_ext -nodes -subj "/O=Drogue IoT/OU=Cloud/CN=Application" > $(EGEN)/ca-cert.req
