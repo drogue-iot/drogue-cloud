@@ -57,7 +57,7 @@ $(EGEN)/root-key.pem $(EGEN)/root-cert.pem: $(EBASE)/ca.cnf
 	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/root-key-ec.pem" -out "$(EGEN)/root-key.pem"
 
 	# Generate root certificate
-	openssl req -x509 -config "$(EBASE)/ca.cnf" -nodes -new -key "$(EBASE)/root-key.pem" -out "$(EGEN)/root-cert.pem" -days 3650 -subj "/O=Drogue IoT/OU=Cloud/CN=Test Authority"
+	openssl req -x509 -config "$(EBASE)/ca.cnf" -nodes -new -key "$(EGEN)/root-key.pem" -out "$(EGEN)/root-cert.pem" -days 3650 -subj "/O=Drogue IoT/OU=Cloud/CN=Test Authority"
 	chmod a+r $(EGEN)/root-key.pem $(EGEN)/root-cert.pem
 
 $(EGEN)/ca-cert.req: $(EBASE)/ca.cnf
