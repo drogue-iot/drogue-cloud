@@ -12,6 +12,8 @@ on:
   # Also on PRs, just be careful not to publish anything
   pull_request:
 
+env:
+  VERSION_HELM: "v3.6.0"
 
 jobs:
 
@@ -153,7 +155,6 @@ jobs:
     needs: [check, build]
     env:
       CLUSTER: "kind"
-      VERSION_HELM: "v3.6.0"
     steps:
 
       - uses: actions/checkout@v2
