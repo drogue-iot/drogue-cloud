@@ -43,4 +43,28 @@ mod test {
 
         std::env::remove_var("FOO__BAR");
     }
+
+    #[test]
+    fn test_nested() {
+        #[derive(Debug, Deserialize)]
+        struct Foo {
+            #[serde(default)]
+            pub bar: Option<Bar>,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Bar {
+            pub baz: Baz,
+        }
+        #[derive(Debug, Deserialize)]
+        struct Baz {
+            pub value: String,
+        }
+
+        std::env::set_var("FOO__BAR__BAZ__VALUE", "s1");
+        let foo = Foo::from_env_prefix("FOO").unwrap();
+
+        assert_eq!(foo.bar.unwrap().baz.value, "s1");
+
+        std::env::remove_var("FOO__BAR__BAZ__VALUE");
+    }
 }

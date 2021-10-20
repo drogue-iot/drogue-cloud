@@ -58,22 +58,14 @@ pub async fn eval_endpoints() -> anyhow::Result<Endpoints> {
 pub fn create_endpoint_source() -> anyhow::Result<EndpointSourceType> {
     let source = std::env::var_os("ENDPOINT_SOURCE").unwrap_or_else(|| "env".into());
     match source.to_str() {
-        Some("env") => Ok(Box::new(EnvEndpointSource(amend_global_sso(
+        Some("env") => Ok(Box::new(EnvEndpointSource(
             EndpointConfig::from_env_prefix("ENDPOINTS")?,
-        )))),
+        ))),
         other => Err(anyhow::anyhow!(
             "Unsupported endpoint source: '{:?}'",
             other
         )),
     }
-}
-
-/// Fill in the SSO url from the global scope, if we don't have any configuration for it.
-fn amend_global_sso(mut endpoints: EndpointConfig) -> EndpointConfig {
-    if endpoints.sso_url.is_none() {
-        endpoints.sso_url = super::openid::global_sso();
-    }
-    endpoints
 }
 
 #[derive(Debug)]

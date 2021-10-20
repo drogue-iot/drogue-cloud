@@ -75,6 +75,13 @@ where
             let query_str = req.query_string();
             let token_query_param = Query::<Token>::from_query(query_str);
 
+            log::debug!(
+                "Basic: {:?}, Bearer: {:?}, Query: {:?}",
+                basic_auth,
+                bearer_auth,
+                token_query_param
+            );
+
             let credentials = match (basic_auth, bearer_auth, token_query_param) {
                 // basic auth is present
                 (Ok(basic), Err(_), _) => Ok(Credentials::ApiKey(UsernameAndApiKey {

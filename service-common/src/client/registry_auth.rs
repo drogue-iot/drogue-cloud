@@ -1,4 +1,4 @@
-use crate::{config::ConfigFromEnv, defaults, openid::TokenConfig};
+use crate::{defaults, openid::TokenConfig};
 use drogue_client::registry;
 use serde::Deserialize;
 use url::Url;
@@ -7,18 +7,8 @@ use url::Url;
 pub struct RegistryConfig {
     #[serde(default = "defaults::registry_url")]
     pub url: Url,
+    #[serde(flatten)]
     pub token_config: Option<TokenConfig>,
-}
-
-impl Default for RegistryConfig {
-    fn default() -> Self {
-        Self {
-            url: defaults::registry_url(),
-            token_config: TokenConfig::from_env_prefix("REGISTRY")
-                .map(|v| v.amend_with_env())
-                .ok(),
-        }
-    }
 }
 
 impl RegistryConfig {

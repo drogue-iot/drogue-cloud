@@ -2,7 +2,6 @@ mod v1alpha1;
 
 use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
-use anyhow::Context;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_common::{
     defaults,
@@ -15,8 +14,11 @@ use serde_json::json;
 use std::str;
 
 use drogue_cloud_service_api::auth::user::authz::Permission;
-use drogue_cloud_service_common::actix_auth::Auth;
-use drogue_cloud_service_common::client::{RegistryConfig, UserAuthClient, UserAuthClientConfig};
+use drogue_cloud_service_common::{
+    actix_auth::Auth,
+    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    openid::AuthenticatorConfig,
+};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -27,14 +29,15 @@ pub struct Config {
     #[serde(default = "defaults::enable_api_keys")]
     pub enable_api_keys: bool,
 
-    #[serde(default)]
-    pub registry: Option<RegistryConfig>,
+    pub registry: RegistryConfig,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
+
+    pub oauth: AuthenticatorConfig,
 }
 
 #[derive(Debug)]
@@ -56,23 +59,20 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let enable_api_keys = config.enable_api_keys;
 
+    let client = reqwest::Client::new();
+
     // set up authentication
 
-    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
-        let client = reqwest::Client::new();
-        let authenticator = Authenticator::new().await?;
-        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
-        (Some(authenticator), Some(user_auth))
+    let authenticator = config.oauth.into_client().await?;
+    let user_auth = if let Some(user_auth) = config.user_auth {
+        let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
+        Some(user_auth)
     } else {
-        (None, None)
+        None
     };
 
     let client = reqwest::Client::new();
-    let registry = config
-        .registry
-        .context("no registry configured")?
-        .into_client(client.clone())
-        .await?;
+    let registry = config.registry.into_client(client.clone()).await?;
 
     // main server
 
@@ -87,7 +87,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .service(
                 web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
                     .wrap(Auth {
-                        auth_n: authenticator.clone(),
+                        auth_n: authenticator.as_ref().cloned(),
                         auth_z: user_auth.clone(),
                         permission: Some(Permission::Write),
                         enable_api_key: enable_api_keys,

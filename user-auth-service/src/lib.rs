@@ -2,14 +2,14 @@ pub mod endpoints;
 pub mod service;
 
 use actix_web::{web, App, HttpServer};
-use drogue_cloud_api_key_service::service::KeycloakApiKeyServiceConfig;
 use drogue_cloud_api_key_service::{
-    endpoints::WebData as KeycloakWebData, service::KeycloakApiKeyService,
+    endpoints::WebData as KeycloakWebData,
+    service::{KeycloakApiKeyService, KeycloakApiKeyServiceConfig},
 };
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
-    openid::Authenticator,
+    openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
 use futures::TryFutureExt;
@@ -31,8 +31,8 @@ pub struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[serde(default = "defaults::enable_auth")]
-    pub enable_auth: bool,
+
+    pub oauth: AuthenticatorConfig,
 
     pub keycloak: KeycloakApiKeyServiceConfig,
 
@@ -66,13 +66,9 @@ macro_rules! app {
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
-    let enable_auth = config.enable_auth;
 
-    let authenticator = if enable_auth {
-        Some(Authenticator::new().await?)
-    } else {
-        None
-    };
+    let authenticator = config.oauth.into_client().await?;
+    let enable_auth = authenticator.is_some();
 
     let data = web::Data::new(WebData {
         authenticator,

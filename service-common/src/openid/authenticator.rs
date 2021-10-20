@@ -1,4 +1,4 @@
-use crate::{config::ConfigFromEnv, defaults, openid::ExtendedClaims, reqwest::add_service_cert};
+use crate::{defaults, openid::ExtendedClaims, reqwest::add_service_cert};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use failure::Fail;
@@ -13,11 +13,14 @@ use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthenticatorConfig {
+    #[serde(default)]
+    pub disabled: bool,
+
     #[serde(flatten)]
     pub global: AuthenticatorGlobalConfig,
 
     #[serde(default)]
-    pub oauth: HashMap<String, AuthenticatorClientConfig>,
+    pub clients: HashMap<String, AuthenticatorClientConfig>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -41,6 +44,18 @@ pub struct AuthenticatorClientConfig {
     pub client_secret: String,
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
+}
+
+impl AuthenticatorConfig {
+    /// Create a client from a configuration. This respects the "disabled" field and returns
+    /// `None` in this case.
+    pub async fn into_client(self) -> anyhow::Result<Option<Authenticator>> {
+        if self.disabled {
+            Ok(None)
+        } else {
+            Ok(Some(Authenticator::new(self).await?))
+        }
+    }
 }
 
 impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
@@ -88,10 +103,21 @@ pub struct Authenticator {
     clients: Vec<openid::Client<Discovered, ExtendedClaims>>,
 }
 
+struct ClientsDebug<'a>(&'a [openid::Client<Discovered, ExtendedClaims>]);
+impl<'a> Debug for ClientsDebug<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_list();
+        for c in self.0 {
+            d.entry(&c.client_id);
+        }
+        d.finish()
+    }
+}
+
 impl Debug for Authenticator {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         let mut d = f.debug_struct("Authenticator");
-        d.field("client", &"...");
+        d.field("clients", &ClientsDebug(self.clients.as_slice()));
         d.finish()
     }
 }
@@ -103,17 +129,13 @@ impl From<openid::Client<Discovered, ExtendedClaims>> for Authenticator {
 }
 
 impl Authenticator {
-    /// Create a new authenticator by evaluating endpoints and SSO configuration.
-    pub async fn new() -> anyhow::Result<Self> {
-        Self::from_config(AuthenticatorConfig::from_env()?).await
-    }
-
     pub fn from_clients(clients: Vec<openid::Client<Discovered, ExtendedClaims>>) -> Self {
         Authenticator { clients }
     }
 
-    pub async fn from_config(mut config: AuthenticatorConfig) -> anyhow::Result<Self> {
-        let configs = config.oauth.drain().map(|(_, v)| v);
+    /// Create a new authenticator by evaluating endpoints and SSO configuration.
+    pub async fn new(mut config: AuthenticatorConfig) -> anyhow::Result<Self> {
+        let configs = config.clients.drain().map(|(_, v)| v);
         Self::from_configs(config.global, configs).await
     }
 
@@ -244,6 +266,7 @@ pub async fn create_client<C: ClientConfig, P: CompactJson + Claims>(
 mod test {
 
     use super::*;
+    use crate::config::ConfigFromEnv;
     use openid::biscuit::ClaimsSet;
 
     #[test]
@@ -267,5 +290,10 @@ mod test {
         println!("Token: {:#?}", token);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_empty_config() {
+        AuthenticatorConfig::from_env().expect("Empty config is ok");
     }
 }

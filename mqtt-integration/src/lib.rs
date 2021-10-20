@@ -1,13 +1,12 @@
 mod service;
 
 use crate::service::ServiceConfig;
-use anyhow::Context;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
-use drogue_cloud_mqtt_common::server::{build, TlsConfig};
+use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     health::{HealthServer, HealthServerConfig},
-    openid::Authenticator,
+    openid::AuthenticatorConfig,
 };
 use futures::TryFutureExt;
 use serde::Deserialize;
@@ -27,8 +26,7 @@ pub struct Config {
     #[serde(default)]
     pub bind_addr_mqtt: Option<String>,
 
-    #[serde(default)]
-    pub registry: Option<RegistryConfig>,
+    pub registry: RegistryConfig,
 
     pub max_size: Option<u32>,
 
@@ -40,6 +38,8 @@ pub struct Config {
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
+
+    pub oauth: AuthenticatorConfig,
 }
 
 impl TlsConfig for Config {
@@ -70,6 +70,8 @@ impl Debug for OpenIdClient {
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
+    log::debug!("Config: {:#?}", config);
+
     let app_config = config.clone();
 
     log::info!(
@@ -78,27 +80,24 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     );
     log::info!("Kafka servers: {}", config.service.kafka.bootstrap_servers);
 
+    let client = reqwest::Client::new();
+
     // set up security
 
-    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
-        let client = reqwest::Client::new();
-        let authenticator = Authenticator::new().await?;
-        let user_auth = Arc::new(UserAuthClient::from_config(client, user_auth).await?);
-        (Some(authenticator), Some(user_auth))
+    let authenticator = config.oauth.into_client().await?;
+    let user_auth = if let Some(user_auth) = config.user_auth {
+        let user_auth = Arc::new(UserAuthClient::from_config(client.clone(), user_auth).await?);
+        Some(user_auth)
     } else {
-        (None, None)
+        None
     };
 
-    let client = reqwest::Client::new();
-    let registry = config
-        .registry
-        .as_ref()
-        .cloned()
-        .context("no registry configured")?
-        .into_client(client.clone())
-        .await?;
+    let registry = config.registry.into_client(client.clone()).await?;
 
     let sender = UpstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
+
+    log::info!("Authenticator: {:?}", authenticator);
+    log::info!("User auth: {:?}", user_auth);
 
     // creating the application
 
@@ -113,8 +112,15 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // create server
 
-    let addr = config.bind_addr_mqtt.as_deref();
-    let srv = build(addr, app, &app_config)?.run();
+    let srv = build(
+        MqttServerOptions {
+            bind_addr: config.bind_addr_mqtt.clone(),
+            ..Default::default()
+        },
+        app,
+        &app_config,
+    )?
+    .run();
 
     log::info!("Starting server");
 

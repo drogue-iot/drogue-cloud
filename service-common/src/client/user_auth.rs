@@ -1,4 +1,4 @@
-use crate::{config::ConfigFromEnv, defaults, openid::TokenConfig};
+use crate::{defaults, openid::TokenConfig};
 use drogue_client::{
     error::ClientError,
     openid::{OpenIdTokenProvider, TokenInjector},
@@ -26,19 +26,8 @@ pub struct UserAuthClientConfig {
     #[serde(default = "defaults::user_auth_url")]
     pub url: Url,
 
-    #[serde(default)]
+    #[serde(flatten, default)]
     pub token_config: Option<TokenConfig>,
-}
-
-impl Default for UserAuthClientConfig {
-    fn default() -> Self {
-        Self {
-            url: defaults::user_auth_url(),
-            token_config: TokenConfig::from_env_prefix("USER_AUTH")
-                .map(|v| v.amend_with_env())
-                .ok(),
-        }
-    }
 }
 
 impl UserAuthClient {

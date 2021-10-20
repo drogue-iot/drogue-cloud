@@ -4,13 +4,12 @@ mod telemetry;
 mod ttn;
 mod x509;
 
-#[cfg(feature = "rustls")]
-use actix_tls::accept::rustls::Session;
 use actix_web::{
     get, middleware,
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
+use drogue_cloud_endpoint_common::auth::AuthConfig;
 use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
 };
@@ -43,6 +42,8 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
+    pub auth: AuthConfig,
+
     pub command_source_kafka: KafkaCommandSourceConfig,
 }
 
@@ -61,7 +62,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
     let http_server_commands = commands.clone();
 
-    let device_authenticator = DeviceAuthenticator::new().await?;
+    let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
 
     let http_server = HttpServer::new(move || {
         let app = App::new()

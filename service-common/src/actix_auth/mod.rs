@@ -12,12 +12,14 @@ mod auth_middleware;
 //  - username + API key
 //  - openID token
 //  - Anonymous
+#[derive(Debug, Clone)]
 pub enum Credentials {
     Token(String),
     ApiKey(UsernameAndApiKey),
     Anonymous,
 }
 
+#[derive(Debug, Clone)]
 pub struct UsernameAndApiKey {
     pub username: String,
     pub key: Option<String>,

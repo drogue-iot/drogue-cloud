@@ -1,11 +1,6 @@
 use url::Url;
 
 #[inline]
-pub fn enable_auth() -> bool {
-    true
-}
-
-#[inline]
 pub fn enable_api_keys() -> bool {
     true
 }

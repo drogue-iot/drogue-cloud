@@ -2104,12 +2104,14 @@ dependencies = [
  "async-trait",
  "drogue-cloud-endpoint-common",
  "futures",
+ "humantime-serde",
  "log",
  "ntex",
  "ntex-mqtt",
  "ntex-service",
  "pem 1.0.0",
  "rustls",
+ "serde 1.0.130",
 ]
 
 [[package]]

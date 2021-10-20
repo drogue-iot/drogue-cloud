@@ -6,11 +6,12 @@ use crate::{
     service::App,
 };
 use drogue_cloud_endpoint_common::{
+    auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
     sender::DownstreamSender,
     sink::KafkaSink,
 };
-use drogue_cloud_mqtt_common::server::{build, TlsConfig};
+use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
 use futures::TryFutureExt;
 use rust_tls::ClientCertVerifier;
@@ -30,6 +31,8 @@ pub struct Config {
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
+
+    pub auth: AuthConfig,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
 }
@@ -60,13 +63,21 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let app = App {
         downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
         authenticator: DeviceAuthenticator(
-            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
+            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth.clone())
+                .await?,
         ),
         commands: commands.clone(),
     };
 
-    let addr = config.bind_addr_mqtt.as_deref();
-    let srv = build(addr, app, &config)?.run();
+    let srv = build(
+        MqttServerOptions {
+            bind_addr: config.bind_addr_mqtt.clone(),
+            ..Default::default()
+        },
+        app,
+        &config,
+    )?
+    .run();
 
     log::info!("Starting web server");
 

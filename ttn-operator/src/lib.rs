@@ -5,7 +5,6 @@ mod utils;
 
 use crate::controller::{app::ApplicationController, device::DeviceController};
 use anyhow::anyhow;
-use anyhow::Context;
 use async_std::sync::Mutex;
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
@@ -33,8 +32,7 @@ pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    #[serde(default)]
-    pub registry: Option<RegistryConfig>,
+    pub registry: RegistryConfig,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -84,11 +82,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let client = reqwest::Client::new();
 
-    let registry = config
-        .registry
-        .context("no registry configured")?
-        .into_client(client.clone())
-        .await?;
+    let registry = config.registry.into_client(client.clone()).await?;
 
     let app_processor = BaseController::new(
         config.work_queue.clone(),

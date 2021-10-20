@@ -8,8 +8,9 @@ mod telemetry;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap::Server;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
-use drogue_cloud_endpoint_common::command::{
-    Commands, KafkaCommandSource, KafkaCommandSourceConfig,
+use drogue_cloud_endpoint_common::{
+    auth::AuthConfig,
+    command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
 };
 use drogue_cloud_endpoint_common::{
     error::EndpointError,
@@ -38,6 +39,9 @@ pub struct Config {
     pub bind_addr_coap: Option<String>,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
+
+    pub auth: AuthConfig,
+
     #[serde(default)]
     pub health: HealthServerConfig,
 }
@@ -211,7 +215,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let app = App {
         downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
         authenticator: DeviceAuthenticator(
-            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new().await?,
+            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth).await?,
         ),
         commands: coap_server_commands,
     };

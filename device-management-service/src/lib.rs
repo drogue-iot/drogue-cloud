@@ -11,6 +11,7 @@ use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig;
 use drogue_cloud_service_common::actix_auth::Auth;
 use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
+use drogue_cloud_service_common::openid::AuthenticatorConfig;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
 use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator};
 use futures::TryFutureExt;
@@ -37,8 +38,10 @@ pub struct Config {
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
 
-    #[serde(default)]
-    pub database_config: Option<PostgresManagementServiceConfig>,
+    pub oauth: AuthenticatorConfig,
+
+    #[serde(flatten)]
+    pub database_config: PostgresManagementServiceConfig,
 
     pub kafka_sender: KafkaSenderConfig,
 }
@@ -151,13 +154,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // set up authentication
 
-    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
+    let authenticator = config.oauth.into_client().await?;
+    let user_auth = if let Some(user_auth) = config.user_auth {
         let client = reqwest::Client::new();
-        let authenticator = Authenticator::new().await?;
         let user_auth = UserAuthClient::from_config(client, user_auth).await?;
-        (Some(authenticator), Some(user_auth))
+        Some(user_auth)
     } else {
-        (None, None)
+        None
     };
 
     let sender = KafkaEventSender::new(config.kafka_sender)
@@ -165,15 +168,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let max_json_payload_size = 64 * 1024;
 
-    let service = service::PostgresManagementService::new(
-        config
-            .database_config
-            .context("unable to find database config")?,
-        sender,
-    )?;
+    let service = service::PostgresManagementService::new(config.database_config, sender)?;
 
     let data = web::Data::new(WebData {
-        authenticator: authenticator.clone(),
+        authenticator: authenticator.as_ref().cloned(),
         service: service.clone(),
     });
 
@@ -182,7 +180,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let db_service = service.clone();
     let main = HttpServer::new(move || {
         let auth = Auth {
-            auth_n: authenticator.clone(),
+            auth_n: authenticator.as_ref().cloned(),
             auth_z: user_auth.clone(),
             permission: None,
             enable_api_key: enable_api_keys,

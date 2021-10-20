@@ -27,18 +27,6 @@ pub struct TokenConfig {
 }
 
 impl TokenConfig {
-    /// pull in global configuration options
-    pub fn amend_with_env(mut self) -> Self {
-        // try fetching global SSO url
-        if self.sso_url.is_none() {
-            self.sso_url = super::global_sso()
-                .map(|url| Url::parse(&url))
-                .and_then(|url| url.ok())
-        }
-
-        self
-    }
-
     pub fn issuer_url(&self) -> anyhow::Result<Url> {
         match (&self.issuer_url, &self.sso_url) {
             (Some(issuer_url), _) => Ok(issuer_url.clone()),

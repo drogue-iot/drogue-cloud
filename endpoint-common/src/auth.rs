@@ -9,7 +9,7 @@ use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, Credential,
 };
 use drogue_cloud_service_common::{
-    client::ReqwestAuthenticatorClient, config::ConfigFromEnv, defaults, openid::TokenConfig,
+    client::ReqwestAuthenticatorClient, defaults, openid::TokenConfig,
 };
 use futures::future::{err, ok, Ready};
 use http::HeaderValue;
@@ -26,7 +26,10 @@ pub struct AuthConfig {
 
     /// The URL of the authentication service.
     #[serde(default = "defaults::authentication_url")]
-    pub auth_service_url: Url,
+    pub url: Url,
+
+    #[serde(flatten, default)]
+    pub token_config: Option<TokenConfig>,
 }
 
 #[derive(Clone, Debug)]
@@ -41,16 +44,13 @@ impl DeviceAuthenticator {
     ///
     /// If the configuration has authentication enabled, but no token configuration is provided, an
     /// error will be returned.
-    pub async fn with_config(
-        config: AuthConfig,
-        token_config: Option<TokenConfig>,
-    ) -> anyhow::Result<Self> {
+    pub async fn new(config: AuthConfig) -> anyhow::Result<Self> {
         let url = config
-            .auth_service_url
+            .url
             .join("/api/v1/auth")
             .context("Failed to build auth URL from base URL")?;
 
-        let token_provider = match (config.auth_disabled, token_config) {
+        let token_provider = match (config.auth_disabled, config.token_config) {
             (false, Some(token_config)) => Some(
                 token_config
                     .discover_from(reqwest::Client::new())
@@ -69,18 +69,6 @@ impl DeviceAuthenticator {
         Ok(DeviceAuthenticator {
             client: ReqwestAuthenticatorClient::new(Default::default(), url, token_provider),
         })
-    }
-
-    /// Create a new authentication client by using configuration from the environment.
-    pub async fn new() -> anyhow::Result<Self> {
-        let config: AuthConfig = AuthConfig::from_env()?;
-
-        let token_config = match config.auth_disabled {
-            false => Some(TokenConfig::from_env()?),
-            true => None,
-        };
-
-        Self::with_config(config, token_config).await
     }
 
     pub async fn authenticate<A, D>(

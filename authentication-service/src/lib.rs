@@ -3,13 +3,12 @@ pub mod service;
 
 use crate::service::PostgresAuthenticationService;
 use actix_web::{web, App, HttpServer};
-use anyhow::Context;
 use drogue_cloud_service_api::health::HealthChecked;
-use drogue_cloud_service_common::openid_auth;
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
-    openid::Authenticator,
+    openid::{Authenticator, AuthenticatorConfig},
+    openid_auth,
 };
 use futures::TryFutureExt;
 use serde::Deserialize;
@@ -29,11 +28,11 @@ pub struct Config {
     pub bind_addr: String,
     #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
-    #[serde(default = "defaults::enable_auth")]
-    pub enable_auth: bool,
 
-    #[serde(default)]
-    pub auth_service_config: Option<AuthenticationServiceConfig>,
+    pub oauth: AuthenticatorConfig,
+
+    #[serde(flatten)]
+    pub auth_service_config: AuthenticationServiceConfig,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -61,20 +60,13 @@ pub fn health_checks(service: PostgresAuthenticationService) -> Vec<Box<dyn Heal
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let max_json_payload_size = config.max_json_payload_size;
-    let enable_auth = config.enable_auth;
 
-    let authenticator = if enable_auth {
-        Some(Authenticator::new().await?)
-    } else {
-        None
-    };
+    let authenticator = config.oauth.into_client().await?;
+    let enable_auth = authenticator.is_some();
 
-    let auth_service_config = config
-        .auth_service_config
-        .context("database config not found")?;
     let data = web::Data::new(WebData {
         authenticator,
-        service: service::PostgresAuthenticationService::new(auth_service_config)?,
+        service: service::PostgresAuthenticationService::new(config.auth_service_config)?,
     });
 
     let data_service = data.service.clone();

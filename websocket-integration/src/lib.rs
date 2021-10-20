@@ -3,21 +3,19 @@ mod route;
 mod service;
 mod wshandler;
 
+use crate::service::Service;
 use actix::Actor;
 use actix_web::{web, App, HttpServer};
-
-use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
-use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator};
-use serde::Deserialize;
-
-use crate::service::Service;
-use anyhow::Context;
-use drogue_cloud_service_common::client::{RegistryConfig, UserAuthClient, UserAuthClientConfig};
+use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
+use drogue_cloud_service_common::{
+    actix_auth::Auth,
+    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+    openid::AuthenticatorConfig,
+};
 use futures::TryFutureExt;
-
-use drogue_cloud_service_api::auth::user::authz::Permission;
-use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_common::actix_auth::Auth;
+use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -37,8 +35,9 @@ pub struct Config {
     #[serde(default)]
     pub kafka: KafkaClientConfig,
 
-    #[serde(default)]
-    pub registry: Option<RegistryConfig>,
+    pub registry: RegistryConfig,
+
+    pub oauth: AuthenticatorConfig,
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
@@ -49,21 +48,17 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // set up authentication
 
-    let (authenticator, user_auth) = if let Some(user_auth) = config.user_auth {
-        let client = reqwest::Client::new();
-        let authenticator = Authenticator::new().await?;
-        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
-        (Some(authenticator), Some(user_auth))
+    let client = reqwest::Client::new();
+
+    let authenticator = config.oauth.into_client().await?;
+    let user_auth = if let Some(user_auth) = config.user_auth {
+        let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
+        Some(user_auth)
     } else {
-        (None, None)
+        None
     };
 
-    let client = reqwest::Client::new();
-    let registry = config
-        .registry
-        .context("no registry configured")?
-        .into_client(client.clone())
-        .await?;
+    let registry = config.registry.into_client(client.clone()).await?;
 
     // create and start the service actor
     let service_addr = Service {
@@ -83,7 +78,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .service(
                 web::scope("/{application}")
                     .wrap(Auth {
-                        auth_n: authenticator.clone(),
+                        auth_n: authenticator.as_ref().cloned(),
                         auth_z: user_auth.clone(),
                         permission: Some(Permission::Read),
                         enable_api_key: enable_api_keys,

@@ -17,6 +17,8 @@ ntex-mqtt = "0.7"
 ntex-service = "0.2"
 
 pem = "1"
+serde = "1"
+humantime-serde = "1"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 

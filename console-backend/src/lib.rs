@@ -24,7 +24,7 @@ use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
-    openid::{Authenticator, TokenConfig},
+    openid::{Authenticator, AuthenticatorConfig, TokenConfig},
     openid_auth,
 };
 use futures::TryFutureExt;
@@ -59,7 +59,7 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
-    #[serde(default)]
+    #[serde(rename = "ui", default)]
     pub console_token_config: Option<TokenConfig>,
 
     #[serde(default = "defaults::oauth2_scopes")]
@@ -68,15 +68,19 @@ pub struct Config {
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
 
-    #[serde(default)]
-    pub registry: Option<RegistryConfig>,
+    pub registry: RegistryConfig,
 
     #[serde(default)]
     pub disable_account_url: bool,
+
+    pub oauth: AuthenticatorConfig,
 }
 
 pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
     log::info!("Running console server!");
+
+    log::debug!("Config: {:#?}", config);
+
     // kube
 
     let kube = kube::client::Client::try_default()
@@ -85,12 +89,15 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let config_maps = Api::<ConfigMap>::default_namespaced(kube.clone());
 
+    let client = reqwest::Client::new();
+
     // OpenIdConnect
 
     let app_config = config.clone();
 
-    let (openid_client, user_auth, authenticator) = if let Some(user_auth) = config.user_auth {
-        let client = reqwest::Client::new();
+    let authenticator = config.oauth.into_client().await?.map(web::Data::new);
+
+    let (openid_client, user_auth) = if let Some(user_auth) = config.user_auth {
         let console_token_config = config
             .console_token_config
             .context("unable to find console token config")?;
@@ -98,7 +105,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             .into_client(client.clone(), endpoints.redirect_url.clone())
             .await?;
 
-        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
+        let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
 
         let account_url = match config.disable_account_url {
             true => None,
@@ -122,10 +129,9 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                 account_url,
             }),
             Some(web::Data::new(user_auth)),
-            Some(web::Data::new(Authenticator::new().await?)),
         )
     } else {
-        (None, None, None)
+        (None, None)
     };
 
     let openid_client = openid_client.map(web::Data::new);
@@ -136,12 +142,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         service: KeycloakApiKeyService::new(config.keycloak)?,
     });
 
-    let client = reqwest::Client::new();
-    let registry = config
-        .registry
-        .context("no registry configured")?
-        .into_client(client.clone())
-        .await?;
+    let registry = config.registry.into_client(client.clone()).await?;
 
     // upstream API url
     #[cfg(feature = "forward")]
