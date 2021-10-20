@@ -15,7 +15,8 @@ use std::str;
 
 use drogue_cloud_service_api::auth::user::authz::Permission;
 use drogue_cloud_service_common::{
-    actix_auth::Auth,
+    actix_auth::authentication::AuthN,
+    actix_auth::authorization::AuthZ,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     openid::AuthenticatorConfig,
 };
@@ -86,10 +87,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .service(index)
             .service(
                 web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
-                    .wrap(Auth {
-                        auth_n: authenticator.as_ref().cloned(),
-                        auth_z: user_auth.clone(),
-                        permission: Some(Permission::Write),
+                    .wrap(AuthZ {
+                        client: user_auth.clone(),
+                        permission: Permission::Write,
+                    })
+                    .wrap(AuthN {
+                        openid: authenticator.as_ref().cloned(),
+                        token: user_auth.clone(),
                         enable_api_key: enable_api_keys,
                     })
                     .wrap(Cors::permissive())
