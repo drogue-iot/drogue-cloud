@@ -8,13 +8,15 @@ use actix::Actor;
 use actix_web::{web, App, HttpServer};
 use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
-    actix_auth::Auth,
+    actix_auth::authentication::AuthN,
+    actix_auth::authorization::AuthZ,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
     openid::AuthenticatorConfig,
 };
 use futures::TryFutureExt;
+
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -77,10 +79,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .app_data(service_addr.clone())
             .service(
                 web::scope("/{application}")
-                    .wrap(Auth {
-                        auth_n: authenticator.as_ref().cloned(),
-                        auth_z: user_auth.clone(),
-                        permission: Some(Permission::Read),
+                    .wrap(AuthZ {
+                        client: user_auth.clone(),
+                        permission: Permission::Read,
+                    })
+                    .wrap(AuthN {
+                        openid: authenticator.as_ref().cloned(),
+                        token: user_auth.clone(),
                         enable_api_key: enable_api_keys,
                     })
                     .service(route::start_connection),

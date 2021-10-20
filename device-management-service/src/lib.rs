@@ -9,7 +9,7 @@ use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig;
-use drogue_cloud_service_common::actix_auth::Auth;
+use drogue_cloud_service_common::actix_auth::authentication::AuthN;
 use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
 use drogue_cloud_service_common::openid::AuthenticatorConfig;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
@@ -179,10 +179,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let db_service = service.clone();
     let main = HttpServer::new(move || {
-        let auth = Auth {
-            auth_n: authenticator.as_ref().cloned(),
-            auth_z: user_auth.clone(),
-            permission: None,
+        let auth = AuthN {
+            openid: authenticator.as_ref().cloned(),
+            token: user_auth.clone(),
             enable_api_key: enable_api_keys,
         };
         app!(KafkaEventSender, max_json_payload_size, auth)

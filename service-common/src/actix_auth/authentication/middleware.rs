@@ -5,7 +5,7 @@ use actix_web::{
     Error, HttpMessage,
 };
 
-use crate::actix_auth::{Auth, Credentials, UsernameAndApiKey};
+use crate::actix_auth::authentication::{AuthN, Credentials, UsernameAndApiKey};
 use crate::error::ServiceError;
 
 use actix_web_httpauth::extractors::basic::BasicAuth;
@@ -18,14 +18,14 @@ use std::rc::Rc;
 
 pub struct AuthMiddleware<S> {
     service: Rc<S>,
-    authenticator: Auth,
+    authenticator: AuthN,
 }
 
 // 1. Middleware initialization
 // Middleware factory is `Transform` trait from actix-service crate
 // `S` - type of the next service
 // `B` - type of response's body
-impl<S, B> Transform<S, ServiceRequest> for Auth
+impl<S, B> Transform<S, ServiceRequest> for AuthN
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
@@ -101,11 +101,9 @@ where
                 )),
             };
 
-            let app = req.match_info().get("application");
-
             // authentication
             let auth_result = match credentials {
-                Ok(c) => auth.authenticate_and_authorize(app, c).await,
+                Ok(c) => auth.authenticate(c).await,
                 Err(_) => Err(ServiceError::AuthenticationError),
             };
 
