@@ -75,8 +75,6 @@ where
             let query_str = req.query_string();
             let token_query_param = Query::<Token>::from_query(query_str);
 
-            let app = req.match_info().get("application").unwrap();
-
             let credentials = match (basic_auth, bearer_auth, token_query_param) {
                 // basic auth is present
                 (Ok(basic), Err(_), _) => Ok(Credentials::ApiKey(UsernameAndApiKey {
@@ -96,10 +94,13 @@ where
                 )),
             };
 
+            let app = req.match_info().get("application");
+
             // authentication
-            let auth_result = match credentials {
-                Ok(c) => auth.authenticate_and_authorize(app.to_string(), c).await,
-                Err(_) => Err(ServiceError::AuthenticationError),
+            let auth_result = match (credentials, app) {
+                (Ok(c), None) => auth.authenticate(c).await,
+                (Ok(c), Some(app)) => auth.authenticate_and_authorize(app.to_string(), c).await,
+                (Err(_), _) => Err(ServiceError::AuthenticationError),
             };
 
             match auth_result {
