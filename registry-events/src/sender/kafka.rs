@@ -5,7 +5,7 @@ use cloudevents::{
     event::ExtensionValue,
     AttributesReader,
 };
-use drogue_cloud_event_common::config::KafkaConfig;
+use drogue_cloud_service_api::kafka::KafkaConfig;
 use rdkafka::{
     error::KafkaError,
     producer::{FutureProducer, FutureRecord},

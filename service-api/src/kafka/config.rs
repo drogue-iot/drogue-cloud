@@ -1,6 +1,5 @@
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::ops::Deref;
+use std::{collections::HashMap, ops::Deref};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct KafkaClientConfig {
