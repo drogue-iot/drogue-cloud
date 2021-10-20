@@ -35,19 +35,19 @@ impl Auth {
     /// Authorise a request
     pub async fn authenticate_and_authorize(
         &self,
-        application: String,
+        application: Option<&str>,
         credentials: Credentials,
     ) -> Result<UserInformation, ServiceError> {
         if let (Some(_), Some(_)) = (&self.auth_n, &self.auth_z) {
             let authentication_result = self.authenticate(credentials).await;
 
-            match self.permission {
-                Some(permission) => {
+            match (self.permission, application) {
+                (Some(permission), Some(application)) => {
                     self.authorize(application, authentication_result?, permission)
                         .await
                 }
-                // no permission is specified, skip the AuthZ process
-                None => authentication_result,
+                // no permission nor application specified, skip the AuthZ process
+                _ => authentication_result,
             }
 
         //authentication disabled
@@ -109,7 +109,7 @@ impl Auth {
 
     async fn authorize(
         &self,
-        application: String,
+        application: &str,
         user: UserInformation,
         permission: Permission,
     ) -> Result<UserInformation, ServiceError> {
@@ -126,7 +126,7 @@ impl Auth {
             .unwrap()
             .authorize(
                 AuthorizationRequest {
-                    application,
+                    application: application.to_string(),
                     permission,
                     user_id: user.user_id().map(ToString::to_string),
                     roles: user.roles().clone(),

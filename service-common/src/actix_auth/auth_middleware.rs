@@ -97,10 +97,9 @@ where
             let app = req.match_info().get("application");
 
             // authentication
-            let auth_result = match (credentials, app) {
-                (Ok(c), None) => auth.authenticate(c).await,
-                (Ok(c), Some(app)) => auth.authenticate_and_authorize(app.to_string(), c).await,
-                (Err(_), _) => Err(ServiceError::AuthenticationError),
+            let auth_result = match credentials {
+                Ok(c) => auth.authenticate_and_authorize(app, c).await,
+                Err(_) => Err(ServiceError::AuthenticationError),
             };
 
             match auth_result {
