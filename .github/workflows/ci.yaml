@@ -13,7 +13,7 @@ on:
   pull_request:
 
 env:
-  VERSION_HELM: "v3.6.0"
+  VERSION_HELM: "v3.7.1"
 
 jobs:
 
