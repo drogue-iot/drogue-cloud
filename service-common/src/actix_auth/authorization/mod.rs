@@ -22,6 +22,7 @@ mod middleware;
 /// # Example
 ///
 /// ```
+/// use anyhow::Result;
 /// use actix_web::{web, App, HttpRequest, HttpServer, Responder};
 /// use drogue_cloud_service_common::actix_auth::authentication::AuthN;
 /// use drogue_cloud_service_common::actix_auth::authorization::AuthZ;
@@ -30,6 +31,8 @@ mod middleware;
 /// use drogue_cloud_service_common::config::ConfigFromEnv;
 /// use drogue_cloud_service_common::openid::AuthenticatorConfig;
 /// use drogue_cloud_service_common::client::UserAuthClient;
+/// use serde::Deserialize;
+/// use reqwest;
 ///
 /// #[derive(Clone, Debug, Deserialize)]
 /// pub struct Config {
@@ -39,9 +42,11 @@ mod middleware;
 /// }
 ///
 /// #[actix_web::main]
-/// async fn main() -> std::io::Result<()> {
+/// async fn main() -> Result<()> {
 ///
+/// use actix_web::HttpResponse;
 /// let config = Config::from_env()?;
+/// let client = reqwest::Client::new();
 ///
 /// let authenticator = config.oauth.into_client().await?;
 /// let user_auth = if let Some(user_auth) = config.user_auth {
@@ -65,12 +70,14 @@ mod middleware;
 ///              token: user_auth.clone(),
 ///              enable_api_key: true,
 ///         })
-///         .service(route::start_connection),
+///         .service(web::resource("/").to(|| HttpResponse::Ok()))
 ///      )
 ///     })
 ///     .bind("127.0.0.1:8080")?
 ///     .run()
-///     .await
+///     .await;
+///
+///     Ok(())
 /// }
 /// ```
 #[derive(Clone)]

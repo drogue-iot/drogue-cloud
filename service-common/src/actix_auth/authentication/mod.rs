@@ -42,6 +42,7 @@ pub struct UsernameAndApiKey {
 /// # Example
 ///
 /// ```
+/// use anyhow::Result;
 /// use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 /// use drogue_cloud_service_common::actix_auth::authentication::AuthN;
 /// use drogue_cloud_service_common::actix_auth::authorization::AuthZ;
@@ -50,6 +51,8 @@ pub struct UsernameAndApiKey {
 /// use drogue_cloud_service_common::config::ConfigFromEnv;
 /// use drogue_cloud_service_common::openid::AuthenticatorConfig;
 /// use drogue_cloud_service_common::client::UserAuthClient;
+/// use serde::Deserialize;
+/// use reqwest;
 ///
 /// #[derive(Clone, Debug, Deserialize)]
 /// pub struct Config {
@@ -59,9 +62,10 @@ pub struct UsernameAndApiKey {
 /// }
 ///
 /// #[actix_web::main]
-/// async fn main() -> std::io::Result<()> {
+/// async fn main() -> Result<()> {
 ///
 /// let config = Config::from_env()?;
+/// let client = reqwest::Client::new();
 ///
 /// let authenticator = config.oauth.into_client().await?;
 /// let user_auth = if let Some(user_auth) = config.user_auth {
@@ -85,7 +89,9 @@ pub struct UsernameAndApiKey {
 ///     })
 ///     .bind("127.0.0.1:8080")?
 ///     .run()
-///     .await
+///     .await;
+///
+///     Ok(())
 /// }
 /// ```
 #[derive(Clone)]
