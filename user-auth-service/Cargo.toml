@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-user-auth-service"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2018"
 
