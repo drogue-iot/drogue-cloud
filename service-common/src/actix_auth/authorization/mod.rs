@@ -6,10 +6,78 @@ use drogue_cloud_service_api::auth::user::{authz, UserInformation};
 
 mod middleware;
 
+/// An Authorization middleware for actix-web relying on drogue-cloud user-auth-service.
+///
+/// This middleware will act on each request and makes sure the user have the corrects rights
+/// to act on the application.
+/// This middleware relies on extracting the user information from the request, so it should be ran
+/// after the authentication middleware, see [AuthN](crate::actix_auth::keycloak:authentication::AuthN).
+///
+/// # Fields
+///
+/// * `client` - An instance of `UserAuthClient` it's a client for drogue-cloud-user-auth-service.
+/// * `permission` - The Permission to check. See [Permission](drogue_cloud_service_api::auth::user::authz::Permission) enum.
+/// * `app_aparam` - The name of the application param to extract the value from the request.
+///
+/// # Example
+///
+/// ```
+/// use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+/// use drogue_cloud_service_common::actix_auth::authentication::AuthN;
+/// use drogue_cloud_service_common::actix_auth::authorization::AuthZ;
+/// use drogue_cloud_service_api::auth::user::authz::Permission;
+/// use drogue_cloud_service_common::client::UserAuthClientConfig;
+/// use drogue_cloud_service_common::config::ConfigFromEnv;
+/// use drogue_cloud_service_common::openid::AuthenticatorConfig;
+/// use drogue_cloud_service_common::client::UserAuthClient;
+///
+/// #[derive(Clone, Debug, Deserialize)]
+/// pub struct Config {
+///     #[serde(default)]
+///     pub user_auth: Option<UserAuthClientConfig>,
+///     pub oauth: AuthenticatorConfig,
+/// }
+///
+/// #[actix_web::main]
+/// async fn main() -> std::io::Result<()> {
+///
+/// let config = Config::from_env()?;
+///
+/// let authenticator = config.oauth.into_client().await?;
+/// let user_auth = if let Some(user_auth) = config.user_auth {
+///     let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
+///     Some(user_auth)
+/// } else {
+///     None
+/// };
+///
+/// HttpServer::new(move || {
+///     App::new()
+///     .service(
+///          web::scope("/{application}")
+///          .wrap(AuthZ {
+///                 client: user_auth.clone(),
+///                 permission: Permission::Read,
+///                 app_param: "application".to_string(),
+///          })
+///         .wrap(AuthN {
+///              openid: authenticator.as_ref().cloned(),
+///              token: user_auth.clone(),
+///              enable_api_key: true,
+///         })
+///         .service(route::start_connection),
+///      )
+///     })
+///     .bind("127.0.0.1:8080")?
+///     .run()
+///     .await
+/// }
+/// ```
 #[derive(Clone)]
 pub struct AuthZ {
     pub client: Option<UserAuthClient>,
     pub permission: Permission,
+    pub app_param: String,
 }
 
 impl AuthZ {

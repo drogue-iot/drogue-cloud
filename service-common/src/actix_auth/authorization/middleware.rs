@@ -63,6 +63,7 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let srv = Rc::clone(&self.service);
         let auth = self.authenticator.clone();
+        let param = self.authenticator.app_param.clone();
 
         Box::pin(async move {
             // extract user information and application from the request
@@ -72,7 +73,7 @@ where
                 .cloned()
                 .unwrap_or(UserInformation::Anonymous);
 
-            match req.match_info().get("application") {
+            match req.match_info().get(param.as_str()) {
                 // authorize
                 Some(app) => match auth.authorize(app, user).await {
                     Ok(_) => {

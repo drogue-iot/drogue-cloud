@@ -82,6 +82,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .wrap(AuthZ {
                         client: user_auth.clone(),
                         permission: Permission::Read,
+                        app_param: "application".to_string(),
                     })
                     .wrap(AuthN {
                         openid: authenticator.as_ref().cloned(),

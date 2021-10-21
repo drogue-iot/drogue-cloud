@@ -22,6 +22,72 @@ pub struct UsernameAndApiKey {
     pub key: Option<String>,
 }
 
+/// An Authentication middleware for actix-web relying on drogue-cloud user-auth-service and an openID service
+///
+/// This middleware will act on each request and try to authenticate the request with :
+/// - The `Authorisation: Bearer` header, which should contain an openID token.
+/// - The `Authorisation: Basic` header, which should contain a username and an API-key issued by the drogue-cloud API.
+/// - The `token` query parameter, which should contain am openID token.
+///
+/// If more than one of the above is provided, the request will be responded with `400: Bad request.`
+///
+/// After the authentication is successful, this middleware will inject the `UserInformation` in the request object and forward it.
+///
+/// # Fields
+///
+/// * `open_id` - An instance of `Authenticator` It's an openID client. It is used to verify OpenID tokens.
+/// * `token` - An instance of `UserAuthClient`. It's a client for drogue-cloud-user-auth-service. It is used to verify API keys.
+/// * `enable_api_key` - Whether to allow api keys for authentication.
+///
+/// # Example
+///
+/// ```
+/// use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+/// use drogue_cloud_service_common::actix_auth::authentication::AuthN;
+/// use drogue_cloud_service_common::actix_auth::authorization::AuthZ;
+/// use drogue_cloud_service_api::auth::user::authz::Permission;
+/// use drogue_cloud_service_common::client::UserAuthClientConfig;
+/// use drogue_cloud_service_common::config::ConfigFromEnv;
+/// use drogue_cloud_service_common::openid::AuthenticatorConfig;
+/// use drogue_cloud_service_common::client::UserAuthClient;
+///
+/// #[derive(Clone, Debug, Deserialize)]
+/// pub struct Config {
+///     #[serde(default)]
+///     pub user_auth: Option<UserAuthClientConfig>,
+///     pub oauth: AuthenticatorConfig,
+/// }
+///
+/// #[actix_web::main]
+/// async fn main() -> std::io::Result<()> {
+///
+/// let config = Config::from_env()?;
+///
+/// let authenticator = config.oauth.into_client().await?;
+/// let user_auth = if let Some(user_auth) = config.user_auth {
+///     let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
+///     Some(user_auth)
+/// } else {
+///     None
+/// };
+///
+/// HttpServer::new(move || {
+///     App::new()
+///     .service(
+///          web::scope("/index.html")
+///         .wrap(AuthN {
+///              openid: authenticator.as_ref().cloned(),
+///              token: user_auth.clone(),
+///              enable_api_key: true,
+///         })
+///         .service(web::resource("/").to(|| HttpResponse::Ok()))
+///      )
+///     })
+///     .bind("127.0.0.1:8080")?
+///     .run()
+///     .await
+/// }
+/// ```
 #[derive(Clone)]
 pub struct AuthN {
     pub openid: Option<Authenticator>,
