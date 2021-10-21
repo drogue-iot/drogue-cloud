@@ -38,7 +38,7 @@ pub struct AuthenticatorGlobalConfig {
     pub redirect_url: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct AuthenticatorClientConfig {
     pub client_id: String,
     pub client_secret: String,
@@ -295,5 +295,61 @@ mod test {
     #[test]
     fn test_empty_config() {
         AuthenticatorConfig::from_env().expect("Empty config is ok");
+    }
+
+    #[test]
+    fn test_standard_config() {
+        #[derive(Deserialize)]
+        struct Config {
+            pub oauth: AuthenticatorConfig,
+        }
+
+        let mut set = HashMap::new();
+        set.insert("OAUTH__SSO_URL", "http://sso.url");
+
+        set.insert("OAUTH__CLIENTS__FOO__CLIENT_ID", "client.id.1");
+        set.insert("OAUTH__CLIENTS__FOO__CLIENT_SECRET", "client.secret.1");
+
+        set.insert("OAUTH__CLIENTS__BAR__CLIENT_ID", "client.id.2");
+        set.insert("OAUTH__CLIENTS__BAR__CLIENT_SECRET", "");
+
+        with_env(set, || {
+            let cfg = Config::from_env().expect("Config should be ok");
+
+            assert_eq!(cfg.oauth.global.sso_url, Some("http://sso.url".into()));
+
+            assert_eq!(
+                cfg.oauth.clients.get("foo"),
+                Some(&AuthenticatorClientConfig {
+                    client_id: "client.id.1".into(),
+                    client_secret: "client.secret.1".into(),
+                    scopes: defaults::oauth2_scopes(),
+                })
+            );
+
+            assert_eq!(
+                cfg.oauth.clients.get("bar"),
+                Some(&AuthenticatorClientConfig {
+                    client_id: "client.id.2".into(),
+                    client_secret: "".into(),
+                    scopes: defaults::oauth2_scopes(),
+                })
+            );
+        });
+    }
+
+    fn with_env<F>(vars: HashMap<&str, &str>, f: F)
+    where
+        F: FnOnce(),
+    {
+        for (k, v) in &vars {
+            std::env::set_var(k, v);
+        }
+
+        f();
+
+        for (k, _) in vars {
+            std::env::remove_var(k);
+        }
     }
 }
