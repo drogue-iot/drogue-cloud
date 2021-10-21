@@ -213,10 +213,11 @@ jobs:
       - name: Collect logs
         if: failure()
         run: |
-          mkdir -p /tmp/logs
-          kind export logs /tmp/logs
+          mkdir -p /tmp/logs/kind
+          kind export logs /tmp/logs/kind
+          mkdir -p /tmp/logs/ns
           for ns in kafka kourier-system knative-serving knative-eventing drogue-iot; do
-            ./.github/scripts/collect_logs.sh /tmp/logs/$ns $ns
+            ./.github/scripts/collect_logs.sh /tmp/logs/ns/$ns $ns
           done
 
       - name: Upload artifacts
