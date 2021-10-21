@@ -198,6 +198,7 @@ jobs:
       - name: Deploy drogue
         env:
           TEST_CERTS_IMAGE: "dev.local/test-cert-generator:${{ github.sha }}"
+          DEBUG: "true"
         run: |
           ./scripts/drgadm deploy \
             -m \
