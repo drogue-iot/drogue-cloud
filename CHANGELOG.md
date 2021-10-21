@@ -5,6 +5,7 @@
 ### Features
 
 * Try using conventional commits 67e5b69
+* Support api token authentication for device management service and command endpoint.  
 
 ### Fixes
 

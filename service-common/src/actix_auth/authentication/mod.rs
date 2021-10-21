@@ -39,61 +39,6 @@ pub struct UsernameAndApiKey {
 /// * `token` - An instance of `UserAuthClient`. It's a client for drogue-cloud-user-auth-service. It is used to verify API keys.
 /// * `enable_api_key` - Whether to allow api keys for authentication.
 ///
-/// # Example
-///
-/// ```
-/// use anyhow::Result;
-/// use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer, Responder};
-/// use drogue_cloud_service_common::actix_auth::authentication::AuthN;
-/// use drogue_cloud_service_common::actix_auth::authorization::AuthZ;
-/// use drogue_cloud_service_api::auth::user::authz::Permission;
-/// use drogue_cloud_service_common::client::UserAuthClientConfig;
-/// use drogue_cloud_service_common::config::ConfigFromEnv;
-/// use drogue_cloud_service_common::openid::AuthenticatorConfig;
-/// use drogue_cloud_service_common::client::UserAuthClient;
-/// use serde::Deserialize;
-/// use reqwest;
-///
-/// #[derive(Clone, Debug, Deserialize)]
-/// pub struct Config {
-///     #[serde(default)]
-///     pub user_auth: Option<UserAuthClientConfig>,
-///     pub oauth: AuthenticatorConfig,
-/// }
-///
-/// #[actix_web::main]
-/// async fn main() -> Result<()> {
-///
-/// let config = Config::from_env()?;
-/// let client = reqwest::Client::new();
-///
-/// let authenticator = config.oauth.into_client().await?;
-/// let user_auth = if let Some(user_auth) = config.user_auth {
-///     let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
-///     Some(user_auth)
-/// } else {
-///     None
-/// };
-///
-/// HttpServer::new(move || {
-///     App::new()
-///     .service(
-///          web::scope("/index.html")
-///         .wrap(AuthN {
-///              openid: authenticator.as_ref().cloned(),
-///              token: user_auth.clone(),
-///              enable_api_key: true,
-///         })
-///         .service(web::resource("/").to(|| HttpResponse::Ok()))
-///      )
-///     })
-///     .bind("127.0.0.1:8080")?
-///     .run()
-///     .await;
-///
-///     Ok(())
-/// }
-/// ```
 #[derive(Clone)]
 pub struct AuthN {
     pub openid: Option<Authenticator>,
