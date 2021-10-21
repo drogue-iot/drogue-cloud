@@ -207,7 +207,7 @@ jobs:
             -s drogueCloudExamples.defaults.images.repository=dev.local \
             -s drogueCloudExamples.defaults.images.tag=${{ github.sha }} \
             -s drogueCloudExamples.defaults.images.pullPolicy=Never
-        timeout-minutes: 20
+        timeout-minutes: 30
 
       - name: Collect logs
         if: failure()

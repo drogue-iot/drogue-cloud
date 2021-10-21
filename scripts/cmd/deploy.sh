@@ -21,12 +21,13 @@ Options:
                        -S foo=bar -S bar=baz -S foo.bar=baz
   -k                 Don't install dependencies
   -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
+  -t <timeout>       Helm installation timeout (default: 15m)
   -h                 Show this help
 
 EOF
 }
 
-opts=$(getopt -o "mhkp:c:n:d:s:S:" -- "$@")
+opts=$(getopt -o "mhkp:c:n:d:s:S:t:" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
@@ -69,6 +70,10 @@ while [[ $# -gt 0 ]]; do
         HELM_PROFILE="$2"
         shift 2
         ;;
+    -t)
+        HELM_TIMEOUT="$2"
+        shift 2
+        ;;
     -h)
         help >&3
         exit 0
@@ -97,6 +102,7 @@ echo "Minimize: $MINIMIZE"
 : "${INSTALL_STRIMZI:=${INSTALL_DEPS}}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
+: "${HELM_TIMEOUT:=15m}"
 
 case $CLUSTER in
     kind)
@@ -163,6 +169,7 @@ fi
 
 domain=$(detect_domain)
 
+HELM_ARGS="$HELM_ARGS --timeout=${HELM_TIMEOUT}"
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
