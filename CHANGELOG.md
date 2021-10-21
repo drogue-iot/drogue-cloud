@@ -1,14 +1,21 @@
 # Changelog
 
-## [Unreleased](https://github.com/drogue-iot/drogue-cloud/compare/v0.7.0...HEAD) (2021-09-23)
+## [Unreleased](https://github.com/drogue-iot/drogue-cloud/compare/v0.7.0...HEAD) (2021-10-21)
 
 ### Features
 
+* **deploy:** Update Knative to 0.24.x c30d809
 * Try using conventional commits 67e5b69
 * Support api token authentication for device management service and command endpoint.  
 
 ### Fixes
 
+* Wait 15m for Helm hooks to complete and make if configurable 3f8506e
+* **deploy:** Relax timeout to not run into issue with termination delay d5b1e1f
+* **coap:** Enable DNS name in cert generation 3624fad
+* **examples:** Use explicit listening addresses for dual stack e676909
+* **installer:** Handle the case in Kind when we have multiple addresses 6cfe2e1
+* base64 encode json payload for TTNv3 API 21d2c8a
 * **frontend:** Add the missing topic field to the Knative example f09639b
 * **auth:** Fix the crate version ff42898
 
