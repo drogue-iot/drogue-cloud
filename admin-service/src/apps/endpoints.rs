@@ -33,7 +33,7 @@ where
         .transfer(&user, app_id.into_inner(), payload.0)
         .await
     {
-        Ok(key) => Ok(HttpResponse::Accepted().json(key)),
+        Ok(_) => Ok(HttpResponse::Accepted().finish()),
         Err(e) => Err(e.into()),
     };
 
@@ -50,7 +50,7 @@ where
     S: AdminService + 'static,
 {
     let result = match service.cancel(&user, app_id.into_inner()).await {
-        Ok(key) => Ok(HttpResponse::NoContent().json(key)),
+        Ok(_) => Ok(HttpResponse::NoContent().finish()),
         Err(e) => Err(e.into()),
     };
 
@@ -67,7 +67,7 @@ where
     S: AdminService + 'static,
 {
     let result = match service.accept(&user, app_id.into_inner()).await {
-        Ok(key) => Ok(HttpResponse::NoContent().json(key)),
+        Ok(_) => Ok(HttpResponse::NoContent().finish()),
         Err(e) => Err(e.into()),
     };
 
