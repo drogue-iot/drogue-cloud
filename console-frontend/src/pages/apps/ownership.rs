@@ -19,7 +19,7 @@ pub struct Props {
 }
 
 pub enum Msg {
-    Load,
+    Accept,
     Error(String),
     Success,
     Done,
@@ -38,7 +38,6 @@ impl Component for Ownership {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::Load);
         Self {
             props,
             link,
@@ -49,7 +48,7 @@ impl Component for Ownership {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Load => match self.load() {
+            Msg::Accept => match self.accept() {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to fetch", err),
             },
@@ -94,9 +93,22 @@ impl Component for Ownership {
         return html! {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
-                    <Content>
-                        <Title>{"Application ownership transfer"}</Title>
-                    </Content>
+                    <Card title={html!{"Application ownership transfer"}}>
+                        <p>{html!{format!("Application name: {}", &self.props.name)}}</p>
+                        <Toolbar>
+                        <ToolbarGroup>
+                            <ToolbarItem>
+                                    <Button
+                                            disabled=self.fetch_task.is_some()
+                                            label="Accept"
+                                            icon=Icon::CheckCircle
+                                            variant=Variant::Primary
+                                            onclick=self.link.callback(|_|Msg::Accept)
+                                    />
+                            </ToolbarItem>
+                        </ToolbarGroup>
+                        </Toolbar>
+                    </Card>
                 </PageSection>
             </>
         };
@@ -104,7 +116,7 @@ impl Component for Ownership {
 }
 
 impl Ownership {
-    fn load(&mut self) -> Result<FetchTask, anyhow::Error> {
+    fn accept(&mut self) -> Result<FetchTask, anyhow::Error> {
         self.props.backend.info.request(
             Method::PUT,
             format!(
