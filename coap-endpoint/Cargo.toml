@@ -2,7 +2,7 @@
 name = "drogue-cloud-coap-endpoint"
 version = "0.8.0"
 authors = ["Pranav <adpranavb2000@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
