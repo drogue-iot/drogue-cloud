@@ -351,7 +351,7 @@ impl Admin {
             .endpoints
             .console
             .clone()
-            .map(|console| format!("{}/transfer/{}", console, self.props.name))
+            .map(|console| format!("{}/transfer/{}", console, url_encode(&self.props.name)))
             .unwrap_or_else(|| "Error while creating the link".into());
 
         self.props.backend.info.request(
