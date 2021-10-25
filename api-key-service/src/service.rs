@@ -67,8 +67,9 @@ impl<K: KeycloakClient> KeycloakApiKeyService<K> {
 }
 
 #[async_trait]
-impl<K: KeycloakClient + std::marker::Sync + std::marker::Send> ApiKeyService
-    for KeycloakApiKeyService<K>
+impl<K> ApiKeyService for KeycloakApiKeyService<K>
+where
+    K: KeycloakClient + std::marker::Sync + std::marker::Send,
 {
     type Error = Error;
 

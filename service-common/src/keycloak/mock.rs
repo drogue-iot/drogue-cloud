@@ -34,7 +34,7 @@ impl KeycloakAdminClientConfig {
     pub fn mock() -> Self {
         KeycloakAdminClientConfig {
             url: Url::parse("https://drogue.io/").unwrap(),
-            realm: "drogue".to_string(),
+            realm: "mock".to_string(),
             admin_username: "admin".to_string(),
             admin_password: "password".to_string(),
             tls_noverify: false,
