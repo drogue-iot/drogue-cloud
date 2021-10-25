@@ -1,0 +1,11 @@
+on:
+  issue_comment:
+    - if:
+        - command: "test"
+        - user_is: ["MEMBER", "OWNER"]
+        - is_pr
+      steps:
+        - run: |
+            gh workflow run system-test.yaml -R drogue-iot/drogue-cloud-testing -F prNr=${{ github.event.issue.number }}
+        - run: |
+            gh pr comment ${{ github.event.issue.number }} -b "Aye, aye, captain! … Triggered System Test worklow!"
