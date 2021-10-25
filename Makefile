@@ -7,7 +7,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.11
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.12
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
