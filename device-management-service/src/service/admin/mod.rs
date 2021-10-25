@@ -100,21 +100,27 @@ where
 
         // ensure we are permitted to do the change
 
-        ensure_with(&app, identity, Permission::Owner, || ServiceError::NotFound)?;
+        // the app receiver is allowed to decline the transfer
+        if app.transfer_owner.as_deref() == identity.user_id()
+            // The app owner (who initiated the transfer) cancels the transfer
+            || app.owner.as_deref() == identity.user_id()
+        {
+            // make the change
 
-        // make the change
+            accessor
+                .update_transfer(app.name, app.owner.map(Into::into), None)
+                .await?;
 
-        accessor
-            .update_transfer(app.name, identity.user_id().map(Into::into), None)
-            .await?;
+            // commit
 
-        // commit
+            t.commit().await?;
 
-        t.commit().await?;
+            // done
 
-        // done
-
-        Ok(())
+            Ok(())
+        } else {
+            Err(ServiceError::NotFound.into())
+        }
     }
 
     async fn accept(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error> {
