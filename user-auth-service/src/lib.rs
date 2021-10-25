@@ -66,9 +66,10 @@ macro_rules! app {
     };
 }
 
-pub async fn run<K: 'static + KeycloakClient + std::marker::Send + std::marker::Sync>(
-    config: Config,
-) -> anyhow::Result<()> {
+pub async fn run<K>(config: Config) -> anyhow::Result<()>
+where
+    K: 'static + KeycloakClient + std::marker::Send + std::marker::Sync,
+{
     let max_json_payload_size = config.max_json_payload_size;
 
     let authenticator = config.oauth.into_client().await?;
