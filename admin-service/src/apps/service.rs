@@ -14,6 +14,12 @@ pub trait AdminService: Clone {
         transfer: TransferOwnership,
     ) -> Result<(), Self::Error>;
 
+    async fn read_transfer_state(
+        &self,
+        identity: &UserInformation,
+        app_id: String,
+    ) -> Result<Option<TransferOwnership>, Self::Error>;
+
     async fn cancel(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error>;
     async fn accept(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error>;
 

@@ -2,7 +2,7 @@ use crate::error::error;
 use crate::pages::apps::details::Props;
 use crate::utils::url_encode;
 
-use drogue_cloud_service_api::admin::{MemberEntry, Members, Role};
+use drogue_cloud_service_api::admin::{MemberEntry, Members, Role, TransferOwnership};
 
 use anyhow::{anyhow, Result};
 use core::time::Duration;
@@ -22,6 +22,8 @@ pub struct Admin {
     new_member_role: Role,
 
     new_owner: String,
+    pending_transfer: bool,
+    transfer_fetch: Option<FetchTask>,
 
     stop: bool,
 }
@@ -35,7 +37,6 @@ pub struct Users {
     resource_version: String,
 }
 
-#[derive(Debug)]
 pub enum Msg {
     // admin
     LoadMembers,
@@ -47,6 +48,8 @@ pub enum Msg {
     NewMemberId(String),
     NewOwner(String),
     TransferOwner,
+    TransferPending(Option<TransferOwnership>),
+    CancelTransfer,
     Error(String),
     Reset,
     Stop(String),
@@ -107,12 +110,17 @@ impl Component for Admin {
             new_member_role: Role::Reader,
             new_owner: Default::default(),
             stop: false,
+            pending_transfer: false,
+            transfer_fetch: None,
         }
     }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::LoadMembers => match self.load() {
-                Ok(task) => self.fetch = Some(task),
+                Ok((members, transfer)) => {
+                    self.fetch = Some(members);
+                    self.transfer_fetch = Some(transfer);
+                }
                 Err(err) => error("Failed to load", err),
             },
             Msg::SetMembers(members) => {
@@ -149,7 +157,22 @@ impl Component for Admin {
                 Ok(task) => self.fetch = Some(task),
                 Err(err) => error("Failed to transfer app", err),
             },
-
+            Msg::TransferPending(transfer) => {
+                self.transfer_fetch = None;
+                match transfer {
+                    Some(t) => {
+                        self.new_owner = t.new_user;
+                        self.pending_transfer = true;
+                    }
+                    None => {
+                        self.pending_transfer = false;
+                    }
+                }
+            }
+            Msg::CancelTransfer => match self.cancel_transfer() {
+                Ok(task) => self.transfer_fetch = Some(task),
+                Err(err) => error("Failed to cancel", err),
+            },
             Msg::Error(msg) => {
                 error("Error", msg);
                 self.reset();
@@ -256,15 +279,31 @@ impl Component for Admin {
                                     placeholder="Username"/>
                             </ToolbarItem>
                             <ToolbarItem>
+                                <Form>
+                                <ActionGroup>
                                     <Button
+                                            disabled=self.transfer_fetch.is_some()
                                             label="Transfer"
                                             icon=Icon::CheckCircle
                                             variant=Variant::Primary
                                             onclick=self.link.callback(|_|Msg::TransferOwner)
                                     />
+                                    <Button
+                                            disabled=!self.pending_transfer
+                                            label="Cancel"
+                                            // todo add an icon to patternfly_yew
+                                            variant=Variant::Secondary
+                                            onclick=self.link.callback(|_|Msg::CancelTransfer)
+                                    />
+                                </ActionGroup>
+                                </Form>
                             </ToolbarItem>
                         </ToolbarGroup>
                 </Toolbar>
+                // todo
+                // if pending_transfer {
+                        // There is a currently a pending transfer to : <user>
+                //     }
                 </Card>
                 </PageSection>
             };
@@ -275,7 +314,18 @@ impl Component for Admin {
 }
 
 impl Admin {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
+    fn load(&self) -> Result<(FetchTask, FetchTask), anyhow::Error> {
+        let members = self.load_members();
+        let transfer = self.load_transfer_state();
+
+        match (members, transfer) {
+            (Ok(members), Ok(transfer)) => Ok((members, transfer)),
+            (Err(e), _) => Err(e),
+            (_, Err(e)) => Err(e),
+        }
+    }
+
+    fn load_members(&self) -> Result<FetchTask, anyhow::Error> {
         self.props.backend.info.request(
             Method::GET,
             format!(
@@ -345,7 +395,9 @@ impl Admin {
     }
 
     fn transfer(&self) -> Result<FetchTask, anyhow::Error> {
-        let payload = json!({ "newUser": self.new_owner });
+        let payload = json!(TransferOwnership {
+            new_user: self.new_owner.clone()
+        });
         let link = self
             .props
             .endpoints
@@ -391,6 +443,47 @@ impl Admin {
                             .unwrap_or(&"Unknown error.".to_string())
                     )),
                 }),
+        )
+    }
+
+    fn cancel_transfer(&self) -> Result<FetchTask, anyhow::Error> {
+        self.props.backend.info.request(
+            Method::DELETE,
+            format!(
+                "/api/admin/v1alpha1/apps/{}/transfer-ownership",
+                url_encode(&self.props.name)
+            ),
+            Nothing,
+            vec![],
+            self.link
+                .callback(move |response: Response<Text>| match response.status() {
+                    StatusCode::NO_CONTENT => Msg::TransferPending(None),
+                    status => Msg::Error(format!("Failed to cancel transfer. {}", status)),
+                }),
+        )
+    }
+
+    fn load_transfer_state(&self) -> Result<FetchTask, anyhow::Error> {
+        self.props.backend.info.request(
+            Method::GET,
+            format!(
+                "/api/admin/v1alpha1/apps/{}/transfer-ownership",
+                url_encode(&self.props.name)
+            ),
+            Nothing,
+            vec![],
+            self.link.callback(
+                move |response: Response<Json<Result<TransferOwnership, anyhow::Error>>>| {
+                    match response.status() {
+                        StatusCode::OK => match response.into_body().0 {
+                            Ok(user) => Msg::TransferPending(Some(user)),
+                            Err(err) => Msg::Error(err.to_string()),
+                        },
+                        StatusCode::NO_CONTENT => Msg::TransferPending(None),
+                        status => Msg::Error(format!("Failed to fetch transfer state. {}", status)),
+                    }
+                },
+            ),
         )
     }
 }

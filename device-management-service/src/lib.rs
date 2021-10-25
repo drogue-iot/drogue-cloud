@@ -127,6 +127,9 @@ macro_rules! app {
 
             let scope = scope.service(
                 web::resource("/apps/{appId}/transfer-ownership")
+                    .route(web::get().to(apps::read_transfer_state::<
+                        service::PostgresManagementService<$sender, $keycloak>,
+                    >))
                     .route(web::put().to(apps::transfer::<
                         service::PostgresManagementService<$sender, $keycloak>,
                     >))

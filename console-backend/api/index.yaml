@@ -392,6 +392,26 @@ paths:
           description: Transfer process is initiated.
         404:
           description: If the requested application does not exist or if the user has no access to it.
+    get:
+      tags:
+        - Application administration
+      description: Retrieve state of the application transfer
+      responses:
+        200:
+          description: An transfer is pending for this application.
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  newUser:
+                    type: string
+                required:
+                  - newUser
+        204:
+          description: There is no current pending transfer for this application.
+        404:
+          description:  The application does not exist, or the user does not have access to the information.
 
     delete:
       tags:

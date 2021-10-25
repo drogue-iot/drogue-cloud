@@ -40,6 +40,29 @@ where
     result
 }
 
+/// Get ownership transfer state
+pub async fn read_transfer_state<S>(
+    user: UserInformation,
+    service: web::Data<WebData<S>>,
+    app_id: web::Path<String>,
+) -> Result<HttpResponse, actix_web::Error>
+where
+    S: AdminService + 'static,
+{
+    let result = match service
+        .read_transfer_state(&user, app_id.into_inner())
+        .await
+    {
+        Ok(response) => match response {
+            Some(payload) => Ok(HttpResponse::Ok().json(payload)),
+            None => Ok(HttpResponse::NoContent().finish()),
+        },
+        Err(e) => Err(e.into()),
+    };
+
+    result
+}
+
 /// Cancel an ownership transfer
 pub async fn cancel<S>(
     user: UserInformation,
