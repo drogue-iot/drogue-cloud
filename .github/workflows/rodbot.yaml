@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.BOT_PAT }}
 
     steps:
       - name: Checkout
