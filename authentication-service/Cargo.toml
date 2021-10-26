@@ -1,5 +1,6 @@
 [package]
 name = "drogue-cloud-authentication-service"
+description = "Authentication service"
 version = "0.8.0"
 authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2021"

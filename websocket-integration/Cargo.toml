@@ -1,5 +1,6 @@
 [package]
 name = "drogue-cloud-websocket-integration"
+description = "Websocket integration"
 version = "0.8.0"
 authors = ["Jb Trystram <jbtrystram@redhat.com>"]
 edition = "2021"

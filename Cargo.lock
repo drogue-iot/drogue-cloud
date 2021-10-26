@@ -1823,6 +1823,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "cloudevents-sdk",
+ "dotenv",
  "drogue-client",
  "drogue-cloud-api-key-service",
  "drogue-cloud-console-common",

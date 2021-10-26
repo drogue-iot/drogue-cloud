@@ -1,5 +1,6 @@
 [package]
 name = "drogue-cloud-coap-endpoint"
+description = "CoAP endpoint"
 version = "0.8.0"
 authors = ["Pranav <adpranavb2000@gmail.com>"]
 edition = "2021"

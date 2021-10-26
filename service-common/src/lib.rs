@@ -1,4 +1,5 @@
 pub mod actix_auth;
+pub mod app;
 pub mod auth;
 pub mod client;
 pub mod config;
