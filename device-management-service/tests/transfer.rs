@@ -164,3 +164,79 @@ async fn test_transfer_app_fails() -> anyhow::Result<()> {
 
     })
 }
+
+#[actix_rt::test]
+#[serial]
+async fn test_decline_transfer_app() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+        let foo = user("foo");
+        let bar = user("bar");
+        let baz = user("baz");
+
+        create_app(&app, &foo, "app1", Default::default()).await?;
+
+        // get as user "foo" - must succeed
+
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // transfer app - must succeed
+
+        let resp = call_http(&app, &foo, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership").set_json(&json!({
+            "newUser": "bar",
+        }))).await;
+        assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+        // decline transfer as user "bar" - must succeed
+
+        let resp = call_http(&app, &bar, test::TestRequest::delete().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership")).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // accept transfer as user "bar" - must fail (transfer no longer exit)
+
+        let resp = call_http(&app, &foo, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/accept-ownership")).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_read_app_transfer_state() -> anyhow::Result<()> {
+    test!((app, _sender, _outbox) => {
+        let foo = user("foo");
+        let bar = user("bar");
+        let baz = user("baz");
+
+
+        create_app(&app, &foo, "app1", Default::default()).await?;
+
+        // get as user "foo" - must succeed
+
+        let resp = call_http(&app, &foo, test::TestRequest::get().uri("/api/registry/v1alpha1/apps/app1")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // transfer app - must succeed
+
+        let resp = call_http(&app, &foo, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership").set_json(&json!({
+            "newUser": "bar",
+        }))).await;
+        assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+        // read transfer state - must succeed
+
+        let resp = call_http(&app, &bar, test::TestRequest::get().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // read transfer state as user "bar" - must succeed
+
+        let resp = call_http(&app, &bar, test::TestRequest::get().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership")).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // read transfer state as user "baz" - must fail
+
+        let resp = call_http(&app, &baz, test::TestRequest::get().uri("/api/admin/v1alpha1/apps/app1/transfer-ownership")).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+    })
+}
