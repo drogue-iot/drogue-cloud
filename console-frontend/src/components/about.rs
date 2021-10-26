@@ -62,6 +62,7 @@ impl Component for AboutModal {
                 <About
                     brand_src="/images/logo.svg"
                     title="Drogue IoT Cloud"
+                    hero_style=r#"--pf-c-about-modal-box__hero--sm--BackgroundImage: url("/images/about.jpg"); --pf-c-about-modal-box__hero--sm--BackgroundPosition: bottom right; --pf-c-about-modal-box__hero--sm--BackgroundSize: contain; background-attachment: local;"#
                 >
                 <Content>
                     { if let Some(info) = &self.info {html!{
