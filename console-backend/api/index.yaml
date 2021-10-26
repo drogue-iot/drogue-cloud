@@ -420,7 +420,7 @@ paths:
       responses:
         204:
           description: The transfer was successfully canceled.
-        403:
+        404:
           description: |
             The user has no access to the resource.
 
