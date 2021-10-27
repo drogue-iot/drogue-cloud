@@ -203,7 +203,8 @@ impl Component for Admin {
     fn view(&self) -> Html {
         if let Some(m) = &self.members {
             return html! {
-                <PageSection>
+                <Stack gutter=true>
+                    <StackItem>
                     <Card title={html!{"Application readers"}}>
                         <Table<SimpleTableModel<User>>
                                 entries=SimpleTableModel::from(m.readers.clone())
@@ -215,6 +216,8 @@ impl Component for Admin {
                                 >
                         </Table<SimpleTableModel<User>>>
                     </Card>
+                    </StackItem>
+                    <StackItem>
                     <Card title={html!{"Application managers"}}>
                         <Table<SimpleTableModel<User>>
                             entries=SimpleTableModel::from(m.managers.clone())
@@ -226,6 +229,8 @@ impl Component for Admin {
                         >
                         </Table<SimpleTableModel<User>>>
                     </Card>
+                    </StackItem>
+                    <StackItem>
                     <Card title={html!{"Application administrators"}}>
                         <Table<SimpleTableModel<User>>
                             entries=SimpleTableModel::from(m.admin.clone())
@@ -237,6 +242,8 @@ impl Component for Admin {
                         >
                         </Table<SimpleTableModel<User>>>
                     </Card>
+                    </StackItem>
+                    <StackItem>
                 <Card>
                 <Toolbar>
                     <ToolbarItem>
@@ -270,6 +277,8 @@ impl Component for Admin {
                         </ActionGroup>
                     </Form>
                  </Card>
+                </StackItem>
+                <StackItem>
                 <Card title={html!{"Transfer application ownership"}}>
                    <Toolbar>
                         <ToolbarGroup>
@@ -279,24 +288,20 @@ impl Component for Admin {
                                     placeholder="Username"/>
                             </ToolbarItem>
                             <ToolbarItem>
-                                <Form>
-                                <ActionGroup>
-                                    <Button
-                                            disabled=self.transfer_fetch.is_some()
-                                            label="Transfer"
-                                            icon=Icon::CheckCircle
-                                            variant=Variant::Primary
-                                            onclick=self.link.callback(|_|Msg::TransferOwner)
-                                    />
-                                    <Button
-                                            disabled=!self.pending_transfer
-                                            label="Cancel"
-                                            // todo add an icon to patternfly_yew
-                                            variant=Variant::Secondary
-                                            onclick=self.link.callback(|_|Msg::CancelTransfer)
-                                    />
-                                </ActionGroup>
-                                </Form>
+                                <Button
+                                        disabled=self.transfer_fetch.is_some()
+                                        label="Transfer"
+                                        variant=Variant::Primary
+                                        onclick=self.link.callback(|_|Msg::TransferOwner)
+                                />
+                            </ToolbarItem>
+                            <ToolbarItem>
+                                <Button
+                                        disabled=!self.pending_transfer
+                                        label="Cancel"
+                                        variant=Variant::Secondary
+                                        onclick=self.link.callback(|_|Msg::CancelTransfer)
+                                />
                             </ToolbarItem>
                         </ToolbarGroup>
                 </Toolbar>
@@ -305,7 +310,8 @@ impl Component for Admin {
                         // There is a currently a pending transfer to : <user>
                 //     }
                 </Card>
-                </PageSection>
+                </StackItem>
+                </Stack>
             };
         } else {
             return html! {};
