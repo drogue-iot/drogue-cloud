@@ -253,20 +253,17 @@ impl Component for Admin {
                                 placeholder="User id"/>
                         </ToolbarItem>
                         <ToolbarItem>
-                            <Dropdown toggle={ html!{<DropdownToggle text=self.new_member_role.to_string()></DropdownToggle>}}>
-                                <DropdownItem onclick=self.link.callback(|_|Msg::NewMemberRole(Role::Reader))>{"Reader"}</DropdownItem>
-                                <Divider/>
-                                <DropdownItem onclick=self.link.callback(|_|Msg::NewMemberRole(Role::Manager))>{"Manager"}</DropdownItem>
-                                <Divider/>
-                                <DropdownItem onclick=self.link.callback(|_|Msg::NewMemberRole(Role::Admin))>{"Admin"}</DropdownItem>
-                                <Divider/>
-                            </Dropdown>
+                            <Select<Role> placeholder="Select user role" variant=SelectVariant::Single(self.link.callback(Msg::NewMemberRole))>
+                                <SelectOption<Role> value=Role::Reader description="Read-only access" />
+                                <SelectOption<Role> value=Role::Manager description="Read-write access" />
+                                <SelectOption<Role> value=Role::Admin description="Administrative access" />
+                            </Select<Role>>
                         </ToolbarItem>
                         <ToolbarItem>
                             <Button
-                                    label="Add"
-                                    icon=Icon::PlusCircleIcon
-                                    onclick=self.link.callback(|_|Msg::AddMember)
+                                label="Add"
+                                icon=Icon::PlusCircleIcon
+                                onclick=self.link.callback(|_|Msg::AddMember)
                             />
                     </ToolbarItem>
                 </Toolbar>
