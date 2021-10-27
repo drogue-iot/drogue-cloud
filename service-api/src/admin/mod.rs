@@ -1,6 +1,7 @@
 use core::fmt;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,7 +24,7 @@ pub struct MemberEntry {
     pub role: Role,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum Role {
     /// Allow everything, including changing members
@@ -34,8 +35,12 @@ pub enum Role {
     Reader,
 }
 
-impl fmt::Display for Role {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
+impl Display for Role {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Admin => write!(f, "Administrator"),
+            Self::Manager => write!(f, "Manager"),
+            Self::Reader => write!(f, "Reader"),
+        }
     }
 }
