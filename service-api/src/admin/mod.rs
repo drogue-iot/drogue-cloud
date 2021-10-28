@@ -1,7 +1,6 @@
-use core::fmt;
+use core::fmt::{Display, Formatter};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
