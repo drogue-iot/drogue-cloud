@@ -97,7 +97,10 @@ impl<S> mqtt::Service<Session<S>> for App<S>
 where
     S: SenderSink,
 {
-    async fn connect<'a, Io>(&'a self, connect: Connect<'a, Io>) -> Result<Session<S>, ServerError>
+    async fn connect<'a, Io>(
+        &'a self,
+        connect: Connect<'a, Io>,
+    ) -> Result<ConnectAck<Session<S>>, ServerError>
     where
         Io: Send + Sync,
     {
@@ -127,16 +130,24 @@ where
             None => None,
         };
 
-        Ok(Session::new(
-            self.config.clone(),
-            self.user_auth.clone(),
-            connect.sink(),
-            user,
-            client_id,
-            self.sender.clone(),
-            self.client.clone(),
-            self.registry.clone(),
-            token,
-        ))
+        Ok(ConnectAck {
+            session: Session::new(
+                self.config.clone(),
+                self.user_auth.clone(),
+                connect.sink(),
+                user,
+                client_id,
+                self.sender.clone(),
+                self.client.clone(),
+                self.registry.clone(),
+                token,
+            ),
+            ack: AckOptions {
+                wildcard_subscription_available: Some(true),
+                shared_subscription_available: Some(true),
+                retain_available: Some(false),
+                ..Default::default()
+            },
+        })
     }
 }

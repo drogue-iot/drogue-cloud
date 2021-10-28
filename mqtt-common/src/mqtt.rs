@@ -20,9 +20,22 @@ pub trait Service<S>
 where
     S: Session,
 {
-    async fn connect<'a, Io>(&'a self, connect: Connect<'a, Io>) -> Result<S, ServerError>
+    async fn connect<'a, Io>(
+        &'a self,
+        connect: Connect<'a, Io>,
+    ) -> Result<ConnectAck<S>, ServerError>
     where
         Io: ClientCertificateRetriever + Sync + Send + Debug;
+}
+
+pub type AckOptions = v5::codec::ConnectAck;
+
+pub struct ConnectAck<S>
+where
+    S: Session,
+{
+    pub session: S,
+    pub ack: AckOptions,
 }
 
 #[async_trait(?Send)]
@@ -43,7 +56,7 @@ where
     Io: Sync + Send + ClientCertificateRetriever + Debug,
 {
     match app.connect(Connect::V3(&mut connect)).await {
-        Ok(session) => Ok(connect.ack(session, false)),
+        Ok(ack) => Ok(connect.ack(ack.session, ack.ack.session_present)),
         Err(_) => Ok(connect.bad_username_or_pwd()),
     }
 }
@@ -58,11 +71,8 @@ where
     Io: Sync + Send + ClientCertificateRetriever + Debug,
 {
     match app.connect(Connect::V5(&mut connect)).await {
-        Ok(session) => Ok(connect.ack(session).with(|ack| {
-            ack.retain_available = Some(false);
-            ack.shared_subscription_available = Some(true);
-            ack.subscription_identifiers_available = Some(true);
-            ack.wildcard_subscription_available = Some(false);
+        Ok(connect_ack) => Ok(connect.ack(connect_ack.session).with(|ack| {
+            *ack = connect_ack.ack;
         })),
         Err(_) => Ok(connect.failed(ConnectAckReason::BadUserNameOrPassword)),
     }
@@ -317,30 +327,30 @@ pub enum Subscription<'a> {
 impl<'a> Subscription<'a> {
     pub fn topic(&self) -> &'a ByteString {
         match self {
-            Subscription::V3(sub) => sub.topic(),
-            Subscription::V5(sub) => sub.topic(),
+            Self::V3(sub) => sub.topic(),
+            Self::V5(sub) => sub.topic(),
         }
     }
 
     #[allow(dead_code)]
     pub fn qos(&self) -> QoS {
         match self {
-            Subscription::V3(sub) => sub.qos(),
-            Subscription::V5(sub) => sub.options().qos,
+            Self::V3(sub) => sub.qos(),
+            Self::V5(sub) => sub.options().qos,
         }
     }
 
     pub fn fail(&mut self, reason: v5::codec::SubscribeAckReason) {
         match self {
-            Subscription::V3(sub) => sub.fail(),
-            Subscription::V5(sub) => sub.fail(reason),
+            Self::V3(sub) => sub.fail(),
+            Self::V5(sub) => sub.fail(reason),
         }
     }
 
     pub fn confirm(&mut self, qos: QoS) {
         match self {
-            Subscription::V3(sub) => sub.confirm(qos),
-            Subscription::V5(sub) => sub.confirm(qos),
+            Self::V3(sub) => sub.confirm(qos),
+            Self::V5(sub) => sub.confirm(qos),
         }
     }
 }
@@ -394,6 +404,20 @@ impl<'a> Unsubscription<'a> {
         match self {
             Self::V3(topic) => topic,
             Self::V5(unsub) => unsub.topic(),
+        }
+    }
+
+    pub fn success(&mut self) {
+        match self {
+            Self::V3(_) => {}
+            Self::V5(unsub) => unsub.success(),
+        }
+    }
+
+    pub fn fail(&mut self, reason: v5::codec::UnsubscribeAckReason) {
+        match self {
+            Self::V3(_) => {}
+            Self::V5(unsub) => unsub.fail(reason),
         }
     }
 }

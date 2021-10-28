@@ -9,7 +9,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::{
     error::ServerError,
-    mqtt::{Connect, Service},
+    mqtt::{AckOptions, Connect, ConnectAck, Service},
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::Id;
@@ -67,7 +67,7 @@ where
     async fn connect<'a, Io>(
         &'a self,
         mut connect: Connect<'a, Io>,
-    ) -> Result<Session<S>, ServerError>
+    ) -> Result<ConnectAck<Session<S>>, ServerError>
     where
         Io: ClientCertificateRetriever + Sync + Send + Debug + 'a,
     {
@@ -95,17 +95,25 @@ where
                 r#as: _,
             }) => {
                 let app_id = application.metadata.name.clone();
-                let device_id = device.metadata.name.clone();
+                let device_id = device.metadata.name;
 
                 let session = Session::<S>::new(
                     self.downstream.clone(),
                     connect.sink(),
                     application,
-                    Id::new(app_id.clone(), device_id.clone()),
+                    Id::new(app_id, device_id),
                     self.commands.clone(),
                 );
 
-                Ok(session)
+                Ok(ConnectAck {
+                    session,
+                    ack: AckOptions {
+                        wildcard_subscription_available: Some(true),
+                        shared_subscription_available: Some(false),
+                        subscription_identifiers_available: Some(false),
+                        ..Default::default()
+                    },
+                })
             }
             Ok(AuthOutcome::Fail) => Err(ServerError::AuthenticationFailed),
             Err(_) => Err(ServerError::AuthenticationFailed),
