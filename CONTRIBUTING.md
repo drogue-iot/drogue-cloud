@@ -240,5 +240,5 @@ Then you can start the `console-frontend` in the development mode:
 
 ~~~
 cd console-frontend
-npm run start:dev
+npm run start
 ~~~
