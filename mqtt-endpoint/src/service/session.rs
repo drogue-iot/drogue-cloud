@@ -10,61 +10,44 @@ use drogue_cloud_mqtt_common::{
     mqtt::{self, *},
 };
 use drogue_cloud_service_common::Id;
+use futures::lock::Mutex;
 use ntex::util::{ByteString, Bytes};
 use ntex_mqtt::{types::QoS, v5};
+use std::sync::Arc;
 
 const TOPIC_COMMAND_INBOX: &str = "command/inbox";
 const TOPIC_COMMAND_INBOX_PATTERN: &str = "command/inbox/#";
 
-#[derive(Clone)]
-pub struct Session<S>
-where
-    S: Sink,
-{
-    pub sender: DownstreamSender<S>,
-    pub application: registry::v1::Application,
-    pub device_id: Id,
-    pub commands: Commands,
-    sink: mqtt::Sink,
+pub struct InboxReader {
+    device_id: Id,
+    commands: Commands,
 }
 
-impl<S> Session<S>
-where
-    S: Sink,
-{
-    pub fn new(
-        sender: DownstreamSender<S>,
-        sink: mqtt::Sink,
-        application: registry::v1::Application,
-        device_id: Id,
-        commands: Commands,
-    ) -> Self {
-        Self {
-            sender,
-            sink,
-            application,
-            device_id,
-            commands,
-        }
-    }
+impl InboxReader {
+    async fn new(device_id: Id, commands: Commands, sink: mqtt::Sink) -> Self {
+        let mut rx = commands.subscribe(device_id.clone()).await;
 
-    async fn run_commands(&self) {
-        let device_id = self.device_id.clone();
-        let mut rx = self.commands.subscribe(device_id.clone()).await;
-        let sink = self.sink.clone();
+        let id = device_id.clone();
 
         ntex::rt::spawn(async move {
+            log::debug!("Starting inbox command loop: {:?}", id);
             while let Some(cmd) = rx.recv().await {
                 match Self::send_command(&sink, cmd).await {
                     Ok(_) => {
-                        log::debug!("Command sent to device subscription {:?}", device_id);
+                        log::debug!("Command sent to device subscription {:?}", id);
                     }
                     Err(e) => {
                         log::error!("Failed to send a command to device subscription {:?}", e);
                     }
                 }
             }
+            log::debug!("Exiting inbox command loop: {:?}", id);
         });
+
+        Self {
+            device_id,
+            commands,
+        }
     }
 
     async fn send_command(sink: &mqtt::Sink, cmd: Command) -> Result<(), String> {
@@ -84,6 +67,78 @@ where
                 Ok(_) => Ok(()),
                 Err(e) => Err(e.to_string()),
             },
+        }
+    }
+}
+
+impl Drop for InboxReader {
+    fn drop(&mut self) {
+        log::debug!("Dropping inbox reader for {:?}", self.device_id);
+
+        // unsubscribe from commands
+        let device_id = self.device_id.clone();
+        let commands = self.commands.clone();
+        ntex::rt::spawn(async move {
+            commands.unsubscribe(&device_id).await;
+        });
+    }
+}
+
+#[derive(Clone)]
+pub struct Session<S>
+where
+    S: Sink,
+{
+    pub sender: DownstreamSender<S>,
+    pub application: registry::v1::Application,
+    pub device_id: Id,
+    pub commands: Commands,
+    sink: mqtt::Sink,
+    inbox_reader: Arc<Mutex<Option<InboxReader>>>,
+}
+
+impl<S> Session<S>
+where
+    S: Sink,
+{
+    pub fn new(
+        sender: DownstreamSender<S>,
+        sink: mqtt::Sink,
+        application: registry::v1::Application,
+        device_id: Id,
+        commands: Commands,
+    ) -> Self {
+        Self {
+            sender,
+            sink,
+            application,
+            device_id,
+            commands,
+            inbox_reader: Default::default(),
+        }
+    }
+
+    async fn subscribe_inbox(&self) {
+        let mut reader = self.inbox_reader.lock().await;
+
+        match reader.as_ref() {
+            Some(_) => {
+                log::info!("Already subscribed to command inbox");
+            }
+            None => {
+                reader.replace(
+                    InboxReader::new(
+                        self.device_id.clone(),
+                        self.commands.clone(),
+                        self.sink.clone(),
+                    )
+                    .await,
+                );
+                log::debug!(
+                    "Device '{:?}' subscribed to receive commands",
+                    self.device_id
+                );
+            }
         }
     }
 }
@@ -121,17 +176,25 @@ where
         &self,
         sub: Subscribe<'_>,
     ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+        if sub.id().is_some() {
+            log::info!("Rejecting request with subscription IDs");
+            for mut sub in sub {
+                sub.fail(v5::codec::SubscribeAckReason::SubscriptionIdentifiersNotSupported);
+            }
+            return Ok(());
+        }
+
         for mut sub in sub {
-            if sub.topic() == TOPIC_COMMAND_INBOX_PATTERN {
-                self.run_commands().await;
-                log::debug!(
-                    "Device '{:?}' subscribed to receive commands",
-                    self.device_id
-                );
-                sub.confirm(QoS::AtLeastOnce);
-            } else {
-                log::info!("Subscribing to topic {:?} not allowed", sub.topic());
-                sub.fail(v5::codec::SubscribeAckReason::UnspecifiedError);
+            match sub.topic().as_ref() {
+                TOPIC_COMMAND_INBOX_PATTERN => {
+                    log::info!("Subscribing to device command inbox: {:?}", self.device_id);
+                    self.subscribe_inbox().await;
+                    sub.confirm(QoS::AtLeastOnce);
+                }
+                _ => {
+                    log::info!("Subscribing to topic {:?} not allowed", sub.topic());
+                    sub.fail(v5::codec::SubscribeAckReason::UnspecifiedError);
+                }
             }
         }
 
@@ -140,15 +203,36 @@ where
 
     async fn unsubscribe(
         &self,
-        _unsubscribe: Unsubscribe<'_>,
+        unsubscribe: Unsubscribe<'_>,
     ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
-        // FIXME: any unsubscribe get we, we treat as disconnecting from the command inbox
-        self.commands.unsubscribe(&self.device_id).await;
+        for mut unsub in unsubscribe {
+            match unsub.topic().as_ref() {
+                TOPIC_COMMAND_INBOX_PATTERN => {
+                    if self.inbox_reader.lock().await.take().is_some() {
+                        unsub.success();
+                    } else {
+                        log::info!(
+                            "Tried to unsubscribe from not-subscribed inbox reader: {:?}",
+                            self.device_id
+                        );
+                        unsub.fail(v5::codec::UnsubscribeAckReason::NoSubscriptionExisted);
+                    }
+                }
+                _ => {
+                    log::info!(
+                        "Tried to unsubscribe from not-subscribed topic: {}",
+                        unsub.topic()
+                    );
+                    unsub.fail(v5::codec::UnsubscribeAckReason::NoSubscriptionExisted);
+                }
+            }
+        }
+
         Ok(())
     }
 
     async fn closed(&self) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
-        self.commands.unsubscribe(&self.device_id).await;
+        self.inbox_reader.lock().await.take();
         Ok(())
     }
 }
