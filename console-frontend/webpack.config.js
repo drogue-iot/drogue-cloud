@@ -7,7 +7,7 @@ const distPath = path.resolve(__dirname, "dist");
 module.exports = (env, argv) => {
     return {
         devServer: {
-            contentBase: [
+            static: [
                 distPath,
                 path.resolve(__dirname, "dev")
             ],
@@ -21,7 +21,7 @@ module.exports = (env, argv) => {
                 rewrites: [
                     // don't translate endpoints
                     {
-                        from: /endpoints\/.*/, to: function (context) {
+                        from: /\/endpoints\/.*/, to: function (context) {
                             return context.match[0];
                         }
                     },
@@ -188,6 +188,8 @@ module.exports = (env, argv) => {
                 extraArgs: "--no-typescript --mode=no-install",
             })
         ],
-        watch: argv.mode !== 'production'
+        experiments: {
+            asyncWebAssembly: true
+        }
     };
 };
