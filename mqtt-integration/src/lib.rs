@@ -43,6 +43,9 @@ pub struct Config {
     pub oauth: AuthenticatorConfig,
 
     pub command_kafka_sink: KafkaClientConfig,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 impl TlsConfig for Config {
@@ -97,7 +100,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let registry = config.registry.into_client(client.clone()).await?;
 
-    let sender = UpstreamSender::new(KafkaSink::from_config(config.command_kafka_sink)?)?;
+    let sender = UpstreamSender::new(KafkaSink::from_config(
+        config.command_kafka_sink,
+        config.check_kafka_topic_ready,
+    )?)?;
 
     log::info!("Authenticator: {:?}", authenticator);
     log::info!("User auth: {:?}", user_auth);
