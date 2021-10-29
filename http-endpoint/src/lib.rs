@@ -51,6 +51,9 @@ pub struct Config {
     pub kafka_command_config: KafkaClientConfig,
 
     pub instance: String,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 #[get("/")]
@@ -62,7 +65,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new(
-        KafkaSink::from_config(config.kafka_downstream_config, false)?,
+        KafkaSink::from_config(
+            config.kafka_downstream_config,
+            config.check_kafka_topic_ready,
+        )?,
         config.instance,
     )?;
     let commands = Commands::new();

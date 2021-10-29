@@ -13,7 +13,10 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
+use drogue_cloud_service_common::{
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
 use futures::TryFutureExt;
 use rust_tls::ClientCertVerifier;
 use serde::Deserialize;
@@ -41,6 +44,9 @@ pub struct Config {
     pub kafka_command_config: KafkaClientConfig,
 
     pub instance: String,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 impl TlsConfig for Config {
@@ -68,7 +74,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let app = App {
         downstream: DownstreamSender::new(
-            KafkaSink::from_config(config.kafka_downstream_config.clone(), false)?,
+            KafkaSink::from_config(
+                config.kafka_downstream_config.clone(),
+                config.check_kafka_topic_ready,
+            )?,
             config.instance.clone(),
         )?,
 

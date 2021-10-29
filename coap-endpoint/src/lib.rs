@@ -50,6 +50,9 @@ pub struct Config {
 
     #[serde(default)]
     pub health: HealthServerConfig,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -219,7 +222,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let coap_server_commands = commands.clone();
 
     let sender = DownstreamSender::new(
-        KafkaSink::from_config(config.kafka_downstream_config)?,
+        KafkaSink::from_config(
+            config.kafka_downstream_config,
+            config.check_kafka_topic_ready,
+        )?,
         config.instance,
     )?;
 

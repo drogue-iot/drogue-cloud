@@ -51,6 +51,11 @@ pub fn enable_kube() -> bool {
 }
 
 #[inline]
+pub fn check_kafka_topic_ready() -> bool {
+    true
+}
+
+#[inline]
 pub fn authentication_url() -> Url {
     Url::parse("http://authentication-service").unwrap()
 }

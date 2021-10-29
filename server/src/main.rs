@@ -1,9 +1,8 @@
 use clap::{App, Arg, SubCommand};
-use drogue_cloud_api_key_service::{endpoints as keys, service::KeycloakApiKeyService};
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
-use drogue_cloud_registry_events::{sender::KafkaSenderConfig, stream::KafkaStreamConfig};
+use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
 use drogue_cloud_service_api::{
     endpoints::*,
     kafka::{KafkaClientConfig, KafkaConfig},
@@ -11,11 +10,8 @@ use drogue_cloud_service_api::{
 use drogue_cloud_service_common::{
     client::RegistryConfig,
     client::UserAuthClientConfig,
-    config::ConfigFromEnv,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
-    openid::{
-        AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
-    },
+    openid::{AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig},
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use std::collections::HashMap;
@@ -143,10 +139,12 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("run") {
         let server: ServerConfig = Default::default();
 
+        /*
         let kafka_stream = |topic: &str, consumer_group: &str| KafkaStreamConfig {
             client: kafka_config(topic),
             consumer_group: consumer_group.to_string(),
         };
+        */
 
         let kafka_sender = |topic: &str| KafkaSenderConfig {
             client: kafka_config(topic),
@@ -219,7 +217,7 @@ fn main() {
             let k = keycloak.clone();
             let bind_addr = server.clone().registry.into();
             let s = server.clone();
-            let mut pg = pg.clone();
+            let pg = pg.clone();
             let t = token_config.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
@@ -263,7 +261,7 @@ fn main() {
             let o = oauth.clone();
             let k = keycloak.clone();
             let bind_addr = server.clone().user_auth.into();
-            let mut pg = pg.clone();
+            let pg = pg.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_user_auth_service::Config {
                     max_json_payload_size: 65536,
@@ -291,9 +289,8 @@ fn main() {
         if matches.is_present("enable-authentication-service") || matches.is_present("enable-all") {
             log::info!("Enabling device authentication service");
             let o = oauth.clone();
-            let k = keycloak.clone();
             let bind_addr = server.clone().device_auth.into();
-            let mut pg = pg.clone();
+            let pg = pg.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_authentication_service::Config {
                     max_json_payload_size: 65536,
@@ -318,7 +315,6 @@ fn main() {
         if matches.is_present("enable-console-backend") || matches.is_present("enable-all") {
             log::info!("Enabling console backend service");
             let o = oauth.clone();
-            let k = keycloak.clone();
             let s = server.clone();
             let t = token_config.clone();
             let bind_addr = s.console.clone().into();
@@ -374,6 +370,7 @@ fn main() {
                     instance: "drogue".to_string(),
                     kafka_downstream_config: kafka_client(),
                     kafka_command_config: kafka_client(),
+                    check_kafka_topic_ready: false,
                     bind_addr,
                 };
                 actix_rt::System::with_tokio_rt(|| {
