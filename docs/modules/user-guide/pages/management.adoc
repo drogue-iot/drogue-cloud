@@ -144,7 +144,7 @@ spec:
 ----
 <1> One credential entry of type "password" as "bcrypt" hash.
 
-See xref:supported-password-hashes for a list of supported password hashes.
+See <<supported-password-hashes>> for a list of supported password hashes.
 
 [#setting_username_password]
 === Setting username/password credentials
@@ -201,7 +201,7 @@ spec:
 <2> The username
 <3> The bcrypt hashed password
 
-See xref:supported-password-hashes for a list of supported password hashes.
+See <<supported-password-hashes>> for a list of supported password hashes.
 
 === Setting username/password credentials (unique username)
 
