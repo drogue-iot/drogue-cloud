@@ -8,9 +8,11 @@ to transfer any sensitive data over public networks.
 == *Requests:*
 Before communicating with the endpoint, the respective device and application need to be registered with drogue cloud.
 The coap requests made to the endpoint need to be of the following format:
-```
+
+[source]
+----
 coap://<coap-endpoint-address>/v1/{channel}/{subject(optional)}
-```
+----
 The UriPath option should be set with v1, channel name and subject name(optional).
 
 Optional parameters can also be passed, but they need to be URL encoded. The rules for encoding the 
@@ -29,34 +31,44 @@ The command will piggyback on the response—the responsibility to track when th
 
 Authentication information is sent using the `CoAP option number 4209`. It is carried out using HTTP-like
 authentication headers. For example:
-```
+
+[source]
+----
 Basic ZGV2aWNlMUBhcHAxOmhleS1yb2RuZXk
-```
+----
 Here, we use the HTTP Basic authentication scheme, along with the base64 encoded device authentication information.
 The format of the device authentication information is `<device-id>@<application-id>:<password>`.
 
 A sample CoAP request would look something like the following:
 
-• The Request URL would be formatted like so, with the device name 'device#2' and 'device#4' percentage encoded: 
-```
+• The Request URL would be formatted like so, with the device name 'device#2' and 'device#4' percentage encoded:
+
+[source]
+----
 coap://test-url/v1/sample_channel/sample_subject?application=app1&device=device%232&data_schema=application%2Foctet-stream&as=device%232&ct=30
-```
+----
 
-• The value of Option 4209, representing auth information "device1@app1:hey-rodney": 
-```
+• The value of Option 4209, representing auth information "device1@app1:hey-rodney":
+
+[source]
+----
 Basic ZGV2aWNlMUBhcHAxOmhleS1yb2RuZXk // present as bytes
-```
+----
 
-• Value of the UriPath Option(obtained from request URL): 
-```
+• Value of the UriPath Option(obtained from request URL):
+
+[source]
+----
 v1, Rust, test // present as bytes
-```
+----
 
-• Value of the UriQuery Option(obtained from request URL): 
-```
+• Value of the UriQuery Option(obtained from request URL):
+
+[source]
+----
 // present as bytes
 application=app1&device=device%232&data_schema=application%2Foctet-stream&as=device%234&ct=30
-```
+----
 
 == *Response:*
 
