@@ -12,9 +12,12 @@ use drogue_cloud_service_common::{
     client::RegistryConfig,
     client::UserAuthClientConfig,
     config::ConfigFromEnv,
-    keycloak::KeycloakAdminClientConfig,
-    openid::{AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig},
+    keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
+    openid::{
+        AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
+    },
 };
+use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use std::collections::HashMap;
 use url::Url;
 
@@ -32,7 +35,6 @@ impl Into<String> for Endpoint {
 
 #[derive(Clone)]
 struct ServerConfig {
-    pub api: Endpoint,
     pub console: Endpoint,
     pub mqtt: Endpoint,
     pub http: Endpoint,
@@ -42,15 +44,12 @@ struct ServerConfig {
     pub command: Endpoint,
     pub registry: Endpoint,
     pub device_auth: Endpoint,
+    pub user_auth: Endpoint,
 }
 
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
-            api: Endpoint {
-                host: "localhost".to_string(),
-                port: 10000,
-            },
             console: Endpoint {
                 host: "localhost".to_string(),
                 port: 10001,
@@ -87,6 +86,10 @@ impl Default for ServerConfig {
                 host: "localhost".to_string(),
                 port: 10005,
             },
+            user_auth: Endpoint {
+                host: "localhost".to_string(),
+                port: 10006,
+            },
         }
     }
 }
@@ -105,9 +108,19 @@ fn main() {
                         .help("enable all services"),
                 )
                 .arg(
+                    Arg::with_name("enable-console-backend")
+                        .long("--enable-console-backend")
+                        .help("enable console backend service"),
+                )
+                .arg(
                     Arg::with_name("enable-device-registry")
                         .long("--enable-device-registry")
                         .help("enable device management service"),
+                )
+                .arg(
+                    Arg::with_name("enable-user-authentication-service")
+                        .long("--enable-user-authentication-service")
+                        .help("enable user authentication service"),
                 )
                 .arg(
                     Arg::with_name("enable-authentication-service")
@@ -148,9 +161,9 @@ fn main() {
         let oauth = AuthenticatorConfig {
             disabled: true,
             global: AuthenticatorGlobalConfig {
-                sso_url: None,
-                issuer_url: None,
-                realm: "drogue".to_string(),
+                sso_url: endpoints(&server).sso,
+                issuer_url: endpoints(&server).issuer_url,
+                realm: "master".to_string(),
                 redirect_url: None,
             },
             clients: HashMap::new(),
@@ -158,7 +171,7 @@ fn main() {
 
         let keycloak = KeycloakAdminClientConfig {
             url: Url::parse(endpoints(&server).sso.as_ref().unwrap()).unwrap(),
-            realm: "drogue".into(),
+            realm: "master".into(),
             admin_username: "admin".into(),
             admin_password: "admin123456".into(),
             tls_noverify: true,
@@ -186,17 +199,39 @@ fn main() {
             token_config: None,
         };
 
+        let client_secret = "myimportantsecret";
+        let token_config = TokenConfig {
+            client_id: "drogue-service".to_string(),
+            client_secret: client_secret.to_string(),
+            issuer_url: endpoints(&server)
+                .issuer_url
+                .as_ref()
+                .map(|u| Url::parse(u).unwrap()),
+            sso_url: Url::parse(endpoints(&server).sso.as_ref().unwrap()).ok(),
+            realm: "master".to_string(),
+            refresh_before: None,
+        };
+
         let mut threads = Vec::new();
         if matches.is_present("enable-device-registry") || matches.is_present("enable-all") {
             log::info!("Enabling device registry");
             let o = oauth.clone();
             let k = keycloak.clone();
             let bind_addr = server.clone().registry.into();
+            let s = server.clone();
             let mut pg = pg.clone();
+            let t = token_config.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
                     enable_api_keys: false,
-                    user_auth: None,
+                    user_auth: Some(UserAuthClientConfig {
+                        token_config: Some(t),
+                        url: Url::parse(&format!(
+                            "http://{}:{}",
+                            s.user_auth.host, s.user_auth.port
+                        ))
+                        .unwrap(),
+                    }),
                     oauth: o,
                     keycloak: k,
                     database_config: PostgresManagementServiceConfig {
@@ -217,6 +252,38 @@ fn main() {
                         .unwrap()
                 })
                 .block_on(drogue_cloud_device_management_service::run(config))
+                .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-user-authentication-service")
+            || matches.is_present("enable-all")
+        {
+            log::info!("Enabling user authentication service");
+            let o = oauth.clone();
+            let k = keycloak.clone();
+            let bind_addr = server.clone().user_auth.into();
+            let mut pg = pg.clone();
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_user_auth_service::Config {
+                    max_json_payload_size: 65536,
+                    oauth: o,
+                    keycloak: k,
+                    health: None,
+                    service: AuthorizationServiceConfig { pg },
+                    bind_addr,
+                };
+                actix_rt::System::with_tokio_rt(|| {
+                    tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .worker_threads(1)
+                        .thread_name("authentication-service")
+                        .build()
+                        .unwrap()
+                })
+                .block_on(drogue_cloud_user_auth_service::run::<KeycloakAdminClient>(
+                    config,
+                ))
                 .unwrap();
             }));
         }
@@ -244,6 +311,47 @@ fn main() {
                         .unwrap()
                 })
                 .block_on(drogue_cloud_authentication_service::run(config))
+                .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-console-backend") || matches.is_present("enable-all") {
+            log::info!("Enabling console backend service");
+            let o = oauth.clone();
+            let k = keycloak.clone();
+            let s = server.clone();
+            let t = token_config.clone();
+            let bind_addr = s.console.clone().into();
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_console_backend::Config {
+                    oauth: o,
+                    health: None,
+                    bind_addr,
+                    enable_kube: false,
+                    kafka: kafka_client(),
+                    keycloak,
+                    registry,
+                    console_token_config: Some(t.clone()),
+                    disable_account_url: false,
+                    scopes: "openid profile email".into(),
+                    user_auth: Some(UserAuthClientConfig {
+                        token_config: Some(t),
+                        url: Url::parse(&format!(
+                            "http://{}:{}",
+                            s.user_auth.host, s.user_auth.port
+                        ))
+                        .unwrap(),
+                    }),
+                };
+                actix_rt::System::with_tokio_rt(|| {
+                    tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .worker_threads(1)
+                        .thread_name("console-backend-service")
+                        .build()
+                        .unwrap()
+                })
+                .block_on(drogue_cloud_console_backend::run(config, endpoints(&s)))
                 .unwrap();
             }));
         }
@@ -319,7 +427,7 @@ const KAFKA_BOOTSTRAP: &'static str = "localhost:9092";
 
 fn endpoints(config: &ServerConfig) -> Endpoints {
     Endpoints {
-        api: Some(format!("http://{}:{}", config.api.host, config.api.port)),
+        api: None,
         console: Some(format!(
             "http://{}:{}",
             config.console.host, config.console.port
@@ -345,8 +453,8 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
             ),
         }),
         sso: Some("http://localhost:8080".into()),
-        issuer_url: Some("http://localhost:8080/auth".into()),
-        redirect_url: Some("http://localhost:10000".into()),
+        issuer_url: Some("http://localhost:8080/auth/realms/master".into()),
+        redirect_url: Some("http://localhost:10001".into()),
         registry: Some(RegistryEndpoint {
             url: format!("http://{}:{}", config.registry.host, config.registry.port),
         }),

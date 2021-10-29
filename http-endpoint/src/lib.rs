@@ -62,7 +62,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new(
-        KafkaSink::from_config(config.kafka_downstream_config)?,
+        KafkaSink::from_config(config.kafka_downstream_config, false)?,
         config.instance,
     )?;
     let commands = Commands::new();

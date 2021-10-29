@@ -18,6 +18,7 @@ drogue-cloud-event-common = { path = "../event-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-device-management-service = { path = "../device-management-service" }
 drogue-cloud-authentication-service = { path = "../authentication-service" }
+drogue-cloud-user-auth-service = { path = "../user-auth-service" }
 url = "2"
 env_logger = { version = "0.7" } 
 log = "0.4"

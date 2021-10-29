@@ -2530,6 +2530,7 @@ dependencies = [
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
+ "drogue-cloud-user-auth-service",
  "env_logger 0.7.1",
  "log",
  "ntex 0.3.18",

@@ -68,7 +68,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let app = App {
         downstream: DownstreamSender::new(
-            KafkaSink::from_config(config.kafka_downstream_config.clone())?,
+            KafkaSink::from_config(config.kafka_downstream_config.clone(), false)?,
             config.instance.clone(),
         )?,
 

@@ -46,6 +46,11 @@ pub fn oauth2_scopes() -> String {
 }
 
 #[inline]
+pub fn enable_kube() -> bool {
+    true
+}
+
+#[inline]
 pub fn authentication_url() -> Url {
     Url::parse("http://authentication-service").unwrap()
 }
