@@ -1,5 +1,6 @@
 use clap::{App, Arg, SubCommand};
 use drogue_cloud_api_key_service::{endpoints as keys, service::KeycloakApiKeyService};
+use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
 use drogue_cloud_registry_events::{sender::KafkaSenderConfig, stream::KafkaStreamConfig};
@@ -40,6 +41,7 @@ struct ServerConfig {
     pub websocket_integration: Endpoint,
     pub command: Endpoint,
     pub registry: Endpoint,
+    pub device_auth: Endpoint,
 }
 
 impl Default for ServerConfig {
@@ -81,6 +83,10 @@ impl Default for ServerConfig {
                 host: "localhost".to_string(),
                 port: 10004,
             },
+            device_auth: Endpoint {
+                host: "localhost".to_string(),
+                port: 10005,
+            },
         }
     }
 }
@@ -102,6 +108,11 @@ fn main() {
                     Arg::with_name("enable-device-registry")
                         .long("--enable-device-registry")
                         .help("enable device management service"),
+                )
+                .arg(
+                    Arg::with_name("enable-authentication-service")
+                        .long("--enable-authentication-service")
+                        .help("enable device authentication service"),
                 )
                 .arg(
                     Arg::with_name("enable-http-endpoint")
@@ -159,20 +170,19 @@ fn main() {
         };
 
         let mut pg = deadpool_postgres::Config::new();
+        pg.host = Some("localhost".to_string());
+        pg.port = Some(5432);
+        pg.user = Some("admin".to_string());
+        pg.password = Some("admin123456".to_string());
         pg.dbname = Some("drogue".to_string());
-        pg.host = Some("localhost:5432".to_string());
         pg.manager = Some(deadpool_postgres::ManagerConfig {
             recycling_method: deadpool_postgres::RecyclingMethod::Fast,
         });
 
-        let database = PostgresManagementServiceConfig {
-            pg: pg,
-            instance: "drogue".to_string(),
-        };
-
+        let authurl: String = server.device_auth.clone().into();
         let auth = AuthConfig {
             auth_disabled: true,
-            url: Url::parse("http://localhost:8080").unwrap(),
+            url: Url::parse(&format!("http://{}", authurl)).unwrap(),
             token_config: None,
         };
 
@@ -182,13 +192,18 @@ fn main() {
             let o = oauth.clone();
             let k = keycloak.clone();
             let bind_addr = server.clone().registry.into();
+            let mut pg = pg.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
                     enable_api_keys: false,
                     user_auth: None,
                     oauth: o,
                     keycloak: k,
-                    database_config: database.clone(),
+                    database_config: PostgresManagementServiceConfig {
+                        pg: pg.clone(),
+                        instance: "drogue".to_string(),
+                    },
+
                     health: None,
                     bind_addr,
                     kafka_sender: kafka_sender("registry"),
@@ -202,6 +217,33 @@ fn main() {
                         .unwrap()
                 })
                 .block_on(drogue_cloud_device_management_service::run(config))
+                .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-authentication-service") || matches.is_present("enable-all") {
+            log::info!("Enabling device authentication service");
+            let o = oauth.clone();
+            let k = keycloak.clone();
+            let bind_addr = server.clone().device_auth.into();
+            let mut pg = pg.clone();
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_authentication_service::Config {
+                    max_json_payload_size: 65536,
+                    oauth: o,
+                    health: None,
+                    auth_service_config: AuthenticationServiceConfig { pg },
+                    bind_addr,
+                };
+                actix_rt::System::with_tokio_rt(|| {
+                    tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .worker_threads(1)
+                        .thread_name("authentication-service")
+                        .build()
+                        .unwrap()
+                })
+                .block_on(drogue_cloud_authentication_service::run(config))
                 .unwrap();
             }));
         }
