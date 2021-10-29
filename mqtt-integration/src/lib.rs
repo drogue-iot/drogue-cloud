@@ -6,6 +6,7 @@ use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    defaults,
     health::{HealthServer, HealthServerConfig},
     openid::AuthenticatorConfig,
 };
