@@ -2,8 +2,115 @@
 
 The HTTP protocol endpoint is a device facing service offering connectivity using different HTTP based APIs.
 
+The base address of the HTTP protocol endpoints depends on your installation. For a local, test installation, this
+is mostly based on the IP address and uses `nip.io` to resolve this as a DNS name. Assuming your IP address is `1.2.3.4`
+the hostname would be `http-endpoint.1.2.3.4.nip.io`.
+
 == Simple HTTP API
+
+=== Publish telemetry
+
+----
+POST /v1/{channel}
+----
+
+==== Authentication
+
+You need to use one of the following authentication mechanisms:
+
+|===
+|Name |Information | Details
+
+| X.509 Client certificates | | Provide an X.509 client certificate during the TLS handshake. The certificate must be signed with a trust anchor stored in the device registry on the application level.
+
+.3+| Basic authentication
+a| * Credentials: `<username>@<application>:<password>`
+| Standard username/password authentication using `<username>@<application>` as HTTP username. The `<username>` can
+either be a device name, device alias, or unique username.
+
+a|* Credentials: `<username>@<password>`
+* Query: `application=<application>`
+| Use a standard username and provide the application as part of the HTTP query. The `<username>` can
+either be a device name, device alias, or unique username.
+
+a|* Credentials: `<username>@<password>`
+* Query: `application=<application>&device=<device>`
+| Use a non-unique username, provide application and device using query parameters.
+
+|===
+
+==== Parameters
+
+|===
+|Name |Type |Location |Required |Default |Description
+
+|`channel`
+|string
+|path
+|X
+|
+|The name of the channel to send to
+
+|`application`
+|string
+|query
+|
+|
+|Override the application for authentication. See above.
+
+|`device`
+|string
+|query
+|
+|
+|Override the device for authentication. See above.
+
+|`as`
+|string
+|query
+|
+|
+|Allows to specify an alternate device name that this device may act on behalf of. The "as" device must be configured to
+allow the authenticated device (from the credentials or `device`) to act on its behalf.
+
+|`ct`
+|integer
+|query
+|
+|
+|Number of seconds the endpoint should wait for a command, for returning to the device from the cloud side.
+
+|===
+
+==== Code samples
+
+===== Shell
+
+[source,shell]
+----
+http \
+    --auth device1@example-app:foobar \
+    --verify build/certs/endpoints/root-cert.pem \
+    POST \
+    https://http-endpoint.1.2.3.4.nip.io:30443/v1/telemetry \
+    temp:=42
+----
+
+[source,shell]
+----
+http \
+    --auth device1:foobar \
+    --verify build/certs/endpoints/root-cert.pem \
+    POST \
+    https://http-endpoint.192.168.39.35.nip.io:30443/v1/foo \
+    application==example-app \
+    temp:=42
+----
 
 == The Things Network v2
 
+**Deprecated!**
+
 == The Things Network v3
+
+The entrypoint is `/ttn/v3`.
