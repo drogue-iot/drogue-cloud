@@ -32,3 +32,4 @@ deadpool-postgres = { version = "0.7", features = ["config"] }
 diesel = { version = "1.4.0", features = ["postgres"] }
 diesel_migrations = { version = "1.4.0", features = ["postgres"] }
 keycloak = { version = "14" }
+reqwest = { version = "0.11.6" }

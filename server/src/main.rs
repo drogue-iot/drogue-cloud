@@ -149,8 +149,36 @@ fn run_migrations(db: &Database) {
     log::info!("Migration done");
 }
 
-fn configure_keycloak(_server: &Keycloak) {
-    // TODO: Configure keycloak clients
+fn configure_keycloak(server: &Keycloak) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let url = format!("http://{}:{}", server.endpoint.host, server.endpoint.port);
+        let user = server.user.clone();
+        let password = server.password.clone();
+        let client = reqwest::Client::new();
+        let admin_token = keycloak::KeycloakAdminToken::acquire(&url, &user, &password, &client)
+            .await
+            .unwrap();
+
+        let admin = keycloak::KeycloakAdmin::new(&url, admin_token, client);
+        let mut c: keycloak::types::ClientRepresentation = Default::default();
+        c.client_id.replace("drogue".to_string());
+        c.enabled.replace(true);
+        c.redirect_uris.replace(vec!["*".to_string()]);
+        c.web_origins.replace(vec!["*".to_string()]);
+        c.client_authenticator_type
+            .replace("client-secret".to_string());
+        c.public_client.replace(true);
+
+        match admin.realm_clients_post("master", c).await {
+            Ok(_) => {
+                log::info!("Keycloak OIDC client created");
+            }
+            Err(e) => {
+                log::warn!("Create client error: {:?}", e);
+            }
+        }
+    });
 }
 
 fn main() {
