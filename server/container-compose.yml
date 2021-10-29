@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  postgres:
+    image: docker.io/bitnami/postgresql:13
+    environment:
+      - POSTGRESQL_USERNAME=admin
+      - POSTGRESQL_PASSWORD=admin123456
+      - POSTGRESQL_DATABASE=drogue
+    ports:
+      - "5432:5432"
+  kafka:
+    image: docker.io/moeenz/docker-kafka-kraft:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KRAFT_CONTAINER_HOST_NAME=kafka
+      - KRAFT_CREATE_TOPICS=iot-commands
+      - KRAFT_PARTITIONS_PER_TOPIC=1
+  keycloak:
+    image: docker.io/jboss/keycloak:13.0.1
+    environment:
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin123456
+      - DB_VENDOR=h2
+    ports:
+      - "8080:8080"
