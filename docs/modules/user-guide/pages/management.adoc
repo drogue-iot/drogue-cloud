@@ -104,6 +104,177 @@ NOTE: If a device requires any cleanup, the device will be first marked as delet
 and then the device will be deleted.
 
 === Setting password credentials
+
+It is possible to set a password as access credentials. This way, when connecting, the username will be the device name.
+
+==== Pre-requisites
+
+* You have created a device
+
+==== Procedure
+
+Configure the device, adding a password credentials entry:
+
+[source, yaml]
+----
+metadata:
+  name: device
+  # …
+spec:
+  # …
+  credentials:
+    credentials:
+      - pass: my-password <1>
+----
+<1> One credential entry of type "password".
+
+You can also use hashed passwords. For this, you need to specify the hash algorithm:
+
+[source, yaml]
+----
+metadata:
+  name: device
+  # …
+spec:
+  # …
+  credentials:
+    credentials:
+      - pass:
+          bcrypt: "$2a$12$WsLmgORBv3WHZ3CjCiMzXOeo2hL5UEeq8PEd11q9BfbM/RWqb7c3G" <1>
+----
+<1> One credential entry of type "password" as "bcrypt" hash.
+
+See xref:supported-password-hashes for a list of supported password hashes.
+
+=== Setting username/password credentials
+
+It is also possible to set a username and password as credentials. In this case, the device ID must be transmitted
+through an alternate way, in order to look up the device. The provided username/password combination will then be
+checked against the configured username/password combination.
+
+The way the device name is transmitted to the endpoint depends on the capabilities of the protocol endpoint.
+For example, using HTTP, the device name can be provided as an additional query parameter.
+
+==== Pre-requisites
+
+* You have created a device
+
+==== Procedure
+
+Configure the device, adding a password credentials entry:
+
+[source,yaml]
+----
+metadata:
+  name: device <1>
+  # …
+spec:
+  # …
+  credentials:
+    credentials:
+      - user:
+          username: device-user <2>
+          password: bar <3>
+----
+<1> The device name
+<2> The username
+<3> The plain text password
+
+You can also use hashed passwords, instead of plain text:
+
+[source,yaml]
+----
+metadata:
+  name: device <1>
+  # …
+spec:
+  # …
+  credentials:
+    credentials:
+      - user:
+          username: device-user <2>
+          password:
+            bcrypt: "$2a$12$WsLmgORBv3WHZ3CjCiMzXOeo2hL5UEeq8PEd11q9BfbM/RWqb7c3G" <3>
+----
+<1> The device name
+<2> The username
+<3> The bcrypt hashed password
+
+See xref:supported-password-hashes for a list of supported password hashes.
+
+=== Setting username/password credentials (unique username)
+
+If you want to use the username only for authenticating your device, without the need to provide an additional
+device identifier, you can use "unique usernames". These usernames are unique per application.
+
+==== Pre-requisites
+
+* You have created a device
+
+==== Procedure
+
+Configure the device, adding a password credentials entry:
+
+[source,yaml]
+----
+metadata:
+  name: device
+  # …
+spec:
+  # …
+  credentials:
+    credentials:
+      - user:
+          username: device-user
+          password: bar
+          unique: true <1>
+----
+<1> Setting the value to `true` makes the entry a unique username entry.
+
+As described in <<_setting_usernamepassword_credentials>>, you can use hashed passwords too.
+
 === Setting X.509 client certificate credentials
 
 === Configuring a gateway device
+
+Every device can act as a gateway for another device. However, it must be granted the permission to act on behalf
+of that other device.
+
+The way this is done, is by adding this information to the device connects through a gateway.
+
+==== Pre-requisites
+
+* You have created two devices.
+** One that should act as gateway (named `gateway` in the following steps).
+** One that should act as the actual device (named `sensor` in the following steps).
+* The gateway device has access credentials configured, so that the gateway can connect to the cloud.
+
+==== Procedure
+
+In the configuration of the actual device, select the devices that can act as a gateway:
+
+[source, yaml]
+----
+metadata:
+  name: sensor
+  # …
+spec:
+  # …
+  gatewaySelector:
+    matchNames:
+      - gateway
+----
+
+It is possible to use one or more devices as gateway.
+
+== Hashed passwords
+
+It is possible to store passwords either plain text or hashed.
+
+[#supported-password-hashes]
+=== Supported hashes
+
+The following hash types are currently supported:
+
+* `bcrypt` – https://en.wikipedia.org/wiki/Bcrypt[Bcrypt] hash
+* `sha512` – SHA512 https://en.wikipedia.org/wiki/Crypt_(C)[crypt] (Scheme ID 6)
