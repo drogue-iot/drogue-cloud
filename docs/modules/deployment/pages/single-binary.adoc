@@ -1,0 +1,62 @@
+= Running as a single binary
+
+In order to make it possible to run Drogue Cloud in other environments, we provide a `drogue-server` binary to run a single or multiple Drogue Cloud services. This does not require Kubernetes or containers to run.
+
+You do need to run an instance of Kafka, Keycloak and PostgreSQL in order to use this binary.
+
+== Pre-requisites
+
+The binary assumes the following services being available locally:
+
+* Kafka bootstrap: localhost:9092
+* Keycloak:
+** Url: http://localhost:8080
+** Admin user: admin
+** Admin password: admin123456
+* PostgreSQL
+** Database name: drogue
+** Database user: admin
+** Database password: admin123456
+
+== (Optional) Starting pre-requisites
+
+You thought you didn't need containers, HAH! Well, to make it simpler to get the prerequisites running, here is a docker compose file for running them and making them available at the above ports:
+
+```
+version: "3.9"
+services:
+  postgres:
+    image: docker.io/bitnami/postgresql:13
+    environment:
+      - POSTGRESQL_USERNAME=admin
+      - POSTGRESQL_PASSWORD=admin123456
+      - POSTGRESQL_DATABASE=drogue
+    ports:
+      - "5432:5432"
+  kafka:
+    image: docker.io/moeenz/docker-kafka-kraft:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KRAFT_CONTAINER_HOST_NAME=kafka
+      - KRAFT_CREATE_TOPICS=iot-commands
+      - KRAFT_PARTITIONS_PER_TOPIC=1
+  keycloak:
+    image: docker.io/jboss/keycloak:13.0.1
+    environment:
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=admin123456
+      - DB_VENDOR=h2
+    ports:
+      - "8080:8080"
+```
+
+== Running
+
+Make sure all dependencies are running correcrly. To start the drogue server, go to the `server` folder and run:
+
+```
+cargo run -- --enable-all
+```
+
+This will start all drogue services.
