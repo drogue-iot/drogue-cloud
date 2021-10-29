@@ -37,7 +37,8 @@ pub struct Config {
 
     pub command_source_kafka: KafkaCommandSourceConfig,
 
-    pub kafka_config: KafkaClientConfig,
+    pub kafka_downstream_config: KafkaClientConfig,
+    pub kafka_command_config: KafkaClientConfig,
 
     pub instance: String,
 }
@@ -67,7 +68,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let app = App {
         downstream: DownstreamSender::new(
-            KafkaSink::from_config(config.kafka_config.clone())?,
+            KafkaSink::from_config(config.kafka_downstream_config.clone())?,
             config.instance.clone(),
         )?,
 
@@ -92,8 +93,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // command source
 
-    let command_source =
-        KafkaCommandSource::new(commands, config.kafka_config, config.command_source_kafka)?;
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
 
     // run
     if let Some(health) = config.health {

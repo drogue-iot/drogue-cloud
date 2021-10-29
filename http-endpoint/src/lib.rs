@@ -47,7 +47,8 @@ pub struct Config {
 
     pub command_source_kafka: KafkaCommandSourceConfig,
 
-    pub kafka_config: KafkaClientConfig,
+    pub kafka_downstream_config: KafkaClientConfig,
+    pub kafka_command_config: KafkaClientConfig,
 
     pub instance: String,
 }
@@ -61,7 +62,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new(
-        KafkaSink::from_config(config.kafka_config.clone())?,
+        KafkaSink::from_config(config.kafka_downstream_config)?,
         config.instance,
     )?;
     let commands = Commands::new();
@@ -146,8 +147,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let http_server = http_server.run();
 
-    let command_source =
-        KafkaCommandSource::new(commands, config.kafka_config, config.command_source_kafka)?;
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
 
     // run
 

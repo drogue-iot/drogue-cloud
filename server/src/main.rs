@@ -222,7 +222,8 @@ fn main() {
                     key_file: None,
                     command_source_kafka,
                     instance: "drogue".to_string(),
-                    kafka_config: kafka_client(),
+                    kafka_downstream_config: kafka_client(),
+                    kafka_command_config: kafka_client(),
                     bind_addr,
                 };
                 actix_rt::System::with_tokio_rt(|| {

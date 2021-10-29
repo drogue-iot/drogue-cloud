@@ -41,7 +41,8 @@ pub struct Config {
 
     pub command_source_kafka: KafkaCommandSourceConfig,
 
-    pub kafka_config: KafkaClientConfig,
+    pub kafka_downstream_config: KafkaClientConfig,
+    pub kafka_command_config: KafkaClientConfig,
 
     pub instance: String,
 
@@ -218,7 +219,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let coap_server_commands = commands.clone();
 
     let sender = DownstreamSender::new(
-        KafkaSink::from_config(config.kafka_config.clone())?,
+        KafkaSink::from_config(config.kafka_downstream_config)?,
         config.instance,
     )?;
 
@@ -241,7 +242,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             response
         }
     });
-    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
     let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
     futures::try_join!(health.run(), device_to_endpoint.err_into())?;
