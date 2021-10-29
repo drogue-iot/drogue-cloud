@@ -47,11 +47,50 @@ struct ServerConfig {
     pub registry: Endpoint,
     pub device_auth: Endpoint,
     pub user_auth: Endpoint,
+    pub database: Database,
+    pub keycloak: Keycloak,
+    pub kafka: KafkaClientConfig,
+}
+
+#[derive(Clone)]
+pub struct Database {
+    endpoint: Endpoint,
+    db: String,
+    user: String,
+    password: String,
+}
+
+#[derive(Clone)]
+pub struct Keycloak {
+    endpoint: Endpoint,
+    user: String,
+    password: String,
 }
 
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
+            kafka: KafkaClientConfig {
+                bootstrap_servers: "localhost:9092".to_string(),
+                properties: HashMap::new(),
+            },
+            database: Database {
+                endpoint: Endpoint {
+                    host: "localhost".to_string(),
+                    port: 5432,
+                },
+                db: "drogue".to_string(),
+                user: "admin".to_string(),
+                password: "admin123456".to_string(),
+            },
+            keycloak: Keycloak {
+                endpoint: Endpoint {
+                    host: "localhost".to_string(),
+                    port: 8080,
+                },
+                user: "admin".to_string(),
+                password: "admin123456".to_string(),
+            },
             console: Endpoint {
                 host: "localhost".to_string(),
                 port: 10001,
@@ -96,15 +135,22 @@ impl Default for ServerConfig {
     }
 }
 
-fn run_migrations() {
+fn run_migrations(db: &Database) {
     use diesel::Connection;
     log::info!("Migrating database");
-    let database_url = "postgres://admin:admin123456@localhost:5432/drogue";
-    let connection = diesel::PgConnection::establish(database_url)
+    let database_url = format!(
+        "postgres://{}:{}@{}:{}/{}",
+        db.user, db.password, db.endpoint.host, db.endpoint.port, db.db
+    );
+    let connection = diesel::PgConnection::establish(&database_url)
         .expect(&format!("Error connecting to {}", database_url));
 
     embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
     log::info!("Migration done");
+}
+
+fn configure_keycloak(_server: &Keycloak) {
+    // TODO: Configure keycloak clients
 }
 
 fn main() {
@@ -154,10 +200,11 @@ fn main() {
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("run") {
-        run_migrations();
-
         let server: ServerConfig = Default::default();
 
+        run_migrations(&server.database);
+
+        configure_keycloak(&server.keycloak);
         /*
         let kafka_stream = |topic: &str, consumer_group: &str| KafkaStreamConfig {
             client: kafka_config(topic),
@@ -165,8 +212,8 @@ fn main() {
         };
         */
 
-        let kafka_sender = |topic: &str| KafkaSenderConfig {
-            client: kafka_config(topic),
+        let kafka_sender = |topic: &str, config: &KafkaClientConfig| KafkaSenderConfig {
+            client: kafka_config(config, topic),
             queue_timeout: None,
         };
 
@@ -189,8 +236,8 @@ fn main() {
         let keycloak = KeycloakAdminClientConfig {
             url: Url::parse(endpoints(&server).sso.as_ref().unwrap()).unwrap(),
             realm: "master".into(),
-            admin_username: "admin".into(),
-            admin_password: "admin123456".into(),
+            admin_username: server.keycloak.user.clone(),
+            admin_password: server.keycloak.password.clone(),
             tls_noverify: true,
         };
 
@@ -200,11 +247,11 @@ fn main() {
         };
 
         let mut pg = deadpool_postgres::Config::new();
-        pg.host = Some("localhost".to_string());
-        pg.port = Some(5432);
-        pg.user = Some("admin".to_string());
-        pg.password = Some("admin123456".to_string());
-        pg.dbname = Some("drogue".to_string());
+        pg.host = Some(server.database.endpoint.host.clone());
+        pg.port = Some(server.database.endpoint.port);
+        pg.user = Some(server.database.user.clone());
+        pg.password = Some(server.database.password.clone());
+        pg.dbname = Some(server.database.db.clone());
         pg.manager = Some(deadpool_postgres::ManagerConfig {
             recycling_method: deadpool_postgres::RecyclingMethod::Fast,
         });
@@ -258,7 +305,7 @@ fn main() {
 
                     health: None,
                     bind_addr,
-                    kafka_sender: kafka_sender("registry"),
+                    kafka_sender: kafka_sender("registry", &s.kafka),
                 };
                 actix_rt::System::with_tokio_rt(|| {
                     tokio::runtime::Builder::new_current_thread()
@@ -343,7 +390,7 @@ fn main() {
                     health: None,
                     bind_addr,
                     enable_kube: false,
-                    kafka: kafka_client(),
+                    kafka: s.kafka.clone(),
                     keycloak,
                     registry,
                     console_token_config: Some(t.clone()),
@@ -376,6 +423,7 @@ fn main() {
             let a = auth.clone();
             let command_source_kafka = command_source("http_endpoint");
             let bind_addr = server.http.into();
+            let kafka = server.kafka.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_http_endpoint::Config {
                     auth: a,
@@ -387,8 +435,8 @@ fn main() {
                     key_file: None,
                     command_source_kafka,
                     instance: "drogue".to_string(),
-                    kafka_downstream_config: kafka_client(),
-                    kafka_command_config: kafka_client(),
+                    kafka_downstream_config: kafka.clone(),
+                    kafka_command_config: kafka,
                     check_kafka_topic_ready: false,
                     bind_addr,
                 };
@@ -468,9 +516,18 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
                 config.websocket_integration.host, config.websocket_integration.port
             ),
         }),
-        sso: Some("http://localhost:8080".into()),
-        issuer_url: Some("http://localhost:8080/auth/realms/master".into()),
-        redirect_url: Some("http://localhost:10001".into()),
+        sso: Some(format!(
+            "http://{}:{}",
+            config.keycloak.endpoint.host, config.keycloak.endpoint.port
+        )),
+        issuer_url: Some(format!(
+            "http://{}:{}/auth/realms/master",
+            config.keycloak.endpoint.host, config.keycloak.endpoint.port
+        )),
+        redirect_url: Some(format!(
+            "http://{}:{}",
+            config.console.host, config.console.port
+        )),
         registry: Some(RegistryEndpoint {
             url: format!("http://{}:{}", config.registry.host, config.registry.port),
         }),
@@ -483,16 +540,9 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
     }
 }
 
-fn kafka_client() -> KafkaClientConfig {
-    KafkaClientConfig {
-        bootstrap_servers: KAFKA_BOOTSTRAP.into(),
-        properties: HashMap::new(),
-    }
-}
-
-fn kafka_config(topic: &str) -> KafkaConfig {
+fn kafka_config(kafka: &KafkaClientConfig, topic: &str) -> KafkaConfig {
     KafkaConfig {
-        client: kafka_client(),
+        client: kafka.clone(),
         topic: topic.to_string(),
     }
 }
