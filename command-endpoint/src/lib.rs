@@ -59,7 +59,10 @@ async fn index() -> impl Responder {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting Command service endpoint");
 
-    let sender = UpstreamSender::new(KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?)?;
+    let sender = UpstreamSender::new(KafkaSink::from_config(
+        config.command_kafka_sink,
+        config.check_kafka_topic_ready,
+    )?)?;
 
     let max_json_payload_size = config.max_json_payload_size;
 
