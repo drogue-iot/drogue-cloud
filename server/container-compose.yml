@@ -27,7 +27,7 @@ services:
 
   migrator:
     image: ghcr.io/drogue-iot/database-migration:latest
-    entrypoint: [ "bash", "-c", "sleep 10 && /usr/local/bin/diesel migration run" ]
+    entrypoint: [ "bash", "-c", "sleep 20 && /usr/local/bin/diesel migration run" ]
     depends_on:
       - postgres
     restart: "no"
