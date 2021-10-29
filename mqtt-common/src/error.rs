@@ -9,6 +9,7 @@ pub enum PublishError {
     UnsupportedOperation,
     PayloadFormatInvalid,
     UnspecifiedError,
+    TopicNameInvalid,
 }
 
 #[derive(Debug)]
@@ -59,6 +60,9 @@ impl MqttResponse<v5::PublishAck, v5::PublishAck> for PublishError {
             Self::PayloadFormatInvalid => ack
                 .reason(ByteString::from_static("Payload format invalid"))
                 .reason_code(v5::codec::PublishAckReason::PayloadFormatInvalid),
+            Self::TopicNameInvalid => ack
+                .reason(ByteString::from_static("Topic name is invalid"))
+                .reason_code(v5::codec::PublishAckReason::TopicNameInvalid),
         }
     }
 }

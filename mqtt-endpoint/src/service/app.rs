@@ -12,7 +12,6 @@ use drogue_cloud_mqtt_common::{
     mqtt::{AckOptions, Connect, ConnectAck, Service},
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
-use drogue_cloud_service_common::Id;
 use std::fmt::Debug;
 
 #[derive(Clone, Debug)]
@@ -94,14 +93,12 @@ where
                 device,
                 r#as: _,
             }) => {
-                let app_id = application.metadata.name.clone();
-                let device_id = device.metadata.name;
-
                 let session = Session::<S>::new(
+                    self.authenticator.clone(),
                     self.downstream.clone(),
                     connect.sink(),
                     application,
-                    Id::new(app_id, device_id),
+                    device,
                     self.commands.clone(),
                 );
 

@@ -134,7 +134,9 @@ where
     send_uplink(
         sender,
         application,
-        device_id,
+        r#as.map(|d| d.metadata.name)
+            .unwrap_or_else(|| device.metadata.name.clone()),
+        device.metadata.name,
         port,
         time,
         content_type,
@@ -149,6 +151,7 @@ async fn send_uplink<B, S>(
     sender: web::Data<DownstreamSender<S>>,
     application: registry::v1::Application,
     device_id: String,
+    sender_id: String,
     port: String,
     time: DateTime<Utc>,
     content_type: Option<String>,
@@ -160,12 +163,13 @@ where
     B: AsRef<[u8]> + Send + Sync,
     S: Sink,
 {
-    sender
+    Ok(sender
         .publish_http_default(
             sender::Publish {
                 channel: port,
                 application: &application,
                 device_id,
+                sender_id,
                 options: sender::PublishOptions {
                     time: Some(time),
                     content_type,
@@ -176,7 +180,7 @@ where
             },
             body,
         )
-        .await
+        .await)
 }
 
 #[cfg(test)]

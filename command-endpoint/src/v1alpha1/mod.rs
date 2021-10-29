@@ -61,11 +61,11 @@ where
                 device_gateways.1,
                 &sender,
                 client.get_ref().clone(),
-                content_type,
                 CommandOptions {
                     application: app_name,
                     device: device_name,
                     command: opts.command,
+                    content_type,
                 },
                 body,
             )
