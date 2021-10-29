@@ -18,7 +18,10 @@ use drogue_cloud_endpoint_common::{
     sink::{KafkaSink, Sink},
 };
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
+use drogue_cloud_service_common::{
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
 use futures::{self, TryFutureExt};
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
