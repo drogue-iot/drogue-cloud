@@ -146,6 +146,7 @@ spec:
 
 See xref:supported-password-hashes for a list of supported password hashes.
 
+[#setting_username_password]
 === Setting username/password credentials
 
 It is also possible to set a username and password as credentials. In this case, the device ID must be transmitted
@@ -231,7 +232,7 @@ spec:
 ----
 <1> Setting the value to `true` makes the entry a unique username entry.
 
-As described in <<_setting_usernamepassword_credentials>>, you can use hashed passwords too.
+As described in <<setting_username_password>>, you can use hashed passwords too.
 
 === Setting X.509 client certificate credentials
 
