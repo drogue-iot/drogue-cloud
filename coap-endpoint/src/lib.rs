@@ -17,6 +17,7 @@ use drogue_cloud_endpoint_common::{
     sender::DownstreamSender,
     sink::{KafkaSink, Sink},
 };
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
 use futures::{self, TryFutureExt};
 use serde::Deserialize;
@@ -39,6 +40,10 @@ pub struct Config {
     pub bind_addr_coap: Option<String>,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
+
+    pub kafka_config: KafkaClientConfig,
+
+    pub instance: String,
 
     pub auth: AuthConfig,
 
@@ -212,8 +217,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         .unwrap_or_else(|| "0.0.0.0:5683".to_string());
     let coap_server_commands = commands.clone();
 
+    let sender = DownstreamSender::new(
+        KafkaSink::from_config(config.kafka_config.clone())?,
+        config.instance,
+    )?;
+
     let app = App {
-        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
+        downstream: sender,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth).await?,
         ),

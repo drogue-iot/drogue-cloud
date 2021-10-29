@@ -1,0 +1,29 @@
+[package]
+name = "drogue-server"
+version = "0.7.0"
+authors = ["Ulf Lilleengen <lulf@redhat.com>"]
+edition = "2021"
+
+[dependencies]
+
+clap = { version = "2.33.3" }
+drogue-cloud-console-backend = { path = "../console-backend" }
+drogue-cloud-mqtt-endpoint = { path = "../mqtt-endpoint" }
+drogue-cloud-http-endpoint = { path = "../http-endpoint" }
+drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-api-key-service = { path = "../api-key-service" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-event-common = { path = "../event-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-device-management-service = { path = "../device-management-service" }
+url = "2"
+env_logger = { version = "0.7" } 
+log = "0.4"
+tokio = { version = "1.11.0", features = ["full"] }
+ntex = "0.3"
+dotenv = "0.15"
+ntex-rt = "0.2.2"
+actix-rt = { version = "2.2.0" }
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }

@@ -5,7 +5,7 @@ use drogue_cloud_event_common::stream::{
 };
 use drogue_cloud_service_api::{
     health::{HealthCheckError, HealthChecked},
-    kafka::KafkaConfig,
+    kafka::{KafkaClientConfig, KafkaConfig},
 };
 use futures::StreamExt;
 use serde::Deserialize;
@@ -19,7 +19,7 @@ use tokio::task::JoinHandle;
 #[derive(Clone, Debug, Deserialize)]
 pub struct KafkaCommandSourceConfig {
     #[serde(default, flatten)]
-    pub kafka: KafkaConfig,
+    pub topic: String,
     pub consumer_group: String,
 }
 
@@ -29,12 +29,19 @@ pub struct KafkaCommandSource {
 }
 
 impl KafkaCommandSource {
-    pub fn new<D>(dispatcher: D, config: KafkaCommandSourceConfig) -> Result<Self, EventStreamError>
+    pub fn new<D>(
+        dispatcher: D,
+        kafka_client: KafkaClientConfig,
+        config: KafkaCommandSourceConfig,
+    ) -> Result<Self, EventStreamError>
     where
         D: CommandDispatcher + Send + Sync + 'static,
     {
         let mut source = EventStream::<AutoAck>::new(EventStreamConfig {
-            kafka: config.kafka,
+            kafka: KafkaConfig {
+                topic: config.topic,
+                client: kafka_client,
+            },
             consumer_group: Some(config.consumer_group),
         })?;
 

@@ -36,10 +36,13 @@ pub struct KafkaSink {
 
 impl KafkaSink {
     /// Create a new Kafka sink from a configuration specified by the prefix.
-    pub fn new(prefix: &str) -> anyhow::Result<Self> {
+    pub fn from_env(prefix: &str) -> anyhow::Result<Self> {
         let config = KafkaClientConfig::from_env_prefix(prefix)
             .with_context(|| format!("Failed to parse {} config", prefix))?;
+        Self::from_config(config)
+    }
 
+    pub fn from_config(config: KafkaClientConfig) -> anyhow::Result<Self> {
         let kafka_config: ClientConfig = config.into();
 
         Ok(Self {
