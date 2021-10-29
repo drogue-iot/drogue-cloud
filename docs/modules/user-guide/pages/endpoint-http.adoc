@@ -18,12 +18,12 @@ POST /v1/{channel}
 
 You need to use one of the following authentication mechanisms:
 
+[%autowidth.stretch]
 |===
-|Name |Information | Details
+|Information | Details
 
-| X.509 Client certificates | | Provide an X.509 client certificate during the TLS handshake. The certificate must be signed with a trust anchor stored in the device registry on the application level.
+| X.509 Client certificate | Provide an X.509 client certificate during the TLS handshake. The certificate must be signed with a trust anchor stored in the device registry on the application level.
 
-.3+| Basic authentication
 a| * Credentials: `<username>@<application>:<password>`
 | Standard username/password authentication using `<username>@<application>` as HTTP username. The `<username>` can
 either be a device name, device alias, or unique username.
@@ -41,20 +41,19 @@ a|* Credentials: `<username>@<password>`
 
 ==== Parameters
 
+[%autowidth.stretch]
 |===
-|Name |Type |Location |Required |Default |Description
+|Name |Type |Location |Required |Description
 
 |`channel`
 |string
 |path
 |X
-|
 |The name of the channel to send to
 
 |`application`
 |string
 |query
-|
 |
 |Override the application for authentication. See above.
 
@@ -62,13 +61,11 @@ a|* Credentials: `<username>@<password>`
 |string
 |query
 |
-|
 |Override the device for authentication. See above.
 
 |`as`
 |string
 |query
-|
 |
 |Allows to specify an alternate device name that this device may act on behalf of. The "as" device must be configured to
 allow the authenticated device (from the credentials or `device`) to act on its behalf.
