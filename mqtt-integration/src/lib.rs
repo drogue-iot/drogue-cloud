@@ -3,6 +3,7 @@ mod service;
 use crate::service::ServiceConfig;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     health::{HealthServer, HealthServerConfig},
@@ -40,6 +41,8 @@ pub struct Config {
     pub health: Option<HealthServerConfig>,
 
     pub oauth: AuthenticatorConfig,
+
+    pub command_kafka_sink: KafkaClientConfig,
 }
 
 impl TlsConfig for Config {
@@ -94,7 +97,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let registry = config.registry.into_client(client.clone()).await?;
 
-    let sender = UpstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
+    let sender = UpstreamSender::new(KafkaSink::from_config(config.command_kafka_sink)?)?;
 
     log::info!("Authenticator: {:?}", authenticator);
     log::info!("User auth: {:?}", user_auth);
