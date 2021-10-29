@@ -13,7 +13,7 @@ services:
     ports:
       - "9092:9092"
     environment:
-      - KRAFT_CONTAINER_HOST_NAME=kafka
+      - KRAFT_CONTAINER_HOST_NAME=localhost
       - KRAFT_CREATE_TOPICS=iot-commands
       - KRAFT_PARTITIONS_PER_TOPIC=1
   keycloak:
