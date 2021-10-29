@@ -41,6 +41,9 @@ pub struct Config {
     pub oauth: AuthenticatorConfig,
 
     pub command_kafka_sink: KafkaClientConfig,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 #[derive(Debug)]
@@ -56,7 +59,7 @@ async fn index() -> impl Responder {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting Command service endpoint");
 
-    let sender = UpstreamSender::new(KafkaSink::from_config(config.command_kafka_sink)?)?;
+    let sender = UpstreamSender::new(KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?)?;
 
     let max_json_payload_size = config.max_json_payload_size;
 
