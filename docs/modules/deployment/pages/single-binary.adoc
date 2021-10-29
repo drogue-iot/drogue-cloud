@@ -51,10 +51,20 @@ services:
 
 == Running
 
-Make sure all dependencies are running correcrly. To start the drogue server, go to the `server` folder and run:
+Make sure all dependencies are running correcrly. To start the drogue server, run:
 
 ```
-cargo run -- --enable-all
+drogue-server --enable-all
 ```
 
-This will start all drogue services.
+This will perform the following steps:
+
+* Migrate database schema
+* Create Keycloak OIDC clients
+* Start all drogue services
+
+You should be able to connect to the local drogue instance using the `drg` client:
+
+```
+drg login http://localhost:10001
+```

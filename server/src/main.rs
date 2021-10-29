@@ -137,7 +137,7 @@ impl Default for ServerConfig {
 
 fn run_migrations(db: &Database) {
     use diesel::Connection;
-    log::info!("Migrating database");
+    log::info!("Running database migration");
     let database_url = format!(
         "postgres://{}:{}@{}:{}/{}",
         db.user, db.password, db.endpoint.host, db.endpoint.port, db.db
@@ -146,10 +146,11 @@ fn run_migrations(db: &Database) {
         .expect(&format!("Error connecting to {}", database_url));
 
     embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
-    log::info!("Migration done");
+    log::info!("Database migration done");
 }
 
 fn configure_keycloak(server: &Keycloak) {
+    log::info!("Configuring keycloak");
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let url = format!("http://{}:{}", server.endpoint.host, server.endpoint.port);
@@ -179,6 +180,7 @@ fn configure_keycloak(server: &Keycloak) {
             }
         }
     });
+    log::info!("Done configuring keycloak");
 }
 
 fn main() {
