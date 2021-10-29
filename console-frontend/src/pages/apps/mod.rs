@@ -28,10 +28,12 @@ pub enum DetailsSection {
     Integrations,
     #[to = "yaml"]
     Yaml,
-    #[end]
-    Overview,
+    #[to = "debug"]
+    Debug,
     #[to = "administration"]
     Administration,
+    #[end]
+    Overview,
 }
 
 pub type ApplicationTabs = TabsRouter<AppRoute, DetailsSection>;

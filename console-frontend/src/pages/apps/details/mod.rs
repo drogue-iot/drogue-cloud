@@ -1,14 +1,17 @@
 mod admin;
+mod debug;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
-use crate::pages::apps::details::admin::Admin;
 use crate::{
     backend::{Backend, Token},
     error::error,
     page::AppRoute,
     pages::{
-        apps::{details::integrations::IntegrationDetails, DetailsSection},
+        apps::{
+            details::{admin::Admin, integrations::IntegrationDetails},
+            DetailsSection,
+        },
         HasReadyState,
     },
     utils::{to_yaml_model, url_encode},
@@ -202,6 +205,7 @@ impl Details {
                         <TabRouterItem<DetailsSection> to=DetailsSection::Overview label="Overview"/>
                         <TabRouterItem<DetailsSection> to=DetailsSection::Integrations label="Integrations"/>
                         <TabRouterItem<DetailsSection> to=DetailsSection::Yaml label="YAML"/>
+                        <TabRouterItem<DetailsSection> to=DetailsSection::Debug label="Debug"/>
                         <TabRouterItem<DetailsSection> to=DetailsSection::Administration label="Administration"/>
                     </ApplicationTabs>
                 </PageSection>
@@ -211,6 +215,7 @@ impl Details {
                         DetailsSection::Overview => self.render_overview(app),
                         DetailsSection::Integrations => self.render_integrations(app),
                         DetailsSection::Yaml => self.render_editor(),
+                        DetailsSection::Debug => self.render_debug(app),
                         DetailsSection::Administration => self.render_admin(),
                     }
                 }
@@ -294,6 +299,17 @@ impl Details {
             endpoints: &self.props.endpoints,
         }
         .render()
+    }
+
+    fn render_debug(&self, application: &Application) -> Html {
+        return html! {
+            <debug::Debug
+                backend=self.props.backend.clone()
+                application=application.metadata.name.clone()
+                endpoints=self.props.endpoints.clone()
+                token=self.props.token.clone()
+                />
+        };
     }
 
     fn render_editor(&self) -> Html {
