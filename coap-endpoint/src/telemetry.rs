@@ -119,7 +119,7 @@ where
 {
     log::debug!("Publish to '{}'", channel);
 
-    let (application, device, _) = match authenticator
+    let (application, device, r#as) = match authenticator
         .authenticate_coap(
             opts.common.application,
             opts.common.device,
@@ -136,19 +136,21 @@ where
             r#as,
         } => (application, device, r#as),
     };
+
     // If we have an "as" parameter, we publish as another device.
-    let device_id = match opts.r#as {
+    let (sender_id, device_id) = match r#as {
         // use the "as" information as device id
-        Some(device_id) => device_id,
+        Some(r#as) => (device.metadata.name, r#as.metadata.name),
         // use the original device id
-        None => device.metadata.name,
+        None => (device.metadata.name.clone(), device.metadata.name),
     };
 
     // Create Publish Object
     let publish = sender::Publish {
         channel,
         application: &application,
-        device_id: device_id.clone(),
+        device_id,
+        sender_id,
         options: sender::PublishOptions {
             data_schema: opts.common.data_schema,
             topic: suffix,

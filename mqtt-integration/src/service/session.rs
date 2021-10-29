@@ -350,6 +350,7 @@ where
                         application: app.to_string(),
                         device: device.to_string(),
                         command: command.to_string(),
+                        content_type: None,
                     };
 
                     match drogue_cloud_integration_common::commands::process_command(
@@ -358,7 +359,6 @@ where
                         device_gateways.1,
                         &self.sender,
                         self.client.clone(),
-                        None,
                         opts,
                         bytes::Bytes::from(publish.payload().to_vec()),
                     )

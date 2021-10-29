@@ -123,11 +123,11 @@ where
     };
 
     // If we have an "as" parameter, we publish as another device.
-    let device_id = match r#as {
+    let (sender_id, device_id) = match r#as {
         // use the "as" information as device id
-        Some(device) => device.metadata.name,
+        Some(r#as) => (device.metadata.name, r#as.metadata.name),
         // use the original device id
-        None => device.metadata.name,
+        None => (device.metadata.name.clone(), device.metadata.name),
     };
 
     // publish
@@ -135,7 +135,8 @@ where
     let publish = sender::Publish {
         channel,
         application: &application,
-        device_id: device_id.clone(),
+        device_id,
+        sender_id,
         options: sender::PublishOptions {
             data_schema: opts.common.data_schema,
             topic: suffix,

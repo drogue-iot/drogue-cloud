@@ -23,6 +23,16 @@ pub enum Credential {
     Certificate(Vec<Vec<u8>>),
 }
 
+/// Authorize a gateway to act on behalf of a device.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthorizeGatewayRequest {
+    pub application: String,
+    // the name of the gateway device
+    pub device: String,
+    // the identifier of the actual device
+    pub r#as: String,
+}
+
 struct Ellipsis;
 
 impl fmt::Debug for Ellipsis {
@@ -64,7 +74,7 @@ pub enum Outcome {
 /// The result of an authentication request.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AuthenticationResponse {
-    /// The outcome, if the request.
+    /// The outcome, of the request.
     pub outcome: Outcome,
 }
 
@@ -74,6 +84,24 @@ impl AuthenticationResponse {
             outcome: Outcome::Fail,
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GatewayOutcome {
+    /// The authentication request passed. The outcome also contains application and device
+    /// details for further processing.
+    Pass { r#as: registry::v1::Device },
+    /// The authentication request failed. The device is not authenticated, and the device's
+    /// request must be rejected.
+    Fail,
+}
+
+/// The result of an authentication request.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct AuthorizeGatewayResponse {
+    /// The outcome, of the request.
+    pub outcome: GatewayOutcome,
 }
 
 #[cfg(test)]

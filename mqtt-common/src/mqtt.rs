@@ -264,6 +264,13 @@ impl<'a> Publish<'a> {
             Self::V5(publish) => publish.payload(),
         }
     }
+
+    pub fn properties(&self) -> Option<&v5::codec::PublishProperties> {
+        match self {
+            Self::V3(_) => None,
+            Self::V5(publish) => Some(&publish.packet().properties),
+        }
+    }
 }
 
 #[derive(Debug)]

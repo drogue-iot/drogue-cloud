@@ -48,7 +48,8 @@ macro_rules! app {
             .service(
                 web::scope("/api/v1")
                     .wrap(actix_web::middleware::Condition::new($enable_auth, $auth))
-                    .service(endpoints::authenticate),
+                    .service(endpoints::authenticate)
+                    .service(endpoints::authorize_as),
             )
     };
 }

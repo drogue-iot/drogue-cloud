@@ -1,25 +1,31 @@
 use crate::{
-    error::HttpEndpointError,
     sink::{Sink, SinkError, SinkTarget},
+    EXT_PARTITIONKEY,
 };
 use actix_web::HttpResponse;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
 use drogue_client::registry;
-use drogue_cloud_service_api::EXT_INSTANCE;
+use drogue_cloud_service_api::{EXT_INSTANCE, EXT_SENDER};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::HashMap, future::Future};
+use std::collections::HashMap;
 
 const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
 
 #[derive(Clone, Debug)]
 pub struct Publish<'a> {
     pub application: &'a registry::v1::Application,
+    /// The device id this message originated from.
     pub device_id: String,
+    /// The device id this message was sent by.
+    ///
+    /// In case of a gateway sending for another device, this would be the gateway id. In case
+    /// of a device sending for its own, this would be equal to the device_id.
+    pub sender_id: String,
     pub channel: String,
     pub options: PublishOptions,
 }
@@ -158,8 +164,9 @@ where
             .subject(&publish.channel)
             .time(Utc::now());
 
-        event = event.extension(crate::EXT_PARTITIONKEY, source);
+        event = event.extension(EXT_PARTITIONKEY, source);
         event = event.extension(EXT_INSTANCE, self.instance());
+        event = event.extension(EXT_SENDER, publish.sender_id);
 
         if let Some(data_schema) = publish.options.data_schema {
             event = event.extension("dataschema", data_schema);
@@ -190,48 +197,22 @@ where
 
         // build event
 
-        self.send(&publish.application, event.build()?).await
+        self.send(publish.application, event.build()?).await
     }
 
     #[allow(clippy::needless_lifetimes)]
-    async fn publish_http<'a, B, H, F>(
-        &self,
-        publish: Publish<'a>,
-        body: B,
-        f: H,
-    ) -> Result<HttpResponse, HttpEndpointError>
+    #[allow(clippy::async_yields_async)]
+    async fn publish_http_default<'a, B>(&self, publish: Publish<'a>, body: B) -> HttpResponse
     where
         B: AsRef<[u8]> + Send + Sync,
-        H: FnOnce(PublishOutcome) -> F + Send + Sync,
-        F: Future<Output = Result<HttpResponse, HttpEndpointError>> + Send + Sync,
     {
         match self.publish(publish, body).await {
-            // ok
-            Ok(outcome) => f(outcome).await,
-
-            // internal error
-            Err(err) => Ok(HttpResponse::InternalServerError()
+            Ok(PublishOutcome::Accepted) => HttpResponse::Accepted().finish(),
+            Ok(PublishOutcome::Rejected) => HttpResponse::NotAcceptable().finish(),
+            Ok(PublishOutcome::QueueFull) => HttpResponse::ServiceUnavailable().finish(),
+            Err(err) => HttpResponse::InternalServerError()
                 .content_type("text/plain")
-                .body(err.to_string())),
+                .body(err.to_string()),
         }
-    }
-
-    #[allow(clippy::needless_lifetimes)]
-    async fn publish_http_default<'a, B>(
-        &self,
-        publish: Publish<'a>,
-        body: B,
-    ) -> Result<HttpResponse, HttpEndpointError>
-    where
-        B: AsRef<[u8]> + Send + Sync,
-    {
-        self.publish_http(publish, body, |outcome| async move {
-            match outcome {
-                PublishOutcome::Accepted => Ok(HttpResponse::Accepted().finish()),
-                PublishOutcome::Rejected => Ok(HttpResponse::NotAcceptable().finish()),
-                PublishOutcome::QueueFull => Ok(HttpResponse::ServiceUnavailable().finish()),
-            }
-        })
-        .await
     }
 }

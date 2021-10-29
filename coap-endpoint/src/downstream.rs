@@ -1,16 +1,13 @@
-use std::net::SocketAddr;
-
-use crate::command::wait_for_command;
-use crate::error::CoapEndpointError;
+use crate::{command::wait_for_command, error::CoapEndpointError};
 use async_trait::async_trait;
 use coap_lite::{CoapRequest, CoapResponse, ResponseType};
 use drogue_cloud_endpoint_common::{
-    command::Commands,
+    command::{CommandFilter, Commands},
     error::EndpointError,
     sender::{DownstreamSender, Publish, PublishOutcome, Publisher},
     sink::Sink,
 };
-use drogue_cloud_service_common::Id;
+use std::net::SocketAddr;
 
 #[async_trait]
 pub trait CoapCommandSender {
@@ -36,10 +33,14 @@ where
         ttd: Option<u64>,
         req: CoapRequest<SocketAddr>,
     ) -> Result<Option<CoapResponse>, CoapEndpointError> {
-        let id = Id::new(&publish.application.metadata.name, &publish.device_id);
+        let filter = CommandFilter::proxied_device(
+            &publish.application.metadata.name,
+            &publish.sender_id,
+            &publish.device_id,
+        );
         match self.publish(publish, &req.message.payload).await {
             // ok, and accepted
-            Ok(PublishOutcome::Accepted) => wait_for_command(req, commands, id, ttd).await,
+            Ok(PublishOutcome::Accepted) => wait_for_command(req, commands, filter, ttd).await,
 
             // ok, but rejected
             Ok(PublishOutcome::Rejected) => Ok(req.response.map(|mut v| {

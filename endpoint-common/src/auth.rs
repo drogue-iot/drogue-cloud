@@ -6,7 +6,8 @@ use actix_web::{
 use anyhow::Context;
 use drogue_client::{error::ClientError, registry};
 use drogue_cloud_service_api::auth::device::authn::{
-    AuthenticationRequest, AuthenticationResponse, Credential,
+    AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
+    AuthorizeGatewayResponse, Credential,
 };
 use drogue_cloud_service_common::{
     client::ReqwestAuthenticatorClient, defaults, openid::TokenConfig,
@@ -47,7 +48,7 @@ impl DeviceAuthenticator {
     pub async fn new(config: AuthConfig) -> anyhow::Result<Self> {
         let url = config
             .url
-            .join("/api/v1/auth")
+            .join("/api/v1/")
             .context("Failed to build auth URL from base URL")?;
 
         let token_provider = match (config.auth_disabled, config.token_config) {
@@ -67,8 +68,31 @@ impl DeviceAuthenticator {
         };
 
         Ok(DeviceAuthenticator {
-            client: ReqwestAuthenticatorClient::new(Default::default(), url, token_provider),
+            client: ReqwestAuthenticatorClient::new(Default::default(), url, token_provider)?,
         })
+    }
+
+    pub async fn authorize_as<A1, A2, D>(
+        &self,
+        application: A1,
+        device: D,
+        r#as: A2,
+    ) -> AuthResult<AuthorizeGatewayResponse>
+    where
+        A1: ToString,
+        A2: ToString,
+        D: ToString,
+    {
+        self.client
+            .authorize_as(
+                AuthorizeGatewayRequest {
+                    application: application.to_string(),
+                    device: device.to_string(),
+                    r#as: r#as.to_string(),
+                },
+                Default::default(),
+            )
+            .await
     }
 
     pub async fn authenticate<A, D>(

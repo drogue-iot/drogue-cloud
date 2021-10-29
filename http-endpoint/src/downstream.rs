@@ -3,12 +3,11 @@ use actix_web::{web, HttpResponse};
 use async_trait::async_trait;
 use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
-    command::Commands,
+    command::{CommandFilter, Commands},
     error::HttpEndpointError,
     sender::{DownstreamSender, Publish, PublishOutcome, Publisher},
     sink::Sink,
 };
-use drogue_cloud_service_common::Id;
 
 #[async_trait]
 pub trait HttpCommandSender {
@@ -39,10 +38,14 @@ where
     where
         B: AsRef<[u8]> + Send + Sync,
     {
-        let id = Id::new(&publish.application.metadata.name, &publish.device_id);
+        let filter = CommandFilter::proxied_device(
+            &publish.application.metadata.name,
+            &publish.sender_id,
+            &publish.device_id,
+        );
         match self.publish(publish, body).await {
             // ok, and accepted
-            Ok(PublishOutcome::Accepted) => wait_for_command(commands, id, ttd).await,
+            Ok(PublishOutcome::Accepted) => wait_for_command(commands, filter, ttd).await,
 
             // ok, but rejected
             Ok(PublishOutcome::Rejected) => {

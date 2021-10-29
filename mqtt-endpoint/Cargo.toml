@@ -10,6 +10,7 @@ license = "Apache-2.0"
 
 anyhow = "1"
 async-trait = "0.1.42"
+clru = "0.5"
 
 ntex = "0.4"
 ntex-rt = "0.3"

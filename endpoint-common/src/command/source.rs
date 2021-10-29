@@ -49,13 +49,10 @@ impl KafkaCommandSource {
 
         let handle = tokio::spawn(async move {
             while let Some(event) = source.next().await {
+                log::debug!("Command event: {:?}", event);
                 match event {
                     Ok(event) => match Command::try_from(event) {
-                        Ok(command) => {
-                            if let Err(err) = dispatcher.send(command).await {
-                                log::info!("Failed to dispatch command: {}", err);
-                            }
-                        }
+                        Ok(command) => dispatcher.send(command).await,
                         Err(_) => {
                             log::info!("Failed to convert event to command");
                         }

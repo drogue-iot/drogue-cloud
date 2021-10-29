@@ -4,11 +4,13 @@ use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
 use drogue_client::registry::v1::Password;
 use drogue_client::{registry, Dialect, Translator};
+use drogue_cloud_database_common::models::Lock;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::{app::*, device::*},
     Client, DatabaseService,
 };
+use drogue_cloud_service_api::auth::device::authn::{AuthorizeGatewayRequest, GatewayOutcome};
 use drogue_cloud_service_api::{
     auth::device::authn::{self, AuthenticationRequest, Outcome},
     health::{HealthCheckError, HealthChecked},
@@ -34,7 +36,14 @@ macro_rules! pass {
 pub trait AuthenticationService: Clone {
     type Error: ResponseError;
 
+    // authenticate a device
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error>;
+
+    // authorize a device (gateway) to act on behalf of another.
+    async fn authorize_gateway(
+        &self,
+        request: AuthorizeGatewayRequest,
+    ) -> Result<GatewayOutcome, Self::Error>;
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -70,7 +79,6 @@ impl PostgresAuthenticationService {
     }
 
     async fn validate_gateway<'c, C>(
-        device_id: String,
         as_id: String,
         accessor: PostgresDeviceAccessor<'c, C>,
         application: registry::v1::Application,
@@ -79,13 +87,14 @@ impl PostgresAuthenticationService {
     where
         C: Client + 'c,
     {
+        let device_id = &device.metadata.name;
         Ok(
             match accessor.lookup(&application.metadata.name, &as_id).await? {
                 Some(as_device) if as_device.deletion_timestamp.is_none() => {
                     let as_manage: registry::v1::Device = as_device.into();
                     match as_manage.section::<registry::v1::DeviceSpecGatewaySelector>() {
                         Some(Ok(gateway_selector)) => {
-                            if gateway_selector.match_names.contains(&device_id) {
+                            if gateway_selector.match_names.contains(device_id) {
                                 log::debug!(
                                     "Device {:?} allowed to publish as {:?}",
                                     device_id,
@@ -180,14 +189,7 @@ impl AuthenticationService for PostgresAuthenticationService {
                     // check gateway
                     match request.r#as {
                         Some(as_id) if as_id != request.device => {
-                            Self::validate_gateway(
-                                request.device,
-                                as_id,
-                                accessor,
-                                application,
-                                device,
-                            )
-                            .await?
+                            Self::validate_gateway(as_id, accessor, application, device).await?
                         }
                         _ => {
                             pass!(application, device, None)
@@ -195,6 +197,56 @@ impl AuthenticationService for PostgresAuthenticationService {
                     }
                 }
                 false => Outcome::Fail,
+            },
+        )
+    }
+
+    async fn authorize_gateway(
+        &self,
+        request: AuthorizeGatewayRequest,
+    ) -> Result<GatewayOutcome, Self::Error> {
+        let c = self.pool.get().await?;
+
+        // lookup the application
+
+        let application = PostgresApplicationAccessor::new(&c);
+        let application = match application.lookup(&request.application).await? {
+            Some(application) => application.into(),
+            None => {
+                return Ok(GatewayOutcome::Fail);
+            }
+        };
+
+        log::debug!("Found application: {:?}", application);
+
+        // validate application
+
+        if !validate_app(&application) {
+            return Ok(GatewayOutcome::Fail);
+        }
+
+        // lookup the device
+
+        let accessor = PostgresDeviceAccessor::new(&c);
+
+        let device = match accessor
+            .get(&application.metadata.name, &request.device, Lock::None)
+            .await?
+        {
+            Some(device) => device.into(),
+            None => {
+                return Ok(GatewayOutcome::Fail);
+            }
+        };
+
+        log::debug!("Found device: {:?}", device);
+
+        Ok(
+            match Self::validate_gateway(request.r#as, accessor, application, device).await? {
+                Outcome::Pass {
+                    r#as: Some(r#as), ..
+                } => GatewayOutcome::Pass { r#as },
+                _ => GatewayOutcome::Fail,
             },
         )
     }

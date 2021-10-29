@@ -4,7 +4,7 @@ use actix_web::HttpResponse;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
     error::HttpEndpointError,
-    sender::{Publish, PublishOptions, Publisher, UpstreamSender},
+    sender::{Publish, PublishOptions, PublishOutcome, Publisher, UpstreamSender},
     sink::Sink,
 };
 use serde::Deserialize;
@@ -15,15 +15,16 @@ pub struct CommandOptions {
     pub device: String,
 
     pub command: String,
+    pub content_type: Option<String>,
 }
 
+/// Main entrypoint for processing commands
 pub async fn process_command<S>(
     application: registry::v1::Application,
     device: registry::v1::Device,
     gateways: Vec<registry::v1::Device>,
     sender: &UpstreamSender<S>,
     client: reqwest::Client,
-    content_type: Option<String>,
     opts: CommandOptions,
     body: bytes::Bytes,
 ) -> Result<HttpResponse, HttpEndpointError>
@@ -33,6 +34,8 @@ where
     if !device.attribute::<registry::v1::DeviceEnabled>() {
         return Ok(HttpResponse::NotAcceptable().finish());
     }
+
+    let mut targets = vec![device.metadata.name.clone()];
 
     for gateway in gateways {
         if !gateway.attribute::<registry::v1::DeviceEnabled>() {
@@ -59,21 +62,48 @@ where
                 }
             };
         }
+
+        targets.push(gateway.metadata.name.clone());
     }
-    // no hits so far
-    sender
-        .publish_http_default(
-            Publish {
-                channel: opts.command,
-                application: &application,
-                device_id: opts.device,
-                options: PublishOptions {
-                    topic: None,
-                    content_type,
-                    ..Default::default()
+
+    // no hits so far ... send to internal
+
+    log::debug!("Processing command internally");
+
+    for target in targets {
+        log::debug!("Delivering to: {}", target);
+        match sender
+            .publish(
+                Publish {
+                    channel: opts.command.clone(),
+                    application: &application,
+                    device_id: opts.device.clone(),
+                    sender_id: target,
+                    options: PublishOptions {
+                        content_type: opts.content_type.clone(),
+                        ..Default::default()
+                    },
                 },
-            },
-            body,
-        )
-        .await
+                body.clone(),
+            )
+            .await
+        {
+            Ok(PublishOutcome::Accepted) => {
+                // keep going
+            }
+            Ok(PublishOutcome::Rejected) => {
+                return Ok(HttpResponse::NotAcceptable().finish());
+            }
+            Ok(PublishOutcome::QueueFull) => {
+                return Ok(HttpResponse::ServiceUnavailable().finish());
+            }
+            Err(err) => {
+                return Ok(HttpResponse::InternalServerError()
+                    .content_type("text/plain")
+                    .body(err.to_string()));
+            }
+        }
+    }
+
+    Ok(HttpResponse::Accepted().finish())
 }
