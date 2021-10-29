@@ -39,8 +39,6 @@ services:
       - "9092:9092"
     environment:
       - KRAFT_CONTAINER_HOST_NAME=localhost
-      - KRAFT_CREATE_TOPICS=iot-commands
-      - KRAFT_PARTITIONS_PER_TOPIC=1
   keycloak:
     image: docker.io/jboss/keycloak:13.0.1
     environment:

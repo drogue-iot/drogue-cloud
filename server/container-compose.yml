@@ -14,8 +14,6 @@ services:
       - "9092:9092"
     environment:
       - KRAFT_CONTAINER_HOST_NAME=localhost
-#      - KRAFT_CREATE_TOPICS=iot-commands,events-evt-example-app,events-evt
-#      - KRAFT_PARTITIONS_PER_TOPIC=1
   keycloak:
     image: docker.io/jboss/keycloak:13.0.1
     environment:
@@ -24,15 +22,3 @@ services:
       - DB_VENDOR=h2
     ports:
       - "8080:8080"
-
-  migrator:
-    image: ghcr.io/drogue-iot/database-migration:latest
-    entrypoint: [ "bash", "-c", "sleep 20 && /usr/local/bin/diesel migration run" ]
-    depends_on:
-      - postgres
-    restart: "no"
-    environment:
-      - DATABASE_URL=postgres://admin:admin123456@localhost:5432/drogue
-      - POSTGRES_DB=drogue
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin123456

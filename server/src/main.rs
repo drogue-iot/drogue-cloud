@@ -1,4 +1,5 @@
 use clap::{App, Arg, SubCommand};
+use diesel_migrations::embed_migrations;
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
@@ -16,6 +17,11 @@ use drogue_cloud_service_common::{
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use std::collections::HashMap;
 use url::Url;
+
+#[macro_use]
+extern crate diesel_migrations;
+
+embed_migrations!("../database-common/migrations");
 
 #[derive(Clone)]
 struct Endpoint {
@@ -90,6 +96,17 @@ impl Default for ServerConfig {
     }
 }
 
+fn run_migrations() {
+    use diesel::Connection;
+    log::info!("Migrating database");
+    let database_url = "postgres://admin:admin123456@localhost:5432/drogue";
+    let connection = diesel::PgConnection::establish(database_url)
+        .expect(&format!("Error connecting to {}", database_url));
+
+    embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
+    log::info!("Migration done");
+}
+
 fn main() {
     env_logger::init();
     dotenv::dotenv().ok();
@@ -137,6 +154,8 @@ fn main() {
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("run") {
+        run_migrations();
+
         let server: ServerConfig = Default::default();
 
         /*

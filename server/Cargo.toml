@@ -29,3 +29,6 @@ ntex-rt = "0.2.2"
 actix-rt = { version = "2.2.0" }
 deadpool = "0.7"
 deadpool-postgres = { version = "0.7", features = ["config"] }
+diesel = { version = "1.4.0", features = ["postgres"] }
+diesel_migrations = { version = "1.4.0", features = ["postgres"] }
+# diesel_codegen = { version = "0.16.0", features = ["postgres"] }
