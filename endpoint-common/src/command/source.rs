@@ -18,7 +18,6 @@ use tokio::task::JoinHandle;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct KafkaCommandSourceConfig {
-    #[serde(default, flatten)]
     pub topic: String,
     pub consumer_group: String,
 }
