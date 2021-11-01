@@ -67,8 +67,8 @@ pub struct Keycloak {
     password: String,
 }
 
-impl Default for ServerConfig {
-    fn default() -> ServerConfig {
+impl ServerConfig {
+    fn new(iface: &str) -> ServerConfig {
         ServerConfig {
             kafka: KafkaClientConfig {
                 bootstrap_servers: "localhost:9092".to_string(),
@@ -92,43 +92,43 @@ impl Default for ServerConfig {
                 password: "admin123456".to_string(),
             },
             console: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 10001,
             },
             mqtt: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 1883,
             },
             http: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 8088,
             },
             coap: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 5683,
             },
             mqtt_integration: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 18883,
             },
             websocket_integration: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 10002,
             },
             command: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 10003,
             },
             registry: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 10004,
             },
             device_auth: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 10005,
             },
             user_auth: Endpoint {
-                host: "localhost".to_string(),
+                host: iface.to_string(),
                 port: 10006,
             },
         }
@@ -202,6 +202,13 @@ fn main() {
             SubCommand::with_name("run")
                 .about("run server")
                 .arg(
+                    Arg::with_name("bind-address")
+                        .long("--bind-address")
+                        .help("bind to specific network address (default localhost)")
+                        .value_name("ADDRESS")
+                        .takes_value(true),
+                )
+                .arg(
                     Arg::with_name("enable-all")
                         .long("--enable-all")
                         .help("enable all services"),
@@ -255,7 +262,10 @@ fn main() {
     let matches = app.clone().get_matches();
 
     if let Some(matches) = matches.subcommand_matches("run") {
-        let server: ServerConfig = Default::default();
+        let server: ServerConfig = matches
+            .value_of("bind-address")
+            .map(|a| ServerConfig::new(a))
+            .unwrap_or_else(|| ServerConfig::new("localhost"));
         let eps = endpoints(&server);
 
         run_migrations(&server.database);
