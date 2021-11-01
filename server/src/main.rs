@@ -225,6 +225,20 @@ fn main() {
                     Arg::with_name("enable-mqtt-endpoint")
                         .long("--enable-mqtt-endpoint")
                         .help("enable mqtt endpoint"),
+                )
+                .arg(
+                    Arg::with_name("server-key")
+                        .long("--server-key")
+                        .value_name("FILE")
+                        .help("private key to use for service endpoints")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("server-cert")
+                        .long("--server-cert")
+                        .value_name("FILE")
+                        .help("public certificate to use for service endpoints")
+                        .takes_value(true),
                 ),
         )
         .get_matches();
@@ -452,17 +466,21 @@ fn main() {
             log::info!("Enabling HTTP endpoint");
             let a = auth.clone();
             let command_source_kafka = command_source("http_endpoint");
-            let bind_addr = server.http.into();
+            let bind_addr = server.http.clone().into();
             let kafka = server.kafka.clone();
+            let cert_bundle_file: Option<String> =
+                matches.value_of("server-cert").map(|s| s.to_string());
+            let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_http_endpoint::Config {
                     auth: a,
-                    disable_tls: true,
+                    disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                     health: None,
                     max_json_payload_size: 65536,
                     max_payload_size: 65536,
-                    cert_bundle_file: None,
-                    key_file: None,
+                    cert_bundle_file,
+                    key_file,
                     command_source_kafka,
                     instance: "drogue".to_string(),
                     kafka_downstream_config: kafka.clone(),
