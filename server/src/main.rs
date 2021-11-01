@@ -137,7 +137,7 @@ impl Default for ServerConfig {
 
 fn run_migrations(db: &Database) {
     use diesel::Connection;
-    log::info!("Running database migration");
+    print!("Migrating database schema...");
     let database_url = format!(
         "postgres://{}:{}@{}:{}/{}",
         db.user, db.password, db.endpoint.host, db.endpoint.port, db.db
@@ -146,11 +146,11 @@ fn run_migrations(db: &Database) {
         .expect(&format!("Error connecting to {}", database_url));
 
     embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
-    log::info!("Database migration done");
+    println!("done!");
 }
 
 fn configure_keycloak(server: &Keycloak) {
-    log::info!("Configuring keycloak");
+    print!("Configuring keycloak..");
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let url = format!("http://{}:{}", server.endpoint.host, server.endpoint.port);
@@ -173,21 +173,31 @@ fn configure_keycloak(server: &Keycloak) {
 
         match admin.realm_clients_post("master", c).await {
             Ok(_) => {
-                log::info!("Keycloak OIDC client created");
+                println!("done!");
             }
             Err(e) => {
-                log::warn!("Create client error: {:?}", e);
+                if let keycloak::KeycloakError::HttpFailure {
+                    status: 409,
+                    body: _,
+                    text: _,
+                } = e
+                {
+                    log::trace!("Client already exists");
+                } else {
+                    log::warn!("Error creating keycloak client: {:?}", e);
+                    println!("failed!");
+                }
             }
         }
     });
-    log::info!("Done configuring keycloak");
 }
 
 fn main() {
     env_logger::init();
     dotenv::dotenv().ok();
-    let matches = App::new("Drogue Cloud Server")
-        .about("Server for all Drogue Cloud components")
+    let mut app = App::new("Drogue Cloud Server")
+        .about("Running Drogue Cloud in a single process")
+        .long_about("Drogue Server runs all the Drogue Cloud services in a single process, with an external dependency on PostgreSQL, Kafka and Keycloak for storing data, device management and user management")
         .subcommand(
             SubCommand::with_name("run")
                 .about("run server")
@@ -240,11 +250,13 @@ fn main() {
                         .help("public certificate to use for service endpoints")
                         .takes_value(true),
                 ),
-        )
-        .get_matches();
+        );
+
+    let matches = app.clone().get_matches();
 
     if let Some(matches) = matches.subcommand_matches("run") {
         let server: ServerConfig = Default::default();
+        let eps = endpoints(&server);
 
         run_migrations(&server.database);
 
@@ -269,8 +281,8 @@ fn main() {
         let oauth = AuthenticatorConfig {
             disabled: true,
             global: AuthenticatorGlobalConfig {
-                sso_url: endpoints(&server).sso,
-                issuer_url: endpoints(&server).issuer_url,
+                sso_url: eps.sso.clone(),
+                issuer_url: eps.issuer_url.clone(),
                 realm: "master".to_string(),
                 redirect_url: None,
             },
@@ -278,7 +290,7 @@ fn main() {
         };
 
         let keycloak = KeycloakAdminClientConfig {
-            url: Url::parse(endpoints(&server).sso.as_ref().unwrap()).unwrap(),
+            url: Url::parse(&eps.sso.as_ref().unwrap()).unwrap(),
             realm: "master".into(),
             admin_username: server.keycloak.user.clone(),
             admin_password: server.keycloak.password.clone(),
@@ -286,7 +298,7 @@ fn main() {
         };
 
         let registry = RegistryConfig {
-            url: Url::parse(&endpoints(&server).registry.as_ref().unwrap().url).unwrap(),
+            url: Url::parse(&eps.registry.as_ref().unwrap().url).unwrap(),
             token_config: None,
         };
 
@@ -311,11 +323,8 @@ fn main() {
         let token_config = TokenConfig {
             client_id: "drogue-service".to_string(),
             client_secret: client_secret.to_string(),
-            issuer_url: endpoints(&server)
-                .issuer_url
-                .as_ref()
-                .map(|u| Url::parse(u).unwrap()),
-            sso_url: Url::parse(endpoints(&server).sso.as_ref().unwrap()).ok(),
+            issuer_url: eps.issuer_url.as_ref().map(|u| Url::parse(u).unwrap()),
+            sso_url: Url::parse(&eps.sso.as_ref().unwrap()).ok(),
             realm: "master".to_string(),
             refresh_before: None,
         };
@@ -528,10 +537,51 @@ fn main() {
             }));
         }
         */
+
+        println!("Drogue Cloud is running!");
+        println!("");
+
+        println!("Endpoints:");
+        println!(
+            "\tAPI:\t http://{}:{}",
+            server.console.host, server.console.port
+        );
+        println!("\tHTTP:\t http://{}:{}", server.http.host, server.http.port);
+        println!("\tMQTT:\t mqtt://{}:{}", server.mqtt.host, server.mqtt.port);
+        println!("");
+
+        println!("Keycloak Credentials:");
+        println!("\tUser: {}", server.keycloak.user);
+        println!("\tPassword: {}", server.keycloak.password);
+        println!("");
+
+        println!("Logging in:");
+        println!(
+            "\tdrg login http://{}:{}",
+            server.console.host, server.console.port
+        );
+        println!("");
+
+        println!("Creating an application:");
+        println!("\tdrg create app example-app");
+        println!("");
+
+        println!("Creating a device:");
+        println!("\tdrg create device --app example-app device1 --data '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
+        println!("");
+
+        println!("Publishing data to the HTTP endpoint:");
+        println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if matches.is_present("server-cert") && matches.is_present("server-key") { "-k https" } else {"http"}, server.http.host, server.http.port);
+        println!("");
+
         for t in threads.drain(..) {
             t.join().unwrap();
         }
         log::info!("All services stopped");
+    } else {
+        eprintln!("No subcommand specified");
+        app.print_long_help().unwrap();
+        std::process::exit(1);
     }
 }
 
