@@ -2357,6 +2357,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-server"
+version = "0.7.0"
+dependencies = [
+ "actix-rt 2.2.0",
+ "clap",
+ "deadpool",
+ "deadpool-postgres",
+ "diesel",
+ "diesel_migrations",
+ "dotenv",
+ "drogue-cloud-api-key-service",
+ "drogue-cloud-authentication-service",
+ "drogue-cloud-console-backend",
+ "drogue-cloud-device-management-service",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-event-common",
+ "drogue-cloud-http-endpoint",
+ "drogue-cloud-mqtt-endpoint",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "drogue-cloud-user-auth-service",
+ "env_logger 0.7.1",
+ "keycloak 14.0.0",
+ "log",
+ "ntex",
+ "ntex-rt",
+ "reqwest",
+ "tokio 1.11.0",
+ "url",
+]
+
+[[package]]
 name = "drogue-cloud-service-api"
 version = "0.8.0"
 dependencies = [
@@ -2575,39 +2608,6 @@ dependencies = [
  "serde_json",
  "url",
  "uuid",
-]
-
-[[package]]
-name = "drogue-server"
-version = "0.7.0"
-dependencies = [
- "actix-rt 2.2.0",
- "clap",
- "deadpool",
- "deadpool-postgres",
- "diesel",
- "diesel_migrations",
- "dotenv",
- "drogue-cloud-api-key-service",
- "drogue-cloud-authentication-service",
- "drogue-cloud-console-backend",
- "drogue-cloud-device-management-service",
- "drogue-cloud-endpoint-common",
- "drogue-cloud-event-common",
- "drogue-cloud-http-endpoint",
- "drogue-cloud-mqtt-endpoint",
- "drogue-cloud-registry-events",
- "drogue-cloud-service-api",
- "drogue-cloud-service-common",
- "drogue-cloud-user-auth-service",
- "env_logger 0.7.1",
- "keycloak 14.0.0",
- "log",
- "ntex",
- "ntex-rt",
- "reqwest",
- "tokio 1.11.0",
- "url",
 ]
 
 [[package]]
