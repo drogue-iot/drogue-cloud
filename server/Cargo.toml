@@ -20,7 +20,7 @@ drogue-cloud-device-management-service = { path = "../device-management-service"
 drogue-cloud-authentication-service = { path = "../authentication-service" }
 drogue-cloud-user-auth-service = { path = "../user-auth-service" }
 url = "2"
-env_logger = { version = "0.7" } 
+stderrlog = "0.4"
 log = "0.4"
 tokio = { version = "1.11.0", features = ["full"] }
 ntex = "0.4"

@@ -1,4 +1,4 @@
-use clap::{App, Arg, SubCommand};
+use clap::{crate_version, App, Arg, SubCommand};
 use diesel_migrations::embed_migrations;
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
@@ -193,11 +193,28 @@ fn configure_keycloak(server: &Keycloak) {
 }
 
 fn main() {
-    env_logger::init();
+    //env_logger::init();
     dotenv::dotenv().ok();
     let mut app = App::new("Drogue Cloud Server")
         .about("Running Drogue Cloud in a single process")
+        .version(crate_version!())
         .long_about("Drogue Server runs all the Drogue Cloud services in a single process, with an external dependency on PostgreSQL, Kafka and Keycloak for storing data, device management and user management")
+        .arg(
+            Arg::with_name("verbose")
+                .global(true)
+                .long("verbose")
+                .short("v")
+                .multiple(true)
+                .help("Be verbose. Can be used multiple times to increase verbosity.")
+        )
+        .arg(
+            Arg::with_name("quiet")
+                .global(true)
+                .long("quiet")
+                .short("q")
+                .conflicts_with("verbose")
+                .help("Be quiet.")
+        )
         .subcommand(
             SubCommand::with_name("run")
                 .about("run server")
@@ -260,6 +277,12 @@ fn main() {
         );
 
     let matches = app.clone().get_matches();
+
+    stderrlog::new()
+        .verbosity((matches.occurrences_of("verbose") + 1) as usize)
+        .quiet(matches.is_present("quiet"))
+        .init()
+        .unwrap();
 
     if let Some(matches) = matches.subcommand_matches("run") {
         let server: ServerConfig = matches
@@ -583,12 +606,16 @@ fn main() {
         println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if matches.is_present("server-cert") && matches.is_present("server-key") { "-k https" } else {"http"}, server.http.host, server.http.port);
         println!("");
 
+        if threads.is_empty() {
+            log::warn!("No services selected to start up. Process will exit. Enable some services using --enable-* or enable all using --enable-all.")
+        }
+
         for t in threads.drain(..) {
             t.join().unwrap();
         }
         log::info!("All services stopped");
     } else {
-        eprintln!("No subcommand specified");
+        log::error!("No subcommand specified");
         app.print_long_help().unwrap();
         std::process::exit(1);
     }
