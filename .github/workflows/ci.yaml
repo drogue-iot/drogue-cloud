@@ -146,6 +146,13 @@ jobs:
           path: build/images/all.tar
           if-no-files-found: error
 
+      - name: Upload server binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: server-binary
+          path: target/release/server/drogue-cloud-server
+          if-no-files-found: error
+
   deploy:
     name: deploy on kind
     runs-on: ubuntu-20.04
