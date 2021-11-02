@@ -171,7 +171,6 @@ async fn test_decline_transfer_app() -> anyhow::Result<()> {
     test!((app, _sender, _outbox) => {
         let foo = user("foo");
         let bar = user("bar");
-        let baz = user("baz");
 
         create_app(&app, &foo, "app1", Default::default()).await?;
 
@@ -194,7 +193,7 @@ async fn test_decline_transfer_app() -> anyhow::Result<()> {
 
         // accept transfer as user "bar" - must fail (transfer no longer exit)
 
-        let resp = call_http(&app, &foo, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/accept-ownership")).await;
+        let resp = call_http(&app, &bar, test::TestRequest::put().uri("/api/admin/v1alpha1/apps/app1/accept-ownership")).await;
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
     })
