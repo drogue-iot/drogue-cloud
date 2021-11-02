@@ -73,9 +73,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
-      - name: Pre-Check
-        run: make pre-check
-
       - name: Check
         run: make host-check
 
