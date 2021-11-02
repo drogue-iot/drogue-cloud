@@ -520,12 +520,12 @@ fn main() {
             }));
         }
 
-        /*
         if matches.is_present("enable-mqtt-endpoint") || matches.is_present("enable-all") {
             log::info!("Enabling MQTT endpoint");
             let a = auth.clone();
             let command_source_kafka = command_source("mqtt_endpoint");
-            let bind_addr_mqtt = server.mqtt.into();
+            let bind_addr_mqtt = server.mqtt.clone().into();
+            let kafka = server.kafka.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_mqtt_endpoint::Config {
                     auth: a,
@@ -534,19 +534,18 @@ fn main() {
                     cert_bundle_file: None,
                     key_file: None,
                     bind_addr_mqtt: Some(bind_addr_mqtt),
-                    kafka_config: kafka_client(),
                     instance: "drogue".to_string(),
                     command_source_kafka,
+                    kafka_downstream_config: kafka.clone(),
+                    kafka_command_config: kafka,
+                    check_kafka_topic_ready: false,
                 };
 
-                let rt = ntex::rt::System::new("mqtt-endpoint");
-                ntex::rt::System::set_current(rt);
-                ntex::rt::System::current()
+                ntex::rt::System::new("mqtt-endpoint")
                     .block_on(drogue_cloud_mqtt_endpoint::run(config))
                     .unwrap();
             }));
         }
-        */
 
         println!("Drogue Cloud is running!");
         println!("");
