@@ -137,7 +137,7 @@ impl ServerConfig {
 
 fn run_migrations(db: &Database) {
     use diesel::Connection;
-    print!("Migrating database schema...");
+    println!("Migrating database schema...");
     let database_url = format!(
         "postgres://{}:{}@{}:{}/{}",
         db.user, db.password, db.endpoint.host, db.endpoint.port, db.db
@@ -146,11 +146,11 @@ fn run_migrations(db: &Database) {
         .expect(&format!("Error connecting to {}", database_url));
 
     embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
-    println!("done!");
+    println!("Migrating database schema... done!");
 }
 
 fn configure_keycloak(server: &Keycloak) {
-    print!("Configuring keycloak..");
+    print!("Configuring keycloak... ");
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let url = format!("http://{}:{}", server.endpoint.host, server.endpoint.port);
@@ -576,7 +576,7 @@ fn main() {
         println!("");
 
         println!("Creating a device:");
-        println!("\tdrg create device --app example-app device1 --data '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
+        println!("\tdrg create device --app example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
         println!("");
 
         println!("Publishing data to the HTTP endpoint:");
