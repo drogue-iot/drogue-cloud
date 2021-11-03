@@ -173,20 +173,26 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Install linux build dependencies
+      - name: Build binary for Linux
         if: ${{ matrix.os == 'ubuntu-18.04' }}
         run: |
           sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
           sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
-      - name: Install windows build dependencies
+          cargo build --release -p drogue-cloud-server
+      - name: Build binary for Windows
         if: ${{ matrix.os == 'windows-2019' }}
         run: |
           git clone https://github.com/microsoft/vcpkg
           ./vcpkg/bootstrap-vcpkg.sh
           ./vcpkg/vcpkg install openssl
-      - name: Build server binary
-        run: |
           cargo build --release -p drogue-cloud-server
+      - name: Build binary for Mac OS X
+        if: ${{ matrix.os == 'macos-10.15' }}
+        run: |
+          brew update
+          brew install cyrus2-sasl librdkafka openssl libpq
+          RUSTFLAGS='-L /opt/homebrew/opt/libpq/lib' PKG_CONFIG_PATH=/opt/homebrew/opt/libpq/lib/pkgconfig:/opt/homebrew/opt/openssl/lib/pkgconfig:/opt/homebrew/opt/cyrus-sasl/lib/pkgconfig:/opt/homebrew/opt/librdkafka/lib/pkgconfig cargo build --release -p drogue-cloud-server
+
       - name: Upload server binary
         uses: actions/upload-artifact@v2
         with:
