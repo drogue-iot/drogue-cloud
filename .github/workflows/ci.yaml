@@ -157,12 +157,12 @@ jobs:
     # needs: [check]
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-10.15, windows-2019]
+        os: [macos-10.15, windows-2019]
         include:
           # - os: ubuntu-18.04
           #   suffix: "linux-amd64"
-          # - os: macos-10.15
-          #   suffix: "macos-amd64"
+           - os: macos-10.15
+             suffix: "macos-amd64"
           - os: windows-2019
             suffix: "windows-amd64"
     runs-on: ${{ matrix.os }}
@@ -185,12 +185,14 @@ jobs:
           git clone https://github.com/microsoft/vcpkg
           .\vcpkg\bootstrap-vcpkg.bat
           .\vcpkg\vcpkg install openssl
+          .\vcpkg\vcpkg install libpq
+          .\vcpkg\vcpkg install librdkafka
           cargo build --release -p drogue-cloud-server
       - name: Build binary for Mac OS X
         if: ${{ matrix.os == 'macos-10.15' }}
         run: |
           brew update
-          brew install cyrus2-sasl librdkafka openssl libpq
+          brew install cyrus-sasl librdkafka openssl libpq
           RUSTFLAGS='-L /opt/homebrew/opt/libpq/lib' PKG_CONFIG_PATH=/opt/homebrew/opt/libpq/lib/pkgconfig:/opt/homebrew/opt/openssl/lib/pkgconfig:/opt/homebrew/opt/cyrus-sasl/lib/pkgconfig:/opt/homebrew/opt/librdkafka/lib/pkgconfig cargo build --release -p drogue-cloud-server
 
       - name: Upload server binary
