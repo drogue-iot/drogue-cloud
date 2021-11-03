@@ -204,7 +204,7 @@ jobs:
         run: |
           brew update
           brew install cyrus-sasl librdkafka libpq openssl
-          LIBZ_SYS_STATIC=1 RUSTFLAGS='-L /usr/local/opt/libpq/lib -L /usr/local/opt/openssl/lib -C target-feature=+crt-static' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/usr/local/opt/librdkafka/lib/pkgconfig:/usr/local/opt/openssl/lib/pkgconfig cargo build --release -p drogue-cloud-server
+          LIBZ_SYS_STATIC=1 PQ_LIB_STATIC=1 OPENSSL_STATIC=1 RUSTFLAGS='-L /usr/local/opt/libpq/lib -L /usr/local/opt/openssl/lib -C target-feature=+crt-static' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/usr/local/opt/librdkafka/lib/pkgconfig:/usr/local/opt/openssl/lib/pkgconfig cargo build --release -p drogue-cloud-server --features vendored
 
       - name: Upload server binary
         uses: actions/upload-artifact@v2
