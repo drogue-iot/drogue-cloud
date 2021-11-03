@@ -203,8 +203,8 @@ jobs:
         if: ${{ matrix.os == 'macos-10.15' }}
         run: |
           brew update
-          brew install cyrus-sasl librdkafka libpq
-          RUSTFLAGS='-L /usr/local/opt/libpq/lib' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/usr/local/opt/librdkafka/lib/pkgconfig cargo build --release -p drogue-cloud-server
+          brew install cyrus-sasl librdkafka libpq openssl
+          RUSTFLAGS='-L /usr/local/opt/libpq/lib -L /usr/local/opt/openssl/lib' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/usr/local/opt/librdkafka/lib/pkgconfig:/usr/local/opt/openssl/lib/pkgconfig cargo build --release -p drogue-cloud-server
 
       - name: Upload server binary
         uses: actions/upload-artifact@v2
