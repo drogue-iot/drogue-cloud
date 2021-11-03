@@ -23,14 +23,11 @@ use drogue_cloud_service_api::{
     kafka::{KafkaConfigExt, KafkaEventType},
 };
 use drogue_cloud_service_common::client::UserAuthClient;
+use futures::lock::Mutex;
 use futures::StreamExt;
 use ntex::util::Bytes;
 use ntex_mqtt::{types::QoS, v5};
-use std::{
-    collections::HashMap,
-    num::NonZeroU32,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use tokio::task::JoinHandle;
 
 pub struct Session<S: SenderSink> {
@@ -178,7 +175,7 @@ where
 
         // create stream
 
-        let stream = EventStream::new(EventStreamConfig {
+        let event_stream = EventStream::new(EventStreamConfig {
             kafka: app_res
                 .kafka_config(KafkaEventType::Events, &self.config.kafka)
                 .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
@@ -194,11 +191,11 @@ where
         let stream = Stream {
             topic: original_topic.into(),
             id,
-            event_stream: stream,
+            event_stream,
             content_mode,
         };
 
-        self.attach_app(stream);
+        self.attach_app(stream).await;
 
         // done
 
@@ -277,8 +274,11 @@ where
         Ok(())
     }
 
-    fn attach_app(&self, stream: Stream<'static>) {
+    async fn attach_app(&self, stream: Stream<'static>) {
         let topic = stream.topic.to_string();
+
+        log::debug!("Attaching: {}", topic);
+
         let mut sink = self.sink.clone();
 
         let f = async move {
@@ -293,19 +293,18 @@ where
 
         let handle = ntex_rt::spawn(f);
 
-        if let Ok(mut streams) = self.streams.lock() {
-            streams.insert(topic, handle);
-        }
+        self.streams.lock().await.insert(topic, handle);
     }
 
-    fn detach(&self, topic: &str) -> bool {
-        if let Ok(mut streams) = self.streams.lock() {
-            if let Some(stream) = streams.remove(topic) {
-                stream.abort();
-                true
-            } else {
-                false
-            }
+    async fn detach(&self, topic: &str) -> bool {
+        log::debug!("Detaching: {}", topic);
+
+        let mut streams = self.streams.lock().await;
+        if let Some(stream) = streams.remove(topic) {
+            stream.abort();
+            let result = stream.await;
+            log::debug!("Stream result: {:?}", result);
+            true
         } else {
             false
         }
@@ -432,7 +431,7 @@ where
         for unsub in unsubscribe.into_iter() {
             let topic = unsub.topic();
             log::debug!("Unsubscribe: {:?}", topic);
-            if !self.detach(topic.as_ref()) {
+            if !self.detach(topic.as_ref()).await {
                 // failed to unsubscribe
                 match unsub {
                     Unsubscription::V3(_) => {
@@ -464,11 +463,14 @@ where
 {
     fn drop(&mut self) {
         log::debug!("Dropping session");
-        if let Ok(mut streams) = self.streams.lock() {
-            for (_, stream) in streams.iter() {
+        let streams = self.streams.clone();
+        ntex_rt::spawn(async move {
+            log::debug!("Dropping streams");
+            let mut streams = streams.lock().await;
+
+            for (_, stream) in streams.drain() {
                 stream.abort();
             }
-            streams.clear();
-        }
+        });
     }
 }
