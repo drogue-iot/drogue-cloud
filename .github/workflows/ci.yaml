@@ -79,72 +79,80 @@ jobs:
       - name: Fix permissions
         run: make fix-permissions
 
-  test:
-    name: test
-    runs-on: ubuntu-20.04
-    needs: [check]
-    steps:
+          # test:
+          #   name: test
+          #   runs-on: ubuntu-20.04
+          #   needs: [check]
+          #   steps:
 
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
+          #     - uses: actions/checkout@v2
+          #       with:
+          #         submodules: recursive
 
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            .cargo-container-home
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          #     - uses: actions/cache@v2
+          #       with:
+          #         path: |
+          #           ~/.cargo/registry
+          #           ~/.cargo/git
+          #           .cargo-container-home
+          #           target
+          #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run tests
-        run: |
-          make test
+          #     - name: Run tests
+          #       run: |
+          #         make test
 
-  build:
-    name: build
-    runs-on: ubuntu-20.04
-    needs: [check]
-    steps:
+          # build:
+          #   name: build
+          #   runs-on: ubuntu-20.04
+          #   needs: [check]
+          #   steps:
 
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
+          #     - uses: actions/checkout@v2
+          #       with:
+          #         submodules: recursive
 
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            .cargo-container-home
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          #     - uses: actions/cache@v2
+          #       with:
+          #         path: |
+          #           ~/.cargo/registry
+          #           ~/.cargo/git
+          #           .cargo-container-home
+          #           target
+          #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - uses: actions/cache@v2
-        with:
-          path: console-frontend/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
+          #     - uses: actions/cache@v2
+          #       with:
+          #         path: console-frontend/node_modules
+          #         key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
+          #         restore-keys: |
+          #           ${{ runner.os }}-node-modules-
 
-      - name: Run build
-        run: |
-          make build
+          #     - name: Run build
+          #       run: |
+          #         make build
 
-      - name: Save images
-        run: |
-          make save-images
+          #     - name: Save images
+          #       run: |
+          #         make save-images
 
-      - name: Fix permissions
-        run: make fix-permissions
+          #     - name: Fix permissions
+          #       run: make fix-permissions
 
-      - name: Upload images
-        uses: actions/upload-artifact@v2
-        with:
-          name: container-images
-          path: build/images/all.tar
-          if-no-files-found: error
+          #     - name: Upload images
+          #       uses: actions/upload-artifact@v2
+          #       with:
+          #         name: container-images
+          #         path: build/images/all.tar
+          #         if-no-files-found: error
+
+          #     - name: Upload server binary
+          #       uses: actions/upload-artifact@v2
+          #       with:
+          #         name: drogue-server
+          #         path: target/release/drogue-cloud-server
+          #         if-no-files-found: error
+
   binary:
     needs: [check]
     strategy:
