@@ -204,7 +204,7 @@ jobs:
         run: |
           brew update
           brew install cyrus-sasl librdkafka openssl libpq
-          RUSTFLAGS='-L /usr/local/opt/libpq/lib' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/openssl@3/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/opt/homebrew/opt/librdkafka/lib/pkgconfig cargo build --release -p drogue-cloud-server
+          RUSTFLAGS='-L /usr/local/opt/libpq/lib' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/openssl@3/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/usr/local/opt/librdkafka/lib/pkgconfig cargo build --release -p drogue-cloud-server
 
       - name: Upload server binary
         uses: actions/upload-artifact@v2
