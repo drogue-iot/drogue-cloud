@@ -179,17 +179,17 @@ jobs:
           sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
           sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
           cargo build --release -p drogue-cloud-server
-      - name: Build binary for Windows
-        if: ${{ matrix.os == 'windows-2019' }}
-        run: |
-          git clone https://github.com/microsoft/vcpkg
-          .\vcpkg\bootstrap-vcpkg.bat
-          .\vcpkg\vcpkg install openssl
-          .\vcpkg\vcpkg install libpq
-          .\vcpkg\vcpkg install librdkafka
-          .\vcpkg\vcpkg integrate install
-          set VCPKG_ROOT=${{ GITHUB_WORKSPACE }}\drogue-cloud\vcpkg
-          # Cyrus SASL is interesting...
+#      - name: Build binary for Windows
+#        if: ${{ matrix.os == 'windows-2019' }}
+#        run: |
+#          git clone https://github.com/microsoft/vcpkg
+#          .\vcpkg\bootstrap-vcpkg.bat
+#          .\vcpkg\vcpkg install openssl
+#          .\vcpkg\vcpkg install libpq
+#          .\vcpkg\vcpkg install librdkafka
+#          .\vcpkg\vcpkg integrate install
+#          set VCPKG_ROOT=${{ GITHUB_WORKSPACE }}\drogue-cloud\vcpkg
+#          # Cyrus SASL is interesting...
 #          curl -fsSL -o cyrus-sasl-2.1.26.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.26/cyrus-sasl-2.1.26.tar.gz
 #          7z x cyrus-sasl-2.1.26.tar.gz -so | 7z x -si -ttar > nul
 #          move cyrus-sasl-2.1.26 sasl
@@ -198,8 +198,7 @@ jobs:
 #          '%VSDEVCMD_BAT%'
 #          nmake /f NTMakefile OPENSSL_INCLUDE=c:\OpenSSL-Win32\include OPENSSL_LIBPATH=c:\OpenSSL-Win32\lib install
 #          cd ..
-
-          cargo build --release -p drogue-cloud-server
+#          cargo build --release -p drogue-cloud-server
       - name: Build binary for Mac OS X
         if: ${{ matrix.os == 'macos-10.15' }}
         run: |
