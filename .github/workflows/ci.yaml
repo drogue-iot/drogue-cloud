@@ -170,6 +170,9 @@ jobs:
       VERSION: ${{needs.check.outputs.version}}
 
     steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Build server binary
         run: |
           cargo build --release -p drogue-cloud-server
