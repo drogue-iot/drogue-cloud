@@ -157,14 +157,10 @@ jobs:
     # needs: [check]
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-10.15] #, windows-2019]
+        os: [windows-2019]
         include:
-          - os: ubuntu-18.04
-            suffix: "linux-amd64"
-          - os: macos-10.15
-            suffix: "macos-amd64"
-         # - os: windows-2019
-         #   suffix: "windows-amd64"
+         - os: windows-2019
+           suffix: "windows-amd64"
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{needs.check.outputs.version}}
@@ -173,39 +169,26 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Build binary for Linux
-        if: ${{ matrix.os == 'ubuntu-18.04' }}
+      - name: Build binary for Windows
+        if: ${{ matrix.os == 'windows-2019' }}
         run: |
-          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
-          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
+          git clone https://github.com/microsoft/vcpkg
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg install openssl
+          .\vcpkg\vcpkg install libpq
+          .\vcpkg\vcpkg install librdkafka
+          .\vcpkg\vcpkg integrate install
+          set VCPKG_ROOT=${{ GITHUB_WORKSPACE }}\drogue-cloud\vcpkg
+          # Cyrus SASL is interesting...
+          curl -fsSL -o cyrus-sasl-2.1.26.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.26/cyrus-sasl-2.1.26.tar.gz
+          7z x cyrus-sasl-2.1.26.tar.gz -so | 7z x -si -ttar > nul
+          move cyrus-sasl-2.1.26 sasl
+          cd sasl
+          echo using vsdevcmd %VSDEVCMD_BAT%
+          '%VSDEVCMD_BAT%'
+          nmake /f NTMakefile OPENSSL_INCLUDE=c:\OpenSSL-Win32\include OPENSSL_LIBPATH=c:\OpenSSL-Win32\lib install
+          cd ..
           cargo build --release -p drogue-cloud-server
-#      - name: Build binary for Windows
-#        if: ${{ matrix.os == 'windows-2019' }}
-#        run: |
-#          git clone https://github.com/microsoft/vcpkg
-#          .\vcpkg\bootstrap-vcpkg.bat
-#          .\vcpkg\vcpkg install openssl
-#          .\vcpkg\vcpkg install libpq
-#          .\vcpkg\vcpkg install librdkafka
-#          .\vcpkg\vcpkg integrate install
-#          set VCPKG_ROOT=${{ GITHUB_WORKSPACE }}\drogue-cloud\vcpkg
-#          # Cyrus SASL is interesting...
-#          curl -fsSL -o cyrus-sasl-2.1.26.tar.gz https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.26/cyrus-sasl-2.1.26.tar.gz
-#          7z x cyrus-sasl-2.1.26.tar.gz -so | 7z x -si -ttar > nul
-#          move cyrus-sasl-2.1.26 sasl
-#          cd sasl
-#          echo using vsdevcmd %VSDEVCMD_BAT%
-#          '%VSDEVCMD_BAT%'
-#          nmake /f NTMakefile OPENSSL_INCLUDE=c:\OpenSSL-Win32\include OPENSSL_LIBPATH=c:\OpenSSL-Win32\lib install
-#          cd ..
-#          cargo build --release -p drogue-cloud-server
-      - name: Build binary for Mac OS X
-        if: ${{ matrix.os == 'macos-10.15' }}
-        run: |
-          brew update
-          brew install cyrus-sasl librdkafka libpq
-          RUSTFLAGS='-L /usr/local/opt/libpq/lib' PKG_CONFIG_PATH=/usr/local/opt/libpq/lib/pkgconfig:/usr/local/opt/cyrus-sasl/lib/pkgconfig:/usr/local/opt/librdkafka/lib/pkgconfig cargo build --release -p drogue-cloud-server
-
       - name: Upload server binary
         uses: actions/upload-artifact@v2
         with:
