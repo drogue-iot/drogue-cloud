@@ -17,7 +17,11 @@ use drogue_cloud_endpoint_common::{
     sender::DownstreamSender,
     sink::{KafkaSink, Sink},
 };
-use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::{
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
 use futures::{self, TryFutureExt};
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
@@ -40,10 +44,18 @@ pub struct Config {
 
     pub command_source_kafka: KafkaCommandSourceConfig,
 
+    pub kafka_downstream_config: KafkaClientConfig,
+    pub kafka_command_config: KafkaClientConfig,
+
+    pub instance: String,
+
     pub auth: AuthConfig,
 
     #[serde(default)]
     pub health: HealthServerConfig,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -212,8 +224,16 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         .unwrap_or_else(|| "0.0.0.0:5683".to_string());
     let coap_server_commands = commands.clone();
 
+    let sender = DownstreamSender::new(
+        KafkaSink::from_config(
+            config.kafka_downstream_config,
+            config.check_kafka_topic_ready,
+        )?,
+        config.instance,
+    )?;
+
     let app = App {
-        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
+        downstream: sender,
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth).await?,
         ),
@@ -231,7 +251,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             response
         }
     });
-    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
     let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
     futures::try_join!(health.run(), device_to_endpoint.err_into())?;

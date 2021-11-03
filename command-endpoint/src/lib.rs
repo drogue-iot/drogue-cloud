@@ -13,7 +13,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::str;
 
-use drogue_cloud_service_api::auth::user::authz::Permission;
+use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     actix_auth::authorization::AuthZ,
@@ -39,6 +39,11 @@ pub struct Config {
     pub user_auth: Option<UserAuthClientConfig>,
 
     pub oauth: AuthenticatorConfig,
+
+    pub command_kafka_sink: KafkaClientConfig,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 #[derive(Debug)]
@@ -54,7 +59,10 @@ async fn index() -> impl Responder {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting Command service endpoint");
 
-    let sender = UpstreamSender::new(KafkaSink::new("COMMAND_KAFKA_SINK")?)?;
+    let sender = UpstreamSender::new(KafkaSink::from_config(
+        config.command_kafka_sink,
+        config.check_kafka_topic_ready,
+    )?)?;
 
     let max_json_payload_size = config.max_json_payload_size;
 

@@ -218,7 +218,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             service: db_service.clone(),
         }))
     })
-    .bind(config.bind_addr)?
+    .bind(config.bind_addr)
+    .context("error starting server")?
     .run();
 
     // run

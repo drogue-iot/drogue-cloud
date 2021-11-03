@@ -77,9 +77,7 @@ impl<S> DownstreamSender<S>
 where
     S: Sink,
 {
-    pub fn new(sink: S) -> anyhow::Result<Self> {
-        let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
-
+    pub fn new(sink: S, instance: String) -> anyhow::Result<Self> {
         Ok(Self { sink, instance })
     }
 }

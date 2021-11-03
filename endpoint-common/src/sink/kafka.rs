@@ -32,18 +32,23 @@ pub enum KafkaSinkError {
 #[derive(Clone)]
 pub struct KafkaSink {
     internal_producer: FutureProducer,
+    check_ready: bool,
 }
 
 impl KafkaSink {
     /// Create a new Kafka sink from a configuration specified by the prefix.
-    pub fn new(prefix: &str) -> anyhow::Result<Self> {
+    pub fn from_env(prefix: &str) -> anyhow::Result<Self> {
         let config = KafkaClientConfig::from_env_prefix(prefix)
             .with_context(|| format!("Failed to parse {} config", prefix))?;
+        Self::from_config(config, true)
+    }
 
+    pub fn from_config(config: KafkaClientConfig, check_ready: bool) -> anyhow::Result<Self> {
         let kafka_config: ClientConfig = config.into();
 
         Ok(Self {
             internal_producer: kafka_config.create()?,
+            check_ready,
         })
     }
 
@@ -87,6 +92,14 @@ impl KafkaSink {
         }
     }
 
+    fn check_ready(&self, app: &registry::v1::Application) -> bool {
+        if self.check_ready {
+            Self::is_ready(app)
+        } else {
+            true
+        }
+    }
+
     fn is_ready(app: &registry::v1::Application) -> bool {
         app.section::<core::v1::Conditions>()
             .and_then(|s| s.ok())
@@ -110,7 +123,7 @@ impl Sink for KafkaSink {
         target: SinkTarget<'a>,
         event: Event,
     ) -> Result<PublishOutcome, SinkError<Self::Error>> {
-        if !Self::is_ready(&target) {
+        if !self.check_ready(&target) {
             log::debug!("Kafka topic is not ready yet");
             return Err(SinkError::Transport(KafkaSinkError::NotReady));
         }

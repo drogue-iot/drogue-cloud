@@ -72,6 +72,9 @@ pub struct Config {
     pub disable_account_url: bool,
 
     pub oauth: AuthenticatorConfig,
+
+    #[serde(default = "defaults::enable_kube")]
+    pub enable_kube: bool,
 }
 
 pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
@@ -81,11 +84,14 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     // kube
 
-    let kube = kube::client::Client::try_default()
-        .await
-        .context("Failed to create Kubernetes client")?;
-
-    let config_maps = Api::<ConfigMap>::default_namespaced(kube.clone());
+    let config_maps = if config.enable_kube {
+        let kube = kube::client::Client::try_default()
+            .await
+            .context("Failed to create Kubernetes client")?;
+        Some(Api::<ConfigMap>::default_namespaced(kube.clone()))
+    } else {
+        None
+    };
 
     let client = reqwest::Client::new();
 
@@ -183,7 +189,11 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
         let app = app.app_data(keycloak_service.clone());
         let app = app.app_data(web::Data::new(registry.clone()));
-        let app = app.app_data(web::Data::new(config_maps.clone()));
+        let app = if let Some(config_maps) = config_maps.clone() {
+            app.app_data(web::Data::new(config_maps))
+        } else {
+            app
+        };
 
         let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(

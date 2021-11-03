@@ -16,6 +16,7 @@ use drogue_cloud_endpoint_common::command::{
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator, sender::DownstreamSender, sink::KafkaSink,
 };
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
@@ -45,6 +46,14 @@ pub struct Config {
     pub auth: AuthConfig,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
+
+    pub kafka_downstream_config: KafkaClientConfig,
+    pub kafka_command_config: KafkaClientConfig,
+
+    pub instance: String,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 #[get("/")]
@@ -55,7 +64,13 @@ async fn index() -> impl Responder {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
-    let sender = DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?;
+    let sender = DownstreamSender::new(
+        KafkaSink::from_config(
+            config.kafka_downstream_config,
+            config.check_kafka_topic_ready,
+        )?,
+        config.instance,
+    )?;
     let commands = Commands::new();
 
     let max_payload_size = config.max_payload_size;
@@ -138,7 +153,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let http_server = http_server.run();
 
-    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
 
     // run
 

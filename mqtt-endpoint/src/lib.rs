@@ -12,7 +12,11 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
-use drogue_cloud_service_common::health::{HealthServer, HealthServerConfig};
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::{
+    defaults,
+    health::{HealthServer, HealthServerConfig},
+};
 use futures::TryFutureExt;
 use rust_tls::ClientCertVerifier;
 use serde::Deserialize;
@@ -35,6 +39,14 @@ pub struct Config {
     pub auth: AuthConfig,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
+
+    pub kafka_downstream_config: KafkaClientConfig,
+    pub kafka_command_config: KafkaClientConfig,
+
+    pub instance: String,
+
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
 }
 
 impl TlsConfig for Config {
@@ -61,7 +73,14 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let commands = Commands::new();
 
     let app = App {
-        downstream: DownstreamSender::new(KafkaSink::new("DOWNSTREAM_KAFKA_SINK")?)?,
+        downstream: DownstreamSender::new(
+            KafkaSink::from_config(
+                config.kafka_downstream_config.clone(),
+                config.check_kafka_topic_ready,
+            )?,
+            config.instance.clone(),
+        )?,
+
         authenticator: DeviceAuthenticator(
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth.clone())
                 .await?,
@@ -83,7 +102,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // command source
 
-    let command_source = KafkaCommandSource::new(commands, config.command_source_kafka)?;
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
 
     // run
     if let Some(health) = config.health {

@@ -146,6 +146,13 @@ jobs:
           path: build/images/all.tar
           if-no-files-found: error
 
+      - name: Upload server binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: server-binary
+          path: target/release/drogue-cloud-server
+          if-no-files-found: error
+
   deploy:
     name: deploy on kind
     runs-on: ubuntu-20.04
@@ -200,10 +207,10 @@ jobs:
           ./scripts/drgadm deploy \
             -m \
             -s drogueCloudCore.defaults.images.repository=dev.local \
-            -s drogueCloudCore.defaults.images.tag=${{ github.sha }} \
+            -S drogueCloudCore.defaults.images.tag=${{ github.sha }} \
             -s drogueCloudCore.defaults.images.pullPolicy=Never \
             -s drogueCloudExamples.defaults.images.repository=dev.local \
-            -s drogueCloudExamples.defaults.images.tag=${{ github.sha }} \
+            -S drogueCloudExamples.defaults.images.tag=${{ github.sha }} \
             -s drogueCloudExamples.defaults.images.pullPolicy=Never
         timeout-minutes: 30
 
