@@ -52,7 +52,7 @@ You can run the server with `--help` to discover how to run the server, but the 
 run:
 
 ```
-drogue-server run --enable-all
+./target/release/drogue-cloud-server run --enable-all
 ```
 
 This start the drogue services and print some useful information on how to connect.
