@@ -163,8 +163,8 @@ jobs:
             suffix: "linux-amd64"
           - os: macos-10.15
             suffix: "macos-amd64"
-          - os: windows-2019
-            suffix: "windows-amd64"
+         # - os: windows-2019
+         #   suffix: "windows-amd64"
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{needs.check.outputs.version}}
