@@ -162,6 +162,9 @@ jobs:
       VERSION: ${{needs.check.outputs.version}}
 
     steps:
+      - name: Build server binary
+        run: |
+          cargo build --release -p drogue-cloud-server
       - name: Upload server binary
         uses: actions/upload-artifact@v2
         with:
