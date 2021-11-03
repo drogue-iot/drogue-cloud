@@ -207,10 +207,10 @@ jobs:
           ./scripts/drgadm deploy \
             -m \
             -s drogueCloudCore.defaults.images.repository=dev.local \
-            -s drogueCloudCore.defaults.images.tag=${{ github.sha }} \
+            -S drogueCloudCore.defaults.images.tag=${{ github.sha }} \
             -s drogueCloudCore.defaults.images.pullPolicy=Never \
             -s drogueCloudExamples.defaults.images.repository=dev.local \
-            -s drogueCloudExamples.defaults.images.tag=${{ github.sha }} \
+            -S drogueCloudExamples.defaults.images.tag=${{ github.sha }} \
             -s drogueCloudExamples.defaults.images.pullPolicy=Never
         timeout-minutes: 30
 
