@@ -6,7 +6,10 @@ The base address of the HTTP protocol endpoints depends on your installation. Fo
 is mostly based on the IP address and uses `nip.io` to resolve this as a DNS name. Assuming your IP address is `1.2.3.4`
 the hostname would be `http-endpoint.1.2.3.4.nip.io`.
 
-== Simple HTTP API
+== Default HTTP API
+
+Drogue Cloud offers a default HTTP API for connecting devices to the cloud. In addition to that, other HTTP APIs may
+exist, implementing other IoT like APIs, see the following sections for more information.
 
 === Publish telemetry
 

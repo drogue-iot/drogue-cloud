@@ -2,3 +2,31 @@
 
 The MQTT protocol endpoint is a device facing service offering connectivity using a simple MQTT v3.1.1 and v5
 based protocol.
+
+[NOTE]
+.This is not an MQTT broker
+====
+It is important to understand, that the MQTT endpoint is not a general purpose MQTT broker. It is an MQTT based API,
+providing access to Drogue Cloud specific functionality, using the MQTT protocol and existing MQTT tools.
+====
+
+== Connecting
+
+* Clean session must be `true`
+
+== Authenticating
+
+* X.509 Client certificates
+* Username/password
+
+== Simple device
+
+=== Publish data
+
+=== Subscribe to commands
+
+== Gateway device
+
+=== Publish data
+
+=== Subscribe to commands
