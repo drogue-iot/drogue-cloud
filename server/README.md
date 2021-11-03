@@ -16,7 +16,7 @@ To build drogue-server, you need:
 #### Installing dependencies on Fedora
 
 ```
-dnf install cyrus-sasl-devel openssl-devel libpq-devel librdkafka-devel
+dnf install gcc-c++ cyrus-sasl-devel openssl-devel libpq-devel librdkafka-devel
 ```
 
 #### Installing dependencies on Mac OS X
