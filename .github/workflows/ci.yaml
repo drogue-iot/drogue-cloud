@@ -173,6 +173,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Install build tools
+        if: ${{ matrix.os == 'ubuntu-18.04' }}
+        run: |
+          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
+          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
       - name: Build server binary
         run: |
           cargo build --release -p drogue-cloud-server
