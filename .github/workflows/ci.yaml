@@ -187,6 +187,7 @@ jobs:
           .\vcpkg\vcpkg install openssl
           .\vcpkg\vcpkg install libpq
           .\vcpkg\vcpkg install librdkafka
+          .\vcpkg\vcpkg integrate install
           cargo build --release -p drogue-cloud-server
       - name: Build binary for Mac OS X
         if: ${{ matrix.os == 'macos-10.15' }}
