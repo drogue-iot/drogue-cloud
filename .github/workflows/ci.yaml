@@ -154,15 +154,15 @@ jobs:
           #         if-no-files-found: error
 
   binary:
-    needs: [check]
+    # needs: [check]
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-10.15, windows-2019]
         include:
-          - os: ubuntu-18.04
-            suffix: "linux-amd64"
-          - os: macos-10.15
-            suffix: "macos-amd64"
+          # - os: ubuntu-18.04
+          #   suffix: "linux-amd64"
+          # - os: macos-10.15
+          #   suffix: "macos-amd64"
           - os: windows-2019
             suffix: "windows-amd64"
     runs-on: ${{ matrix.os }}
@@ -173,11 +173,17 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Install build tools
+      - name: Install linux build dependencies
         if: ${{ matrix.os == 'ubuntu-18.04' }}
         run: |
           sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
           sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
+      - name: Install windows build dependencies
+        if: ${{ matrix.os == 'windows-2019' }}
+        run: |
+          git clone https://github.com/microsoft/vcpkg
+          ./vcpkg/bootstrap-vcpkg.sh
+          ./vcpkg/vcpkg install openssl
       - name: Build server binary
         run: |
           cargo build --release -p drogue-cloud-server
