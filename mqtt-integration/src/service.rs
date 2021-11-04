@@ -453,7 +453,7 @@ where
                         self.client.clone(),
                         None,
                         opts,
-                        publish.payload().clone(),
+                        bytes::Bytes::from(publish.payload().to_vec()),
                     )
                     .await
                     {
