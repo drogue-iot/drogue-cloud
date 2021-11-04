@@ -17,7 +17,6 @@ impl ReconcileError {
     }
 }
 
-#[cfg(feature = "reqwest")]
 impl From<reqwest::Error> for ReconcileError {
     fn from(err: reqwest::Error) -> Self {
         Self::permanent(err)

@@ -1,12 +1,14 @@
 mod app;
 mod conditions;
 mod device;
+#[cfg(feature = "with_kube")]
 mod event;
 pub mod queue;
 
 pub use app::*;
 pub use conditions::*;
 pub use device::*;
+#[cfg(feature = "with_kube")]
 pub use event::*;
 
 use crate::controller::{

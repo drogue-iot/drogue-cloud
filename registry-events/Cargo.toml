@@ -40,5 +40,5 @@ anyhow = "1"
 [features]
 default = ["with_kafka", "with_database"]
 with_reqwest = ["reqwest", "cloudevents-sdk/reqwest"]
-with_kafka = ["rdkafka", "cloudevents-sdk/rdkafka"]
+with_kafka = ["rdkafka", "cloudevents-sdk/rdkafka", "drogue-cloud-service-api/rdkafka"]
 with_database = ["drogue-cloud-database-common"]
