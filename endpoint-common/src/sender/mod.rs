@@ -1,7 +1,8 @@
-use crate::error::HttpEndpointError;
-use crate::sink::{Sink, SinkError, SinkTarget};
+use crate::{
+    error::HttpEndpointError,
+    sink::{Sink, SinkError, SinkTarget},
+};
 use actix_web::HttpResponse;
-use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
@@ -56,10 +57,11 @@ impl<S> UpstreamSender<S>
 where
     S: Sink,
 {
-    pub fn new(sink: S) -> anyhow::Result<Self> {
-        let instance = std::env::var("INSTANCE").context("Missing variable 'INSTANCE'")?;
-
-        Ok(Self { sink, instance })
+    pub fn new<I: Into<String>>(instance: I, sink: S) -> anyhow::Result<Self> {
+        Ok(Self {
+            sink,
+            instance: instance.into(),
+        })
     }
 }
 

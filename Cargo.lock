@@ -2381,6 +2381,7 @@ dependencies = [
  "drogue-cloud-event-common",
  "drogue-cloud-http-endpoint",
  "drogue-cloud-mqtt-endpoint",
+ "drogue-cloud-mqtt-integration",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
