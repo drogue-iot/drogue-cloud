@@ -38,4 +38,4 @@ sasl2-sys = { version = "0.1.14" }
 pq-sys = { version = "0.4.6" }
 
 [features]
-static = ["rdkafka-sys/ssl-vendored", "sasl2-sys/vendored", "sasl2-sys/openssl-sys", "sasl2-sys/gssapi-vendored", "pg-sys/pkg-config"]
+static = ["rdkafka-sys/ssl-vendored", "sasl2-sys/vendored", "sasl2-sys/openssl-sys", "sasl2-sys/gssapi-vendored", "pq-sys/pkg-config"]
