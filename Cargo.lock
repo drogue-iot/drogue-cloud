@@ -3579,16 +3579,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "krb5-src"
-version = "0.2.4+1.18.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a01c2b7c3b70ca41646dafc8fc3b6053a8a0da9301251e8da8548fb067462d81"
-dependencies = [
- "duct",
- "openssl-sys",
-]
-
-[[package]]
 name = "kube"
 version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5242,9 +5232,7 @@ checksum = "067d1f7cad609ce2046016915d48caf20d6fc35469b0dae17579eea927c3b1f8"
 dependencies = [
  "cc",
  "duct",
- "krb5-src",
  "libc",
- "openssl-sys",
  "pkg-config",
 ]
 
