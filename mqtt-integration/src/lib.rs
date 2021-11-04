@@ -1,6 +1,7 @@
 mod service;
 
-use crate::service::ServiceConfig;
+pub use crate::service::ServiceConfig;
+
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
@@ -47,6 +48,9 @@ pub struct Config {
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
+
+    #[serde(default = "defaults::instance")]
+    pub instance: String,
 }
 
 impl TlsConfig for Config {
@@ -101,10 +105,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let registry = config.registry.into_client(client.clone()).await?;
 
-    let sender = UpstreamSender::new(KafkaSink::from_config(
-        config.command_kafka_sink,
-        config.check_kafka_topic_ready,
-    )?)?;
+    let sender = UpstreamSender::new(
+        config.instance,
+        KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?,
+    )?;
 
     log::info!("Authenticator: {:?}", authenticator);
     log::info!("User auth: {:?}", user_auth);

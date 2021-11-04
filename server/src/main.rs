@@ -261,6 +261,11 @@ fn main() {
                         .help("enable mqtt endpoint"),
                 )
                 .arg(
+                    Arg::with_name("enable-mqtt-integration")
+                        .long("--enable-mqtt-integration")
+                        .help("enable mqtt integration"),
+                )
+                .arg(
                     Arg::with_name("server-key")
                         .long("--server-key")
                         .value_name("FILE")
@@ -323,7 +328,7 @@ fn main() {
         };
 
         let keycloak = KeycloakAdminClientConfig {
-            url: Url::parse(&eps.sso.as_ref().unwrap()).unwrap(),
+            url: Url::parse(eps.sso.as_ref().unwrap()).unwrap(),
             realm: "master".into(),
             admin_username: server.keycloak.user.clone(),
             admin_password: server.keycloak.password.clone(),
@@ -357,10 +362,19 @@ fn main() {
             client_id: "drogue-service".to_string(),
             client_secret: client_secret.to_string(),
             issuer_url: eps.issuer_url.as_ref().map(|u| Url::parse(u).unwrap()),
-            sso_url: Url::parse(&eps.sso.as_ref().unwrap()).ok(),
+            sso_url: Url::parse(eps.sso.as_ref().unwrap()).ok(),
             realm: "master".to_string(),
             refresh_before: None,
         };
+
+        let user_auth = Some(UserAuthClientConfig {
+            token_config: Some(token_config.clone()),
+            url: Url::parse(&format!(
+                "http://{}:{}",
+                server.user_auth.host, server.user_auth.port
+            ))
+            .unwrap(),
+        });
 
         let mut threads = Vec::new();
         if matches.is_present("enable-device-registry") || matches.is_present("enable-all") {
@@ -370,18 +384,11 @@ fn main() {
             let bind_addr = server.clone().registry.into();
             let s = server.clone();
             let pg = pg.clone();
-            let t = token_config.clone();
+            let user_auth = user_auth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
                     enable_api_keys: false,
-                    user_auth: Some(UserAuthClientConfig {
-                        token_config: Some(t),
-                        url: Url::parse(&format!(
-                            "http://{}:{}",
-                            s.user_auth.host, s.user_auth.port
-                        ))
-                        .unwrap(),
-                    }),
+                    user_auth,
                     oauth: o,
                     keycloak: k,
                     database_config: PostgresManagementServiceConfig {
@@ -470,6 +477,7 @@ fn main() {
             let s = server.clone();
             let t = token_config.clone();
             let bind_addr = s.console.clone().into();
+            let registry = registry.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_console_backend::Config {
                     oauth: o,
@@ -549,13 +557,16 @@ fn main() {
             let command_source_kafka = command_source("mqtt_endpoint");
             let bind_addr_mqtt = server.mqtt.clone().into();
             let kafka = server.kafka.clone();
+            let cert_bundle_file: Option<String> =
+                matches.value_of("server-cert").map(|s| s.to_string());
+            let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_mqtt_endpoint::Config {
                     auth: a,
                     health: None,
-                    disable_tls: true,
-                    cert_bundle_file: None,
-                    key_file: None,
+                    disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                    cert_bundle_file,
+                    key_file,
                     bind_addr_mqtt: Some(bind_addr_mqtt),
                     instance: "drogue".to_string(),
                     command_source_kafka,
@@ -566,6 +577,40 @@ fn main() {
 
                 ntex::rt::System::new("mqtt-endpoint")
                     .block_on(drogue_cloud_mqtt_endpoint::run(config))
+                    .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-mqtt-integration") || matches.is_present("enable-all") {
+            log::info!("Enabling MQTT integration");
+            let bind_addr_mqtt = server.mqtt_integration.clone().into();
+            let kafka = server.kafka.clone();
+            let cert_bundle_file: Option<String> =
+                matches.value_of("server-cert").map(|s| s.to_string());
+            let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_mqtt_integration::Config {
+                    health: None,
+                    oauth,
+                    disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                    cert_bundle_file,
+                    key_file,
+                    bind_addr_mqtt: Some(bind_addr_mqtt),
+                    registry,
+                    max_size: None,
+                    service: drogue_cloud_mqtt_integration::ServiceConfig {
+                        kafka: kafka.clone(),
+                        enable_username_password_auth: false,
+                        disable_api_keys: false,
+                    },
+                    check_kafka_topic_ready: false,
+                    user_auth: None,
+                    instance: "drogue".to_string(),
+                    command_kafka_sink: kafka,
+                };
+
+                ntex::rt::System::new("mqtt-integration")
+                    .block_on(drogue_cloud_mqtt_integration::run(config))
                     .unwrap();
             }));
         }
@@ -621,7 +666,7 @@ fn main() {
     }
 }
 
-const KAFKA_BOOTSTRAP: &'static str = "localhost:9092";
+const KAFKA_BOOTSTRAP: &str = "localhost:9092";
 
 fn endpoints(config: &ServerConfig) -> Endpoints {
     Endpoints {

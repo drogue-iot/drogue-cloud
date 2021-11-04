@@ -79,3 +79,8 @@ pub fn keycloak_url() -> Url {
 pub fn mqtts_port() -> u16 {
     8883
 }
+
+#[inline]
+pub fn instance() -> String {
+    "drogue".into()
+}

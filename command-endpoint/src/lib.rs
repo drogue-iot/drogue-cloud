@@ -3,6 +3,13 @@ mod v1alpha1;
 use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
+use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
+use drogue_cloud_service_common::{
+    actix_auth::authentication::AuthN,
+    actix_auth::authorization::AuthZ,
+    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    openid::AuthenticatorConfig,
+};
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
@@ -12,14 +19,6 @@ use futures::TryFutureExt;
 use serde::Deserialize;
 use serde_json::json;
 use std::str;
-
-use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
-use drogue_cloud_service_common::{
-    actix_auth::authentication::AuthN,
-    actix_auth::authorization::AuthZ,
-    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
-    openid::AuthenticatorConfig,
-};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -44,6 +43,9 @@ pub struct Config {
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
+
+    #[serde(default = "defaults::instance")]
+    pub instance: String,
 }
 
 #[derive(Debug)]
@@ -59,10 +61,10 @@ async fn index() -> impl Responder {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Starting Command service endpoint");
 
-    let sender = UpstreamSender::new(KafkaSink::from_config(
-        config.command_kafka_sink,
-        config.check_kafka_topic_ready,
-    )?)?;
+    let sender = UpstreamSender::new(
+        config.instance,
+        KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?,
+    )?;
 
     let max_json_payload_size = config.max_json_payload_size;
 
