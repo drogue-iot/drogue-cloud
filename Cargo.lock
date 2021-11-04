@@ -4010,9 +4010,9 @@ dependencies = [
 
 [[package]]
 name = "ntex"
-version = "0.4.4"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "246125c7babd6e6f877494e1940697b1967fa71594916d0fdd0b7f80f6029cea"
+checksum = "c6786bd33f7c5742f5c3bf1cfd7326d383d31ddea0ab46795008add316851553"
 dependencies = [
  "async-channel",
  "async-oneshot",
@@ -4092,9 +4092,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-mqtt"
-version = "0.7.2"
+version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c580af657422314e494657f1c9a8c479f21336c9764771fbf272596b9b05e1c"
+checksum = "31631d60dab4368727079f1f06890ef851f410698c4d5583e0db3d59158eb338"
 dependencies = [
  "bitflags",
  "derive_more",

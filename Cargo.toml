@@ -38,6 +38,8 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "275c7a116b75baf95c63307ead45806c8fc62405" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }
 
+#ntex-mqtt = { git = "https://github.com/ntex-rs/ntex-mqtt", rev="fb14f0e96c36419f3fceb27a963e1c245371798e" } # FIXME: awaiting release of https://github.com/ntex-rs/ntex-mqtt/issues/73
+
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
