@@ -171,7 +171,7 @@ cargo-pre-check:
 #
 cargo-check: cargo-pre-check
 	cargo check --release
-	cargo clippy --release --all-features
+	#cargo clippy --release --all-features
 
 
 #
