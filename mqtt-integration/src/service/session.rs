@@ -207,9 +207,13 @@ where
 
     async fn run_stream(mut stream: Stream<'_>, sink: &mut Sink) -> Result<(), anyhow::Error> {
         let content_mode = stream.content_mode;
-
-        log::debug!("Running stream - content-mode: {:?}", content_mode);
         let sub_id = stream.id.map(|id| vec![id]);
+
+        log::debug!(
+            "Running stream - content-mode: {:?}, subscription-ids: {:?}",
+            content_mode,
+            sub_id
+        );
 
         // run event stream
         while let Some(event) = stream.event_stream.next().await {
