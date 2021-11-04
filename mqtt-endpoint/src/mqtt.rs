@@ -1,12 +1,11 @@
 use crate::{error::ServerError, server::Session, x509::ClientCertificateRetriever, App};
-use bytes::Bytes;
-use bytestring::ByteString;
 use drogue_cloud_endpoint_common::{
     sender::{Publish, PublishOutcome, Publisher},
     sink::Sink,
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use drogue_cloud_service_common::Id;
+use ntex_bytes::{ByteString, Bytes};
 use ntex_mqtt::{
     types::QoS,
     v3,
@@ -221,12 +220,14 @@ macro_rules! unsubscribe {
 
 pub async fn control_v3<S>(
     session: v3::Session<Session<S>>,
-    control: v3::ControlMessage,
+    control: v3::ControlMessage<ServerError>,
 ) -> Result<v3::ControlResult, ServerError>
 where
     S: Sink,
 {
     match control {
+        v3::ControlMessage::Error(e) => Ok(e.ack()),
+        v3::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => unsubscribe!(d, session, "Disconnecting device {:?}"),
         v3::ControlMessage::Subscribe(mut s) => {

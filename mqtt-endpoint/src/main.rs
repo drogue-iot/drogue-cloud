@@ -10,8 +10,6 @@ use crate::{
     auth::DeviceAuthenticator,
     server::{build, build_tls},
 };
-use bytes::Bytes;
-use bytestring::ByteString;
 use dotenv::dotenv;
 use drogue_cloud_endpoint_common::{
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -27,6 +25,7 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
 };
 use futures::TryFutureExt;
+use ntex_bytes::{ByteString, Bytes};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]

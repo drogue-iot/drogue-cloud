@@ -942,7 +942,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90706ba19e97b90786e19dc0d5e2abd80008d99d4c0c5d1ad0b5e72cec7c494d"
 dependencies = [
  "bytes 1.1.0",
- "serde 1.0.130",
 ]
 
 [[package]]
@@ -2118,10 +2117,11 @@ dependencies = [
  "http",
  "lazy_static",
  "log",
- "ntex 0.3.18",
- "ntex-mqtt 0.6.9",
- "ntex-rt 0.2.2",
- "ntex-service 0.1.9",
+ "ntex",
+ "ntex-bytes",
+ "ntex-mqtt",
+ "ntex-rt",
+ "ntex-service",
  "openssl",
  "pem",
  "reqwest",
@@ -2157,10 +2157,10 @@ dependencies = [
  "lazy_static",
  "log",
  "mime",
- "ntex 0.4.7",
- "ntex-mqtt 0.7.5",
- "ntex-rt 0.3.1",
- "ntex-service 0.2.1",
+ "ntex",
+ "ntex-mqtt",
+ "ntex-rt",
+ "ntex-service",
  "openid",
  "openssl",
  "pem",
@@ -2307,7 +2307,7 @@ dependencies = [
  "k8s-openapi",
  "kube",
  "log",
- "ntex 0.3.18",
+ "ntex",
  "openid",
  "pem",
  "reqwest",
@@ -3767,12 +3767,6 @@ dependencies = [
 
 [[package]]
 name = "nanorand"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac1378b66f7c93a1c0f8464a19bf47df8795083842e5090f4b7305973d5a22d0"
-
-[[package]]
-name = "nanorand"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "729eb334247daa1803e0a094d0a5c55711b85571179f5ec6e53eccfdf7008958"
@@ -3841,54 +3835,6 @@ dependencies = [
 
 [[package]]
 name = "ntex"
-version = "0.3.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3e631d38487d1db501fa6fcc7be4d1bdfeee3e99051fb157bd6fbd73ee7afba"
-dependencies = [
- "ahash",
- "base64 0.13.0",
- "bitflags",
- "bytes 1.1.0",
- "bytestring",
- "derive_more",
- "encoding_rs",
- "futures-core",
- "futures-sink",
- "h2 0.3.4",
- "http",
- "httparse",
- "httpdate",
- "log",
- "mime",
- "mio 0.7.13",
- "nanorand 0.5.2",
- "ntex-codec 0.4.1",
- "ntex-macros",
- "ntex-router 0.4.4",
- "ntex-rt 0.2.2",
- "ntex-service 0.1.9",
- "ntex-util",
- "num_cpus",
- "openssl",
- "percent-encoding",
- "pin-project-lite 0.2.7",
- "regex",
- "rustls",
- "serde 1.0.130",
- "serde_json",
- "serde_urlencoded",
- "sha-1",
- "slab",
- "socket2 0.4.2",
- "tokio 1.11.0",
- "tokio-openssl",
- "tokio-rustls",
- "webpki",
- "webpki-roots",
-]
-
-[[package]]
-name = "ntex"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6786bd33f7c5742f5c3bf1cfd7326d383d31ddea0ab46795008add316851553"
@@ -3909,13 +3855,13 @@ dependencies = [
  "log",
  "mime",
  "mio 0.7.13",
- "nanorand 0.6.1",
+ "nanorand",
  "ntex-bytes",
- "ntex-codec 0.5.1",
+ "ntex-codec",
  "ntex-macros",
- "ntex-router 0.5.1",
- "ntex-rt 0.3.1",
- "ntex-service 0.2.1",
+ "ntex-router",
+ "ntex-rt",
+ "ntex-service",
  "ntex-util",
  "num_cpus",
  "openssl",
@@ -3947,21 +3893,6 @@ dependencies = [
 
 [[package]]
 name = "ntex-codec"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b88f1ddc712a0fd33da2a399d2b2caf1aa6eb1e2438d140552050e24d3a64c76"
-dependencies = [
- "bitflags",
- "bytes 1.1.0",
- "futures-core",
- "futures-sink",
- "log",
- "ntex-service 0.1.9",
- "tokio 1.11.0",
-]
-
-[[package]]
-name = "ntex-codec"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9600262fd47a2dd3686adc3807a582b1dfd4cc1d44a728024a73e4a17b962e22"
@@ -3986,21 +3917,6 @@ dependencies = [
 
 [[package]]
 name = "ntex-mqtt"
-version = "0.6.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "100e5f4740bc33018e77d59407a627302c006fff335791670345df8857621afa"
-dependencies = [
- "bitflags",
- "derive_more",
- "log",
- "ntex 0.3.18",
- "pin-project-lite 0.2.7",
- "serde 1.0.130",
- "serde_json",
-]
-
-[[package]]
-name = "ntex-mqtt"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31631d60dab4368727079f1f06890ef851f410698c4d5583e0db3d59158eb338"
@@ -4008,23 +3924,10 @@ dependencies = [
  "bitflags",
  "derive_more",
  "log",
- "ntex 0.4.7",
+ "ntex",
  "pin-project-lite 0.2.7",
  "serde 1.0.130",
  "serde_json",
-]
-
-[[package]]
-name = "ntex-router"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bfa0efa03b4bb64ac093587bbd75f3f8dfaded0240a0716e43afcfd0ceef637"
-dependencies = [
- "bytestring",
- "http",
- "log",
- "regex",
- "serde 1.0.130",
 ]
 
 [[package]]
@@ -4042,16 +3945,6 @@ dependencies = [
 
 [[package]]
 name = "ntex-rt"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b3cc7cc7d1c30f93e0fc04676b415531fb89fa96d41d4c77ba0569211c10460"
-dependencies = [
- "ntex-service 0.1.9",
- "tokio 1.11.0",
-]
-
-[[package]]
-name = "ntex-rt"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cfad2fe27d76d0b7ad69e603611ef87e96d079dc67bfac54c8129de3423da95"
@@ -4059,16 +3952,6 @@ dependencies = [
  "ntex-util",
  "pin-project-lite 0.2.7",
  "tokio 1.11.0",
-]
-
-[[package]]
-name = "ntex-service"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a845b8def9e7f99904675a4842f4c96e219254597f720d091b8663217aee5f4"
-dependencies = [
- "ntex-util",
- "pin-project-lite 0.2.7",
 ]
 
 [[package]]
