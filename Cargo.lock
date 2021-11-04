@@ -2358,7 +2358,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-server"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "actix-rt 2.2.0",
  "clap",
