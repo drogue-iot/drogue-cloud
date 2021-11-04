@@ -31,9 +31,7 @@ pub struct Admin {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Users {
     app: String,
-    managers: Vec<User>,
-    readers: Vec<User>,
-    admin: Vec<User>,
+    members: Vec<User>,
     resource_version: String,
 }
 
@@ -43,7 +41,6 @@ pub enum Msg {
     SetMembers(Members),
     AddMember,
     DeleteMember(String),
-    SaveMembers,
     NewMemberRole(Role),
     NewMemberId(String),
     NewOwner(String),
@@ -58,6 +55,7 @@ pub enum Msg {
 #[derive(Clone, Debug)]
 struct User {
     id: String,
+    role: Role,
     on_delete: Callback<()>,
 }
 
@@ -71,6 +69,7 @@ impl TableRenderer for User {
     fn render(&self, column: ColumnIndex) -> Html {
         match column.index {
             0 => self.clone().id.into(),
+            1 => self.clone().role.into(),
             // 3 => html! { <Button
             //              icon=Icon::ExclamationCircle
             //              variant=Variant::Link
@@ -132,17 +131,18 @@ impl Component for Admin {
                 if let Some(m) = self.members.as_mut() {
                     if let Err(e) = m.add(id.clone(), entry.clone(), &self.link) {
                         error("Failed to add user", e);
+                    } else {
+                        match self.submit() {
+                            Ok(task) => self.fetch = Some(task),
+                            Err(err) => error("Failed to update", err),
+                        }
                     }
                 }
             }
             Msg::DeleteMember(id) => {
                 if let Some(m) = self.members.as_mut() {
                     m.delete(id);
-                }
-            }
-            Msg::SaveMembers => {
-                if let Some(members) = &self.members {
-                    match self.submit(&members.serialize()) {
+                    match self.submit() {
                         Ok(task) => self.fetch = Some(task),
                         Err(err) => error("Failed to update", err),
                     }
@@ -205,41 +205,16 @@ impl Component for Admin {
             return html! {
                 <Stack gutter=true>
                     <StackItem>
-                    <Card title={html!{"Application readers"}}>
+                    <Card title={html!{"Application Members"}}>
                         <Table<SimpleTableModel<User>>
-                                entries=SimpleTableModel::from(m.readers.clone())
+                                entries=SimpleTableModel::from(m.members.clone())
                                     header={html_nested!{
                                         <TableHeader>
                                             <TableColumn label="User name"/>
+                                            <TableColumn label="Role"/>
                                         </TableHeader>
                                     }}
                                 >
-                        </Table<SimpleTableModel<User>>>
-                    </Card>
-                    </StackItem>
-                    <StackItem>
-                    <Card title={html!{"Application managers"}}>
-                        <Table<SimpleTableModel<User>>
-                            entries=SimpleTableModel::from(m.managers.clone())
-                            header={html_nested!{
-                                <TableHeader>
-                                    <TableColumn label="User name"/>
-                                </TableHeader>
-                            }}
-                        >
-                        </Table<SimpleTableModel<User>>>
-                    </Card>
-                    </StackItem>
-                    <StackItem>
-                    <Card title={html!{"Application administrators"}}>
-                        <Table<SimpleTableModel<User>>
-                            entries=SimpleTableModel::from(m.admin.clone())
-                            header={html_nested!{
-                                <TableHeader>
-                                    <TableColumn label="User name"/>
-                                </TableHeader>
-                            }}
-                        >
                         </Table<SimpleTableModel<User>>>
                     </Card>
                     </StackItem>
@@ -267,12 +242,6 @@ impl Component for Admin {
                             />
                     </ToolbarItem>
                 </Toolbar>
-                    <Form>
-                        <ActionGroup>
-                            <Button disabled=self.fetch.is_some() label="Save" variant=Variant::Primary onclick=self.link.callback(|_|Msg::SaveMembers)/>
-                            <Button disabled=self.fetch.is_some() label="Reload" variant=Variant::Secondary onclick=self.link.callback(|_|Msg::Reset)/>
-                        </ActionGroup>
-                    </Form>
                  </Card>
                 </StackItem>
                 <StackItem>
@@ -354,42 +323,46 @@ impl Admin {
         )
     }
 
-    fn submit(&self, members: &Members) -> Result<FetchTask, anyhow::Error> {
-        let json_members = members;
-        self.props.backend.info.request(
-            Method::PUT,
-            format!(
-                "/api/admin/v1alpha1/apps/{}/members",
-                url_encode(&self.props.name)
-            ),
-            Json(json_members),
-            vec![("Content-Type", "application/json")],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::NO_CONTENT => {
-                        ToastDispatcher::default().toast(Toast {
-                            title: "Success !".into(),
-                            body: html! {<>
-                                <Content>
-                                <p>{"Application members saved."}</p>
-                                </Content>
-                            </>},
-                            r#type: Type::Success,
-                            timeout: Some(Duration::from_secs(3)),
-                            ..Default::default()
-                        });
-                        Msg::LoadMembers
-                    }
-                    status => Msg::Error(format!(
-                        "Failed to perform update: Code {}. {}",
-                        status,
-                        response
-                            .body()
-                            .as_ref()
-                            .unwrap_or(&"Unknown error.".to_string())
-                    )),
-                }),
-        )
+    fn submit(&self) -> Result<FetchTask, anyhow::Error> {
+        if let Some(m) = &self.members {
+            let members = m.serialize();
+            self.props.backend.info.request(
+                Method::PUT,
+                format!(
+                    "/api/admin/v1alpha1/apps/{}/members",
+                    url_encode(&self.props.name)
+                ),
+                Json(&members),
+                vec![("Content-Type", "application/json")],
+                self.link
+                    .callback(move |response: Response<Text>| match response.status() {
+                        StatusCode::NO_CONTENT => {
+                            ToastDispatcher::default().toast(Toast {
+                                title: "Success !".into(),
+                                body: html! {<>
+                                    <Content>
+                                    <p>{"Application members saved."}</p>
+                                    </Content>
+                                </>},
+                                r#type: Type::Success,
+                                timeout: Some(Duration::from_secs(3)),
+                                ..Default::default()
+                            });
+                            Msg::LoadMembers
+                        }
+                        status => Msg::Error(format!(
+                            "Failed to perform update: Code {}. {}",
+                            status,
+                            response
+                                .body()
+                                .as_ref()
+                                .unwrap_or(&"Unknown error.".to_string())
+                        )),
+                    }),
+            )
+        } else {
+            Err(anyhow!("Nothing to save"))
+        }
     }
 
     fn reset(&mut self) {
@@ -493,32 +466,19 @@ impl Admin {
 
 impl Users {
     pub fn from(members: Members, app: String, link: &ComponentLink<Admin>) -> Self {
-        let mut readers: Vec<User> = Vec::new();
-        let mut managers: Vec<User> = Vec::new();
-        let mut admin: Vec<User> = Vec::new();
+        let mut new_members: Vec<User> = Vec::new();
 
         for (user, role) in members.members {
-            match role.role {
-                Role::Admin => admin.push(User {
-                    id: user.clone(),
-                    on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
-                }),
-                Role::Manager => managers.push(User {
-                    id: user.clone(),
-                    on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
-                }),
-                Role::Reader => readers.push(User {
-                    id: user.clone(),
-                    on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
-                }),
-            }
+            new_members.push(User {
+                id: user.clone(),
+                role: role.role,
+                on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
+            });
         }
 
         Users {
             app,
-            managers,
-            readers,
-            admin,
+            members: new_members,
             resource_version: members.resource_version.unwrap_or_default(),
         }
     }
@@ -527,19 +487,8 @@ impl Users {
     pub fn serialize(&self) -> Members {
         let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
 
-        for u in &self.managers {
-            members.insert(
-                u.id.clone(),
-                MemberEntry {
-                    role: Role::Manager,
-                },
-            );
-        }
-        for u in &self.readers {
-            members.insert(u.id.clone(), MemberEntry { role: Role::Reader });
-        }
-        for u in &self.admin {
-            members.insert(u.id.clone(), MemberEntry { role: Role::Admin });
+        for u in &self.members {
+            members.insert(u.id.clone(), MemberEntry { role: u.role });
         }
 
         Members {
@@ -549,25 +498,21 @@ impl Users {
     }
 
     pub fn delete(&mut self, id: String) {
-        self.readers.retain(|u| *u.id != id);
-        self.managers.retain(|u| *u.id != id);
+        self.members.retain(|u| *u.id != id);
     }
 
     pub fn add(&mut self, id: String, role: Role, link: &ComponentLink<Admin>) -> Result<()> {
         let copy_id = id.clone();
         let user = User {
             id: id.clone(),
+            role,
             on_delete: link.callback(move |_| Msg::DeleteMember(copy_id.clone())),
         };
 
         if self.contains(id.clone()) {
             Err(anyhow!("User is already a member"))
         } else {
-            match role {
-                Role::Reader => self.readers.push(user),
-                Role::Manager => self.managers.push(user),
-                Role::Admin => self.admin.push(user),
-            }
+            self.members.push(user);
             Ok(())
         }
     }
@@ -575,10 +520,10 @@ impl Users {
     pub fn contains(&self, id: String) -> bool {
         let user = &User {
             id: id.clone(),
+            // does not matter for the equal operation. See PartialEq impl above.
+            role: Role::Reader,
             on_delete: Default::default(),
         };
-        return self.readers.contains(user)
-            || self.managers.contains(user)
-            || self.admin.contains(user);
+        return self.members.contains(user);
     }
 }

@@ -16,155 +16,20 @@ env:
   VERSION_HELM: "v3.7.1"
 
 jobs:
-
-  check:
-    runs-on: ubuntu-20.04
-
-    outputs:
-      do-publish: ${{steps.state.outputs.do-publish}}
-      release: ${{steps.state.outputs.release}}
-      version: ${{steps.version.outputs.version}}
-      prerelease: ${{steps.state.outputs.prerelease}}
-
-    steps:
-
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-
-      # Gather information for build
-
-      - name: Evaluate state
-        id: state
-        run: |
-          test -z "${{github.head_ref}}" && echo '::set-output name=do-publish::true'
-          if [[ "${{ github.event.ref }}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo ::set-output name=release::true
-              echo ::set-output name=release::true
-          elif [[ "${{ github.event.ref }}" =~ ^refs/tags/v.*$ ]]; then
-              echo ::set-output name=release::true
-              echo ::set-output name=prerelease::true
-          fi
-
-      - name: Set version
-        if: ${{github.head_ref == ''}}
-        id: version
-        run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          [ "$VERSION" == "main" ] && VERSION=latest
-          echo VERSION=$VERSION
-          echo "::set-output name=version::$VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            .cargo-container-home
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - uses: actions/cache@v2
-        with:
-          path: console-frontend/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Check
-        run: make host-check
-
-      - name: Fix permissions
-        run: make fix-permissions
-
-          # test:
-          #   name: test
-          #   runs-on: ubuntu-20.04
-          #   needs: [check]
-          #   steps:
-
-          #     - uses: actions/checkout@v2
-          #       with:
-          #         submodules: recursive
-
-          #     - uses: actions/cache@v2
-          #       with:
-          #         path: |
-          #           ~/.cargo/registry
-          #           ~/.cargo/git
-          #           .cargo-container-home
-          #           target
-          #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-          #     - name: Run tests
-          #       run: |
-          #         make test
-
-          # build:
-          #   name: build
-          #   runs-on: ubuntu-20.04
-          #   needs: [check]
-          #   steps:
-
-          #     - uses: actions/checkout@v2
-          #       with:
-          #         submodules: recursive
-
-          #     - uses: actions/cache@v2
-          #       with:
-          #         path: |
-          #           ~/.cargo/registry
-          #           ~/.cargo/git
-          #           .cargo-container-home
-          #           target
-          #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-          #     - uses: actions/cache@v2
-          #       with:
-          #         path: console-frontend/node_modules
-          #         key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
-          #         restore-keys: |
-          #           ${{ runner.os }}-node-modules-
-
-          #     - name: Run build
-          #       run: |
-          #         make build
-
-          #     - name: Save images
-          #       run: |
-          #         make save-images
-
-          #     - name: Fix permissions
-          #       run: make fix-permissions
-
-          #     - name: Upload images
-          #       uses: actions/upload-artifact@v2
-          #       with:
-          #         name: container-images
-          #         path: build/images/all.tar
-          #         if-no-files-found: error
-
-          #     - name: Upload server binary
-          #       uses: actions/upload-artifact@v2
-          #       with:
-          #         name: drogue-server
-          #         path: target/release/drogue-cloud-server
-          #         if-no-files-found: error
-
   binary:
-    # needs: [check]
     strategy:
       matrix:
-        os: [windows-2019]
+        os: [ubuntu-18.04, macos-10.15] #, windows-2019]
         include:
-         - os: windows-2019
-           suffix: "windows-amd64"
+          - os: ubuntu-18.04
+            suffix: "linux-amd64"
+          - os: macos-10.15
+            suffix: "macos-amd64"
+         # - os: windows-2019
+         #   suffix: "windows-amd64"
     runs-on: ${{ matrix.os }}
     env:
       VERSION: ${{needs.check.outputs.version}}
-
     steps:
       - uses: actions/checkout@v2
         with:
