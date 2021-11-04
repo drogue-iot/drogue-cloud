@@ -48,11 +48,37 @@ where
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct WorkQueueReaderOptions {
+    pub delay: Duration,
+}
+
 impl<K> WorkQueueReader<K>
 where
     K: Key,
 {
     pub fn new<H>(pool: Pool, instance: String, r#type: String, handler: H) -> Self
+    where
+        H: WorkQueueHandler<K> + 'static,
+    {
+        Self::with_options(
+            pool,
+            instance,
+            r#type,
+            handler,
+            WorkQueueReaderOptions {
+                delay: Duration::from_secs(5),
+            },
+        )
+    }
+
+    pub fn with_options<H>(
+        pool: Pool,
+        instance: String,
+        r#type: String,
+        handler: H,
+        opts: WorkQueueReaderOptions,
+    ) -> Self
     where
         H: WorkQueueHandler<K> + 'static,
     {
@@ -63,6 +89,7 @@ where
             r#type: r#type.clone(),
             pool: pool.clone(),
             running: running.clone(),
+            delay: opts.delay,
         };
         let writer = WorkQueueWriter {
             instance,
@@ -203,6 +230,7 @@ struct InnerReader<K> {
     instance: String,
     r#type: String,
     pool: Pool,
+    delay: Duration,
 }
 
 impl<K> InnerReader<K>
@@ -222,7 +250,7 @@ where
                 _ => {}
             }
 
-            tokio::time::sleep(Duration::from_secs(5)).await;
+            tokio::time::sleep(self.delay).await;
         }
 
         log::info!("Exiting 'next' loop ...");
@@ -243,7 +271,7 @@ FROM
 WHERE
     INSTANCE = $1 AND
     TYPE = $2 AND
-    TS > now()
+    TS < now()
 ORDER BY
     TS ASC
 LIMIT 1
