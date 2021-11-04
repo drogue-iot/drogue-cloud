@@ -209,7 +209,7 @@ jobs:
           # Build and install postgresql dep
           curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
           tar xvf postgresql-11.13.tar.gz
-          cd postgresql-11.13.tar.gz
+          cd postgresql-11.13
           ./configure --prefix=$PWD/../libpq
           make
           make install
