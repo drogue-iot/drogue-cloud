@@ -2383,7 +2383,10 @@ dependencies = [
  "log",
  "ntex",
  "ntex-rt",
+ "pq-sys",
+ "rdkafka-sys",
  "reqwest",
+ "sasl2-sys",
  "stderrlog",
  "tokio 1.11.0",
  "url",
@@ -3576,6 +3579,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "krb5-src"
+version = "0.2.4+1.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a01c2b7c3b70ca41646dafc8fc3b6053a8a0da9301251e8da8548fb067462d81"
+dependencies = [
+ "duct",
+ "openssl-sys",
+]
+
+[[package]]
 name = "kube"
 version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4372,6 +4385,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28988d872ab76095a6e6ac88d99b54fd267702734fd7ffe610ca27f533ddb95a"
 
 [[package]]
+name = "openssl-src"
+version = "111.16.0+1.1.1l"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ab2173f69416cf3ec12debb5823d244127d23a9b127d5a5189aa97c5fa2859f"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4380,6 +4402,7 @@ dependencies = [
  "autocfg",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -4700,9 +4723,9 @@ checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 [[package]]
 name = "pq-sys"
 version = "0.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ac25eee5a0582f45a67e837e350d784e7003bd29a5f460796772061ca49ffda"
+source = "git+https://github.com/sgrif/pq-sys?branch=master#3e367d53019a2740054d5dc6946e07931f1fb70b"
 dependencies = [
+ "pkg-config",
  "vcpkg",
 ]
 
@@ -5219,7 +5242,9 @@ checksum = "067d1f7cad609ce2046016915d48caf20d6fc35469b0dae17579eea927c3b1f8"
 dependencies = [
  "cc",
  "duct",
+ "krb5-src",
  "libc",
+ "openssl-sys",
  "pkg-config",
 ]
 

@@ -33,3 +33,6 @@ diesel = { version = "1.4.0", features = ["postgres"] }
 diesel_migrations = { version = "1.4.0", features = ["postgres"] }
 keycloak = { version = "14" }
 reqwest = { version = "0.11.6" }
+rdkafka-sys = { version = "3.0", features = [ "ssl-vendored" ] }
+sasl2-sys = { version = "0.1.14", features = [ "vendored", "gssapi-vendored", "openssl-sys" ] }
+pq-sys = { version = "0.4.6", features = ["pkg-config"] }
