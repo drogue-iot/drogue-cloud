@@ -154,7 +154,7 @@ jobs:
           #         if-no-files-found: error
 
   binary:
-    # needs: [check]
+    needs: [check]
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-10.15] #, windows-2019]
