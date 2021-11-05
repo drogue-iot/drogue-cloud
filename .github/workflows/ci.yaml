@@ -32,10 +32,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install perl
-
       # Gather information for build
 
       - name: Evaluate state
@@ -157,16 +153,18 @@ jobs:
           path: target/release/drogue-cloud-server
           if-no-files-found: error
 
-  binary:
+  static-binary:
     needs: [check]
     strategy:
       matrix:
         os: [ubuntu-18.04, macos-10.15] #, windows-2019]
         include:
           - os: ubuntu-18.04
-            suffix: "linux-amd64.zip"
+            suffix: "linux-amd64"
+            pkg: "tar.gz"
           - os: macos-10.15
-            suffix: "macos-amd64.zip"
+            suffix: "macos-amd64"
+            pkg: "tar.gz"
               #- os: windows-2019
               #  suffix: "windows-amd64"
     runs-on: ${{ matrix.os }}
