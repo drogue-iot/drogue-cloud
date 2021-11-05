@@ -32,6 +32,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install perl
+
       # Gather information for build
 
       - name: Evaluate state
@@ -152,6 +156,73 @@ jobs:
           name: server-binary
           path: target/release/drogue-cloud-server
           if-no-files-found: error
+
+  binary:
+    needs: [check]
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-10.15] #, windows-2019]
+        include:
+          - os: ubuntu-18.04
+            suffix: "linux-amd64.zip"
+          - os: macos-10.15
+            suffix: "macos-amd64.zip"
+              #- os: windows-2019
+              #  suffix: "windows-amd64"
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{needs.check.outputs.version}}
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Build binary for Linux
+        if: ${{ matrix.os == 'ubuntu-18.04' }}
+        run: |
+          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
+          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
+          cargo build --release -p drogue-cloud-server
+      - name: Build binary for Mac OS X
+        if: ${{ matrix.os == 'macos-10.15' }}
+        shell: bash
+        run: |
+          brew update
+          brew install librdkafka openssl
+      
+          # Build and install postgresql dep
+          curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
+          tar xvf postgresql-11.13.tar.gz
+          cd postgresql-11.13
+          ./configure --prefix=$PWD/../libpq
+          make
+          make install
+          cd ..
+          PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl DEP_OPENSSL_DIR=/usr/local/opt/openssl RUSTFLAGS="-C target-feature=+crt-static" cargo build --release -p drogue-cloud-server --features static
+      
+          #- name: Build binary for Windows
+          #  if: ${{ matrix.os == 'windows-2019' }}
+          #  run: |
+          #    git clone https://github.com/microsoft/vcpkg
+          #    .\vcpkg\bootstrap-vcpkg.bat
+          #    .\vcpkg\vcpkg install openssl
+          #    .\vcpkg\vcpkg install libpq
+          #    .\vcpkg\vcpkg install librdkafka
+          #    .\vcpkg\vcpkg integrate install
+          #    #$env:VCPKG_ROOT = "vcpkg"
+
+          #    $env:PQ_LIB_STATIC = "1"
+          #    $env:SASL2_STATIC = "1"
+          #    $env:OPENSSL_STATIC = "1"
+          #    $env:RUSTFLAGS = "-C target-feature=+crt-static"
+          #    cargo build --release -p drogue-cloud-server --features static
+      - name: Upload server binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: drogue-server-${{matrix.suffix}}
+          path: target/release/drogue-cloud-server
+          if-no-files-found: error
+
 
   deploy:
     name: deploy on kind

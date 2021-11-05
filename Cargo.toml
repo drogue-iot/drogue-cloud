@@ -51,3 +51,4 @@ patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "275c7
 
 # required du to missing "beta" versions for more recent "beta" actix versions
 cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", branch = "actix-web-4.0.0-beta.8" } # FIXME: pre-release branch
+pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" }

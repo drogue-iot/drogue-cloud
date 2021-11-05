@@ -219,6 +219,7 @@ fn configure_keycloak(server: &Keycloak) {
                 } = e
                 {
                     log::trace!("Client already exists");
+                    println!("done!");
                 } else {
                     log::warn!("Error creating keycloak client: {:?}", e);
                     println!("failed!");
