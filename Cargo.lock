@@ -4720,7 +4720,7 @@ checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 [[package]]
 name = "pq-sys"
 version = "0.4.6"
-source = "git+https://github.com/sgrif/pq-sys?branch=master#3e367d53019a2740054d5dc6946e07931f1fb70b"
+source = "git+https://github.com/sgrif/pq-sys?rev=3e367d53019a2740054d5dc6946e07931f1fb70b#3e367d53019a2740054d5dc6946e07931f1fb70b"
 dependencies = [
  "pkg-config",
  "vcpkg",
@@ -5240,6 +5240,7 @@ dependencies = [
  "cc",
  "duct",
  "libc",
+ "openssl-sys",
  "pkg-config",
 ]
 
