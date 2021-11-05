@@ -1,4 +1,5 @@
-use clap::{crate_version, App, Arg, SubCommand};
+use clap::{crate_version, App, Arg, ArgMatches, SubCommand};
+use core::str::FromStr;
 use diesel_migrations::embed_migrations;
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
@@ -62,34 +63,65 @@ pub struct Database {
 
 #[derive(Clone)]
 pub struct Keycloak {
-    endpoint: Endpoint,
+    url: String,
+    realm: String,
     user: String,
     password: String,
 }
 
 impl ServerConfig {
-    fn new(iface: &str) -> ServerConfig {
+    fn new(matches: &ArgMatches<'_>) -> ServerConfig {
+        let iface = matches
+            .value_of("bind-address")
+            .unwrap_or("localhost")
+            .to_string();
         ServerConfig {
             kafka: KafkaClientConfig {
-                bootstrap_servers: "localhost:9092".to_string(),
+                bootstrap_servers: matches
+                    .value_of("kafka-bootstrap-servers")
+                    .unwrap_or("localhost:9092")
+                    .to_string(),
                 properties: HashMap::new(),
             },
             database: Database {
                 endpoint: Endpoint {
-                    host: "localhost".to_string(),
-                    port: 5432,
+                    host: matches
+                        .value_of("database-host")
+                        .unwrap_or("localhost")
+                        .to_string(),
+                    port: u16::from_str(matches.value_of("database-port").unwrap_or("5432"))
+                        .unwrap(),
                 },
-                db: "drogue".to_string(),
-                user: "admin".to_string(),
-                password: "admin123456".to_string(),
+                db: matches
+                    .value_of("database-name")
+                    .unwrap_or("drogue")
+                    .to_string(),
+                user: matches
+                    .value_of("database-user")
+                    .unwrap_or("admin")
+                    .to_string(),
+                password: matches
+                    .value_of("database-password")
+                    .unwrap_or("admin123456")
+                    .to_string(),
             },
             keycloak: Keycloak {
-                endpoint: Endpoint {
-                    host: "localhost".to_string(),
-                    port: 8080,
-                },
-                user: "admin".to_string(),
-                password: "admin123456".to_string(),
+                url: matches
+                    .value_of("keycloak-url")
+                    .unwrap_or("http://localhost:8080")
+                    .to_string(),
+                realm: matches
+                    .value_of("keycloak-realm")
+                    .unwrap_or("master")
+                    .to_string(),
+                user: matches
+                    .value_of("keycloak-user")
+                    .unwrap_or("admin")
+                    .to_string(),
+                password: matches
+                    .value_of("keycloak-password")
+                    .unwrap_or("admin123456")
+                    .to_string(),
             },
             console: Endpoint {
                 host: iface.to_string(),
@@ -97,7 +129,11 @@ impl ServerConfig {
             },
             mqtt: Endpoint {
                 host: iface.to_string(),
-                port: 1883,
+                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
+                    8883
+                } else {
+                    1883
+                },
             },
             http: Endpoint {
                 host: iface.to_string(),
@@ -153,7 +189,7 @@ fn configure_keycloak(server: &Keycloak) {
     print!("Configuring keycloak... ");
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        let url = format!("http://{}:{}", server.endpoint.host, server.endpoint.port);
+        let url = &server.url;
         let user = server.user.clone();
         let password = server.password.clone();
         let client = reqwest::Client::new();
@@ -171,7 +207,7 @@ fn configure_keycloak(server: &Keycloak) {
             .replace("client-secret".to_string());
         c.public_client.replace(true);
 
-        match admin.realm_clients_post("master", c).await {
+        match admin.realm_clients_post(&server.realm, c).await {
             Ok(_) => {
                 println!("done!");
             }
@@ -278,6 +314,76 @@ fn main() {
                         .value_name("FILE")
                         .help("public certificate to use for service endpoints")
                         .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("database-host")
+                        .long("--database-host")
+                        .value_name("HOST")
+                        .help("hostname of PostgreSQL database")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("database-port")
+                        .long("--database-port")
+                        .value_name("PORT")
+                        .help("port of PostgreSQL database")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("database-name")
+                        .long("--database-name")
+                        .value_name("NAME")
+                        .help("name of database to use")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("database-user")
+                        .long("--database-user")
+                        .value_name("USER")
+                        .help("username to use with database")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("database-password")
+                        .long("--database-password")
+                        .value_name("PASSWORD")
+                        .help("password to use with database")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("keycloak-url")
+                        .long("--keycloak-url")
+                        .value_name("URL")
+                        .help("url for Keycloak")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("keycloak-realm")
+                        .long("--keycloak-realm")
+                        .value_name("REALM")
+                        .help("Keycloak realm to use")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("keycloak-user")
+                        .long("--keycloak-user")
+                        .value_name("USER")
+                        .help("Keycloak realm admin user")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("keycloak-password")
+                        .long("--keycloak-password")
+                        .value_name("PASSWORD")
+                        .help("Keycloak realm admin password")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("kafka-bootstrap-servers")
+                        .long("--kafka-bootstrap-servers")
+                        .value_name("HOSTS")
+                        .help("Kafka bootstrap servers")
+                        .takes_value(true),
                 ),
         );
 
@@ -290,10 +396,7 @@ fn main() {
         .unwrap();
 
     if let Some(matches) = matches.subcommand_matches("run") {
-        let server: ServerConfig = matches
-            .value_of("bind-address")
-            .map(|a| ServerConfig::new(a))
-            .unwrap_or_else(|| ServerConfig::new("localhost"));
+        let server: ServerConfig = ServerConfig::new(matches);
         let eps = endpoints(&server);
 
         run_migrations(&server.database);
@@ -666,8 +769,6 @@ fn main() {
     }
 }
 
-const KAFKA_BOOTSTRAP: &str = "localhost:9092";
-
 fn endpoints(config: &ServerConfig) -> Endpoints {
     Endpoints {
         api: None,
@@ -695,13 +796,10 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
                 config.websocket_integration.host, config.websocket_integration.port
             ),
         }),
-        sso: Some(format!(
-            "http://{}:{}",
-            config.keycloak.endpoint.host, config.keycloak.endpoint.port
-        )),
+        sso: Some(config.keycloak.url.clone()),
         issuer_url: Some(format!(
-            "http://{}:{}/auth/realms/master",
-            config.keycloak.endpoint.host, config.keycloak.endpoint.port
+            "{}/auth/realms/{}",
+            config.keycloak.url, config.keycloak.realm
         )),
         redirect_url: Some(format!(
             "http://{}:{}",
@@ -715,7 +813,7 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
             config.command.host, config.command.port
         )),
         local_certs: false,
-        kafka_bootstrap_servers: Some(KAFKA_BOOTSTRAP.into()),
+        kafka_bootstrap_servers: Some(config.kafka.bootstrap_servers.clone()),
     }
 }
 
