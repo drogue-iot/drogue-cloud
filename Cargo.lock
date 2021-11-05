@@ -2394,6 +2394,7 @@ dependencies = [
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-user-auth-service",
+ "drogue-cloud-websocket-integration",
  "keycloak 14.0.0",
  "log",
  "ntex",

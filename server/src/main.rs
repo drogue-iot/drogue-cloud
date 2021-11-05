@@ -303,6 +303,11 @@ fn main() {
                         .help("enable mqtt integration"),
                 )
                 .arg(
+                    Arg::with_name("enable-websocket-integration")
+                        .long("--enable-websocket-integration")
+                        .help("enable websocket integration"),
+                )
+                .arg(
                     Arg::with_name("server-key")
                         .long("--server-key")
                         .value_name("FILE")
@@ -692,6 +697,8 @@ fn main() {
             let cert_bundle_file: Option<String> =
                 matches.value_of("server-cert").map(|s| s.to_string());
             let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+            let registry = registry.clone();
+            let oauth = oauth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_mqtt_integration::Config {
                     health: None,
@@ -716,6 +723,34 @@ fn main() {
                 ntex::rt::System::new("mqtt-integration")
                     .block_on(drogue_cloud_mqtt_integration::run(config))
                     .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-websocket-integration") || matches.is_present("enable-all") {
+            log::info!("Enabling Websocket integration");
+            let bind_addr = server.websocket_integration.clone().into();
+            let kafka = server.kafka.clone();
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_websocket_integration::Config {
+                    health: None,
+                    enable_api_keys: false,
+                    oauth,
+                    bind_addr,
+                    registry,
+                    kafka,
+                    user_auth: None,
+                };
+
+                actix_rt::System::with_tokio_rt(|| {
+                    tokio::runtime::Builder::new_current_thread()
+                        .worker_threads(1)
+                        .thread_name("websocket-integration")
+                        .enable_all()
+                        .build()
+                        .unwrap()
+                })
+                .block_on(drogue_cloud_websocket_integration::run(config))
+                .unwrap();
             }));
         }
 
