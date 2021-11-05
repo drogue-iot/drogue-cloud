@@ -32,6 +32,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install perl
+
       # Gather information for build
 
       - name: Evaluate state
