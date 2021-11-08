@@ -227,7 +227,7 @@ impl Spy {
             // setup on_message callback
             let link = self.link.clone();
             let onmessage_callback = Closure::wrap(Box::new(move |event: &MessageEvent| {
-                // web_sys::console::debug_2(&JsValue::from("event: "), msg);
+                web_sys::console::debug_2(&wasm_bindgen::JsValue::from("event: "), event);
 
                 let msg = match serde_json::from_str(&event.data().as_string().unwrap()) {
                     Ok(event) => Msg::Event(event),
@@ -331,10 +331,12 @@ fn render_data(event: &Event) -> Html {
     match event.data() {
         None => html! {},
         Some(Data::String(text)) => html! { <pre> {text} </pre> },
-        Some(Data::Binary(blob)) => html! { <>
-        <pre> { pretty_hex::pretty_hex(&blob) } </pre>
-        <pre> { base64_block(&blob) } </pre>
-        </> },
+        Some(Data::Binary(blob)) => html! {
+            <>
+                <pre> { pretty_hex::pretty_hex(&blob) } </pre>
+                <pre> { base64_block(&blob) } </pre>
+            </>
+        },
         Some(Data::Json(value)) => {
             let value = serde_json::to_string_pretty(&value).unwrap();
             return html! { <pre> {value} </pre> };

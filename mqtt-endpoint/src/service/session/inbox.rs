@@ -1,4 +1,6 @@
-use drogue_cloud_endpoint_common::command::{Command, CommandFilter, Commands};
+use drogue_cloud_endpoint_common::command::{
+    Command, CommandFilter, Commands, Subscription, SubscriptionHandle,
+};
 use drogue_cloud_mqtt_common::mqtt;
 use ntex::util::{ByteString, Bytes};
 
@@ -8,14 +10,14 @@ pub struct InboxSubscription {
 }
 
 struct InboxSubscriptionHandle {
-    filter: CommandFilter,
+    handle: SubscriptionHandle,
     commands: Commands,
 }
 
 impl InboxSubscriptionHandle {
     async fn close(self) {
-        log::debug!("Unsubscribe from commands: {:?}", self.filter);
-        self.commands.unsubscribe(&self.filter).await;
+        log::debug!("Unsubscribe from commands: {:?}", self.handle);
+        self.commands.unsubscribe(self.handle).await;
     }
 }
 
@@ -28,13 +30,16 @@ impl InboxSubscription {
     ) -> Self {
         // TODO: try to reduce cloning
 
-        let mut rx = commands.subscribe(filter.clone()).await;
+        let Subscription {
+            mut receiver,
+            handle,
+        } = commands.subscribe(filter.clone()).await;
 
         let sub_filter = filter.clone();
 
         ntex::rt::spawn(async move {
             log::debug!("Starting inbox command loop: {:?}", sub_filter);
-            while let Some(cmd) = rx.recv().await {
+            while let Some(cmd) = receiver.recv().await {
                 match Self::send_command(&sink, force_device, cmd).await {
                     Ok(_) => {
                         log::debug!("Command sent to device subscription {:?}", sub_filter);
@@ -48,8 +53,8 @@ impl InboxSubscription {
         });
 
         Self {
-            filter: filter.clone(),
-            handle: Some(InboxSubscriptionHandle { filter, commands }),
+            filter,
+            handle: Some(InboxSubscriptionHandle { handle, commands }),
         }
     }
 
