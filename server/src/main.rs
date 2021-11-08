@@ -587,6 +587,7 @@ fn main() {
             let t = token_config.clone();
             let bind_addr = s.console.clone().into();
             let registry = registry.clone();
+            let user_auth = user_auth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_console_backend::Config {
                     oauth: o,
@@ -599,14 +600,7 @@ fn main() {
                     console_token_config: Some(t.clone()),
                     disable_account_url: false,
                     scopes: "openid profile email".into(),
-                    user_auth: Some(UserAuthClientConfig {
-                        token_config: Some(t),
-                        url: Url::parse(&format!(
-                            "http://{}:{}",
-                            s.user_auth.host, s.user_auth.port
-                        ))
-                        .unwrap(),
-                    }),
+                    user_auth,
                 };
                 actix_rt::System::with_tokio_rt(|| {
                     tokio::runtime::Builder::new_current_thread()
