@@ -2,10 +2,12 @@ use crate::command::{Command, CommandAddress, CommandDispatcher};
 use async_std::sync::Mutex;
 use async_trait::async_trait;
 use drogue_cloud_service_common::Id;
-use std::collections::hash_map::Entry;
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    fmt::Debug,
+    hash::Hash,
+    sync::Arc,
+};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 /// A filter for commands
