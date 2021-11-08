@@ -179,8 +179,18 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-18.04' }}
         run: |
           sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
-          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
-          cargo build --release -p drogue-cloud-server
+          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev musl-gcc
+
+          # Build and install postgresql dep
+          curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
+          tar xvf postgresql-11.13.tar.gz
+          cd postgresql-11.13
+          ./configure --prefix=$PWD/../libpq
+          make
+          make install
+          cd ..
+
+          PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 RUSTFLAGS="-C target-feature=+crt-static" cargo build --release -p drogue-cloud-server --features static --target x86_64-unknown-linux-musl
       - name: Build binary for Mac OS X
         if: ${{ matrix.os == 'macos-10.15' }}
         shell: bash
