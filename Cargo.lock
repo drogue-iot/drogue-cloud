@@ -2093,6 +2093,7 @@ dependencies = [
  "mime",
  "openid",
  "percent-encoding",
+ "rand 0.8.4",
  "rdkafka",
  "reqwest",
  "serde 1.0.130",

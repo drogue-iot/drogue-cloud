@@ -2,6 +2,9 @@ use crate::command::{Command, CommandAddress, CommandDispatcher};
 use async_std::sync::Mutex;
 use async_trait::async_trait;
 use drogue_cloud_service_common::Id;
+use std::collections::hash_map::Entry;
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
@@ -59,14 +62,26 @@ impl CommandFilter {
 /// Command dispatching implementation.
 #[derive(Clone, Debug)]
 pub struct Commands {
-    devices: Arc<Mutex<HashMap<CommandAddress, Sender<Command>>>>,
-    wildcards: Arc<Mutex<HashMap<Id, Sender<Command>>>>,
+    devices: Arc<Mutex<HashMap<CommandAddress, HashMap<usize, Sender<Command>>>>>,
+    wildcards: Arc<Mutex<HashMap<Id, HashMap<usize, Sender<Command>>>>>,
 }
 
 impl Default for Commands {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[derive(Debug)]
+pub struct SubscriptionHandle {
+    filter: CommandFilter,
+    id: usize,
+}
+
+#[derive(Debug)]
+pub struct Subscription {
+    pub receiver: Receiver<Command>,
+    pub handle: SubscriptionHandle,
 }
 
 impl Commands {
@@ -77,46 +92,110 @@ impl Commands {
         }
     }
 
-    pub async fn subscribe(&self, filter: CommandFilter) -> Receiver<Command> {
+    pub async fn subscribe(&self, filter: CommandFilter) -> Subscription {
         // FIXME: must need to handle multiple subscriptions to the same filter
         log::debug!("Subscribe {:?} to receive commands", filter);
 
         let (tx, rx) = channel(32);
 
-        match filter.device {
+        let id = match filter.device.clone() {
             Some(device) => {
                 let mut devices = self.devices.lock().await;
-                devices.insert(
-                    CommandAddress::new(filter.application, filter.gateway, device),
+                Self::add_entry(
+                    &mut devices,
+                    CommandAddress::new(filter.application.clone(), filter.gateway.clone(), device),
                     tx,
+                )
+            }
+            None => {
+                let mut gateways = self.wildcards.lock().await;
+                Self::add_entry(
+                    &mut gateways,
+                    Id::new(filter.application.clone(), filter.gateway.clone()),
+                    tx,
+                )
+            }
+        };
+
+        Subscription {
+            receiver: rx,
+            handle: SubscriptionHandle { id, filter },
+        }
+    }
+
+    pub async fn unsubscribe<SH>(&self, subscription: SH)
+    where
+        SH: Into<SubscriptionHandle>,
+    {
+        let handle = subscription.into();
+
+        log::debug!("Unsubscribe {:?} from receiving commands", handle);
+
+        // TODO: try to remove cloning all values
+
+        match &handle.filter.device {
+            Some(device) => {
+                let mut devices = self.devices.lock().await;
+                Self::remove_entry(
+                    &mut devices,
+                    CommandAddress::new(
+                        handle.filter.application.clone(),
+                        handle.filter.gateway.clone(),
+                        device,
+                    ),
+                    handle.id,
                 );
             }
             None => {
                 let mut gateways = self.wildcards.lock().await;
-                gateways.insert(Id::new(filter.application, filter.gateway), tx);
+                Self::remove_entry(
+                    &mut gateways,
+                    Id::new(
+                        handle.filter.application.clone(),
+                        handle.filter.gateway.clone(),
+                    ),
+                    handle.id,
+                );
             }
         }
-
-        rx
     }
 
-    pub async fn unsubscribe(&self, filter: &CommandFilter) {
-        log::debug!("Unsubscribe {:?} from receiving commands", filter);
+    fn add_entry<K, V>(map: &mut HashMap<K, HashMap<usize, V>>, key: K, value: V) -> usize
+    where
+        K: Eq + Hash + Debug,
+    {
+        let map = match map.entry(key) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(HashMap::new()),
+        };
 
-        // TODO: try to remove cloning all values
-
-        match &filter.device {
-            Some(device) => {
-                let mut devices = self.devices.lock().await;
-                devices.remove(&CommandAddress::new(
-                    filter.application.clone(),
-                    filter.gateway.clone(),
-                    device,
-                ));
+        loop {
+            let id: usize = rand::random();
+            match map.entry(id) {
+                Entry::Vacant(entry) => {
+                    // entry was free, we can insert
+                    entry.insert(value);
+                    break id;
+                }
+                Entry::Occupied(_) => {
+                    // entry is occupied, we need to re-try
+                }
             }
-            None => {
-                let mut gateways = self.wildcards.lock().await;
-                gateways.remove(&Id::new(filter.application.clone(), filter.gateway.clone()));
+        }
+    }
+
+    fn remove_entry<K, V>(map: &mut HashMap<K, HashMap<usize, V>>, key: K, id: usize)
+    where
+        K: Eq + Hash + Debug,
+    {
+        match map.entry(key) {
+            Entry::Vacant(_) => {}
+            Entry::Occupied(mut entry) => {
+                let map = entry.get_mut();
+                map.remove(&id);
+                if map.is_empty() {
+                    entry.remove();
+                }
             }
         }
     }
@@ -131,39 +210,43 @@ impl CommandDispatcher for Commands {
 
         let mut num: usize = 0;
 
-        if let Some(sender) = self.devices.lock().await.get(&msg.address) {
-            num += 1;
+        if let Some(senders) = self.devices.lock().await.get(&msg.address) {
             log::debug!(
                 "Sending command {:?} sent to device {:?}",
                 msg.command,
                 msg.address
             );
-            match sender.send(msg.clone()).await {
-                Ok(_) => {
-                    log::debug!("Command sent");
-                }
-                Err(e) => {
-                    log::error!("Failed to send a command {:?}", e);
+            for (_, sender) in senders {
+                num += 1;
+                match sender.send(msg.clone()).await {
+                    Ok(_) => {
+                        log::debug!("Command sent");
+                    }
+                    Err(e) => {
+                        log::error!("Failed to send a command {:?}", e);
+                    }
                 }
             }
         }
 
-        if let Some(sender) = self.wildcards.lock().await.get(&Id::new(
+        if let Some(senders) = self.wildcards.lock().await.get(&Id::new(
             msg.address.app_id.clone(),
             msg.address.gateway_id.clone(),
         )) {
-            num += 1;
             log::debug!(
                 "Sending command {:?} sent to wildcard {:?}",
                 msg.command,
                 msg.address
             );
-            match sender.send(msg).await {
-                Ok(_) => {
-                    log::debug!("Command sent");
-                }
-                Err(e) => {
-                    log::error!("Failed to send a command {:?}", e);
+            for (_, sender) in senders {
+                num += 1;
+                match sender.send(msg.clone()).await {
+                    Ok(_) => {
+                        log::debug!("Command sent");
+                    }
+                    Err(e) => {
+                        log::error!("Failed to send a command {:?}", e);
+                    }
                 }
             }
         }
@@ -191,7 +274,7 @@ mod test {
 
         let commands = Commands::new();
 
-        let mut receiver = commands.subscribe(filter).await;
+        let Subscription { mut receiver, .. } = commands.subscribe(filter).await;
 
         let handle = tokio::spawn(async move {
             let cmd = timeout(Duration::from_secs(1), receiver.recv()).await;
@@ -219,7 +302,12 @@ mod test {
 
         let commands = Commands::new();
 
-        let mut receiver = commands.subscribe(filter.clone()).await;
+        let Subscription {
+            mut receiver,
+            handle: sh,
+        } = commands.subscribe(filter.clone()).await;
+
+        // handle
 
         let handle = tokio::spawn(async move {
             for i in 0..5 {
@@ -252,13 +340,15 @@ mod test {
 
         // unsubscribe
 
-        commands.unsubscribe(&filter).await;
+        commands.unsubscribe(sh).await;
 
         // the following commands must not be received
 
         commands
             .send(Command::new(address.clone(), "test5".to_string(), None))
             .await;
+
+        // await
 
         handle.await.unwrap();
     }
@@ -270,8 +360,17 @@ mod test {
     }
 
     fn mock_receiver(
-        mut receiver: Receiver<Command>,
-    ) -> (Arc<Mutex<MockReceiverResult>>, JoinHandle<()>) {
+        receiver: Subscription,
+    ) -> (
+        Arc<Mutex<MockReceiverResult>>,
+        SubscriptionHandle,
+        JoinHandle<()>,
+    ) {
+        let Subscription {
+            mut receiver,
+            handle: sh,
+        } = receiver;
+
         let r = Arc::new(Mutex::new(MockReceiverResult::default()));
 
         let inner_r = r.clone();
@@ -289,7 +388,7 @@ mod test {
             }
         });
 
-        (r, handle)
+        (r, sh, handle)
     }
 
     fn cmd<G, D, C>(gateway: G, device: D, command: C) -> Command
@@ -320,19 +419,19 @@ mod test {
             let mut handles = vec![];
 
             // a simple device
-            let (d1, handle) = mock_receiver(commands.subscribe(d1).await);
+            let (d1, _, handle) = mock_receiver(commands.subscribe(d1).await);
             handles.push(handle);
 
             // a simple gateway device
-            let (gw1_all, handle) = mock_receiver(commands.subscribe(gw1_all).await);
+            let (gw1_all, _, handle) = mock_receiver(commands.subscribe(gw1_all).await);
             handles.push(handle);
 
             // a duplicate
-            let (gw1_all_2, handle) = mock_receiver(commands.subscribe(gw1_all_2).await);
+            let (gw1_all_2, _, handle) = mock_receiver(commands.subscribe(gw1_all_2).await);
             handles.push(handle);
 
             // a gateway device for a specific device
-            let (gw1_d1, handle) = mock_receiver(commands.subscribe(gw1_d1).await);
+            let (gw1_d1, _, handle) = mock_receiver(commands.subscribe(gw1_d1).await);
             handles.push(handle);
 
             // send commands

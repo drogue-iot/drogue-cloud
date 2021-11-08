@@ -5,7 +5,7 @@
 use crate::{error::CoapEndpointError, HEADER_COMMAND};
 use actix_rt::time::timeout;
 use coap_lite::{CoapRequest, CoapResponse, ResponseType};
-use drogue_cloud_endpoint_common::command::{CommandFilter, Commands};
+use drogue_cloud_endpoint_common::command::{CommandFilter, Commands, Subscription};
 use std::{net::SocketAddr, time::Duration};
 
 pub async fn wait_for_command(
@@ -17,11 +17,14 @@ pub async fn wait_for_command(
     match ttd {
         // If command timeout > 0, subscribe to command receiver.
         Some(ttd) if ttd > 0 => {
-            let mut receiver = commands.subscribe(filter.clone()).await;
+            let Subscription {
+                mut receiver,
+                handle,
+            } = commands.subscribe(filter).await;
             match timeout(Duration::from_secs(ttd), receiver.recv()).await {
                 // Command is received
                 Ok(Some(cmd)) => {
-                    commands.unsubscribe(&filter).await;
+                    commands.unsubscribe(handle).await;
                     log::debug!("Got command: {:?}", cmd);
                     // Construct response
                     Ok(req.response.map(|mut v| {
@@ -34,7 +37,7 @@ pub async fn wait_for_command(
                 }
                 // If time limit is reached
                 _ => {
-                    commands.unsubscribe(&filter).await;
+                    commands.unsubscribe(handle).await;
                     Ok(req.response.map(|mut v| {
                         v.set_status(ResponseType::Changed);
                         v.message.payload = vec![];
