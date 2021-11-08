@@ -179,7 +179,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-18.04' }}
         run: |
           sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
-          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev musl-gcc
+          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
 
           # Build and install postgresql dep
           curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
