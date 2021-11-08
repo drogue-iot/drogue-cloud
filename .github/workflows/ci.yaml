@@ -190,7 +190,7 @@ jobs:
           make install
           cd ..
 
-          PQ_LIB_STATIC=1 PQ_LIB_DIR=/home/lulf/src/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static
+          PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static
           
       - name: Build binary for Mac OS X
         if: ${{ matrix.os == 'macos-10.15' }}
