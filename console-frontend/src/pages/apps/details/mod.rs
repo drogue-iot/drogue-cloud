@@ -3,6 +3,8 @@ mod debug;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
+use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::JsonResponse;
 use crate::{
     backend::{Backend, Token},
     error::error,
@@ -37,8 +39,8 @@ pub struct Props {
 pub enum Msg {
     Load,
     Reset,
-    SetData(Application),
-    Error(String),
+    SetData(Rc<Application>),
+    Error(ErrorNotification),
     SaveEditor,
 }
 
@@ -48,7 +50,7 @@ pub struct Details {
 
     fetch_task: Option<FetchTask>,
 
-    content: Option<Application>,
+    content: Option<Rc<Application>>,
     yaml: Option<TextModel>,
 }
 
@@ -92,7 +94,7 @@ impl Component for Details {
                 }
             }
             Msg::Error(msg) => {
-                error("Error", msg);
+                msg.toast();
             }
         }
         true
@@ -135,15 +137,13 @@ impl Details {
             ),
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Application, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(content) => Msg::SetData(content),
-                    Err(err) => Msg::Error(err.to_string()),
-                },
-            ),
+            self.link
+                .callback(move |response: JsonResponse<Application>| {
+                    match response.into_body().0 {
+                        Ok(content) => Msg::SetData(Rc::new(content.value)),
+                        Err(err) => Msg::Error(err.notify("Failed to load")),
+                    }
+                }),
         )
     }
 
@@ -159,7 +159,7 @@ impl Details {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     status if status.is_success() => Msg::Load,
-                    status => Msg::Error(format!("Failed to perform update: {}", status)),
+                    _ => Msg::Error(response.notify("Failed to update")),
                 }),
         )
     }
@@ -172,7 +172,7 @@ impl Details {
 
     fn reset(&mut self) {
         if let Some(content) = &self.content {
-            self.yaml = to_yaml_model(content).ok();
+            self.yaml = to_yaml_model(content.as_ref()).ok();
         } else {
             self.yaml = None;
         }
