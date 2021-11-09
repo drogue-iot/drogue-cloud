@@ -67,15 +67,15 @@ impl PartialEq for User {
 impl TableRenderer for User {
     fn render(&self, column: ColumnIndex) -> Html {
         match column.index {
-            0 => self.clone().id.into(),
-            1 => self.clone().role.into(),
-            // 3 => html! { <Button
-            //              icon=Icon::ExclamationCircle
-            //              variant=Variant::Link
-            //              onclick=self.on_delete.clone()
-            //          />
-            // },
-            _ => html! {},
+            0 => {
+                if self.id.is_empty() {
+                    return html! {<i>{"anonymous"}</i>};
+                } else {
+                    self.id.clone().into()
+                }
+            }
+            1 => self.role.into(),
+            _ => return html! {},
         }
     }
 
@@ -206,6 +206,7 @@ impl Component for Admin {
                     <StackItem>
                     <Card title={html!{"Application Members"}}>
                         <Table<SimpleTableModel<User>>
+                                mode=TableMode::Compact
                                 entries=SimpleTableModel::from(m.members.clone())
                                     header={html_nested!{
                                         <TableHeader>
@@ -218,64 +219,64 @@ impl Component for Admin {
                     </Card>
                     </StackItem>
                     <StackItem>
-                <Card>
-                <Toolbar>
-                    <ToolbarItem>
-                        <TextInput
-                                disabled=self.fetch.is_some()
-                                onchange=self.link.callback(|id|Msg::NewMemberId(id))
-                                placeholder="User id"/>
-                        </ToolbarItem>
-                        <ToolbarItem>
-                            <Select<Role> placeholder="Select user role" variant=SelectVariant::Single(self.link.callback(Msg::NewMemberRole))>
-                                <SelectOption<Role> value=Role::Reader description="Read-only access" />
-                                <SelectOption<Role> value=Role::Manager description="Read-write access" />
-                                <SelectOption<Role> value=Role::Admin description="Administrative access" />
-                            </Select<Role>>
-                        </ToolbarItem>
-                        <ToolbarItem>
-                            <Button
-                                label="Add"
-                                icon=Icon::PlusCircleIcon
-                                onclick=self.link.callback(|_|Msg::AddMember)
-                            />
-                    </ToolbarItem>
-                </Toolbar>
-                 </Card>
-                </StackItem>
-                <StackItem>
-                <Card title={html!{"Transfer application ownership"}}>
-                   <Toolbar>
-                        <ToolbarGroup>
-                            <ToolbarItem>
-                                <TextInput
-                                    onchange=self.link.callback(|user|Msg::NewOwner(user))
-                                    placeholder="Username"/>
-                            </ToolbarItem>
-                            <ToolbarItem>
-                                <Button
-                                        disabled=self.transfer_fetch.is_some()
-                                        label="Transfer"
-                                        variant=Variant::Primary
-                                        onclick=self.link.callback(|_|Msg::TransferOwner)
-                                />
-                            </ToolbarItem>
-                            <ToolbarItem>
-                                <Button
-                                        disabled=!self.pending_transfer
-                                        label="Cancel"
-                                        variant=Variant::Secondary
-                                        onclick=self.link.callback(|_|Msg::CancelTransfer)
-                                />
-                            </ToolbarItem>
-                        </ToolbarGroup>
-                </Toolbar>
-                // todo
-                // if pending_transfer {
-                        // There is a currently a pending transfer to : <user>
-                //     }
-                </Card>
-                </StackItem>
+                        <Card>
+                            <Toolbar>
+                                <ToolbarItem>
+                                    <TextInput
+                                            disabled=self.fetch.is_some()
+                                            onchange=self.link.callback(|id|Msg::NewMemberId(id))
+                                            placeholder="User id"/>
+                                    </ToolbarItem>
+                                    <ToolbarItem>
+                                        <Select<Role> placeholder="Select user role" variant=SelectVariant::Single(self.link.callback(Msg::NewMemberRole))>
+                                            <SelectOption<Role> value=Role::Reader description="Read-only access" />
+                                            <SelectOption<Role> value=Role::Manager description="Read-write access" />
+                                            <SelectOption<Role> value=Role::Admin description="Administrative access" />
+                                        </Select<Role>>
+                                    </ToolbarItem>
+                                    <ToolbarItem>
+                                        <Button
+                                            label="Add"
+                                            icon=Icon::PlusCircleIcon
+                                            onclick=self.link.callback(|_|Msg::AddMember)
+                                        />
+                                </ToolbarItem>
+                            </Toolbar>
+                        </Card>
+                    </StackItem>
+                    <StackItem>
+                        <Card title={html!{"Transfer application ownership"}}>
+                           <Toolbar>
+                                <ToolbarGroup>
+                                    <ToolbarItem>
+                                        <TextInput
+                                            onchange=self.link.callback(|user|Msg::NewOwner(user))
+                                            placeholder="Username"/>
+                                    </ToolbarItem>
+                                    <ToolbarItem>
+                                        <Button
+                                                disabled=self.transfer_fetch.is_some()
+                                                label="Transfer"
+                                                variant=Variant::Primary
+                                                onclick=self.link.callback(|_|Msg::TransferOwner)
+                                        />
+                                    </ToolbarItem>
+                                    <ToolbarItem>
+                                        <Button
+                                                disabled=!self.pending_transfer
+                                                label="Cancel"
+                                                variant=Variant::Secondary
+                                                onclick=self.link.callback(|_|Msg::CancelTransfer)
+                                        />
+                                    </ToolbarItem>
+                                </ToolbarGroup>
+                        </Toolbar>
+                        // todo
+                        // if pending_transfer {
+                                // There is a currently a pending transfer to : <user>
+                        //     }
+                        </Card>
+                    </StackItem>
                 </Stack>
             };
         } else {
