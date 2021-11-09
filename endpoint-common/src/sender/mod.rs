@@ -180,6 +180,16 @@ where
         log::debug!("Payload size: {} bytes", body.as_ref().len());
 
         let event = match publish.options.content_type {
+            // if the content type "is JSON", we do an extra check if the content type is indeed JSON
+            Some(t) if is_json(&t) => {
+                // try decoding as JSON
+                match serde_json::from_slice::<Value>(body.as_ref()) {
+                    // ok -> pass along
+                    Ok(v) => event.data(mime::APPLICATION_JSON.to_string(), Data::Json(v)),
+                    // not ok -> reject
+                    Err(_) => return Ok(PublishOutcome::Rejected),
+                }
+            }
             // pass through content type
             Some(t) => event.data(t, Vec::from(body.as_ref())),
             // no content type, try JSON, then fall back to "bytes"
@@ -215,4 +225,10 @@ where
                 .body(err.to_string()),
         }
     }
+}
+
+pub(crate) fn is_json(content_type: &str) -> bool {
+    content_type.starts_with("application/json")
+        || content_type.starts_with("text/json")
+        || content_type.ends_with("+json")
 }
