@@ -1,4 +1,6 @@
 use super::{DevicesTabs, Pages};
+use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::JsonResponse;
 use crate::{
     backend::Backend,
     error::error,
@@ -23,8 +25,8 @@ pub struct Props {
 pub enum Msg {
     Load,
     Reset,
-    SetData(Device),
-    Error(String),
+    SetData(Rc<Device>),
+    Error(ErrorNotification),
     SaveEditor,
 }
 
@@ -34,7 +36,7 @@ pub struct Details {
 
     fetch_task: Option<FetchTask>,
 
-    content: Option<Device>,
+    content: Option<Rc<Device>>,
     yaml: Option<TextModel>,
 }
 
@@ -78,7 +80,7 @@ impl Component for Details {
                 }
             }
             Msg::Error(msg) => {
-                error("Error", msg);
+                msg.toast();
             }
         }
         true
@@ -122,15 +124,12 @@ impl Details {
             ),
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Device, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(content) => Msg::SetData(content),
-                    Err(err) => Msg::Error(err.to_string()),
-                },
-            ),
+            self.link.callback(move |response: JsonResponse<Device>| {
+                match response.into_body().0 {
+                    Ok(content) => Msg::SetData(Rc::new(content.value)),
+                    Err(err) => Msg::Error(err.notify("Failed to load")),
+                }
+            }),
         )
     }
 
@@ -147,7 +146,7 @@ impl Details {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     status if status.is_success() => Msg::Load,
-                    status => Msg::Error(format!("Failed to perform update: {}", status)),
+                    _ => Msg::Error(response.notify("Failed to update")),
                 }),
         )
     }
@@ -160,7 +159,7 @@ impl Details {
 
     fn reset(&mut self) {
         if let Some(content) = &self.content {
-            let yaml = serde_yaml::to_string(content).unwrap_or_default();
+            let yaml = serde_yaml::to_string(content.as_ref()).unwrap_or_default();
             let p: &[_] = &['-', '\n', '\r'];
             let yaml = yaml.trim_start_matches(p);
             self.yaml = TextModel::create(yaml, Some("yaml"), None).ok();

@@ -1,3 +1,5 @@
+use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::JsonResponse;
 use crate::{
     backend::Backend,
     data::{SharedDataDispatcher, SharedDataOps},
@@ -61,7 +63,7 @@ pub enum Msg {
     SetData(Vec<DeviceEntry>),
     SetApps(Vec<String>),
     SetApp(String),
-    Error(String),
+    Error(ErrorNotification),
 
     AppSearch(String),
 
@@ -136,7 +138,7 @@ impl Component for Index {
                 }
             }
             Msg::Error(msg) => {
-                error("Error", msg);
+                msg.toast();
             }
             Msg::ShowOverview(name) => navigate_to(AppRoute::Devices(Pages::Details {
                 app: ApplicationContext::Single(self.app.clone()),
@@ -231,32 +233,31 @@ impl Index {
             ),
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Vec<Device>, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(entries) => {
-                        let link = link.clone();
-                        let entries = entries
-                            .into_iter()
-                            .map(move |device| {
-                                let name = device.metadata.name.clone();
-                                let on_overview =
-                                    link.callback_once(move |_| Msg::ShowOverview(name));
+            self.link
+                .callback(move |response: JsonResponse<Vec<Device>>| {
+                    match response.into_body().0 {
+                        Ok(entries) => {
+                            let link = link.clone();
+                            let entries = entries
+                                .value
+                                .into_iter()
+                                .map(move |device| {
+                                    let name = device.metadata.name.clone();
+                                    let on_overview =
+                                        link.callback_once(move |_| Msg::ShowOverview(name));
 
-                                DeviceEntry {
-                                    device,
-                                    on_overview,
-                                    on_delete: Default::default(),
-                                }
-                            })
-                            .collect();
-                        Msg::SetData(entries)
+                                    DeviceEntry {
+                                        device,
+                                        on_overview,
+                                        on_delete: Default::default(),
+                                    }
+                                })
+                                .collect();
+                            Msg::SetData(entries)
+                        }
+                        Err(err) => Msg::Error(err.notify("Failed to load device")),
                     }
-                    Err(err) => Msg::Error(err.to_string()),
-                },
-            ),
+                }),
         )
     }
 
@@ -266,20 +267,20 @@ impl Index {
             "/api/registry/v1alpha1/apps",
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Vec<Application>, anyhow::Error>>>| {
+            self.link
+                .callback(move |response: JsonResponse<Vec<Application>>| {
                     match response.into_body().0 {
                         Ok(entries) => {
                             let entries = entries
+                                .value
                                 .into_iter()
                                 .map(move |app| app.metadata.name)
                                 .collect();
                             Msg::SetApps(entries)
                         }
-                        Err(err) => Msg::Error(err.to_string()),
+                        Err(err) => Msg::Error(err.notify("Failed to load applications")),
                     }
-                },
-            ),
+                }),
         )
     }
 }

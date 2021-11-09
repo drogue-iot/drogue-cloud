@@ -2,6 +2,7 @@ pub mod admin;
 pub mod api;
 pub mod auth;
 pub mod endpoints;
+pub mod error;
 pub mod health;
 mod id;
 pub mod kafka;

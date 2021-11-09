@@ -1,4 +1,5 @@
-use crate::{backend::BackendInformation, error::error};
+use crate::backend::BackendInformation;
+use crate::error::error;
 use drogue_cloud_service_api::version::DrogueVersion;
 use patternfly_yew::*;
 use yew::{format::*, prelude::*, services::fetch::*};

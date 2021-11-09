@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
 use drogue_client::error::ClientError;
-use serde::{Deserialize, Serialize};
+use drogue_cloud_service_api::error::ErrorResponse;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -77,10 +77,4 @@ impl ResponseError for ServiceError {
             }),
         }
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ErrorResponse {
-    pub error: String,
-    pub message: String,
 }

@@ -1,9 +1,8 @@
-use crate::backend::RequestOptions;
+use crate::error::error;
 use crate::{
-    backend::{Backend, BackendInformation, Token},
+    backend::{Backend, BackendInformation, RequestOptions, Token},
     components::placeholder::Placeholder,
     data::{SharedDataBridge, SharedDataOps},
-    error::error,
     page::AppPage,
     preferences::Preferences,
 };

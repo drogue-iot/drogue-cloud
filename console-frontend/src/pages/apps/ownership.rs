@@ -1,4 +1,5 @@
-use crate::utils::url_encode;
+use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::{success, url_encode};
 use crate::{
     backend::Backend,
     error::error,
@@ -20,7 +21,7 @@ pub struct Props {
 
 pub enum Msg {
     Accept,
-    Error(String),
+    Error(ErrorNotification),
     Success,
     Done,
     Decline,
@@ -69,7 +70,7 @@ impl Component for Ownership {
                 Err(err) => error("Failed to cancel", err),
             },
             Msg::Error(msg) => {
-                error("Error", msg);
+                msg.toast();
             }
             Msg::Done => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
                 Route::from(AppRoute::Applications(Pages::Details {
@@ -88,22 +89,14 @@ impl Component for Ownership {
                 }
             }
             Msg::Success => {
-                ToastDispatcher::default().toast(Toast {
-                    title: "Success !".into(),
-                    body: html! {<>
-                        <Content>
-                        <p>{"Ownership transfer completed. You are now the owner of this app."}</p>
-                        </Content>
-                    </>},
-                    r#type: Type::Success,
-                    ..Default::default()
-                });
+                success("Ownership transfer completed. You are now the owner of this application.");
 
                 // Set a timeout before leaving the page.
                 let handle = TimeoutService::spawn(
                     Duration::from_secs(3),
                     self.link.callback(|_| Msg::Done),
                 );
+
                 // Keep the task or timer will be cancelled
                 self.timeout = Some(handle);
             }
@@ -161,7 +154,7 @@ impl Ownership {
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::OK => Msg::TransferPending(true),
                     StatusCode::NO_CONTENT => Msg::TransferPending(false),
-                    status => Msg::Error(format!("Failed to fetch transfer state. {}", status)),
+                    _ => Msg::Error(response.notify("Failed to fetch transfer state")),
                 }),
         )
     }
@@ -178,14 +171,7 @@ impl Ownership {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::NO_CONTENT => Msg::Success,
-                    status => Msg::Error(format!(
-                        "Failed to submit: Code {}. {}",
-                        status,
-                        response
-                            .body()
-                            .as_ref()
-                            .unwrap_or(&"Unknown error.".to_string())
-                    )),
+                    _ => Msg::Error(response.notify("Failed to accept ownership")),
                 }),
         )
     }
@@ -202,7 +188,7 @@ impl Ownership {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::NO_CONTENT => Msg::TransferPending(false),
-                    status => Msg::Error(format!("Failed to cancel transfer. {}", status)),
+                    _ => Msg::Error(response.notify("Failed to cancel transfer")),
                 }),
         )
     }

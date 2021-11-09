@@ -1,7 +1,7 @@
 use actix_web::{get, http, web, HttpResponse, Responder};
 use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::UserInfo;
-use drogue_cloud_service_common::error::ErrorResponse;
+use drogue_cloud_service_api::error::ErrorResponse;
 use openid::{biscuit::jws::Compact, Bearer, Configurable, StandardClaims, Token};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

@@ -1,16 +1,15 @@
-use crate::error::error;
-use crate::pages::apps::details::Props;
-use crate::utils::url_encode;
-
-use drogue_cloud_service_api::admin::{MemberEntry, Members, Role, TransferOwnership};
-
+use crate::utils::success;
+use crate::{
+    error::{error, ErrorNotification, ErrorNotifier},
+    pages::apps::details::Props,
+    utils::{url_encode, Json, JsonResponse},
+};
 use anyhow::{anyhow, Result};
-use core::time::Duration;
+use drogue_cloud_service_api::admin::{MemberEntry, Members, Role, TransferOwnership};
 use indexmap::IndexMap;
 use patternfly_yew::*;
-use yew::{format::*, prelude::*, services::fetch::*, Html};
-
 use serde_json::json;
+use yew::{format::*, prelude::*, services::fetch::*, Html};
 
 pub struct Admin {
     props: Props,
@@ -47,7 +46,7 @@ pub enum Msg {
     TransferOwner,
     TransferPending(Option<TransferOwnership>),
     CancelTransfer,
-    Error(String),
+    Error(ErrorNotification),
     Reset,
     Stop(String),
 }
@@ -129,7 +128,7 @@ impl Component for Admin {
             Msg::AddMember => {
                 let (id, entry) = (&self.new_member_id, &self.new_member_role);
                 if let Some(m) = self.members.as_mut() {
-                    if let Err(e) = m.add(id.clone(), entry.clone(), &self.link) {
+                    if let Err(e) = m.add(id.clone(), *entry, &self.link) {
                         error("Failed to add user", e);
                     } else {
                         match self.submit() {
@@ -173,8 +172,8 @@ impl Component for Admin {
                 Ok(task) => self.transfer_fetch = Some(task),
                 Err(err) => error("Failed to cancel", err),
             },
-            Msg::Error(msg) => {
-                error("Error", msg);
+            Msg::Error(err) => {
+                err.toast();
                 self.reset();
             }
             Msg::Reset => {
@@ -307,17 +306,15 @@ impl Admin {
             Nothing,
             vec![],
             self.link.callback(
-                move |response: Response<Json<Result<Members, anyhow::Error>>>| match response
-                    .status()
-                {
+                move |response: JsonResponse<Members>| match response.status() {
                     StatusCode::OK => match response.into_body().0 {
-                        Ok(content) => Msg::SetMembers(content),
-                        Err(err) => Msg::Error(err.to_string()),
+                        Ok(content) => Msg::SetMembers(content.value),
+                        Err(err) => Msg::Error(err.notify("Failed to fetch members")),
                     },
                     StatusCode::NOT_FOUND => {
                         Msg::Stop("You are not an administrator for this app".to_string())
                     }
-                    status => Msg::Error(format!("Failed to fetch members. {}", status)),
+                    _ => Msg::Error(response.notify("Failed to fetch members")),
                 },
             ),
         )
@@ -337,27 +334,10 @@ impl Admin {
                 self.link
                     .callback(move |response: Response<Text>| match response.status() {
                         StatusCode::NO_CONTENT => {
-                            ToastDispatcher::default().toast(Toast {
-                                title: "Success !".into(),
-                                body: html! {<>
-                                    <Content>
-                                    <p>{"Application members saved."}</p>
-                                    </Content>
-                                </>},
-                                r#type: Type::Success,
-                                timeout: Some(Duration::from_secs(3)),
-                                ..Default::default()
-                            });
+                            success("Application members saved.");
                             Msg::LoadMembers
                         }
-                        status => Msg::Error(format!(
-                            "Failed to perform update: Code {}. {}",
-                            status,
-                            response
-                                .body()
-                                .as_ref()
-                                .unwrap_or(&"Unknown error.".to_string())
-                        )),
+                        _ => Msg::Error(response.notify("Update failed")),
                     }),
             )
         } else {
@@ -393,31 +373,19 @@ impl Admin {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::ACCEPTED => {
-                        ToastDispatcher::default().toast(Toast {
-                            title: "Success !".into(),
-                            body: html! {<>
-                                <Content>
+                        success(html! {
+                            <Content>
                                 <p>{"Ownership transfer initiated. Share this link with the user:"}</p>
                                 <p>
                                     <Clipboard value=link.clone()
                                         readonly=true
                                     />
                                 </p>
-                                </Content>
-                            </>},
-                            r#type: Type::Success,
-                            ..Default::default()
+                            </Content>
                         });
                         Msg::Reset
                     }
-                    status => Msg::Error(format!(
-                        "Failed to submit: Code {}. {}",
-                        status,
-                        response
-                            .body()
-                            .as_ref()
-                            .unwrap_or(&"Unknown error.".to_string())
-                    )),
+                    _ => Msg::Error(response.notify("Transfer failed")),
                 }),
         )
     }
@@ -434,7 +402,7 @@ impl Admin {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::NO_CONTENT => Msg::TransferPending(None),
-                    status => Msg::Error(format!("Failed to cancel transfer. {}", status)),
+                    _ => Msg::Error(response.notify("Unable to cancel transfer")),
                 }),
         )
     }
@@ -448,18 +416,17 @@ impl Admin {
             ),
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<TransferOwnership, anyhow::Error>>>| {
+            self.link
+                .callback(move |response: JsonResponse<TransferOwnership>| {
                     match response.status() {
                         StatusCode::OK => match response.into_body().0 {
-                            Ok(user) => Msg::TransferPending(Some(user)),
-                            Err(err) => Msg::Error(err.to_string()),
+                            Ok(user) => Msg::TransferPending(Some(user.value)),
+                            Err(err) => Msg::Error(err.notify("Failed to fetch transfer state")),
                         },
                         StatusCode::NO_CONTENT => Msg::TransferPending(None),
-                        status => Msg::Error(format!("Failed to fetch transfer state. {}", status)),
+                        _ => Msg::Error(response.notify("Failed to fetch transfer state")),
                     }
-                },
-            ),
+                }),
         )
     }
 }
@@ -509,7 +476,7 @@ impl Users {
             on_delete: link.callback(move |_| Msg::DeleteMember(copy_id.clone())),
         };
 
-        if self.contains(id.clone()) {
+        if self.contains(id) {
             Err(anyhow!("User is already a member"))
         } else {
             self.members.push(user);
@@ -519,7 +486,7 @@ impl Users {
 
     pub fn contains(&self, id: String) -> bool {
         let user = &User {
-            id: id.clone(),
+            id,
             // does not matter for the equal operation. See PartialEq impl above.
             role: Role::Reader,
             on_delete: Default::default(),

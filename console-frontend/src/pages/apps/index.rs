@@ -1,4 +1,5 @@
-use crate::utils::url_encode;
+use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::{url_encode, JsonResponse};
 use crate::{
     backend::Backend,
     error::error,
@@ -56,7 +57,7 @@ pub struct Props {
 pub enum Msg {
     Load,
     SetData(Vec<ApplicationEntry>),
-    Error(String),
+    Error(ErrorNotification),
 
     ShowOverview(String),
     Delete(String),
@@ -95,7 +96,7 @@ impl Component for Index {
                 self.fetch_task = None;
             }
             Msg::Error(msg) => {
-                error("Error", msg);
+                msg.toast();
             }
             Msg::ShowOverview(name) => RouteAgentDispatcher::<()>::new().send(
                 RouteRequest::ChangeRoute(Route::from(AppRoute::Applications(Pages::Details {
@@ -150,12 +151,13 @@ impl Index {
             "/api/registry/v1alpha1/apps",
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Vec<Application>, anyhow::Error>>>| {
+            self.link
+                .callback(move |response: JsonResponse<Vec<Application>>| {
                     match response.into_body().0 {
                         Ok(entries) => {
                             let link = link.clone();
                             let entries = entries
+                                .value
                                 .into_iter()
                                 .map(move |app| {
                                     let name = app.metadata.name.clone();
@@ -174,10 +176,9 @@ impl Index {
                                 .collect();
                             Msg::SetData(entries)
                         }
-                        Err(err) => Msg::Error(err.to_string()),
+                        Err(err) => Msg::Error(err.notify("Failed to load")),
                     }
-                },
-            ),
+                }),
         )
     }
 
@@ -190,7 +191,7 @@ impl Index {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::NO_CONTENT => Msg::Load,
-                    status => Msg::Error(format!("Cannot delete application : {}", status)),
+                    _ => Msg::Error(response.notify("Failed to delete")),
                 }),
         )
     }

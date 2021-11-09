@@ -1,3 +1,5 @@
+use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::JsonResponse;
 use crate::{backend::Backend, error::error};
 use drogue_cloud_service_api::api::{ApiKey, ApiKeyCreated};
 use patternfly_yew::*;
@@ -48,7 +50,7 @@ pub enum Msg {
     SetData(Vec<ApiKeyEntry>),
     Delete(ApiKey),
     Deleted,
-    Error(String),
+    Error(ErrorNotification),
 }
 
 pub struct ApiKeys {
@@ -84,7 +86,7 @@ impl Component for ApiKeys {
                 self.fetch_task = None;
             }
             Msg::Error(msg) => {
-                error("Error", msg);
+                msg.toast();
             }
             Msg::Delete(key) => match self.delete(key) {
                 Ok(task) => self.fetch_task = Some(task),
@@ -107,7 +109,7 @@ impl Component for ApiKeys {
             Msg::Created(key) => {
                 self.fetch_task = None;
                 ToastDispatcher::default().toast(Toast {
-                    title: "Created access key".into(),
+                    title: "Created access token".into(),
                     body: html!{<>
                         <Content>
                         <p>{"A new access key was successfully created. The access key is:"}</p>
@@ -118,7 +120,7 @@ impl Component for ApiKeys {
                             name="api-key"
                             />
                         </p>
-                        <p>{"When you close this alert, you won't have any chance to get the access key ever again. Be sure to copy is somewhere safe."}</p>
+                        <p>{"Once you close this alert, you won't have any chance to get the access key ever again. Be sure to copy is somewhere safe."}</p>
                         </Content>
                     </>},
                     r#type: Type::Success,
@@ -139,7 +141,7 @@ impl Component for ApiKeys {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
-                        <Title>{"Access keys"}</Title>
+                        <Title>{"Access tokens"}</Title>
                     </Content>
                 </PageSection>
                 <PageSection>
@@ -183,25 +185,24 @@ impl ApiKeys {
             "/api/keys/v1alpha1",
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<Vec<ApiKey>, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(keys) => {
-                        let link = link.clone();
-                        let keys = keys
-                            .into_iter()
-                            .map(move |key| ApiKeyEntry {
-                                key: key.clone(),
-                                on_delete: link.clone().callback_once(|_| Msg::Delete(key)),
-                            })
-                            .collect();
-                        Msg::SetData(keys)
+            self.link
+                .callback(move |response: JsonResponse<Vec<ApiKey>>| {
+                    match response.into_body().0 {
+                        Ok(keys) => {
+                            let link = link.clone();
+                            let keys = keys
+                                .value
+                                .into_iter()
+                                .map(move |key| ApiKeyEntry {
+                                    key: key.clone(),
+                                    on_delete: link.clone().callback_once(|_| Msg::Delete(key)),
+                                })
+                                .collect();
+                            Msg::SetData(keys)
+                        }
+                        Err(err) => Msg::Error(err.notify("Failed to load")),
                     }
-                    Err(err) => Msg::Error(err.to_string()),
-                },
-            ),
+                }),
         )
     }
 
@@ -215,10 +216,7 @@ impl ApiKeys {
                 if response.status().is_success() {
                     Msg::Deleted
                 } else {
-                    Msg::Error(format!(
-                        "Failed deleting API key: {}",
-                        response.body().as_ref().map(|s| s.as_str()).unwrap_or("")
-                    ))
+                    Msg::Error(response.notify("Failed to delete"))
                 }
             }),
         )
@@ -230,15 +228,13 @@ impl ApiKeys {
             "/api/keys/v1alpha1",
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<ApiKeyCreated, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(key) => Msg::Created(key),
-                    Err(err) => Msg::Error(format!("Failed creating API key: {}", err)),
-                },
-            ),
+            self.link
+                .callback(move |response: JsonResponse<ApiKeyCreated>| {
+                    match response.into_body().0 {
+                        Ok(key) => Msg::Created(key.value),
+                        Err(err) => Msg::Error(err.notify("Creation failed")),
+                    }
+                }),
         )
     }
 }
