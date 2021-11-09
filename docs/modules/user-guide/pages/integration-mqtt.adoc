@@ -2,3 +2,74 @@
 
 The MQTT integration allows consuming device events and send commands to the devices using an MQTT based API.
 Events are encoded as CloudEvents.
+
+== Connecting
+
+The MQTT integration service allows to connect using standard MQTT mechanisms. Depending on the deployment, either using
+TLS or non-TLS connections.
+
+The service supports both MQTT v3.1.1 and MQTT 5.
+
+=== Anonymous
+
+It is possible to use anonymous authentication. This may severely limit access to data, but in some special cases,
+this may be a viable use case.
+
+=== OAuth2 Token
+
+You can use the OAuth2 access token of your user as either username or password (not both at the same time!).
+
+When using MQTT v3.1.1, you must pass the token as the username, as this version of MQTT doesn't allow to send
+a password only.
+
+[NOTE]
+.Token expiration
+====
+OAuth2 access tokens are only valid for a short amount of time. You need to provide a non-expired access token in order
+to log in. For this, you most likely need to refresh the token before every connection attempt.
+
+An alternative is to use API keys instead.
+====
+
+=== API Key
+
+When providing a username and a password, the username must be the name of your user, and the password must be an API
+key created for that user.
+
+== Subscribe to events
+
+In order to subscribe to events, subscribe using the following filter: `app/<application>`. So to subscribe to
+`example-app`, you need to subscribe to `app/example-app`.
+
+=== Data format
+
+The default data format follows the https://github.com/cloudevents/spec/blob/v1.0.1/mqtt-protocol-binding.md[MQTT binding for CloudEvents]
+using the "structured content mode", which includes all information, metadata and actual payload, as part of the MQTT
+payload.
+
+=== Binary content mode
+
+When using MQTT 5, you can request the service to send events in the "binary content mode", which encodes the metadata
+as part of the MQTT user properties. In this case, the MQTT payload is equal to the actual CloudEvents payload.
+
+As this encoding make use of "user properties", it is not available when using MQTT v3.1.1.
+
+=== Shared subscriptions
+
+By default, each MQTT subscriber uses its own Kafka consumer group, and thus receives each message.
+
+However, you can use https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901250[MQTT shared subscriptions]
+to define a shared consumer group, which maps to using the same Kafka consumer group on the backend. In this case,
+only one of the consumers will receive a message.
+
+To subscribe using shared subscriptions, use the following subscription filter: `$share/<group-id>/app/<application>`.
+So when subscribing to the application `my-app` with the shared consumer identifier `my-group`, you would use:
+`$share/my-group/my-app`.
+
+== Publish commands
+
+You can send back a command to a device by publishing to the following topic: `command/<application>/<device>/<command>`.
+
+For example, sending the command `setTemperature` with payload `{"value": 1.23 }` to the device `my-device` of the
+application `my-app`, you would need to publish the payload `{"value": 1.23 }` to the topic
+`command/my-app/my-device/setTemperature`.

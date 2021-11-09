@@ -1,4 +1,4 @@
 = Apache Kafka™ integration
 
 The Kafka integration allows cloud side applications to directly tap into the event stream coming from the devices.
-Events are encoded as CloudEvents.https://xxx[]
+Events are encoded as https://github.com/cloudevents/spec/blob/v1.0.1/kafka-protocol-binding.md[CloudEvents].
