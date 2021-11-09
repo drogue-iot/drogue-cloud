@@ -11,6 +11,7 @@ use drogue_cloud_endpoint_common::{
 
 #[async_trait]
 pub trait HttpCommandSender {
+    #[allow(clippy::needless_lifetimes)]
     async fn publish_and_await<'a, B>(
         &self,
         publish: Publish<'a>,
@@ -28,6 +29,7 @@ where
     S: Sink + Send + Sync,
     <S as Sink>::Error: Send,
 {
+    #[allow(clippy::needless_lifetimes)]
     async fn publish_and_await<'a, B>(
         &self,
         publish: Publish<'a>,
