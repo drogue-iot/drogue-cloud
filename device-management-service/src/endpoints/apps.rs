@@ -10,6 +10,7 @@ use drogue_cloud_registry_events::EventSender;
 use drogue_cloud_service_api::{auth::user::UserInformation, labels::ParserError};
 use drogue_cloud_service_common::error::ServiceError;
 use drogue_cloud_service_common::keycloak::KeycloakClient;
+use hostname_validator;
 use std::convert::TryInto;
 
 pub async fn create<S, K>(
@@ -24,7 +25,7 @@ where
 {
     log::debug!("Creating application: '{:?}'", app);
 
-    if app.metadata.name.is_empty() {
+    if app.metadata.name.is_empty() || !hostname_validator::is_valid(app.metadata.name.as_str()) {
         return Ok(HttpResponse::BadRequest().finish());
     }
 

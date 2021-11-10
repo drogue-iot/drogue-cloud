@@ -33,6 +33,7 @@ rust-crypto = "0.2"
 rand = "0.7"
 uuid = "0.8"
 bytes = "1"
+hostname-validator = "1.1.0"
 
 chrono = { version = "0.4", features = ["serde"] }
 pem = "1"

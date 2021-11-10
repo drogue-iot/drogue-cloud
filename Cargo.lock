@@ -2043,6 +2043,7 @@ dependencies = [
  "env_logger 0.7.1",
  "form_urlencoded",
  "futures",
+ "hostname-validator",
  "http",
  "indexmap",
  "log",
@@ -3284,6 +3285,12 @@ dependencies = [
  "match_cfg",
  "winapi 0.3.9",
 ]
+
+[[package]]
+name = "hostname-validator"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be14a194c8bc9f0ce9901de058cf114bab6ae85d461adc4bfa37deb295ad89d4"
 
 [[package]]
 name = "http"
