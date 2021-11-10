@@ -47,6 +47,40 @@ async fn test_create_app() -> anyhow::Result<()> {
     })
 }
 
+#[actix_rt::test]
+#[serial]
+async fn test_create_app_invalid_name() -> anyhow::Result<()> {
+    test!((app, sender, outbox) => {
+        let resp = call_http(&app, &user("foo"), test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
+            "metadata": {
+                "name": "-invalid-name",
+            },
+        }))).await;
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // no event must have been fired
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![]);
+    })
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_create_app_empty_name() -> anyhow::Result<()> {
+    test!((app, sender, outbox) => {
+    let resp = call_http(&app, &user("foo"), test::TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
+        "metadata": {
+            "name": "",
+        },
+    }))).await;
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+    // no event must have been fired
+    assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![]);
+    })
+}
+
 /// Create, update, and delete an app. Check the current state and the operation outcomes.
 #[actix_rt::test]
 #[serial]

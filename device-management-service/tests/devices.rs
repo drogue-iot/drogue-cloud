@@ -128,6 +128,15 @@ async fn test_create_device_bad_request() -> anyhow::Result<()> {
 
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
+        let resp = test::TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
+            "metadata": {
+                "application": "app1",
+                "name": "a-very-long-name-that-is-well-over-the-character-limit-enforced-by-drogue-cloud-which-is-255-characters-for-devices-names-well-i-must-admit-i-am-surprised-i-did-not-thought-that-255-character-would-be-that-much-text-who-would-want-to-name-a-device-like-this"
+            }
+        })).send_request(&app).await;
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
         // no event must have been fired
         assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![]);
     })

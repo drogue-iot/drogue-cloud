@@ -28,7 +28,11 @@ where
     let app_id = path.into_inner();
     log::debug!("Creating device: '{}' / '{:?}'", app_id, device);
 
-    if device.metadata.name.is_empty() || device.metadata.application.is_empty() {
+    if device.metadata.name.is_empty()
+        || device.metadata.application.is_empty()
+        || device.metadata.name.len() > 255
+        || std::str::from_utf8(device.metadata.name.as_bytes()).is_err()
+    {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
