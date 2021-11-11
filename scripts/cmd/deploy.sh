@@ -22,12 +22,13 @@ Options:
   -k                 Don't install dependencies
   -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
   -t <timeout>       Helm installation timeout (default: 15m)
+  -T                 Deploy the digital twin feature
   -h                 Show this help
 
 EOF
 }
 
-opts=$(getopt -o "mhkp:c:n:d:s:S:t:" -- "$@")
+opts=$(getopt -o "mhkp:c:n:d:s:S:t:T" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
@@ -74,6 +75,10 @@ while [[ $# -gt 0 ]]; do
         HELM_TIMEOUT="$2"
         shift 2
         ;;
+    -T)
+        DEPLOY_TWIN="true"
+        shift
+        ;;
     -h)
         help >&3
         exit 0
@@ -102,6 +107,7 @@ echo "Minimize: $MINIMIZE"
 : "${INSTALL_STRIMZI:=${INSTALL_DEPS}}"
 : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
+: "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 : "${HELM_TIMEOUT:=15m}"
 
 case $CLUSTER in
@@ -151,6 +157,10 @@ if [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]]; then
     progress "📦 Deploying pre-requisites (Keycloak) ... "
     source "$BASEDIR/cmd/__sso.sh"
 fi
+if [[ "$INSTALL_DITTO_OPERATOR" == true && "$DEPLOY_TWIN" == true ]]; then
+    progress "📦 Deploying pre-requisites (Ditto Operator) ... "
+    source "$BASEDIR/cmd/__ditto.sh"
+fi
 
 # gather Helm arguments
 
@@ -174,6 +184,7 @@ HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.grafana.keycloak.enabled=true --set drogueCloudExamples.grafana.keycloak.client.create=true"
+HELM_ARGS="$HELM_ARGS --set drogueCloudTwin.enabled=$DEPLOY_TWIN"
 
 echo "Helm arguments: $HELM_ARGS"
 

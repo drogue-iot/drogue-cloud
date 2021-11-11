@@ -29,3 +29,8 @@ dependencies:
     version: ^0.4.0-alpha1
     alias: drogueCloudExamples
     repository: file://../helm/charts/drogue-cloud-examples
+  - name: drogue-cloud-twin
+    version: ^0.4.0-alpha1
+    alias: drogueCloudTwin
+    condition: drogueCloudTwin.enabled
+    repository: file://../helm/charts/drogue-cloud-twin

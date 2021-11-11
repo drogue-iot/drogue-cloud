@@ -13,7 +13,6 @@ Drogue IoT cloud admin tool
 
 Commands:
     deploy       Deploy Drogue IoT to your cluster
-    deploy-twin  Deploy the digital twin feature
     examples     Show some examples to try
 
 EOF
