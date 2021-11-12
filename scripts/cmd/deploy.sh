@@ -2,6 +2,10 @@
 
 set +e
 
+# defaults
+
+: "${DEPLOY_TWIN:=false}"
+
 # process arguments
 
 help() {
@@ -36,10 +40,6 @@ opts=$(getopt -o "mhkp:c:n:d:s:S:t:T" -- "$@")
     exit 1
 }
 eval set -- "$opts"
-
-# defaults
-
-DEPLOY_TWIN="false"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
