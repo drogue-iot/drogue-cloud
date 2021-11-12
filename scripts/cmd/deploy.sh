@@ -37,6 +37,10 @@ opts=$(getopt -o "mhkp:c:n:d:s:S:t:T" -- "$@")
 }
 eval set -- "$opts"
 
+# defaults
+
+DEPLOY_TWIN="false"
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
     -c)
