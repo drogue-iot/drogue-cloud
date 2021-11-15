@@ -14,10 +14,14 @@ use drogue_client::{meta, registry};
 use drogue_cloud_service_api::labels::LabelSelector;
 use futures::{future, Stream, TryStreamExt};
 use serde_json::Value;
-use std::collections::{hash_map::RandomState, HashMap, HashSet};
-use std::pin::Pin;
-use tokio_postgres::types::{ToSql, Type};
-use tokio_postgres::{types::Json, Row};
+use std::{
+    collections::{hash_map::RandomState, HashMap, HashSet},
+    pin::Pin,
+};
+use tokio_postgres::{
+    types::{Json, ToSql, Type},
+    Row,
+};
 use uuid::Uuid;
 
 /// A device entity record.
