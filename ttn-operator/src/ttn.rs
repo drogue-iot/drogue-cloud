@@ -216,8 +216,8 @@ impl<'de> serde::de::Visitor<'de> for OwnerVisitor {
 impl Owner {
     pub fn extend(&self, path: &mut PathSegmentsMut) {
         match self {
-            Self::User(user) => path.extend(&["users", &user]),
-            Self::Organization(org) => path.extend(&["organizations", &org]),
+            Self::User(user) => path.extend(&["users", user]),
+            Self::Organization(org) => path.extend(&["organizations", org]),
         };
     }
 }
@@ -248,7 +248,7 @@ impl Client {
         owner: Owner,
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3"]);
             owner.extend(path);
             path.extend(&["applications"]);
@@ -271,7 +271,7 @@ impl Client {
         let res = self
             .client
             .post(url)
-            .inject_token(&ctx)
+            .inject_token(ctx)
             .json(&create)
             .send()
             .await?;
@@ -298,7 +298,7 @@ impl Client {
         ttn_app_id: &str,
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "applications", ttn_app_id]);
         })?;
 
@@ -319,7 +319,7 @@ impl Client {
         let res = self
             .client
             .put(url)
-            .inject_token(&ctx)
+            .inject_token(ctx)
             .json(&update)
             .send()
             .await?;
@@ -360,14 +360,14 @@ impl Client {
         app_id: &str,
         ctx: &Context,
     ) -> Result<Option<Value>, ReconcileError> {
-        let mut url = Self::url(&ctx, |path| {
+        let mut url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "applications", app_id]);
         })?;
 
         url.query_pairs_mut()
             .append_pair("field_mask", FIELD_MASK_APP_STR);
 
-        let res = self.client.get(url).inject_token(&ctx).send().await?;
+        let res = self.client.get(url).inject_token(ctx).send().await?;
 
         match res.status() {
             StatusCode::OK => Ok(Some(res.json().await?)),
@@ -378,11 +378,11 @@ impl Client {
     }
 
     pub async fn delete_app(&self, app_id: &str, ctx: &Context) -> Result<(), ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "applications", app_id]);
         })?;
 
-        let res = self.client.delete(url).inject_token(&ctx).send().await?;
+        let res = self.client.delete(url).inject_token(ctx).send().await?;
 
         match res.status() {
             StatusCode::OK | StatusCode::NOT_FOUND => Ok(()),
@@ -396,14 +396,14 @@ impl Client {
         webhook_id: &str,
         ctx: &Context,
     ) -> Result<Option<Value>, ReconcileError> {
-        let mut url = Self::url(&ctx, |path| {
+        let mut url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "as", "webhooks", app_id, webhook_id]);
         })?;
 
         url.query_pairs_mut()
             .append_pair("field_mask", &FIELD_MASK_WEBHOOK_STR);
 
-        let res = self.client.get(url).inject_token(&ctx).send().await?;
+        let res = self.client.get(url).inject_token(ctx).send().await?;
 
         match res.status() {
             StatusCode::OK => Ok(Some(res.json().await?)),
@@ -437,7 +437,7 @@ impl Client {
             },
         });
 
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "as", "webhooks", app_id]);
         })?;
 
@@ -446,7 +446,7 @@ impl Client {
         let res = self
             .client
             .post(url)
-            .inject_token(&ctx)
+            .inject_token(ctx)
             .json(&create)
             .send()
             .await?;
@@ -483,7 +483,7 @@ impl Client {
             },
         });
 
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "as", "webhooks", app_id, webhook_id]);
         })?;
 
@@ -492,7 +492,7 @@ impl Client {
         let res = self
             .client
             .put(url)
-            .inject_token(&ctx)
+            .inject_token(ctx)
             .json(&update)
             .send()
             .await?;
@@ -513,11 +513,11 @@ impl Client {
         device_id: &str,
         ctx: &Context,
     ) -> Result<Option<Value>, ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "applications", app_id, "devices", device_id]);
         })?;
 
-        let res = self.client.get(url).inject_token(&ctx).send().await?;
+        let res = self.client.get(url).inject_token(ctx).send().await?;
 
         match res.status() {
             StatusCode::OK => Ok(Some(res.json().await?)),
@@ -533,7 +533,7 @@ impl Client {
         device_id: &str,
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3"]);
             if let Some(prefix) = prefix {
                 path.push(prefix);
@@ -541,7 +541,7 @@ impl Client {
             path.extend(&["applications", app_id, "devices", device_id]);
         })?;
 
-        let res = self.client.delete(url).inject_token(&ctx).send().await?;
+        let res = self.client.delete(url).inject_token(ctx).send().await?;
 
         match res.status() {
             StatusCode::OK | StatusCode::NOT_FOUND => Ok(()),
@@ -593,7 +593,7 @@ impl Client {
         paths: &[&str],
         ctx: &Context,
     ) -> Result<(), ReconcileError> {
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&[
                 "api",
                 "v3",
@@ -608,8 +608,8 @@ impl Client {
         let res = self
             .client
             .put(url)
-            .inject_token(&ctx)
-            .json(&Self::make_device_json(&ids, &payload, paths)?)
+            .inject_token(ctx)
+            .json(&Self::make_device_json(ids, &payload, paths)?)
             .send()
             .await?;
 
@@ -633,7 +633,7 @@ impl Client {
             &device.ids,
             &device.ns_device,
             FIELD_MASK_DEVICE_NS,
-            &ctx,
+            ctx,
         )
         .await?;
 
@@ -645,7 +645,7 @@ impl Client {
             &device.ids,
             &device.js_device,
             FIELD_MASK_DEVICE_JS,
-            &ctx,
+            ctx,
         )
         .await?;
 
@@ -657,7 +657,7 @@ impl Client {
             &device.ids,
             &json!({}),
             FIELD_MASK_DEVICE_AS,
-            &ctx,
+            ctx,
         )
         .await?;
 
@@ -676,14 +676,14 @@ impl Client {
 
         // core
 
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&["api", "v3", "applications", app_id, "devices"]);
         })?;
 
         let res = self
             .client
             .post(url)
-            .inject_token(&ctx)
+            .inject_token(ctx)
             .json(&Self::make_device_json(
                 &device.ids,
                 &device.end_device,
@@ -699,7 +699,7 @@ impl Client {
 
         // set NS, JS, AS entries as well
 
-        self.set_ns_js_as(app_id, &device, &ctx).await?;
+        self.set_ns_js_as(app_id, &device, ctx).await?;
 
         // done
 
@@ -716,7 +716,7 @@ impl Client {
 
         // core
 
-        let url = Self::url(&ctx, |path| {
+        let url = Self::url(ctx, |path| {
             path.extend(&[
                 "api",
                 "v3",
@@ -730,7 +730,7 @@ impl Client {
         let res = self
             .client
             .put(url)
-            .inject_token(&ctx)
+            .inject_token(ctx)
             .json(&Self::make_device_json(
                 &device.ids,
                 &device.end_device,
@@ -746,7 +746,7 @@ impl Client {
 
         // set NS, JS, AS entries as well
 
-        self.set_ns_js_as(app_id, &device, &ctx).await?;
+        self.set_ns_js_as(app_id, &device, ctx).await?;
 
         // Done
 

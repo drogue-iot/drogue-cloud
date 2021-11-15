@@ -81,7 +81,7 @@ impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
                 self.0
                     .sso_url
                     .as_ref()
-                    .map(|sso| crate::utils::sso_to_issuer_url(&sso, &self.0.realm))
+                    .map(|sso| crate::utils::sso_to_issuer_url(sso, &self.0.realm))
             })
             .ok_or_else(|| anyhow::anyhow!("Missing issuer or SSO URL"))?;
 
@@ -221,7 +221,7 @@ impl Authenticator {
 
         log::debug!("Token: {:#?}", token);
 
-        super::validate::validate_token(&client, &token, None).map_err(|err| {
+        super::validate::validate_token(client, &token, None).map_err(|err| {
             log::info!("Validation failed: {}", err);
             AuthenticatorError::Failed
         })?;

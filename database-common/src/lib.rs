@@ -142,7 +142,7 @@ impl<'a> Client for Transaction<'a> {
     where
         T: ?Sized + ToStatement + Sync,
     {
-        Transaction::query_opt(&self, statement, params).await
+        Transaction::query_opt(self, statement, params).await
     }
 
     async fn query_raw<T, P, I>(&self, statement: &T, params: I) -> Result<RowStream, Error>
@@ -152,7 +152,7 @@ impl<'a> Client for Transaction<'a> {
         I: IntoIterator<Item = P> + Sync + Send,
         I::IntoIter: ExactSizeIterator,
     {
-        Transaction::query_raw(&self, statement, params).await
+        Transaction::query_raw(self, statement, params).await
     }
 }
 

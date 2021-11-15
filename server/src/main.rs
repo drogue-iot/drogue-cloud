@@ -30,9 +30,9 @@ struct Endpoint {
     pub port: u16,
 }
 
-impl Into<String> for Endpoint {
-    fn into(self: Endpoint) -> String {
-        format!("{}:{}", self.host, self.port)
+impl From<Endpoint> for String {
+    fn from(endpoint: Endpoint) -> Self {
+        format!("{}:{}", endpoint.host, endpoint.port)
     }
 }
 
@@ -164,7 +164,7 @@ impl ServerConfig {
                 port: 10005,
             },
             user_auth: Endpoint {
-                host: iface.to_string(),
+                host: iface,
                 port: 10006,
             },
         }
@@ -179,7 +179,7 @@ fn run_migrations(db: &Database) {
         db.user, db.password, db.endpoint.host, db.endpoint.port, db.db
     );
     let connection = diesel::PgConnection::establish(&database_url)
-        .expect(&format!("Error connecting to {}", database_url));
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
 
     embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
     println!("Migrating database schema... done!");
@@ -193,11 +193,11 @@ fn configure_keycloak(server: &Keycloak) {
         let user = server.user.clone();
         let password = server.password.clone();
         let client = reqwest::Client::new();
-        let admin_token = keycloak::KeycloakAdminToken::acquire(&url, &user, &password, &client)
+        let admin_token = keycloak::KeycloakAdminToken::acquire(url, &user, &password, &client)
             .await
             .unwrap();
 
-        let admin = keycloak::KeycloakAdmin::new(&url, admin_token, client);
+        let admin = keycloak::KeycloakAdmin::new(url, admin_token, client);
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue".to_string());
         c.enabled.replace(true);
@@ -488,7 +488,7 @@ fn main() {
             let bind_addr = server.clone().registry.into();
             let s = server.clone();
             let pg = pg.clone();
-            let user_auth = user_auth.clone();
+            let user_auth = user_auth;
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
                     enable_api_keys: false,
@@ -553,7 +553,7 @@ fn main() {
             log::info!("Enabling device authentication service");
             let o = oauth.clone();
             let bind_addr = server.clone().device_auth.into();
-            let pg = pg.clone();
+            let pg = pg;
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_authentication_service::Config {
                     max_json_payload_size: 65536,
@@ -579,7 +579,7 @@ fn main() {
             log::info!("Enabling console backend service");
             let o = oauth.clone();
             let s = server.clone();
-            let t = token_config.clone();
+            let t = token_config;
             let bind_addr = s.console.clone().into();
             let registry = registry.clone();
             threads.push(std::thread::spawn(move || {
@@ -657,7 +657,7 @@ fn main() {
 
         if matches.is_present("enable-mqtt-endpoint") || matches.is_present("enable-all") {
             log::info!("Enabling MQTT endpoint");
-            let a = auth.clone();
+            let a = auth;
             let command_source_kafka = command_source("mqtt_endpoint");
             let bind_addr_mqtt = server.mqtt.clone().into();
             let kafka = server.kafka.clone();
@@ -720,7 +720,7 @@ fn main() {
         }
 
         println!("Drogue Cloud is running!");
-        println!("");
+        println!();
 
         println!("Endpoints:");
         println!(
@@ -729,31 +729,31 @@ fn main() {
         );
         println!("\tHTTP:\t http://{}:{}", server.http.host, server.http.port);
         println!("\tMQTT:\t mqtt://{}:{}", server.mqtt.host, server.mqtt.port);
-        println!("");
+        println!();
 
         println!("Keycloak Credentials:");
         println!("\tUser: {}", server.keycloak.user);
         println!("\tPassword: {}", server.keycloak.password);
-        println!("");
+        println!();
 
         println!("Logging in:");
         println!(
             "\tdrg login http://{}:{}",
             server.console.host, server.console.port
         );
-        println!("");
+        println!();
 
         println!("Creating an application:");
         println!("\tdrg create app example-app");
-        println!("");
+        println!();
 
         println!("Creating a device:");
         println!("\tdrg create device --app example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
-        println!("");
+        println!();
 
         println!("Publishing data to the HTTP endpoint:");
         println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if matches.is_present("server-cert") && matches.is_present("server-key") { "-k https" } else {"http"}, server.http.host, server.http.port);
-        println!("");
+        println!();
 
         if threads.is_empty() {
             log::warn!("No services selected to start up. Process will exit. Enable some services using --enable-* or enable all using --enable-all.")

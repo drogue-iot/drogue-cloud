@@ -134,7 +134,7 @@ where
         let partitions = metadata
             .topics()
             .iter()
-            .find(|t| t.name() == &topic)
+            .find(|t| t.name() == topic)
             .map(|topic| topic.partitions())
             .ok_or_else(|| {
                 log::debug!("Failed to find metadata for topic");
@@ -190,7 +190,7 @@ where
     fn do_ack(&self, msg: &BorrowedMessage) -> KafkaResult<()> {
         self.upstream
             .as_owner()
-            .commit_message(&msg, CommitMode::Async)
+            .commit_message(msg, CommitMode::Async)
     }
 
     /// Check if the content type indicates a JSON payload
@@ -216,7 +216,7 @@ where
             // No content type indication, no need to change anything
             (None, _) => return event,
             // Check if the content type indicates JSON, if not, don't convert
-            (Some(content_type), _) if !Self::is_json_content_type(&content_type) => {
+            (Some(content_type), _) if !Self::is_json_content_type(content_type) => {
                 return event;
             }
             _ => {}
@@ -248,9 +248,9 @@ where
     fn make_json(data: Data) -> Data {
         match data {
             Data::Json(json) => Data::Json(json),
-            Data::String(ref str) => serde_json::from_str(&str).map_or_else(|_| data, Data::Json),
+            Data::String(ref str) => serde_json::from_str(str).map_or_else(|_| data, Data::Json),
             Data::Binary(ref slice) => {
-                serde_json::from_slice(&slice).map_or_else(|_| data, Data::Json)
+                serde_json::from_slice(slice).map_or_else(|_| data, Data::Json)
             }
         }
     }

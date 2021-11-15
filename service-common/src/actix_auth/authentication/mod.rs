@@ -87,7 +87,7 @@ impl AuthN {
                     }
                 }
                 Credentials::Token(token) => match openid.validate_token(&token).await {
-                    Ok(token) => Ok(UserInformation::Authenticated(token.clone().into())),
+                    Ok(token) => Ok(UserInformation::Authenticated(token.into())),
                     Err(_) => Err(ServiceError::AuthenticationError),
                 },
                 Credentials::Anonymous => Ok(UserInformation::Anonymous),

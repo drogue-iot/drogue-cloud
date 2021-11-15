@@ -183,22 +183,22 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                 }
             })),
             Box::new(CreateTopic {
-                api: &self.kafka_topics,
-                resource: &self.kafka_topic_resource,
-                config: &self.config,
+                api: self.kafka_topics,
+                resource: self.kafka_topic_resource,
+                config: self.config,
             }),
             Box::new(TopicReady {
-                config: &self.config,
+                config: self.config,
             }),
             Box::new(CreateUser {
-                users_api: &self.kafka_users,
-                users_resource: &self.kafka_user_resource,
-                secrets_api: &self.secrets,
-                config: &self.config,
+                users_api: self.kafka_users,
+                users_resource: self.kafka_user_resource,
+                secrets_api: self.secrets,
+                config: self.config,
             }),
             Box::new(UserReady {
-                config: &self.config,
-                secrets: &self.secrets,
+                config: self.config,
+                secrets: self.secrets,
             }),
         ])
         .run_with::<KafkaAppStatus>(ctx)

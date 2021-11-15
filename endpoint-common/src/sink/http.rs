@@ -23,7 +23,7 @@ impl Sink for HttpSink {
             cloudevents::binding::reqwest::event_to_request(event, self.client.post(&self.sink))?
                 .send()
                 .await
-                .map_err(|err| SinkError::Transport(err))?;
+                .map_err(SinkError::Transport)?;
 
         log::debug!("Publish result: {:?}", response);
 

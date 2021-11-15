@@ -47,7 +47,7 @@ where
         result.push(".metadata".to_string());
     }
 
-    diff_data(&current.data(), &new.data(), &mut result);
+    diff_data(current.data(), new.data(), &mut result);
 
     result
 }

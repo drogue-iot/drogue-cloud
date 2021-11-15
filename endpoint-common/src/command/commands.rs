@@ -218,7 +218,7 @@ impl CommandDispatcher for Commands {
                 msg.command,
                 msg.address
             );
-            for (_, sender) in senders {
+            for sender in senders.values() {
                 num += 1;
                 match sender.send(msg.clone()).await {
                     Ok(_) => {
@@ -240,7 +240,7 @@ impl CommandDispatcher for Commands {
                 msg.command,
                 msg.address
             );
-            for (_, sender) in senders {
+            for sender in senders.values() {
                 num += 1;
                 match sender.send(msg.clone()).await {
                     Ok(_) => {

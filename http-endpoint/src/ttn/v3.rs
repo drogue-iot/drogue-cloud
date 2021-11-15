@@ -33,7 +33,7 @@ where
     let uplink = match msg.payload {
         Payload::Uplink(uplink) => Ok(uplink),
         _ => Err(EndpointError::InvalidRequest {
-            details: format!("Invalid message type, expected 'Uplink'"),
+            details: "Invalid message type, expected 'Uplink'".to_string(),
         }),
     }?;
 

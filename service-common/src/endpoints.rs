@@ -117,7 +117,7 @@ impl EndpointSource for EnvEndpointSource {
         let sso = self.0.sso_url.clone();
         let issuer_url = self.0.issuer_url.as_ref().cloned().or_else(|| {
             sso.as_ref()
-                .map(|sso| crate::utils::sso_to_issuer_url(&sso, DEFAULT_REALM))
+                .map(|sso| crate::utils::sso_to_issuer_url(sso, DEFAULT_REALM))
         });
 
         Ok(Endpoints {

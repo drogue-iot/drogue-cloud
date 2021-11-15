@@ -107,7 +107,7 @@ lazy_static! {
 fn resource_name(prefix: &str, hashed_prefix: &str, resource: &str) -> String {
     let name = format!("{}-{}", prefix, resource);
     // try the simple route, if that works ...
-    if name.len() < MAX_NAME_LEN && NAME_PATTERN.is_match(&resource) {
+    if name.len() < MAX_NAME_LEN && NAME_PATTERN.is_match(resource) {
         // ... simply return
         name
     } else {

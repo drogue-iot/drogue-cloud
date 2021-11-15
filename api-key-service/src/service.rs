@@ -186,7 +186,7 @@ where
     ) -> Result<Option<UserDetails>, Self::Error> {
         // check if the key appears valid (format, checksum, ...)
 
-        let prefix = if let Some(prefix) = crate::rng::is_valid(&password) {
+        let prefix = if let Some(prefix) = crate::rng::is_valid(password) {
             prefix
         } else {
             return Ok(None);
@@ -244,7 +244,7 @@ where
         // verify the hash
 
         log::debug!("Password: {}", password);
-        let provided_hash = crate::rng::hash_key(&password);
+        let provided_hash = crate::rng::hash_key(password);
         log::debug!(
             "Comparing hashes - expected: {}, provided: {}",
             expected_hash,

@@ -115,10 +115,10 @@ where
     let mut builder = client.request(method, url);
 
     for (k, v) in &endpoint.headers {
-        let key = HeaderName::from_str(&k).map_err(|err| {
+        let key = HeaderName::from_str(k).map_err(|err| {
             Error::InvalidConfiguration(format!("Invalid HTTP header key: '{}': {}", k, err))
         })?;
-        let value = HeaderValue::from_str(&v).map_err(|err| {
+        let value = HeaderValue::from_str(v).map_err(|err| {
             Error::InvalidConfiguration(format!("Invalid HTTP header value: '{}': {}", v, err))
         })?;
         builder = builder.header(key, value);

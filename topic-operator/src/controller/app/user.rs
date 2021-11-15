@@ -41,11 +41,11 @@ impl CreateUser<'_> {
         let password_name = make_kafka_resource_name(ResourceType::Passwords(app.clone()));
 
         let user = create_or_update_by(
-            &self.users_api,
+            self.users_api,
             Some(self.config.topic_namespace.clone()),
             &user_name,
             |meta| {
-                let mut user = DynamicObject::new(&topic_name, &self.users_resource)
+                let mut user = DynamicObject::new(&topic_name, self.users_resource)
                     .within(&self.config.topic_namespace);
                 *user.meta_mut() = meta;
                 user
@@ -202,7 +202,7 @@ impl<'o> ProgressOperation<ConstructContext> for UserReady<'o> {
 
         let app_user_secret = match ctx.app_user_name.as_ref() {
             None => None,
-            Some(user) => self.secrets.get(&user).await.ok(),
+            Some(user) => self.secrets.get(user).await.ok(),
         };
 
         // construct the user status

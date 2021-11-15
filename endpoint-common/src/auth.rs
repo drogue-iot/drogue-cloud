@@ -79,16 +79,16 @@ impl DeviceAuthenticator {
         r#as: A2,
     ) -> AuthResult<AuthorizeGatewayResponse>
     where
-        A1: ToString,
-        A2: ToString,
-        D: ToString,
+        A1: Into<String>,
+        A2: Into<String>,
+        D: Into<String>,
     {
         self.client
             .authorize_as(
                 AuthorizeGatewayRequest {
-                    application: application.to_string(),
-                    device: device.to_string(),
-                    r#as: r#as.to_string(),
+                    application: application.into(),
+                    device: device.into(),
+                    r#as: r#as.into(),
                 },
                 Default::default(),
             )
@@ -261,7 +261,7 @@ impl DeviceAuthenticator {
     }
 
     pub fn ids_from_cert(certs: &[Vec<u8>]) -> AuthResult<(String, String)> {
-        let cert = Self::device_cert(&certs)?;
+        let cert = Self::device_cert(certs)?;
         let app_id = cert.tbs_certificate.issuer.to_string();
         let device_id = cert.tbs_certificate.subject.to_string();
         Ok((app_id, device_id))
@@ -351,7 +351,7 @@ impl DeviceAuthenticator {
     /// Retrieve the end-entity (aka device) certificate, must be the first one.
     fn device_cert(certs: &[Vec<u8>]) -> AuthResult<X509Certificate> {
         match certs.get(0) {
-            Some(cert) => Ok(x509_parser::parse_x509_certificate(&cert)
+            Some(cert) => Ok(x509_parser::parse_x509_certificate(cert)
                 .map_err(|err| {
                     ClientError::Request(format!("Failed to parse client certificate: {}", err))
                 })?

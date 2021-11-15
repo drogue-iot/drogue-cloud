@@ -266,11 +266,9 @@ WHERE APP=$1
 "#
         .to_string();
 
-        let mut types: Vec<Type> = Vec::new();
-        types.push(Type::VARCHAR);
+        let types: Vec<Type> = vec![Type::VARCHAR];
 
-        let mut params: Vec<&(dyn ToSql + Sync)> = Vec::new();
-        params.push(&app);
+        let params: Vec<&(dyn ToSql + Sync)> = vec![&app];
 
         let builder = SelectBuilder::new(select, params, types)
             .has_where()
@@ -427,7 +425,7 @@ AND
 
         // count all remaining devices
 
-        let count = self.count_devices(&app_id).await?;
+        let count = self.count_devices(app_id).await?;
 
         log::debug!("{} devices remain for deletion", count);
 

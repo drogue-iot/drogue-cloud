@@ -41,7 +41,6 @@ impl Handler<Subscribe> for Service {
     fn handle(&mut self, msg: Subscribe, ctx: &mut Context<Self>) -> Self::Result {
         let app = msg.application.clone();
         let addr = msg.addr.clone();
-        let id = msg.id.clone();
         let registry_client = self.registry.clone();
         let kafka = self.kafka_config.clone();
         let consumer_group = msg.consumer_group.clone();
@@ -61,7 +60,7 @@ impl Handler<Subscribe> for Service {
             // if run_stream return, it means that something went wrong
             ctx.notify(StreamError {
                 error: ServiceError::InternalError(String::from("Stream error")),
-                id,
+                id: msg.id,
             });
         });
 

@@ -144,7 +144,7 @@ impl<'a> SelectBuilder<'a> {
     }
 
     /// Add a labels filter.
-    pub fn labels(mut self, labels: &'a Vec<Operation>) -> Self {
+    pub fn labels(mut self, labels: &'a [Operation]) -> Self {
         for op in labels {
             self.ensure_where_or_and();
             match op {

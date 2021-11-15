@@ -88,7 +88,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         let kube = kube::client::Client::try_default()
             .await
             .context("Failed to create Kubernetes client")?;
-        Some(Api::<ConfigMap>::default_namespaced(kube.clone()))
+        Some(Api::<ConfigMap>::default_namespaced(kube))
     } else {
         None
     };
@@ -160,6 +160,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     // main server
 
+    #[allow(clippy::let_and_return)]
     let main = HttpServer::new(move || {
         let auth = openid_auth!(req -> req.app_data::<web::Data<Authenticator>>().map(|data|data.get_ref()));
 

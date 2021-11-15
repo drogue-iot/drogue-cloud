@@ -276,8 +276,8 @@ impl<T> Deref for ProcessOutcome<T> {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::Complete(result) => &result,
-            Self::Retry(result, _) => &result,
+            Self::Complete(result) => result,
+            Self::Retry(result, _) => result,
         }
     }
 }

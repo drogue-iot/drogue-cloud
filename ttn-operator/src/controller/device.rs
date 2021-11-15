@@ -219,9 +219,7 @@ impl<'a> Reconciler for DeviceReconciler<'a> {
 
             let device_id = &ctx.device.metadata.name;
 
-            self.ttn
-                .delete_device(&app_id, &device_id, &ttn_ctx)
-                .await?;
+            self.ttn.delete_device(app_id, device_id, &ttn_ctx).await?;
         }
 
         // remove the status section

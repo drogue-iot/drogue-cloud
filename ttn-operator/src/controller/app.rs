@@ -162,7 +162,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             .clone();
         let mut status = if let Some(mut status) = ctx.status {
             match status.app_id {
-                Some(ref app_id) => ensure_stable_app_id(&ctx.app.metadata, &ctx.spec, &app_id)?,
+                Some(ref app_id) => ensure_stable_app_id(&ctx.app.metadata, &ctx.spec, app_id)?,
                 None => {
                     status.app_id = Some(app_id.clone());
                 }
@@ -208,7 +208,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
                 .api
                 .to_context()?;
 
-            self.ttn.delete_app(&app_id, &ttn_ctx).await?;
+            self.ttn.delete_app(app_id, &ttn_ctx).await?;
         }
 
         ctx.app.metadata.finalizers.retain(|f| f != FINALIZER);
@@ -239,7 +239,7 @@ impl<'a> ApplicationReconciler<'a> {
                     .create_app(&app.metadata.name, ttn_app_id, spec.api.owner.clone(), &ctx)
                     .await
             }
-            Some(ttn_app) => self.update_app(ttn_app_id, ttn_app, &app, &ctx).await,
+            Some(ttn_app) => self.update_app(ttn_app_id, ttn_app, app, &ctx).await,
         }?;
 
         let auth = Authorization::basic(
@@ -259,19 +259,13 @@ impl<'a> ApplicationReconciler<'a> {
         match ttn_webhook {
             None => {
                 self.ttn
-                    .create_webhook(ttn_app_id, TTN_WEBHOOK_NAME, &self.endpoint_url, auth, &ctx)
+                    .create_webhook(ttn_app_id, TTN_WEBHOOK_NAME, self.endpoint_url, auth, &ctx)
                     .await?;
             }
             Some(ttn_webhook) => {
-                if Self::need_webhook_update(ttn_webhook, &self.endpoint_url, auth) {
+                if Self::need_webhook_update(ttn_webhook, self.endpoint_url, auth) {
                     self.ttn
-                        .update_webhook(
-                            ttn_app_id,
-                            TTN_WEBHOOK_NAME,
-                            &self.endpoint_url,
-                            auth,
-                            &ctx,
-                        )
+                        .update_webhook(ttn_app_id, TTN_WEBHOOK_NAME, self.endpoint_url, auth, &ctx)
                         .await?;
                 }
             }
@@ -289,16 +283,10 @@ impl<'a> ApplicationReconciler<'a> {
         // find a current password
 
         let password = match gateway.section::<registry::v1::DeviceSpecCredentials>() {
-            Some(Ok(creds)) => {
-                if let Some(password) = creds.credentials.iter().find_map(|cred| match cred {
-                    registry::v1::Credential::Password(pwd) => Some(pwd.clone()),
-                    _ => None,
-                }) {
-                    Some(password)
-                } else {
-                    None
-                }
-            }
+            Some(Ok(creds)) => creds.credentials.iter().find_map(|cred| match cred {
+                registry::v1::Credential::Password(pwd) => Some(pwd.clone()),
+                _ => None,
+            }),
             _ => None,
         };
 

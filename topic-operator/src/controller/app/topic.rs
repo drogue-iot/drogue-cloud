@@ -30,11 +30,11 @@ impl CreateTopic<'_> {
         let topic_name = make_kafka_resource_name(target.clone());
 
         let topic = create_or_update_by(
-            &kafka_topics,
+            kafka_topics,
             Some(config.topic_namespace.clone()),
             &topic_name,
             |meta| {
-                let mut topic = DynamicObject::new(&topic_name, &kafka_topic_resource)
+                let mut topic = DynamicObject::new(&topic_name, kafka_topic_resource)
                     .within(&config.topic_namespace);
                 *topic.meta_mut() = meta;
                 topic
@@ -82,9 +82,9 @@ impl<'o> ProgressOperation<ConstructContext> for CreateTopic<'o> {
     ) -> drogue_cloud_operator_common::controller::reconciler::progress::Result<ConstructContext>
     {
         let (topic, topic_name) = Self::ensure_kafka_topic(
-            &self.api,
-            &self.resource,
-            &self.config,
+            self.api,
+            self.resource,
+            self.config,
             ResourceType::Events(ctx.app.metadata.name.clone()),
         )
         .await?;

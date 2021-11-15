@@ -48,7 +48,7 @@ where
     I: RowIndex + fmt::Display,
     T: FromSql<'a>,
 {
-    Ok(row.try_get::<_, Vec<T>>(idx).or_else(fix_null_default)?)
+    row.try_get::<_, Vec<T>>(idx).or_else(fix_null_default)
 }
 
 /// Fix a null error by using an alternative value.
@@ -57,10 +57,7 @@ where
     F: FnOnce() -> T,
 {
     err.source()
-        .and_then(|e| match e.downcast_ref::<WasNull>() {
-            Some(_) => Some(Ok(f())),
-            None => None,
-        })
+        .and_then(|e| e.downcast_ref::<WasNull>().map(|_| Ok(f())))
         .unwrap_or(Err(err))
 }
 

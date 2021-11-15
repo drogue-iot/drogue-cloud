@@ -159,7 +159,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
         Ok(target)
     }
 
-    fn find_sql(source: &PathBuf, target: &PathBuf) -> anyhow::Result<Vec<(PathBuf, PathBuf)>> {
+    fn find_sql(source: &Path, target: &Path) -> anyhow::Result<Vec<(PathBuf, PathBuf)>> {
         let mut result = Vec::new();
 
         if !source.exists() {
@@ -264,5 +264,5 @@ where
     };
     let config = f(pc.clone());
 
-    Ok(PostgresRunner::new(cli, config, pc)?)
+    PostgresRunner::new(cli, config, pc)
 }
