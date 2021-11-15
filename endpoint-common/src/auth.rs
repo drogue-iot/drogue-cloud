@@ -79,16 +79,16 @@ impl DeviceAuthenticator {
         r#as: A2,
     ) -> AuthResult<AuthorizeGatewayResponse>
     where
-        A1: ToString,
-        A2: ToString,
-        D: ToString,
+        A1: Into<String>,
+        A2: Into<String>,
+        D: Into<String>,
     {
         self.client
             .authorize_as(
                 AuthorizeGatewayRequest {
-                    application: application.to_string(),
-                    device: device.to_string(),
-                    r#as: r#as.to_string(),
+                    application: application.into(),
+                    device: device.into(),
+                    r#as: r#as.into(),
                 },
                 Default::default(),
             )

@@ -1,12 +1,12 @@
+mod cache;
 mod inbox;
 
 use crate::auth::DeviceAuthenticator;
 use async_trait::async_trait;
-use clru::CLruCache;
+use cache::DeviceCache;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::command::CommandFilter;
 use drogue_cloud_endpoint_common::{
-    command::Commands,
+    command::{CommandFilter, Commands},
     sender::{self, DownstreamSender, PublishOptions, PublishOutcome, Publisher},
     sink::Sink,
 };
@@ -16,12 +16,12 @@ use drogue_cloud_mqtt_common::{
 };
 use drogue_cloud_service_api::auth::device::authn::GatewayOutcome;
 use drogue_cloud_service_common::Id;
-use futures::lock::Mutex;
+use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
 use ntex_mqtt::{types::QoS, v5};
+use std::time::Duration;
 use std::{
     collections::{hash_map::Entry, HashMap},
-    num::NonZeroUsize,
     sync::Arc,
 };
 
@@ -37,12 +37,8 @@ where
     auth: DeviceAuthenticator,
     sink: mqtt::Sink,
     inbox_reader: Arc<Mutex<HashMap<String, InboxSubscription>>>,
-    device_cache: Arc<Mutex<CLruCache<String, DeviceCacheEntry>>>,
+    device_cache: DeviceCache<registry::v1::Device>,
     id: Id,
-}
-
-struct DeviceCacheEntry {
-    pub device: Option<Arc<registry::v1::Device>>,
 }
 
 impl<S> Session<S>
@@ -61,6 +57,7 @@ where
             application.metadata.name.clone(),
             device.metadata.name.clone(),
         );
+        let device_cache = cache::DeviceCache::new(128, Duration::from_secs(30));
         Self {
             auth,
             sender,
@@ -69,7 +66,7 @@ where
             device: Arc::new(device),
             commands,
             inbox_reader: Default::default(),
-            device_cache: Arc::new(Mutex::new(CLruCache::new(NonZeroUsize::new(128).unwrap()))),
+            device_cache,
             id,
         }
     }
@@ -110,50 +107,26 @@ where
         let topic = publish.topic().path().split('/').collect::<Vec<_>>();
         log::debug!("Topic: {:?}", topic);
 
-        Ok(match topic.as_slice() {
-            [channel] => (channel.to_string(), self.device.clone()),
-            [channel, as_device] => {
-                let mut cache = self.device_cache.lock().await;
-                match cache.get(&as_device.to_string()) {
-                    Some(outcome) => match &outcome.device {
-                        Some(r#as) => (channel.to_string(), r#as.clone()),
-                        _ => return Err(PublishError::NotAuthorized),
-                    },
-                    None => {
-                        let outcome = self
-                            .auth
-                            .authorize_as(
-                                &self.application.metadata.name,
-                                &self.device.metadata.name,
-                                as_device,
-                            )
-                            .await
-                            .map_err(|err| {
-                                log::info!("Authorize as failed: {}", err);
-                                PublishError::InternalError("Failed to authorize device".into())
-                            })?
-                            .outcome;
-
-                        let entry = match outcome {
-                            GatewayOutcome::Pass { r#as } => DeviceCacheEntry {
-                                device: Some(Arc::new(r#as)),
-                            },
-                            _ => DeviceCacheEntry { device: None },
-                        };
-
-                        let device = entry.device.clone();
-
-                        cache.put(as_device.to_string(), entry);
-
-                        match device {
-                            Some(r#as) => (channel.to_string(), r#as),
-                            None => return Err(PublishError::NotAuthorized),
-                        }
-                    }
-                }
-            }
-            _ => return Err(PublishError::TopicNameInvalid),
-        })
+        match topic.as_slice() {
+            [channel] => Ok((channel.to_string(), self.device.clone())),
+            [channel, as_device] => self
+                .device_cache
+                .fetch(as_device, |as_device| {
+                    self.auth
+                        .authorize_as(
+                            &self.application.metadata.name,
+                            &self.device.metadata.name,
+                            as_device,
+                        )
+                        .map_ok(|result| match result.outcome {
+                            GatewayOutcome::Pass { r#as } => Some(r#as),
+                            _ => None,
+                        })
+                })
+                .await
+                .map(|r| (channel.to_string(), r)),
+            _ => Err(PublishError::TopicNameInvalid),
+        }
     }
 }
 

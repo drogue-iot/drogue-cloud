@@ -1,7 +1,7 @@
 use ntex::util::ByteString;
 use ntex_mqtt::{v3, v5};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PublishError {
     InternalError(String),
     QuotaExceeded,
