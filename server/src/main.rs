@@ -200,6 +200,18 @@ fn configure_keycloak(server: &Keycloak) {
             .await
             .unwrap();
 
+        let mut mapper_config = HashMap::new();
+        mapper_config.insert("included.client.audience".into(), "drogue".into());
+        mapper_config.insert("id.token.claim".into(), "false".into());
+        mapper_config.insert("access.token.claim".into(), "true".into());
+        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
+            id: None,
+            name: Some("add-audience".to_string()),
+            protocol: Some("openid-connect".to_string()),
+            protocol_mapper: Some("oidc-audience-mapper".to_string()),
+            config: Some(mapper_config),
+        }];
+
         let admin = keycloak::KeycloakAdmin::new(&url, admin_token, client);
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue".to_string());
@@ -209,6 +221,8 @@ fn configure_keycloak(server: &Keycloak) {
         c.client_authenticator_type
             .replace("client-secret".to_string());
         c.public_client.replace(true);
+        c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
+        c.protocol_mappers.replace(mappers.clone());
 
         let mut failed = 0;
         match admin.realm_clients_post(&server.realm, c).await {
@@ -232,13 +246,13 @@ fn configure_keycloak(server: &Keycloak) {
 
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue-service".to_string());
+        c.service_accounts_enabled.replace(true);
         c.enabled.replace(true);
-        c.redirect_uris.replace(vec!["*".to_string()]);
-        c.web_origins.replace(vec!["*".to_string()]);
         c.client_authenticator_type
             .replace("client-secret".to_string());
         c.public_client.replace(false);
         c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
+        c.protocol_mappers.replace(mappers.clone());
 
         match admin.realm_clients_post(&server.realm, c).await {
             Ok(_) => {
@@ -485,7 +499,7 @@ fn main() {
         oauth.clients.insert(
             "drogue".to_string(),
             AuthenticatorClientConfig {
-                client_id: "drogue-service".to_string(),
+                client_id: "drogue".to_string(),
                 client_secret: SERVICE_CLIENT_SECRET.to_string(),
                 scopes: "openid profile email".into(),
             },
@@ -868,7 +882,7 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
         }),
         websocket_integration: Some(HttpEndpoint {
             url: format!(
-                "http://{}:{}",
+                "ws://{}:{}",
                 config.websocket_integration.host, config.websocket_integration.port
             ),
         }),
