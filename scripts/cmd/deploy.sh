@@ -32,64 +32,52 @@ Options:
 EOF
 }
 
-opts=$(getopt -o "mhkp:c:n:d:s:S:t:T" -- "$@")
 # shellcheck disable=SC2181
 [ $? -eq 0 ] || {
     help >&3
     # we don't "fail" but exit here, since we don't want any more output
     exit 1
 }
-eval set -- "$opts"
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-    -c)
-        CLUSTER="$2"
-        shift 2
+while getopts mhkp:c:n:d:s:S:t:T FLAG; do
+  case $FLAG in
+    c)
+        CLUSTER="$OPTARG"
         ;;
-    -k)
+    k)
         INSTALL_DEPS=false
-        shift
         ;;
-    -n)
-        DROGUE_NS="$2"
-        shift 2
+    n)
+        DROGUE_NS="$OPTARG"
         ;;
-    -s)
-        HELM_ARGS="$HELM_ARGS --set $2"
-        shift 2
+    s)
+        HELM_ARGS="$HELM_ARGS --set $OPTARG"
         ;;
-    -S)
-        HELM_ARGS="$HELM_ARGS --set-string $2"
-        shift 2
+    S)
+        HELM_ARGS="$HELM_ARGS --set-string $OPTARG"
         ;;
-    -d)
-        DOMAIN="$2"
-        shift 2
+    d)
+        DOMAIN="$OPTARG"
         ;;
-    -m)
+    m)
         MINIMIZE=true
-        shift
         ;;
-    -p)
-        HELM_PROFILE="$2"
-        shift 2
+    p)
+        HELM_PROFILE="$OPTARG"
         ;;
-    -t)
-        HELM_TIMEOUT="$2"
-        shift 2
+    t)
+        HELM_TIMEOUT="$OPTARG"
         ;;
-    -T)
+    T)
         DEPLOY_TWIN="true"
-        shift
         ;;
-    -h)
+    h)
         help >&3
         exit 0
         ;;
-    --)
-        shift
-        break
+    \?)
+        help >&3
+        exit 0
         ;;
     *)
         help >&3
