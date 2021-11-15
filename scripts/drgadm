@@ -36,7 +36,7 @@ function on_exit() {
     rv=$?
     if [[ $rv != 0 && (! "$DEBUG") && -s "$LOG" ]]; then
         # if there was a failure, dump the full log
-        echo
+        echo 1>&2
         echo "Command failed:" 1>&2
         echo "----------------------" 1>&2
         cat "$LOG" 1>&2
@@ -53,7 +53,7 @@ trap on_exit EXIT
 
 # run the actual command
 if [[ "$DEBUG" ]]; then
-    source "$BASEDIR/cmd/${cmd}.sh" 3>&1
+    ( source "$BASEDIR/cmd/${cmd}.sh" ) 3>&1
 else
-    source "$BASEDIR/cmd/${cmd}.sh" 3>&1 &>"$LOG"
+    ( source "$BASEDIR/cmd/${cmd}.sh" ) 3>&1 &>"$LOG"
 fi
