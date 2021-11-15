@@ -7,11 +7,15 @@ use kube::Api;
 
 pub async fn get_info(
     endpoints: web::Data<Endpoints>,
-    config_maps: web::Data<Api<ConfigMap>>,
+    config_maps: Option<web::Data<Api<ConfigMap>>>,
 ) -> impl Responder {
     let info = EndpointInformation {
         endpoints: endpoints.get_ref().clone(),
-        demos: get_demos(&config_maps).await.unwrap_or_default(),
+        demos: if let Some(config_maps) = config_maps {
+            get_demos(&config_maps).await.unwrap_or_default()
+        } else {
+            Vec::new()
+        },
     };
 
     HttpResponse::Ok().json(info)
