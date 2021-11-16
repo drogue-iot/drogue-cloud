@@ -1,2 +1,9 @@
 drogueCloudTwin:
   enabled: false
+
+drogueCloudExamples:
+  source:
+    kafka:
+      enabled: true
+    drogue:
+      enabled: false
