@@ -95,6 +95,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     .bind(config.bind_addr)?
     .run();
 
+    log::info!("RUNNING WS");
+
     // run
     if let Some(health) = config.health {
         let health = HealthServer::new(health, vec![]);

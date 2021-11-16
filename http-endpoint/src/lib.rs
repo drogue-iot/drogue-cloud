@@ -117,7 +117,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                 ext.insert(cert);
             }
         }
-    });
+    })
+    .client_timeout(60000);
 
     let http_server = match (config.disable_tls, config.key_file, config.cert_bundle_file) {
         (false, Some(key), Some(cert)) => {

@@ -20,8 +20,10 @@ pub async fn start_connection(
     service_addr: web::Data<Addr<Service>>,
     web::Query(group_id): web::Query<GroupId>,
 ) -> Result<HttpResponse, Error> {
+    log::info!("STARTING WS CONNECTION");
     let application = application.into_inner();
 
+    log::info!("STARTING WS CONNECTION");
     // launch web socket actor
     let ws = WsHandler::new(
         application,

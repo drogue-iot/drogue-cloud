@@ -13,7 +13,9 @@ use drogue_cloud_service_common::{
     client::RegistryConfig,
     client::UserAuthClientConfig,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
-    openid::{AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig},
+    openid::{
+        AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
+    },
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use std::collections::HashMap;
@@ -185,10 +187,11 @@ fn run_migrations(db: &Database) {
     println!("Migrating database schema... done!");
 }
 
+const SERVICE_CLIENT_SECRET: &str = "a73d4e96-461b-11ec-8d66-d45ddf138840";
 fn configure_keycloak(server: &Keycloak) {
     print!("Configuring keycloak... ");
     let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
+    let failed = rt.block_on(async {
         let url = &server.url;
         let user = server.user.clone();
         let password = server.password.clone();
@@ -196,21 +199,41 @@ fn configure_keycloak(server: &Keycloak) {
         let admin_token = keycloak::KeycloakAdminToken::acquire(url, &user, &password, &client)
             .await
             .unwrap();
+        let admin = keycloak::KeycloakAdmin::new(&url, admin_token, client);
 
-        let admin = keycloak::KeycloakAdmin::new(url, admin_token, client);
+        let mut mapper_config = HashMap::new();
+        mapper_config.insert("included.client.audience".into(), "drogue".into());
+        mapper_config.insert("id.token.claim".into(), "false".into());
+        mapper_config.insert("access.token.claim".into(), "true".into());
+        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
+            id: None,
+            name: Some("add-audience".to_string()),
+            protocol: Some("openid-connect".to_string()),
+            protocol_mapper: Some("oidc-audience-mapper".to_string()),
+            config: Some(mapper_config),
+        }];
+
+        // Configure oauth account
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue".to_string());
         c.enabled.replace(true);
+        c.implicit_flow_enabled.replace(true);
+        c.standard_flow_enabled.replace(true);
+        c.direct_access_grants_enabled.replace(false);
+        c.service_accounts_enabled.replace(false);
+        c.full_scope_allowed.replace(true);
+        c.root_url.replace("".to_string());
         c.redirect_uris.replace(vec!["*".to_string()]);
         c.web_origins.replace(vec!["*".to_string()]);
         c.client_authenticator_type
             .replace("client-secret".to_string());
         c.public_client.replace(true);
+        c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
+        c.protocol_mappers.replace(mappers.clone());
 
+        let mut failed = 0;
         match admin.realm_clients_post(&server.realm, c).await {
-            Ok(_) => {
-                println!("done!");
-            }
+            Ok(_) => {}
             Err(e) => {
                 if let keycloak::KeycloakError::HttpFailure {
                     status: 409,
@@ -218,15 +241,129 @@ fn configure_keycloak(server: &Keycloak) {
                     text: _,
                 } = e
                 {
-                    log::trace!("Client already exists");
-                    println!("done!");
+                    log::trace!("Client 'drogue' already exists");
                 } else {
-                    log::warn!("Error creating keycloak client: {:?}", e);
-                    println!("failed!");
+                    log::warn!("Error creating 'drogue' client: {:?}", e);
+                    failed += 1;
                 }
             }
         }
+
+        // Configure service account
+        let mut c: keycloak::types::ClientRepresentation = Default::default();
+        c.client_id.replace("services".to_string());
+        c.implicit_flow_enabled.replace(false);
+        c.standard_flow_enabled.replace(false);
+        c.direct_access_grants_enabled.replace(false);
+        c.service_accounts_enabled.replace(true);
+        c.full_scope_allowed.replace(true);
+        c.enabled.replace(true);
+        c.client_authenticator_type
+            .replace("client-secret".to_string());
+        c.public_client.replace(false);
+        c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
+
+        let mut mapper_config = HashMap::new();
+        mapper_config.insert("included.client.audience".into(), "services".into());
+        mapper_config.insert("id.token.claim".into(), "false".into());
+        mapper_config.insert("access.token.claim".into(), "true".into());
+        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
+            id: None,
+            name: Some("add-audience".to_string()),
+            protocol: Some("openid-connect".to_string()),
+            protocol_mapper: Some("oidc-audience-mapper".to_string()),
+            config: Some(mapper_config),
+        }];
+        c.protocol_mappers.replace(mappers.clone());
+
+        match admin.realm_clients_post(&server.realm, c).await {
+            Ok(_) => {}
+            Err(e) => {
+                if let keycloak::KeycloakError::HttpFailure {
+                    status: 409,
+                    body: _,
+                    text: _,
+                } = e
+                {
+                    log::trace!("Client 'services' already exists");
+                } else {
+                    log::warn!("Error creating 'services' client: {:?}", e);
+                    failed += 1;
+                }
+            }
+        }
+
+        // Configure roles
+        let mut admin_role = keycloak::types::RoleRepresentation::default();
+        admin_role.name.replace("drogue-admin".to_string());
+        match admin
+            .realm_roles_post(&server.realm, admin_role.clone())
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                if let keycloak::KeycloakError::HttpFailure {
+                    status: 409,
+                    body: _,
+                    text: _,
+                } = e
+                {
+                    log::trace!("Role 'drogue-admin' already exists");
+                } else {
+                    log::warn!("Error creating 'drogue-admin' role: {:?}", e);
+                    failed += 1;
+                }
+            }
+        }
+
+        let mut user_role = keycloak::types::RoleRepresentation::default();
+        user_role.name.replace("drogue-user".to_string());
+        match admin
+            .realm_roles_post(&server.realm, user_role.clone())
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                if let keycloak::KeycloakError::HttpFailure {
+                    status: 409,
+                    body: _,
+                    text: _,
+                } = e
+                {
+                    log::trace!("Role 'drogue-user' already exists");
+                } else {
+                    log::warn!("Error creating 'drogue-user' role: {:?}", e);
+                    failed += 1;
+                }
+            }
+        }
+
+        // Add to default roles if not present
+        match admin
+            .realm_roles_with_role_name_composites_post(
+                &server.realm,
+                &format!("default-roles-{}", server.realm),
+                vec![admin_role.clone(), user_role.clone()],
+            )
+            .await
+        {
+            Ok(v) => {
+                println!("Yay");
+            }
+            Err(e) => {
+                println!("Nay: {:?}", e);
+                log::warn!("Error associating roles with default: {:?}", e);
+                failed += 1;
+            }
+        }
+
+        failed
     });
+    if failed > 0 {
+        println!("failed!");
+    } else {
+        println!("done!");
+    }
 }
 
 fn main() {
@@ -301,6 +438,11 @@ fn main() {
                     Arg::with_name("enable-mqtt-integration")
                         .long("--enable-mqtt-integration")
                         .help("enable mqtt integration"),
+                )
+                .arg(
+                    Arg::with_name("enable-websocket-integration")
+                        .long("--enable-websocket-integration")
+                        .help("enable websocket integration"),
                 )
                 .arg(
                     Arg::with_name("server-key")
@@ -420,20 +562,45 @@ fn main() {
             consumer_group: consumer_group.to_string(),
         };
 
-        let oauth = AuthenticatorConfig {
-            disabled: true,
+        let token_config = TokenConfig {
+            client_id: "services".to_string(),
+            client_secret: SERVICE_CLIENT_SECRET.to_string(),
+            issuer_url: eps.issuer_url.as_ref().map(|u| Url::parse(u).unwrap()),
+            sso_url: Url::parse(eps.sso.as_ref().unwrap()).ok(),
+            realm: server.keycloak.realm.clone(),
+            refresh_before: None,
+        };
+
+        let mut oauth = AuthenticatorConfig {
+            disabled: false,
             global: AuthenticatorGlobalConfig {
                 sso_url: eps.sso.clone(),
                 issuer_url: eps.issuer_url.clone(),
-                realm: "master".to_string(),
-                redirect_url: None,
+                realm: server.keycloak.realm.clone(),
+                redirect_url: eps.redirect_url.clone(),
             },
             clients: HashMap::new(),
         };
+        oauth.clients.insert(
+            "drogue".to_string(),
+            AuthenticatorClientConfig {
+                client_id: "drogue".to_string(),
+                client_secret: SERVICE_CLIENT_SECRET.to_string(),
+                scopes: "openid profile email".into(),
+            },
+        );
+        oauth.clients.insert(
+            "services".to_string(),
+            AuthenticatorClientConfig {
+                client_id: "services".to_string(),
+                client_secret: SERVICE_CLIENT_SECRET.to_string(),
+                scopes: "openid profile email".into(),
+            },
+        );
 
         let keycloak = KeycloakAdminClientConfig {
             url: Url::parse(eps.sso.as_ref().unwrap()).unwrap(),
-            realm: "master".into(),
+            realm: server.keycloak.realm.clone(),
             admin_username: server.keycloak.user.clone(),
             admin_password: server.keycloak.password.clone(),
             tls_noverify: true,
@@ -441,7 +608,7 @@ fn main() {
 
         let registry = RegistryConfig {
             url: Url::parse(&eps.registry.as_ref().unwrap().url).unwrap(),
-            token_config: None,
+            token_config: Some(token_config.clone()),
         };
 
         let mut pg = deadpool_postgres::Config::new();
@@ -456,19 +623,9 @@ fn main() {
 
         let authurl: String = server.device_auth.clone().into();
         let auth = AuthConfig {
-            auth_disabled: true,
+            auth_disabled: false,
             url: Url::parse(&format!("http://{}", authurl)).unwrap(),
-            token_config: None,
-        };
-
-        let client_secret = "myimportantsecret";
-        let token_config = TokenConfig {
-            client_id: "drogue-service".to_string(),
-            client_secret: client_secret.to_string(),
-            issuer_url: eps.issuer_url.as_ref().map(|u| Url::parse(u).unwrap()),
-            sso_url: Url::parse(eps.sso.as_ref().unwrap()).ok(),
-            realm: "master".to_string(),
-            refresh_before: None,
+            token_config: Some(token_config.clone()),
         };
 
         let user_auth = Some(UserAuthClientConfig {
@@ -491,13 +648,13 @@ fn main() {
             let user_auth = user_auth;
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
-                    enable_api_keys: false,
+                    enable_api_keys: true,
                     user_auth,
                     oauth: o,
                     keycloak: k,
                     database_config: PostgresManagementServiceConfig {
                         pg: pg.clone(),
-                        instance: "drogue".to_string(),
+                        instance: s.database.db.to_string(),
                     },
 
                     health: None,
@@ -582,6 +739,7 @@ fn main() {
             let t = token_config;
             let bind_addr = s.console.clone().into();
             let registry = registry.clone();
+            let user_auth = user_auth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_console_backend::Config {
                     oauth: o,
@@ -594,14 +752,7 @@ fn main() {
                     console_token_config: Some(t.clone()),
                     disable_account_url: false,
                     scopes: "openid profile email".into(),
-                    user_auth: Some(UserAuthClientConfig {
-                        token_config: Some(t),
-                        url: Url::parse(&format!(
-                            "http://{}:{}",
-                            s.user_auth.host, s.user_auth.port
-                        ))
-                        .unwrap(),
-                    }),
+                    user_auth,
                 };
                 actix_rt::System::with_tokio_rt(|| {
                     tokio::runtime::Builder::new_current_thread()
@@ -692,6 +843,8 @@ fn main() {
             let cert_bundle_file: Option<String> =
                 matches.value_of("server-cert").map(|s| s.to_string());
             let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+            let registry = registry.clone();
+            let oauth = oauth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_mqtt_integration::Config {
                     health: None,
@@ -716,6 +869,35 @@ fn main() {
                 ntex::rt::System::new("mqtt-integration")
                     .block_on(drogue_cloud_mqtt_integration::run(config))
                     .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-websocket-integration") || matches.is_present("enable-all") {
+            log::info!("Enabling Websocket integration");
+            let bind_addr = server.websocket_integration.clone().into();
+            let kafka = server.kafka.clone();
+            let user_auth = user_auth.clone();
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_websocket_integration::Config {
+                    health: None,
+                    enable_api_keys: true,
+                    oauth,
+                    bind_addr,
+                    registry,
+                    kafka,
+                    user_auth,
+                };
+
+                actix_rt::System::with_tokio_rt(|| {
+                    tokio::runtime::Builder::new_current_thread()
+                        .worker_threads(1)
+                        .thread_name("websocket-integration")
+                        .enable_all()
+                        .build()
+                        .unwrap()
+                })
+                .block_on(drogue_cloud_websocket_integration::run(config))
+                .unwrap();
             }));
         }
 
@@ -793,7 +975,7 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
         }),
         websocket_integration: Some(HttpEndpoint {
             url: format!(
-                "http://{}:{}",
+                "ws://{}:{}",
                 config.websocket_integration.host, config.websocket_integration.port
             ),
         }),
