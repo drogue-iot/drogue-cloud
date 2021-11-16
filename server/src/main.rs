@@ -506,14 +506,6 @@ fn main() {
                 scopes: "openid profile email".into(),
             },
         );
-        oauth.clients.insert(
-            "drogue-service".to_string(),
-            AuthenticatorClientConfig {
-                client_id: "drogue-service".to_string(),
-                client_secret: SERVICE_CLIENT_SECRET.to_string(),
-                scopes: "openid profile email".into(),
-            },
-        );
 
         let keycloak = KeycloakAdminClientConfig {
             url: Url::parse(eps.sso.as_ref().unwrap()).unwrap(),
