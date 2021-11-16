@@ -213,6 +213,8 @@ fn configure_keycloak(server: &Keycloak) {
         }];
 
         let admin = keycloak::KeycloakAdmin::new(&url, admin_token, client);
+
+        // Configure oauth account
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue".to_string());
         c.enabled.replace(true);
@@ -232,9 +234,7 @@ fn configure_keycloak(server: &Keycloak) {
 
         let mut failed = 0;
         match admin.realm_clients_post(&server.realm, c).await {
-            Ok(_) => {
-                println!("done!");
-            }
+            Ok(_) => {}
             Err(e) => {
                 if let keycloak::KeycloakError::HttpFailure {
                     status: 409,
@@ -250,6 +250,7 @@ fn configure_keycloak(server: &Keycloak) {
             }
         }
 
+        // Configure service account
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("services".to_string());
         c.implicit_flow_enabled.replace(false);
@@ -277,9 +278,7 @@ fn configure_keycloak(server: &Keycloak) {
         c.protocol_mappers.replace(mappers.clone());
 
         match admin.realm_clients_post(&server.realm, c).await {
-            Ok(_) => {
-                println!("done!");
-            }
+            Ok(_) => {}
             Err(e) => {
                 if let keycloak::KeycloakError::HttpFailure {
                     status: 409,
@@ -294,6 +293,71 @@ fn configure_keycloak(server: &Keycloak) {
                 }
             }
         }
+
+        // Configure roles
+        let mut admin_role = keycloak::types::RoleRepresentation::default();
+        admin_role.name.replace("drogue-admin".to_string());
+        match admin
+            .realm_roles_post(&server.realm, admin_role.clone())
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                if let keycloak::KeycloakError::HttpFailure {
+                    status: 409,
+                    body: _,
+                    text: _,
+                } = e
+                {
+                    log::trace!("Role 'drogue-admin' already exists");
+                } else {
+                    log::warn!("Error creating 'drogue-admin' role: {:?}", e);
+                    failed += 1;
+                }
+            }
+        }
+
+        let mut user_role = keycloak::types::RoleRepresentation::default();
+        user_role.name.replace("drogue-user".to_string());
+        match admin
+            .realm_roles_post(&server.realm, user_role.clone())
+            .await
+        {
+            Ok(_) => {}
+            Err(e) => {
+                if let keycloak::KeycloakError::HttpFailure {
+                    status: 409,
+                    body: _,
+                    text: _,
+                } = e
+                {
+                    log::trace!("Role 'drogue-user' already exists");
+                } else {
+                    log::warn!("Error creating 'drogue-user' role: {:?}", e);
+                    failed += 1;
+                }
+            }
+        }
+
+        // Add to default roles if not present
+        match admin
+            .realm_roles_with_role_name_composites_post(
+                &server.realm,
+                &format!("default-roles-{}", server.realm),
+                vec![admin_role.clone(), user_role.clone()],
+            )
+            .await
+        {
+            Ok(v) => {
+                println!("Yay");
+            }
+            Err(e) => {
+                println!("Nay: {:?}", e);
+                log::warn!("Error associating roles with default: {:?}", e);
+                failed += 1;
+            }
+        }
+
         failed
     });
     if failed > 0 {
