@@ -11,6 +11,7 @@ drogue-cloud-console-backend = { path = "../console-backend" }
 drogue-cloud-mqtt-endpoint = { path = "../mqtt-endpoint" }
 drogue-cloud-http-endpoint = { path = "../http-endpoint" }
 drogue-cloud-mqtt-integration = { path = "../mqtt-integration" }
+drogue-cloud-websocket-integration = { path = "../websocket-integration" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-api-key-service = { path = "../api-key-service" }
@@ -20,6 +21,7 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-device-management-service = { path = "../device-management-service" }
 drogue-cloud-authentication-service = { path = "../authentication-service" }
 drogue-cloud-user-auth-service = { path = "../user-auth-service" }
+serde_json = "1.0"
 url = "2"
 stderrlog = "0.4"
 log = "0.4"

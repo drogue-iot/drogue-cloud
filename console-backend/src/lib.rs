@@ -190,11 +190,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
         let app = app.app_data(keycloak_service.clone());
         let app = app.app_data(web::Data::new(registry.clone()));
-        let app = if let Some(config_maps) = config_maps.clone() {
-            app.app_data(web::Data::new(config_maps))
-        } else {
-            app
-        };
+        let app = app.app_data(web::Data::new(config_maps.clone()));
 
         let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(
