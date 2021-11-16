@@ -218,12 +218,6 @@ fn configure_keycloak(server: &Keycloak) {
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue".to_string());
         c.enabled.replace(true);
-        c.implicit_flow_enabled.replace(true);
-        c.standard_flow_enabled.replace(true);
-        c.direct_access_grants_enabled.replace(false);
-        c.service_accounts_enabled.replace(false);
-        c.full_scope_allowed.replace(true);
-        c.root_url.replace("".to_string());
         c.redirect_uris.replace(vec!["*".to_string()]);
         c.web_origins.replace(vec!["*".to_string()]);
         c.client_authenticator_type
@@ -253,29 +247,13 @@ fn configure_keycloak(server: &Keycloak) {
         }
 
         let mut c: keycloak::types::ClientRepresentation = Default::default();
-        c.client_id.replace("services".to_string());
-        c.implicit_flow_enabled.replace(false);
-        c.standard_flow_enabled.replace(false);
-        c.direct_access_grants_enabled.replace(false);
+        c.client_id.replace("drogue-service".to_string());
         c.service_accounts_enabled.replace(true);
-        c.full_scope_allowed.replace(true);
         c.enabled.replace(true);
         c.client_authenticator_type
             .replace("client-secret".to_string());
         c.public_client.replace(false);
         c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
-
-        let mut mapper_config = HashMap::new();
-        mapper_config.insert("included.client.audience".into(), "services".into());
-        mapper_config.insert("id.token.claim".into(), "false".into());
-        mapper_config.insert("access.token.claim".into(), "true".into());
-        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
-            id: None,
-            name: Some("add-audience".to_string()),
-            protocol: Some("openid-connect".to_string()),
-            protocol_mapper: Some("oidc-audience-mapper".to_string()),
-            config: Some(mapper_config),
-        }];
         c.protocol_mappers.replace(mappers.clone());
 
         match admin.realm_clients_post(&server.realm, c).await {
@@ -289,9 +267,9 @@ fn configure_keycloak(server: &Keycloak) {
                     text: _,
                 } = e
                 {
-                    log::trace!("Client 'services' already exists");
+                    log::trace!("Client 'drogue-service' already exists");
                 } else {
-                    log::warn!("Error creating 'services' client: {:?}", e);
+                    log::warn!("Error creating 'drogue-service' client: {:?}", e);
                     failed += 1;
                 }
             }
@@ -502,7 +480,7 @@ fn main() {
         };
 
         let token_config = TokenConfig {
-            client_id: "services".to_string(),
+            client_id: "drogue-service".to_string(),
             client_secret: SERVICE_CLIENT_SECRET.to_string(),
             issuer_url: eps.issuer_url.as_ref().map(|u| Url::parse(u).unwrap()),
             sso_url: Url::parse(eps.sso.as_ref().unwrap()).ok(),
@@ -529,9 +507,9 @@ fn main() {
             },
         );
         oauth.clients.insert(
-            "services".to_string(),
+            "drogue-service".to_string(),
             AuthenticatorClientConfig {
-                client_id: "services".to_string(),
+                client_id: "drogue-service".to_string(),
                 client_secret: SERVICE_CLIENT_SECRET.to_string(),
                 scopes: "openid profile email".into(),
             },
