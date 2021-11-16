@@ -261,11 +261,10 @@ fn configure_keycloak(server: &Keycloak) {
         c.public_client.replace(false);
         c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
 
-        let mut mapper_config = HashMap::new();
+        let mut mapper_config: HashMap<String, serde_json::value::Value> = HashMap::new();
         mapper_config.insert("included.client.audience".into(), "services".into());
         mapper_config.insert("id.token.claim".into(), "false".into());
         mapper_config.insert("access.token.claim".into(), "true".into());
-
         c.protocol_mappers.replace(mappers.clone());
 
         if let Err(e) = admin.realm_clients_post(&server.realm, c).await {
@@ -639,7 +638,7 @@ fn main() {
             let bind_addr = server.clone().registry.into();
             let s = server.clone();
             let pg = pg.clone();
-            let user_auth = user_auth;
+            let user_auth = user_auth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
                     enable_api_keys: true,

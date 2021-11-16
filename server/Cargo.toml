@@ -21,6 +21,7 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-device-management-service = { path = "../device-management-service" }
 drogue-cloud-authentication-service = { path = "../authentication-service" }
 drogue-cloud-user-auth-service = { path = "../user-auth-service" }
+serde_json = "1.0"
 url = "2"
 stderrlog = "0.4"
 log = "0.4"

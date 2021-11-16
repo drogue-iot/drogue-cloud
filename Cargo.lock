@@ -2403,6 +2403,7 @@ dependencies = [
  "rdkafka-sys",
  "reqwest",
  "sasl2-sys",
+ "serde_json",
  "stderrlog",
  "tokio 1.11.0",
  "url",
