@@ -2492,6 +2492,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-topic-admin-operator"
+version = "0.8.0"
+dependencies = [
+ "actix",
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "config 0.11.0",
+ "dotenv",
+ "drogue-client",
+ "drogue-cloud-database-common",
+ "drogue-cloud-operator-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "env_logger 0.7.1",
+ "futures",
+ "humantime 2.1.0",
+ "humantime-serde",
+ "log",
+ "rdkafka",
+ "reqwest",
+ "serde 1.0.130",
+ "serde_json",
+ "thiserror",
+ "tokio 1.11.0",
+ "url",
+]
+
+[[package]]
 name = "drogue-cloud-topic-operator"
 version = "0.8.0"
 dependencies = [
