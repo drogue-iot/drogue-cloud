@@ -42,7 +42,8 @@ ALL_IMAGES=\
 	user-auth-service \
 	mqtt-integration \
 	ttn-operator \
-	topic-operator \
+	topic-strimzi-operator \
+	topic-admin-operator \
 	websocket-integration \
 
 
