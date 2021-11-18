@@ -1961,6 +1961,7 @@ dependencies = [
  "drogue-cloud-service-api",
  "env_logger 0.7.1",
  "headers",
+ "hostname-validator",
  "http",
  "indexmap",
  "itertools 0.9.0",
@@ -3256,6 +3257,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "hostname-validator"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be14a194c8bc9f0ce9901de058cf114bab6ae85d461adc4bfa37deb295ad89d4"
+
+[[package]]
 name = "http"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4511,7 +4518,7 @@ checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
 [[package]]
 name = "patternfly-yew"
 version = "0.0.27"
-source = "git+https://github.com/ctron/patternfly-yew?rev=21660fc7849cb9fc29fc85493ee6b0bb389707b6#21660fc7849cb9fc29fc85493ee6b0bb389707b6"
+source = "git+https://github.com/jbtrystram/patternfly-yew?rev=4ceb7423a561e2319666a8e3c301943400cc505e#4ceb7423a561e2319666a8e3c301943400cc505e"
 dependencies = [
  "chrono",
  "js-sys",

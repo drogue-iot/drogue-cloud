@@ -14,6 +14,8 @@ use patternfly_yew::*;
 use yew::{format::*, prelude::*, services::fetch::*};
 use yew_router::{agent::RouteRequest, prelude::*};
 
+use serde_json::json;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApplicationEntry {
     pub app: Application,
@@ -61,12 +63,18 @@ pub enum Msg {
 
     ShowOverview(String),
     Delete(String),
+
+    TriggerModal,
+    Create,
+    NewAppName(String),
 }
 
 pub struct Index {
     props: Props,
     link: ComponentLink<Self>,
     entries: Vec<ApplicationEntry>,
+
+    new_app_name: String,
 
     fetch_task: Option<FetchTask>,
 }
@@ -82,6 +90,7 @@ impl Component for Index {
             link,
             entries: Vec::new(),
             fetch_task: None,
+            new_app_name: Default::default(),
         }
     }
 
@@ -108,6 +117,18 @@ impl Component for Index {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to delete", err),
             },
+            Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
+                content: (self.create_modal()),
+            }),
+            Msg::Create => {
+                match self.create(self.new_app_name.clone()) {
+                    Ok(task) => self.fetch_task = Some(task),
+                    Err(err) => error("Failed to create", err),
+                }
+                BackdropDispatcher::default().close();
+                self.new_app_name = Default::default();
+            }
+            Msg::NewAppName(name) => self.new_app_name = name,
         };
         true
     }
@@ -122,6 +143,13 @@ impl Component for Index {
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
                         <Title>{"Applications"}</Title>
+                        <ToolbarItem modifiers=vec![ToolbarElementModifier::Right.all()]>
+                            <Button
+                                    label="New Application"
+                                    variant=Variant::Primary
+                                    onclick=self.link.callback(|_|Msg::TriggerModal)
+                            />
+                        </ToolbarItem>
                     </Content>
                 </PageSection>
                 <PageSection>
@@ -194,5 +222,60 @@ impl Index {
                     _ => Msg::Error(response.notify("Failed to delete")),
                 }),
         )
+    }
+
+    fn create(&self, name: String) -> Result<FetchTask, anyhow::Error> {
+        let payload = json!({
+        "metadata": {
+            "name": name,
+        },
+        "spec": {},
+        });
+
+        self.props.backend.info.request(
+            Method::POST,
+            "/api/registry/v1alpha1/apps",
+            Json(&payload),
+            vec![("Content-Type", "application/json")],
+            self.link
+                .callback(move |response: Response<Text>| match response.status() {
+                    StatusCode::CREATED => Msg::Load,
+                    _ => Msg::Error(response.notify("Failed to create")),
+                }),
+        )
+    }
+
+    fn create_modal(&self) -> Html {
+        let v = |value: &str| match hostname_validator::is_valid(value) {
+            false => InputState::Error,
+            true => InputState::Default,
+        };
+
+        return html! {
+            <>
+            <Bullseye plain=true>
+            <Modal
+                title = {"Create an application"}
+                variant= ModalVariant::Small
+                footer = {html!{<>
+                                <button class="pf-c-button pf-m-primary"
+                                disabled=!hostname_validator::is_valid(self.new_app_name.as_str())
+                                type="button"
+                                onclick=self.link.callback(|_|Msg::Create) >
+                                    {"Create"}</button>
+                         </>}}
+            >
+                <Form>
+                       <FormGroup>
+                            <TextInput
+                                validator=Validator::from(v)
+                                onchange=self.link.callback(|app|Msg::NewAppName(app))
+                                placeholder="Application ID"/>
+                        </FormGroup>
+                </Form>
+            </Modal>
+            </Bullseye>
+            </>
+        };
     }
 }
