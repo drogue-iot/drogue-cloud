@@ -35,7 +35,7 @@ members = [
 [patch.crates-io]
 testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", rev = "fe51e06fb2c44b1d3e3fd627cedea3fd582487ef" }
 
-patternfly-yew = { git = "https://github.com/jbtrystram/patternfly-yew", rev = "4ceb7423a561e2319666a8e3c301943400cc505e" } # FIXME: awaiting release
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "a65d37c50adb5ea75d4125c8c835f92873ea87ab" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }
 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
