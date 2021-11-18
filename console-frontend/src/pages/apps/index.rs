@@ -5,7 +5,7 @@ use crate::{
     error::error,
     page::AppRoute,
     pages::{
-        apps::{DetailsSection, Pages},
+        apps::{CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
 };
@@ -13,8 +13,6 @@ use drogue_client::registry::v1::Application;
 use patternfly_yew::*;
 use yew::{format::*, prelude::*, services::fetch::*};
 use yew_router::{agent::RouteRequest, prelude::*};
-
-use serde_json::json;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApplicationEntry {
@@ -65,17 +63,12 @@ pub enum Msg {
     Delete(String),
 
     TriggerModal,
-    Create,
-    NewAppName(String),
 }
 
 pub struct Index {
     props: Props,
     link: ComponentLink<Self>,
     entries: Vec<ApplicationEntry>,
-
-    new_app_name: String,
-    new_app_name_is_valid: bool,
 
     fetch_task: Option<FetchTask>,
 }
@@ -91,8 +84,6 @@ impl Component for Index {
             link,
             entries: Vec::new(),
             fetch_task: None,
-            new_app_name: Default::default(),
-            new_app_name_is_valid: false,
         }
     }
 
@@ -120,20 +111,13 @@ impl Component for Index {
                 Err(err) => error("Failed to delete", err),
             },
             Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
-                content: (self.create_modal()),
+                content: (html! {
+                    <CreateDialog
+                        backend=self.props.backend.clone()
+                        on_close=self.link.callback_once(move |_| Msg::Load)
+                        />
+                }),
             }),
-            Msg::Create => {
-                match self.create(self.new_app_name.clone()) {
-                    Ok(task) => self.fetch_task = Some(task),
-                    Err(err) => error("Failed to create", err),
-                }
-                BackdropDispatcher::default().close();
-                self.new_app_name = Default::default();
-            }
-            Msg::NewAppName(name) => {
-                self.new_app_name_is_valid = hostname_validator::is_valid(name.as_str());
-                self.new_app_name = name
-            }
         };
         true
     }
@@ -227,62 +211,5 @@ impl Index {
                     _ => Msg::Error(response.notify("Failed to delete")),
                 }),
         )
-    }
-
-    fn create(&self, name: String) -> Result<FetchTask, anyhow::Error> {
-        let payload = json!({
-        "metadata": {
-            "name": name,
-        },
-        "spec": {},
-        });
-
-        self.props.backend.info.request(
-            Method::POST,
-            "/api/registry/v1alpha1/apps",
-            Json(&payload),
-            vec![("Content-Type", "application/json")],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::CREATED => Msg::Load,
-                    _ => Msg::Error(response.notify("Failed to create")),
-                }),
-        )
-    }
-
-    fn create_modal(&self) -> Html {
-        let v = |value: &str| match hostname_validator::is_valid(value) {
-            false => InputState::Error,
-            true => InputState::Default,
-        };
-
-        return html! {
-            <>
-            <Bullseye plain=true>
-            <Modal
-                title = {"Create an application"}
-                variant= ModalVariant::Small
-                footer = {html!{<>
-                                <button class="pf-c-button pf-m-primary"
-                                // fixme this does not work because this code is not refreshed
-                                // by the view() method. It's called once, when the modal is opened.
-                               // disabled=!self.new_app_name_is_valid
-                                type="button"
-                                onclick=self.link.callback(|_|Msg::Create) >
-                                    {"Create"}</button>
-                         </>}}
-            >
-                <Form>
-                       <FormGroup>
-                            <TextInput
-                                validator=Validator::from(v)
-                                onchange=self.link.callback(|app|Msg::NewAppName(app))
-                                placeholder="Application ID"/>
-                        </FormGroup>
-                </Form>
-            </Modal>
-            </Bullseye>
-            </>
-        };
     }
 }
