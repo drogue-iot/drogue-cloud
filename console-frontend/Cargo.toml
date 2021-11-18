@@ -59,6 +59,8 @@ base64 = "0.13"
 itertools = "0.9"
 percent-encoding = "2.1"
 
+hostname-validator = "1.1.0"
+
 indexmap = "1.7.0"
 uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
 
