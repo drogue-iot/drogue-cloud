@@ -75,6 +75,7 @@ pub struct Index {
     entries: Vec<ApplicationEntry>,
 
     new_app_name: String,
+    new_app_name_is_valid: bool,
 
     fetch_task: Option<FetchTask>,
 }
@@ -91,6 +92,7 @@ impl Component for Index {
             entries: Vec::new(),
             fetch_task: None,
             new_app_name: Default::default(),
+            new_app_name_is_valid: false,
         }
     }
 
@@ -128,7 +130,10 @@ impl Component for Index {
                 BackdropDispatcher::default().close();
                 self.new_app_name = Default::default();
             }
-            Msg::NewAppName(name) => self.new_app_name = name,
+            Msg::NewAppName(name) => {
+                self.new_app_name_is_valid = hostname_validator::is_valid(name.as_str());
+                self.new_app_name = name
+            }
         };
         true
     }
@@ -259,7 +264,9 @@ impl Index {
                 variant= ModalVariant::Small
                 footer = {html!{<>
                                 <button class="pf-c-button pf-m-primary"
-                                disabled=!hostname_validator::is_valid(self.new_app_name.as_str())
+                                // fixme this does not work because this code is not refreshed
+                                // by the view() method. It's called once, when the modal is opened.
+                               // disabled=!self.new_app_name_is_valid
                                 type="button"
                                 onclick=self.link.callback(|_|Msg::Create) >
                                     {"Create"}</button>
