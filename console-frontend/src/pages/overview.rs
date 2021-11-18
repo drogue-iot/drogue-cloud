@@ -72,6 +72,14 @@ impl Overview {
                 backend.current_url(),
                 Some(("/api", "Interactive API")),
             ));
+            service_cards.push(self.render_linked_card(
+                "Command line client",
+                format!("drg login {}", backend.current_url()),
+                Some((
+                    "https://github.com/drogue-iot/drg/releases/latest",
+                    "Download drg",
+                )),
+            ));
         }
         if let Some(sso) = &endpoints.sso {
             service_cards.push(self.render_card("Single sign-on", sso, true));
