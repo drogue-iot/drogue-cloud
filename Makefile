@@ -171,9 +171,18 @@ cargo-pre-check:
 #
 # Check the code
 #
-cargo-check: cargo-pre-check
+cargo-check: cargo-pre-check cargo-check-frontend
 	cargo check --release
 	cargo clippy --release --all-features
+
+
+#
+# Check the frontend project
+#
+.PHONY: cargo-check-frontend
+cargo-check-frontend:
+	cd console-frontend && cargo check --release
+	cd console-frontend && cargo clippy --release --all-features
 
 
 #
@@ -184,7 +193,7 @@ cargo-build:
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
 	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
-	cargo build --release --workspace --exclude drogue-cloud-console-frontend
+	cargo build --release --workspace
 
 
 #
