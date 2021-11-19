@@ -24,6 +24,7 @@ Options:
   -S <key>=<value>   Set a Helm option (as string), can be repeated:
                        -S foo=bar -S bar=baz -S foo.bar=baz
   -k                 Don't install dependencies
+  -f <vales.yaml>    Add a Helm values files
   -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
   -t <timeout>       Helm installation timeout (default: 15m)
   -T                 Deploy the digital twin feature
@@ -39,7 +40,7 @@ EOF
     exit 1
 }
 
-while getopts mhkp:c:n:d:s:S:t:T FLAG; do
+while getopts mhkp:c:n:d:s:S:t:Tf: FLAG; do
   case $FLAG in
     c)
         CLUSTER="$OPTARG"
@@ -55,6 +56,9 @@ while getopts mhkp:c:n:d:s:S:t:T FLAG; do
         ;;
     S)
         HELM_ARGS="$HELM_ARGS --set-string $OPTARG"
+        ;;
+    f)
+        HELM_ARGS="$HELM_ARGS --values $OPTARG"
         ;;
     d)
         DOMAIN="$OPTARG"
@@ -154,20 +158,27 @@ if [[ "$INSTALL_DITTO_OPERATOR" == true && "$DEPLOY_TWIN" == true ]]; then
     source "$BASEDIR/cmd/__ditto.sh"
 fi
 
-# gather Helm arguments
+# add Helm value files
+#
+# As these are applies in the order of the command line, the more default ones must come first. As we might already
+# have value files from the arguments, we prepend our default value files to the arguments, more specific ones first,
+# so we end up with an argument list of more specific ones last. Values provide with the --set argument will always
+# override value files properties, so their relation to the values files doesn't matter.
 
 if [[ -f $BASEDIR/local-values.yaml ]]; then
     progress "💡 Adding local values file ($BASEDIR/local-values.yaml)"
-    HELM_ARGS="$HELM_ARGS --values $BASEDIR/local-values.yaml"
+    HELM_ARGS="--values $BASEDIR/local-values.yaml $HELM_ARGS"
 fi
 if [[ "$HELM_PROFILE" ]]; then
     progress "💡 Adding profile values file ($BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml)"
-    HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml"
+    HELM_ARGS="--values $BASEDIR/../deploy/profiles/${HELM_PROFILE}.yaml $HELM_ARGS"
 fi
 if [[ -f $BASEDIR/../deploy/profiles/${CLUSTER}.yaml ]]; then
     progress "💡 Adding cluster type values file ($BASEDIR/../deploy/profiles/${CLUSTER}.yaml)"
-    HELM_ARGS="$HELM_ARGS --values $BASEDIR/../deploy/profiles/${CLUSTER}.yaml"
+    HELM_ARGS="--values $BASEDIR/../deploy/profiles/${CLUSTER}.yaml $HELM_ARGS"
 fi
+
+# gather Helm arguments
 
 domain=$(detect_domain)
 
@@ -175,7 +186,6 @@ HELM_ARGS="$HELM_ARGS --timeout=${HELM_TIMEOUT}"
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
-HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.grafana.keycloak.enabled=true --set drogueCloudExamples.grafana.keycloak.client.create=true"
 HELM_ARGS="$HELM_ARGS --set drogueCloudTwin.enabled=$DEPLOY_TWIN"
 
 echo "Helm arguments: $HELM_ARGS"

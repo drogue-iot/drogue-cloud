@@ -2,6 +2,11 @@ drogueCloudTwin:
   enabled: false
 
 drogueCloudExamples:
+  grafana:
+    keycloak:
+      enabled: true
+      client:
+        create: true
   source:
     kafka:
       enabled: true
