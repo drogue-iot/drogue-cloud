@@ -230,7 +230,7 @@ fn configure_keycloak(server: &Keycloak) {
             .replace("client-secret".to_string());
         c.public_client.replace(true);
         c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
-        c.protocol_mappers.replace(mappers.clone());
+        c.protocol_mappers.replace(mappers);
 
         let mut failed = 0;
         if let Err(e) = admin.realm_clients_post(&server.realm, c).await {
@@ -265,7 +265,14 @@ fn configure_keycloak(server: &Keycloak) {
         mapper_config.insert("included.client.audience".into(), "services".into());
         mapper_config.insert("id.token.claim".into(), "false".into());
         mapper_config.insert("access.token.claim".into(), "true".into());
-        c.protocol_mappers.replace(mappers.clone());
+        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
+            id: None,
+            name: Some("add-audience".to_string()),
+            protocol: Some("openid-connect".to_string()),
+            protocol_mapper: Some("oidc-audience-mapper".to_string()),
+            config: Some(mapper_config),
+        }];
+        c.protocol_mappers.replace(mappers);
 
         if let Err(e) = admin.realm_clients_post(&server.realm, c).await {
             if let keycloak::KeycloakError::HttpFailure {
