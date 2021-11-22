@@ -190,7 +190,7 @@ impl Component for Admin {
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
         if self.stop {
-            true
+            false
         } else if self.props != props {
             self.props = props;
             true
@@ -425,7 +425,7 @@ impl Admin {
                             Err(err) => Msg::Error(err.notify("Failed to fetch transfer state")),
                         },
                         StatusCode::NO_CONTENT => Msg::TransferPending(None),
-                        _ => Msg::Error(response.notify("Failed to fetch transfer state")),
+                        _ => Msg::Stop("Failed to fetch transfer state".to_string()),
                     }
                 }),
         )
