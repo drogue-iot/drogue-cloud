@@ -54,6 +54,8 @@ impl<'o> ProgressOperation<ConstructContext> for CreateTopic<'o> {
             ),
         };
 
+        log::debug!("NewTopic: {:?}", topic);
+
         match self
             .admin
             .create_topics(&[topic], &AdminOptions::new())
@@ -65,6 +67,14 @@ impl<'o> ProgressOperation<ConstructContext> for CreateTopic<'o> {
             }
             Err(KafkaError::AdminOp(RDKafkaErrorCode::TopicAlreadyExists)) => {
                 log::debug!("Topic {} already existed", topic_name);
+            }
+            Err(KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure)) => {
+                let err = KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure);
+                log::warn!("Failed to create topic ({}): {:?}", topic_name, err);
+                return Err(ReconcileError::temporary(format!(
+                    "Failed to create topic: {}",
+                    err
+                )));
             }
             Err(err) => {
                 log::warn!("Failed to create topic ({}): {:?}", topic_name, err);

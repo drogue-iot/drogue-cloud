@@ -180,6 +180,14 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             Err(KafkaError::AdminOp(RDKafkaErrorCode::UnknownTopic)) => {
                 log::info!("Topic {} was already deleted", topic_name);
             }
+            Err(KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure)) => {
+                let err = KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure);
+                log::warn!("Failed to create topic ({}): {:?}", topic_name, err);
+                return Err(ReconcileError::temporary(format!(
+                    "Failed to create topic: {}",
+                    err
+                )));
+            }
             Err(err) => {
                 log::warn!("Failed to delete topic: {:?}", err);
                 return Err(ReconcileError::permanent(format!(
