@@ -2,6 +2,10 @@ drogueCloudTwin:
   enabled: false
 
 drogueCloudExamples:
+  drogueApplication:
+    name: example-app
+  autoCreate:
+    enabled: true
   grafana:
     keycloak:
       enabled: true
