@@ -290,7 +290,7 @@ deploy:
 	test -d deploy/helm/charts || git submodule update --init
 	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:$(IMAGE_TAG) ./scripts/drgadm deploy \
 		-s drogueCloudCore.defaults.images.repository=$(CONTAINER_REGISTRY) \
-		-s drogueCloudCore.defaults.images.tag=latest
+		-s drogueCloudCore.defaults.images.tag=latest $(DEPLOY_ARGS)
 
 
 #
