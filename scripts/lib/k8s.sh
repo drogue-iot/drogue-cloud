@@ -20,6 +20,11 @@ function wait_for_ksvc() {
     fi
     shift
 
+    if ! kubectl get "ksvc/${resource}" -n "$DROGUE_NS" >/dev/null 2>&1; then
+        # resource does not exists, so we don't wait
+        return
+    fi
+
     while ((timeout > $(date +%s))); do
         if ! kubectl -n "$DROGUE_NS" wait --timeout=180s --for=condition=Ready "ksvc/${resource}"; then
             kubectl -n "$DROGUE_NS" delete deploy -l "serving.knative.dev/service=${resource}"
