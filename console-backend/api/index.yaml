@@ -1,7 +1,7 @@
 openapi: "3.0.0"
 info:
   title: Drogue Cloud API
-  version: "0.5"
+  version: "0.8"
   contact:
     url: https://drogue.io
 
@@ -206,33 +206,6 @@ paths:
           description: If the application is deleted
         404:
           description: If the requested application does not exist or if the user has not access to it.
-    patch:
-      tags:
-        - Registry
-      description: "FUTURE USE: Patch existing app"
-      deprecated: false
-      parameters:
-        - $ref: '#/components/parameters/Uid'
-        - $ref: '#/components/parameters/ResourceVersion'
-      requestBody:
-        description: The JSON patch to apply
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schema/Patch'
-            example:
-              [
-                { "op": "replace", "path": "/baz", "value": "boo" },
-                { "op": "add", "path": "/hello", "value": [ "world" ] },
-                { "op": "remove", "path": "/foo" }
-              ]
-      responses:
-        204:
-          description: If the app is updated
-        404:
-          description: If requested apps do not exits or if the user has not access to them.
-
 
   #
   # ### Devices
@@ -313,32 +286,6 @@ paths:
       responses:
         204:
           description: If the device is deleted
-        404:
-          description: If requested device does not exist or if the user has no access to it.
-    patch:
-      tags:
-        - Registry
-      description: "FUTURE USE: Patch existing device"
-      deprecated: false
-      parameters:
-        - $ref: '#/components/parameters/Uid'
-        - $ref: '#/components/parameters/ResourceVersion'
-      requestBody:
-        description: The JSON patch to apply
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Patch'
-            example:
-              [
-                { "op": "replace", "path": "/baz", "value": "boo" },
-                { "op": "add", "path": "/hello", "value": [ "world" ] },
-                { "op": "remove", "path": "/foo" }
-              ]
-      responses:
-        204:
-          description: If the device is updated
         404:
           description: If requested device does not exist or if the user has no access to it.
 
@@ -578,6 +525,8 @@ paths:
       requestBody:
         content:
           'application/json':
+            schema:
+              type: object
             example:
               { error: light disconnected }
         description: Optional payload for the command response
@@ -708,6 +657,7 @@ components:
   #
 
   schemas:
+
     Metadata:
       type: object
       required:
@@ -743,7 +693,7 @@ components:
         finalizers:
           type: array
           items:
-            - type: string
+            type: string
           description: |
             A list of finalizers. As long as finalizers are present, the resource will not be deleted
             even if the `deletionTimestamp` is set.
@@ -870,13 +820,6 @@ components:
       minimum: 0
       example: 30
 
-    TelemetryData:
-      type: object
-      additionalProperties: true
-      example:
-        temp: 19
-        luminosity: 55
-
     DeviceSpec:
       type: object
       additionalProperties: true
@@ -994,56 +937,6 @@ components:
       properties:
         cert:
           type: string
-
-    Patch:
-      type: array
-      items:
-        oneOf:
-          - type: object
-            additionalProperties: false
-            required:
-              - path
-              - op
-              - value
-            properties:
-              path:
-                $ref: '#/components/schemas/PatchPath'
-              op:
-                type: string
-                enum: [ "add", "replace", "test" ]
-              value:
-                description: The value to apply.
-          - type: object
-            additionalProperties: false
-            required:
-              - path
-              - op
-            properties:
-              path:
-                $ref: '#/components/schemas/PatchPath'
-              op:
-                type: string
-                enum: [ "remove" ]
-          - type: object
-            additionalProperties: false
-            required:
-              - path
-              - op
-              - from
-            properties:
-              path:
-                $ref: '#/components/schemas/PatchPath'
-              op:
-                type: string
-                enum: [ "move", "copy" ]
-              from:
-                allOf:
-                  - $ref: '#/components/schemas/PatchPath'
-                  - description: A JSON path where to copy/move from.
-
-    PatchPath:
-      type: string
-      description: A JSON path
 
   #
   # Security schemes
