@@ -3,7 +3,7 @@ pub mod service;
 
 use actix_web::{web, App, HttpServer};
 use drogue_cloud_api_key_service::{
-    endpoints::WebData as KeycloakWebData, service::KeycloakApiKeyService,
+    endpoints::WebData as KeycloakWebData, service::KeycloakAccessTokenService,
 };
 use drogue_cloud_service_common::{
     defaults,
@@ -82,7 +82,7 @@ where
 
     let keycloak_client = KeycloakAdminClient::new(config.keycloak)?;
     let api_key = web::Data::new(KeycloakWebData {
-        service: KeycloakApiKeyService {
+        service: KeycloakAccessTokenService {
             client: keycloak_client,
         },
     });
@@ -100,7 +100,7 @@ where
         });
         app!(
             data,
-            KeycloakApiKeyService<K>,
+            KeycloakAccessTokenService<K>,
             api_key,
             max_json_payload_size,
             enable_auth,

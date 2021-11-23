@@ -15,7 +15,7 @@ use actix_web::{
     App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use anyhow::Context;
-use drogue_cloud_api_key_service::{endpoints as keys, service::KeycloakApiKeyService};
+use drogue_cloud_api_key_service::{endpoints as keys, service::KeycloakAccessTokenService};
 use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
@@ -144,7 +144,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let keycloak_admin_client = KeycloakAdminClient::new(config.keycloak)?;
     let keycloak_service = web::Data::new(keys::WebData {
-        service: KeycloakApiKeyService {
+        service: KeycloakAccessTokenService {
             client: keycloak_admin_client,
         },
     });
@@ -194,16 +194,16 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
         let app = app.app_data(web::Data::new(endpoints.clone()))
             .service(
-                web::scope("/api/keys/v1alpha1")
+                web::scope("/api/tokens/v1alpha1")
                     .wrap(auth.clone())
                     .service(
                         web::resource("")
-                            .route(web::post().to(keys::create::<KeycloakApiKeyService<KeycloakAdminClient>>))
-                            .route(web::get().to(keys::list::<KeycloakApiKeyService<KeycloakAdminClient>>)),
+                            .route(web::post().to(keys::create::<KeycloakAccessTokenService<KeycloakAdminClient>>))
+                            .route(web::get().to(keys::list::<KeycloakAccessTokenService<KeycloakAdminClient>>)),
                     )
                     .service(
                         web::resource("/{prefix}")
-                            .route(web::delete().to(keys::delete::<KeycloakApiKeyService<KeycloakAdminClient>>)),
+                            .route(web::delete().to(keys::delete::<KeycloakAccessTokenService<KeycloakAdminClient>>)),
                     ),
             )
             .service(

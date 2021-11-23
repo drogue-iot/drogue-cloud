@@ -1,5 +1,4 @@
 pub mod admin;
-pub mod api;
 pub mod auth;
 pub mod endpoints;
 pub mod error;
@@ -8,6 +7,7 @@ mod id;
 pub mod kafka;
 pub mod labels;
 mod serde;
+pub mod token;
 pub mod version;
 
 pub use id::*;

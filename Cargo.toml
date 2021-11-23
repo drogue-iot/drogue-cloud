@@ -24,7 +24,7 @@ members = [
     "ttn-operator",
     "topic-strimzi-operator",
     "topic-admin-operator",
-    "api-key-service",
+    "access-token-service",
     "admin-service",
     "event-common",
     "websocket-integration",

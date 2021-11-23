@@ -1,14 +1,14 @@
-use crate::service::ApiKeyService;
+use crate::service::AccessTokenService;
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use drogue_cloud_service_api::{
-    api::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions},
     auth::user::{UserDetails, UserInformation},
+    token::{AccessToken, AccessTokenCreated, AccessTokenCreationOptions},
 };
 use std::fmt::Formatter;
 
 #[derive(Clone)]
-pub struct MockApiKeyService;
+pub struct MockAccessTokenService;
 
 #[derive(Debug)]
 pub struct MockError;
@@ -22,14 +22,14 @@ impl core::fmt::Display for MockError {
 impl ResponseError for MockError {}
 
 #[async_trait]
-impl ApiKeyService for MockApiKeyService {
+impl AccessTokenService for MockAccessTokenService {
     type Error = MockError;
 
     async fn create(
         &self,
         _: &UserInformation,
-        _: ApiKeyCreationOptions,
-    ) -> Result<ApiKeyCreated, Self::Error> {
+        _: AccessTokenCreationOptions,
+    ) -> Result<AccessTokenCreated, Self::Error> {
         todo!()
     }
 
@@ -37,7 +37,7 @@ impl ApiKeyService for MockApiKeyService {
         todo!()
     }
 
-    async fn list(&self, _: &UserInformation) -> Result<Vec<ApiKey>, Self::Error> {
+    async fn list(&self, _: &UserInformation) -> Result<Vec<AccessToken>, Self::Error> {
         todo!()
     }
 

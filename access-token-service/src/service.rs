@@ -2,26 +2,26 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
 use drogue_cloud_service_api::{
-    api::{ApiKey, ApiKeyCreated, ApiKeyCreationOptions, ApiKeyData},
     auth::user::{UserDetails, UserInformation},
+    token::{AccessToken, AccessTokenCreated, AccessTokenCreationOptions, AccessTokenData},
 };
 use drogue_cloud_service_common::keycloak::{error::Error, KeycloakClient};
 use serde_json::Value;
 use std::{borrow::Cow, collections::HashMap};
 
-const ATTR_PREFIX: &str = "api_key_";
+const ATTR_PREFIX: &str = "access_token_";
 
 #[async_trait]
-pub trait ApiKeyService: Clone {
+pub trait AccessTokenService: Clone {
     type Error: ResponseError;
 
     async fn create(
         &self,
         identity: &UserInformation,
-        opts: ApiKeyCreationOptions,
-    ) -> Result<ApiKeyCreated, Self::Error>;
+        opts: AccessTokenCreationOptions,
+    ) -> Result<AccessTokenCreated, Self::Error>;
     async fn delete(&self, identity: &UserInformation, prefix: String) -> Result<(), Self::Error>;
-    async fn list(&self, identity: &UserInformation) -> Result<Vec<ApiKey>, Self::Error>;
+    async fn list(&self, identity: &UserInformation) -> Result<Vec<AccessToken>, Self::Error>;
 
     async fn authenticate(
         &self,
@@ -31,15 +31,15 @@ pub trait ApiKeyService: Clone {
 }
 
 #[derive(Clone)]
-pub struct KeycloakApiKeyService<K: KeycloakClient> {
+pub struct KeycloakAccessTokenService<K: KeycloakClient> {
     pub client: K,
 }
 
-impl<K: KeycloakClient> KeycloakApiKeyService<K> {
+impl<K: KeycloakClient> KeycloakAccessTokenService<K> {
     fn insert_entry(
         attributes: &mut HashMap<Cow<str>, Value>,
         prefix: String,
-        entry: ApiKeyData,
+        entry: AccessTokenData,
     ) -> Result<(), Error> {
         let key = Self::make_key(prefix);
         // although the map claims to allow any value, it actually only accepts strings.
@@ -51,23 +51,23 @@ impl<K: KeycloakClient> KeycloakApiKeyService<K> {
         Cow::Owned(format!("{}{}", ATTR_PREFIX, prefix))
     }
 
-    /// Decode a keycloak attribute value into an [`ApiKeyData`], if possible.
+    /// Decode a keycloak attribute value into an [`AccessTokenData`], if possible.
     ///
     /// If the attribute value is of the wrong type, empty, or fails to decide, an error is returned.
-    fn decode_data(value: Value) -> Result<ApiKeyData, Error> {
+    fn decode_data(value: Value) -> Result<AccessTokenData, Error> {
         value
             .as_array()
             .and_then(|a| a.first())
             .and_then(Value::as_str)
             .map_or_else(
                 || Err(Error::NotAuthorized),
-                |str| Ok(serde_json::from_str::<ApiKeyData>(str)?),
+                |str| Ok(serde_json::from_str::<AccessTokenData>(str)?),
             )
     }
 }
 
 #[async_trait]
-impl<K> ApiKeyService for KeycloakApiKeyService<K>
+impl<K> AccessTokenService for KeycloakAccessTokenService<K>
 where
     K: KeycloakClient + std::marker::Sync + std::marker::Send,
 {
@@ -76,27 +76,27 @@ where
     async fn create(
         &self,
         identity: &UserInformation,
-        opts: ApiKeyCreationOptions,
-    ) -> Result<ApiKeyCreated, Self::Error> {
+        opts: AccessTokenCreationOptions,
+    ) -> Result<AccessTokenCreated, Self::Error> {
         let user_id = match identity.user_id() {
             Some(user_id) => user_id,
             None => return Err(Error::NotAuthorized),
         };
 
-        let key = crate::rng::generate_api_key();
+        let token = crate::rng::generate_access_token();
         let admin = self.client.admin().await?;
 
         let mut user = admin
             .realm_users_with_id_get(&self.client.realm(), user_id)
             .await?;
 
-        let insert = ApiKeyData {
-            hashed_key: key.1,
+        let insert = AccessTokenData {
+            hashed_token: token.1,
             created: Utc::now(),
             description: opts.description,
         };
 
-        let prefix = &key.0.prefix;
+        let prefix = &token.0.prefix;
 
         if let Some(ref mut attributes) = user.attributes {
             Self::insert_entry(attributes, prefix.clone(), insert)?;
@@ -110,7 +110,7 @@ where
             .realm_users_with_id_put(&self.client.realm(), user_id, user)
             .await?;
 
-        Ok(key.0)
+        Ok(token.0)
     }
 
     async fn delete(&self, identity: &UserInformation, prefix: String) -> Result<(), Self::Error> {
@@ -141,7 +141,7 @@ where
         Ok(())
     }
 
-    async fn list(&self, identity: &UserInformation) -> Result<Vec<ApiKey>, Self::Error> {
+    async fn list(&self, identity: &UserInformation) -> Result<Vec<AccessToken>, Self::Error> {
         let user_id = match identity.user_id() {
             Some(user_id) => user_id,
             None => return Err(Error::NotAuthorized),
@@ -153,15 +153,15 @@ where
             .realm_users_with_id_get(&self.client.realm(), user_id)
             .await?;
 
-        let keys = if let Some(attributes) = user.attributes {
-            let mut keys = Vec::new();
+        let tokens = if let Some(attributes) = user.attributes {
+            let mut tokens = Vec::new();
             for (key, value) in attributes {
                 log::debug!("{}, {:?}", key, value);
                 if let Some(prefix) = key.strip_prefix(ATTR_PREFIX) {
                     log::debug!("Matches - prefix: {}", prefix);
                     match Self::decode_data(value) {
                         Ok(data) => {
-                            keys.push(ApiKey {
+                            tokens.push(AccessToken {
                                 prefix: prefix.into(),
                                 created: data.created,
                                 description: data.description,
@@ -171,12 +171,12 @@ where
                     }
                 }
             }
-            keys
+            tokens
         } else {
             vec![]
         };
 
-        Ok(keys)
+        Ok(tokens)
     }
 
     async fn authenticate(
@@ -184,7 +184,7 @@ where
         username: &str,
         password: &str,
     ) -> Result<Option<UserDetails>, Self::Error> {
-        // check if the key appears valid (format, checksum, ...)
+        // check if the token appears valid (format, checksum, ...)
 
         let prefix = if let Some(prefix) = crate::rng::is_valid(password) {
             prefix
@@ -235,7 +235,7 @@ where
 
         let expected_hash = match user.attributes.and_then(|mut a| a.remove(&key)) {
             Some(value) => match Self::decode_data(value) {
-                Ok(data) => data.hashed_key,
+                Ok(data) => data.hashed_token,
                 Err(_) => return Ok(None),
             },
             None => return Ok(None),
@@ -244,7 +244,7 @@ where
         // verify the hash
 
         log::debug!("Password: {}", password);
-        let provided_hash = crate::rng::hash_key(password);
+        let provided_hash = crate::rng::hash_token(password);
         log::debug!(
             "Comparing hashes - expected: {}, provided: {}",
             expected_hash,

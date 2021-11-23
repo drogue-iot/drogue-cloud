@@ -16,8 +16,8 @@ security:
   - api_key: [ ]
 
 tags:
-  - name: API keys
-    description: Manage access key to the API.
+  - name: Access Token
+    description: Manage personal access tokens to authenticate with drogue cloud.
   - name: Registry
     description: Manage application and devices in the registry.
   - name: Application administration
@@ -67,14 +67,14 @@ paths:
               schema:
                 type: object
 
-  "/api/keys/v1alpha1":
+  "/api/tokens/v1alpha1":
     get:
-      description: List API keys for this user.
+      description: List access tokens for this user.
       tags:
-        - API keys
+        - Access Token
       responses:
         "200":
-          description: All API keys for this user.
+          description: All access tokens for this user.
           content:
             "application/json":
               schema:
@@ -88,12 +88,12 @@ paths:
                     prefix:
                       type: string
     post:
-      description: Create a new API key for this user.
+      description: Create a new access tokens for this user.
       tags:
-        - API keys
+        - Access Token
       responses:
         "200":
-          description: A new API key was created.
+          description: A new access token was created.
           content:
             "application/json":
               schema:
@@ -106,24 +106,24 @@ paths:
                 required:
                   - key
                   - prefix
-  "/api/keys/v1alpha1/{prefix}":
+  "/api/tokens/v1alpha1/{prefix}":
     delete:
-      description: Delete an API key by prefix.
+      description: Delete an access token by prefix.
       tags:
-        - API keys
+        - Access Token
       parameters:
         - name: prefix
           required: true
           in: path
-          description: The prefix of the API key to delete.
+          description: The prefix of the access token to delete.
           schema:
             type: string
       responses:
         "204":
           description: |
-            Successfully deleted the API key.
+            Successfully deleted the token.
 
-            If the API key didn't exist, still 204 will be returned.
+            If the access token didn't exist, still 204 will be returned.
 
 
   #
@@ -208,6 +208,33 @@ paths:
           description: If the application is deleted
         404:
           description: If the requested application does not exist or if the user has not access to it.
+    patch:
+      tags:
+        - Registry
+      description: "FUTURE USE: Patch existing app"
+      deprecated: false
+      parameters:
+        - $ref: '#/components/parameters/Uid'
+        - $ref: '#/components/parameters/ResourceVersion'
+      requestBody:
+        description: The JSON patch to apply
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schema/Patch'
+            example:
+              [
+                { "op": "replace", "path": "/baz", "value": "boo" },
+                { "op": "add", "path": "/hello", "value": [ "world" ] },
+                { "op": "remove", "path": "/foo" }
+              ]
+      responses:
+        204:
+          description: If the app is updated
+        404:
+          description: If requested apps do not exits or if the user has not access to them.
+
 
   #
   # ### Devices
@@ -288,6 +315,32 @@ paths:
       responses:
         204:
           description: If the device is deleted
+        404:
+          description: If requested device does not exist or if the user has no access to it.
+    patch:
+      tags:
+        - Registry
+      description: "FUTURE USE: Patch existing device"
+      deprecated: false
+      parameters:
+        - $ref: '#/components/parameters/Uid'
+        - $ref: '#/components/parameters/ResourceVersion'
+      requestBody:
+        description: The JSON patch to apply
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Patch'
+            example:
+              [
+                { "op": "replace", "path": "/baz", "value": "boo" },
+                { "op": "add", "path": "/hello", "value": [ "world" ] },
+                { "op": "remove", "path": "/foo" }
+              ]
+      responses:
+        204:
+          description: If the device is updated
         404:
           description: If requested device does not exist or if the user has no access to it.
 
