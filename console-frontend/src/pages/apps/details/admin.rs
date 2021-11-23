@@ -23,6 +23,7 @@ pub struct Admin {
     new_owner: String,
     pending_transfer: bool,
     transfer_fetch: Option<FetchTask>,
+    can_transfer: bool,
 
     stop: bool,
 }
@@ -110,6 +111,7 @@ impl Component for Admin {
             stop: false,
             pending_transfer: false,
             transfer_fetch: None,
+            can_transfer: false,
         }
     }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -158,6 +160,7 @@ impl Component for Admin {
             },
             Msg::TransferPending(transfer) => {
                 self.transfer_fetch = None;
+                self.can_transfer = true;
                 match transfer {
                     Some(t) => {
                         self.new_owner = t.new_user;
@@ -180,7 +183,9 @@ impl Component for Admin {
                 self.reset();
             }
             Msg::Stop(msg) => {
-                error("Error", msg);
+                if !msg.is_empty() {
+                    error("Error", msg);
+                }
                 self.stop = true;
                 return false;
             }
@@ -244,39 +249,44 @@ impl Component for Admin {
                             </Toolbar>
                         </Card>
                     </StackItem>
-                    <StackItem>
-                        <Card title={html!{"Transfer application ownership"}}>
-                           <Toolbar>
-                                <ToolbarGroup>
-                                    <ToolbarItem>
-                                        <TextInput
-                                            onchange=self.link.callback(|user|Msg::NewOwner(user))
-                                            placeholder="Username"/>
-                                    </ToolbarItem>
-                                    <ToolbarItem>
-                                        <Button
-                                                disabled=self.transfer_fetch.is_some()
-                                                label="Transfer"
-                                                variant=Variant::Primary
-                                                onclick=self.link.callback(|_|Msg::TransferOwner)
-                                        />
-                                    </ToolbarItem>
-                                    <ToolbarItem>
-                                        <Button
-                                                disabled=!self.pending_transfer
-                                                label="Cancel"
-                                                variant=Variant::Secondary
-                                                onclick=self.link.callback(|_|Msg::CancelTransfer)
-                                        />
-                                    </ToolbarItem>
-                                </ToolbarGroup>
-                        </Toolbar>
-                        // todo
-                        // if pending_transfer {
-                                // There is a currently a pending transfer to : <user>
-                        //     }
-                        </Card>
-                    </StackItem>
+                    { if self.can_transfer {
+                        html!{
+                            <StackItem>
+                                <Card title={html!{"Transfer application ownership"}}>
+                                { if self.pending_transfer {
+                                        html!{<p>{format!("Pending transfer to user: {}", self.new_owner)}</p>}
+                                } else {html!{}}}
+                                   <Toolbar>
+                                        <ToolbarGroup>
+                                            <ToolbarItem>
+                                                <TextInput
+                                                    onchange=self.link.callback(|user|Msg::NewOwner(user))
+                                                    placeholder="Username"/>
+                                            </ToolbarItem>
+                                            <ToolbarItem>
+                                                <Button
+                                                        disabled=self.transfer_fetch.is_some()
+                                                        label="Transfer"
+                                                        variant=Variant::Primary
+                                                        onclick=self.link.callback(|_|Msg::TransferOwner)
+                                                />
+                                            </ToolbarItem>
+                                            <ToolbarItem>
+                                                <Button
+                                                        disabled=!self.pending_transfer
+                                                        label="Cancel"
+                                                        variant=Variant::Secondary
+                                                        onclick=self.link.callback(|_|Msg::CancelTransfer)
+                                                />
+                                            </ToolbarItem>
+                                        </ToolbarGroup>
+                                </Toolbar>
+                                </Card>
+                            </StackItem>
+                        }
+                    } else {
+                    html!{}
+                    }}
                 </Stack>
             };
         } else {
@@ -425,7 +435,11 @@ impl Admin {
                             Err(err) => Msg::Error(err.notify("Failed to fetch transfer state")),
                         },
                         StatusCode::NO_CONTENT => Msg::TransferPending(None),
-                        _ => Msg::Stop("Failed to fetch transfer state".to_string()),
+                        StatusCode::NOT_FOUND => Msg::Stop("".to_string()),
+                        status => Msg::Error(
+                            response
+                                .notify(format!("Error while fetching transfer state: {}", status)),
+                        ),
                     }
                 }),
         )

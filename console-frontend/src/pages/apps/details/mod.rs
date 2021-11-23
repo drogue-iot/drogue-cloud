@@ -165,16 +165,17 @@ impl Details {
             ),
             self.props.backend.info.request(
                 Method::GET,
-                format!("/api/admin/v1alpha1/apps/{}", url_encode(&self.props.name)),
+                format!(
+                    "/api/admin/v1alpha1/apps/{}/members",
+                    url_encode(&self.props.name)
+                ),
                 Nothing,
                 vec![],
-                self.link.callback(move |response: Response<Text>| {
-                    log::warn!("members callback is {:?}", response);
-                    match response.status() {
+                self.link
+                    .callback(move |response: Response<Text>| match response.status() {
                         status if status.is_success() => Msg::SetAdmin(true),
                         _ => Msg::SetAdmin(false),
-                    }
-                }),
+                    }),
             ),
         )
     }
