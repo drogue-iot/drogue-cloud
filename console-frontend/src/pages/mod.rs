@@ -1,10 +1,10 @@
-mod api_keys;
+mod access_tokens;
 pub mod apps;
 pub mod devices;
 mod overview;
 mod token;
 
-pub use api_keys::*;
+pub use access_tokens::*;
 pub use overview::*;
 pub use token::*;
 

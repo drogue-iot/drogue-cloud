@@ -18,8 +18,8 @@ pub enum AppRoute {
     Spy,
     #[to = "/examples{*}"]
     Examples(Examples),
-    #[to = "/keys"]
-    ApiKeys,
+    #[to = "/tokens"]
+    AccessTokens,
     #[to = "/token"]
     CurrentToken,
     #[to = "/transfer/{name}"]
@@ -127,7 +127,7 @@ impl Component for AppPage {
                             <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
                         </NavRouterExpandable<AppRoute>>
                         <NavRouterExpandable<AppRoute> title="API">
-                            <NavRouterItem<AppRoute> to=AppRoute::ApiKeys>{"Access keys"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to=AppRoute::AccessTokens>{"Access tokens"}</NavRouterItem<AppRoute>>
                             <NavItem to="/api" target="_blank">{"API specification"}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAlt}</span></NavItem>
                         </NavRouterExpandable<AppRoute>>
                     </NavList>
@@ -273,7 +273,7 @@ impl Component for AppPage {
                                         token=token.clone()
                                         endpoints=endpoints.clone()
                                     />},
-                                    AppRoute::ApiKeys => html!{<pages::ApiKeys
+                                    AppRoute::AccessTokens => html!{<pages::AccessTokens
                                         backend=backend.clone()
                                     />},
                                     AppRoute::CurrentToken => html!{<pages::CurrentToken

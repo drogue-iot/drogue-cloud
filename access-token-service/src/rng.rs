@@ -1,12 +1,12 @@
-use drogue_cloud_service_api::api::ApiKeyCreated;
+use drogue_cloud_service_api::token::AccessTokenCreated;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sha3::Digest;
 
 const PREFIX_LENGTH: usize = 6;
 const KEY_LENGTH: usize = 30;
 
-const MIN_KEY_LENGTH: usize = 4 + PREFIX_LENGTH + 1 + KEY_LENGTH;
-const MAX_KEY_LENGTH: usize = MIN_KEY_LENGTH + 6 /*max crc*/;
+const MIN_TOKEN_LENGTH: usize = 4 + PREFIX_LENGTH + 1 + KEY_LENGTH;
+const MAX_TOKEN_LENGTH: usize = MIN_TOKEN_LENGTH + 6 /*max crc*/;
 
 fn generate_key() -> String {
     thread_rng()
@@ -17,7 +17,7 @@ fn generate_key() -> String {
 }
 
 fn generate_prefix() -> String {
-    let mut s = String::with_capacity(MAX_KEY_LENGTH);
+    let mut s = String::with_capacity(MAX_TOKEN_LENGTH);
     s.push_str("drg_");
     s.extend(
         thread_rng()
@@ -28,57 +28,57 @@ fn generate_prefix() -> String {
     s
 }
 
-pub fn hash_key(key: &str) -> String {
-    format!("{:x}", sha3::Sha3_512::digest(key.as_bytes()))
+pub fn hash_token(token: &str) -> String {
+    format!("{:x}", sha3::Sha3_512::digest(token.as_bytes()))
 }
 
-fn serialize_key(prefix: String, key: String) -> (ApiKeyCreated, String) {
-    let key = format!("{}_{}", prefix, key);
+fn serialize_token(prefix: String, key: String) -> (AccessTokenCreated, String) {
+    let token = format!("{}_{}", prefix, key);
 
-    let crc = crc::crc32::checksum_ieee(key.as_bytes());
+    let crc = crc::crc32::checksum_ieee(token.as_bytes());
     let crc = base62::encode(crc);
 
-    let key = key + &crc;
+    let token = token + &crc;
 
-    let hashed = hash_key(&key);
+    let hashed = hash_token(&token);
 
-    (ApiKeyCreated { prefix, key }, hashed)
+    (AccessTokenCreated { prefix, token }, hashed)
 }
 
-/// Create a new (random) API key.
+/// Create a new (random) AccessToken.
 ///
-/// It will return a tuple, consisting of the actual API key as well as the hashed version.
-pub fn generate_api_key() -> (ApiKeyCreated, String) {
+/// It will return a tuple, consisting of the actual Access Token as well as the hashed version.
+pub fn generate_access_token() -> (AccessTokenCreated, String) {
     let prefix = generate_prefix();
     let raw_key = generate_key();
 
-    serialize_key(prefix, raw_key)
+    serialize_token(prefix, raw_key)
 }
 
-pub fn is_valid(key: &str) -> Option<&str> {
-    let len = key.len();
+pub fn is_valid(token: &str) -> Option<&str> {
+    let len = token.len();
 
-    if !(MIN_KEY_LENGTH..=MAX_KEY_LENGTH).contains(&len) {
+    if !(MIN_TOKEN_LENGTH..=MAX_TOKEN_LENGTH).contains(&len) {
         return None;
     }
 
-    let prefix_1 = &key[0..4];
+    let prefix_1 = &token[0..4];
 
     if prefix_1 != "drg_" {
         return None;
     }
 
-    let key_part = &key[0..MIN_KEY_LENGTH];
-    let expected_crc = &key[MIN_KEY_LENGTH..];
+    let key = &token[0..MIN_TOKEN_LENGTH];
+    let expected_crc = &token[MIN_TOKEN_LENGTH..];
 
-    let crc = crc::crc32::update(0u32, &crc::crc32::IEEE_TABLE, key_part.as_bytes());
+    let crc = crc::crc32::update(0u32, &crc::crc32::IEEE_TABLE, key.as_bytes());
     let actual_crc = base62::encode(crc);
 
     if expected_crc != actual_crc {
         return None;
     }
 
-    Some(&key[0..PREFIX_LENGTH + 4])
+    Some(&token[0..PREFIX_LENGTH + 4])
 }
 
 #[cfg(test)]
@@ -87,14 +87,17 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_key() {
+    fn test_token() {
         let prefix = "drg_012345".into();
-        let raw_key = "012345678901234567890123456789".into();
-        let key = serialize_key(prefix, raw_key);
+        let key = "012345678901234567890123456789".into();
+        let token = serialize_token(prefix, key);
 
-        assert_eq!("drg_012345", key.0.prefix);
-        assert_eq!("drg_012345_01234567890123456789012345678920BetF", key.0.key);
-        assert_eq!("d08a9d562a28816d47c875fc34223031b31e3e8a311244ba41cda71497a32315c20293e41a044b32688b2b4bcff960f38e19144001b235888d3ce039053e5962", key.1)
+        assert_eq!("drg_012345", token.0.prefix);
+        assert_eq!(
+            "drg_012345_01234567890123456789012345678920BetF",
+            token.0.token
+        );
+        assert_eq!("d08a9d562a28816d47c875fc34223031b31e3e8a311244ba41cda71497a32315c20293e41a044b32688b2b4bcff960f38e19144001b235888d3ce039053e5962", token.1)
     }
 
     #[test]
@@ -142,8 +145,8 @@ mod test {
     #[test]
     fn test_valid_generator() {
         for _ in 0..1000 {
-            let key = generate_api_key();
-            assert!(matches!(is_valid(&key.0.key), Some(_)))
+            let token = generate_access_token();
+            assert!(matches!(is_valid(&token.0.token), Some(_)))
         }
     }
 }

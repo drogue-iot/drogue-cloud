@@ -1,19 +1,19 @@
-use crate::service::ApiKeyService;
+use crate::service::AccessTokenService;
 use actix_web::{web, HttpResponse};
 use drogue_cloud_service_api::{
-    api::ApiKeyCreationOptions,
     auth::user::{
         authn::{AuthenticationRequest, AuthenticationResponse, Outcome},
         UserInformation,
     },
+    token::AccessTokenCreationOptions,
 };
 use std::ops::Deref;
 
-pub struct WebData<S: ApiKeyService> {
+pub struct WebData<S: AccessTokenService> {
     pub service: S,
 }
 
-impl<S: ApiKeyService> Deref for WebData<S> {
+impl<S: AccessTokenService> Deref for WebData<S> {
     type Target = S;
 
     fn deref(&self) -> &Self::Target {
@@ -24,10 +24,10 @@ impl<S: ApiKeyService> Deref for WebData<S> {
 pub async fn create<S>(
     user: UserInformation,
     service: web::Data<WebData<S>>,
-    opts: web::Query<ApiKeyCreationOptions>,
+    opts: web::Query<AccessTokenCreationOptions>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: ApiKeyService + 'static,
+    S: AccessTokenService + 'static,
 {
     let result = match service.create(&user, opts.0).await {
         Ok(key) => Ok(HttpResponse::Ok().json(key)),
@@ -42,7 +42,7 @@ pub async fn list<S>(
     service: web::Data<WebData<S>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: ApiKeyService + 'static,
+    S: AccessTokenService + 'static,
 {
     let result = match service.list(&user).await {
         Ok(outcome) => Ok(HttpResponse::Ok().json(outcome)),
@@ -58,7 +58,7 @@ pub async fn delete<S>(
     service: web::Data<WebData<S>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: ApiKeyService + 'static,
+    S: AccessTokenService + 'static,
 {
     let result = match service.delete(&user, prefix.into_inner()).await {
         Ok(_) => Ok(HttpResponse::NoContent().finish()),
@@ -74,7 +74,7 @@ pub async fn authenticate<S>(
     service: web::Data<WebData<S>>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
-    S: ApiKeyService + 'static,
+    S: AccessTokenService + 'static,
 {
     let result = match service.authenticate(&req.user_id, &req.api_key).await {
         Ok(Some(details)) => Ok(HttpResponse::Ok().json(AuthenticationResponse {
