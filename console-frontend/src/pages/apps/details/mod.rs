@@ -42,6 +42,7 @@ pub enum Msg {
     SetData(Rc<Application>),
     Error(ErrorNotification),
     SaveEditor,
+    SetAdmin(bool),
 }
 
 pub struct Details {
@@ -49,9 +50,11 @@ pub struct Details {
     link: ComponentLink<Self>,
 
     fetch_task: Option<FetchTask>,
+    fetch_role: Option<FetchTask>,
 
     content: Option<Rc<Application>>,
     yaml: Option<TextModel>,
+    is_admin: bool,
 }
 
 impl Component for Details {
@@ -67,14 +70,19 @@ impl Component for Details {
             content: None,
             yaml: None,
             fetch_task: None,
+            fetch_role: None,
+            is_admin: false,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Load => match self.load() {
-                Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to load", err),
+                (Ok(task), Ok(admin_task)) => {
+                    self.fetch_task = Some(task);
+                    self.fetch_role = Some(admin_task);
+                }
+                (Err(err), _) | (_, Err(err)) => error("Failed to load", err),
             },
             Msg::SetData(content) => {
                 self.content = Some(content);
@@ -95,6 +103,10 @@ impl Component for Details {
             }
             Msg::Error(msg) => {
                 msg.toast();
+            }
+            Msg::SetAdmin(is_admin) => {
+                self.fetch_role = None;
+                self.is_admin = is_admin;
             }
         }
         true
@@ -128,22 +140,42 @@ impl Component for Details {
 }
 
 impl Details {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
-            Method::GET,
-            format!(
-                "/api/registry/v1alpha1/apps/{}",
-                url_encode(&self.props.name)
+    fn load(
+        &self,
+    ) -> (
+        Result<FetchTask, anyhow::Error>,
+        Result<FetchTask, anyhow::Error>,
+    ) {
+        (
+            self.props.backend.info.request(
+                Method::GET,
+                format!(
+                    "/api/registry/v1alpha1/apps/{}",
+                    url_encode(&self.props.name)
+                ),
+                Nothing,
+                vec![],
+                self.link
+                    .callback(move |response: JsonResponse<Application>| {
+                        match response.into_body().0 {
+                            Ok(content) => Msg::SetData(Rc::new(content.value)),
+                            Err(err) => Msg::Error(err.notify("Failed to load")),
+                        }
+                    }),
             ),
-            Nothing,
-            vec![],
-            self.link
-                .callback(move |response: JsonResponse<Application>| {
-                    match response.into_body().0 {
-                        Ok(content) => Msg::SetData(Rc::new(content.value)),
-                        Err(err) => Msg::Error(err.notify("Failed to load")),
+            self.props.backend.info.request(
+                Method::GET,
+                format!("/api/admin/v1alpha1/apps/{}", url_encode(&self.props.name)),
+                Nothing,
+                vec![],
+                self.link.callback(move |response: Response<Text>| {
+                    log::warn!("members callback is {:?}", response);
+                    match response.status() {
+                        status if status.is_success() => Msg::SetAdmin(true),
+                        _ => Msg::SetAdmin(false),
                     }
                 }),
+            ),
         )
     }
 
@@ -196,17 +228,32 @@ impl Details {
             },
         );
 
+        let mut tabs = Vec::new();
+        tabs.push(html_nested! {
+           <TabRouterItem<DetailsSection> to=DetailsSection::Overview label="Overview"/>
+        });
+        tabs.push(html_nested! {
+           <TabRouterItem<DetailsSection> to=DetailsSection::Integrations label="Integrations"/>
+        });
+        tabs.push(html_nested! {
+           <TabRouterItem<DetailsSection> to=DetailsSection::Yaml label="YAML"/>
+        });
+        tabs.push(html_nested! {
+           <TabRouterItem<DetailsSection> to=DetailsSection::Debug label="Debug"/>
+        });
+        if self.is_admin && self.fetch_role.is_none() {
+            tabs.push(html_nested!{
+           <TabRouterItem<DetailsSection> to=DetailsSection::Administration label="Administration"/>
+        });
+        }
+
         return html! {
             <>
                 <PageSection variant=PageSectionVariant::Light>
                     <ApplicationTabs
                         transformer=transformer
                         >
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Overview label="Overview"/>
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Integrations label="Integrations"/>
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Yaml label="YAML"/>
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Debug label="Debug"/>
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Administration label="Administration"/>
+                        { tabs }
                     </ApplicationTabs>
                 </PageSection>
                 <PageSection>
