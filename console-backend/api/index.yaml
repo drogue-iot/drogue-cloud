@@ -123,7 +123,7 @@ paths:
           description: |
             Successfully deleted the API key.
 
-            If the API key didn't exists, still 204 will be returned.
+            If the API key didn't exist, still 204 will be returned.
 
 
   #
@@ -630,6 +630,7 @@ components:
         Multiple selectors can be submited, separated with a coma. A coma implies a AND operation between selectors.<br/>
         This is modeled after the [kubernetes labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
       schema:
+        type: array
         items:
           type: string
           description: URL encoded list of labels selectors.
@@ -769,8 +770,7 @@ components:
         members:
           type: object
           additionalProperties:
-            items:
-              $ref: '#/components/schemas/MemberEntry'
+            $ref: '#/components/schemas/MemberEntry'
       example:
         resourceVersion: ced63698-a0da-11eb-97e8-d45d6455d2cc
         members:
@@ -845,13 +845,12 @@ components:
       properties:
         aliases:
           type: array
+          description: |
+            A list of alternates names that the device can authenticate with.
+            Must conform to UTF-8.
           items:
             type: string
             maxLength: 255
-            description: |
-              A list of alternates names that the device can authenticate with.
-              Must conform to UTF-8.
-
 
     GatewaySelector:
       type: object
@@ -907,13 +906,14 @@ components:
     UserCredential:
       type: object
       additionalProperties: false
-      description: username and password credentials.
+      description: Username and password credentials.
       required:
         - user
       properties:
         user:
           type: object
           additionalProperties: false
+          description: The username and password combination.
           properties:
             usename:
               type: string
