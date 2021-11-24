@@ -47,10 +47,10 @@ where
                 let password = String::from_utf8(password.to_vec())?;
 
                 match user_auth
-                    .authenticate_api_key(
+                    .authenticate_access_token(
                         AuthenticationRequest {
                             user_id: username,
-                            api_key: password,
+                            access_token: password,
                         },
                         Context::default(),
                     )

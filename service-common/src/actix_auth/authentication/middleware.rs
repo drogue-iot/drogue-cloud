@@ -5,7 +5,7 @@ use actix_web::{
     Error, HttpMessage,
 };
 
-use crate::actix_auth::authentication::{AuthN, Credentials, UsernameAndApiKey};
+use crate::actix_auth::authentication::{AuthN, Credentials, UsernameAndToken};
 use crate::error::ServiceError;
 
 use actix_web_httpauth::extractors::basic::BasicAuth;
@@ -84,14 +84,16 @@ where
 
             let credentials = match (basic_auth, bearer_auth, token_query_param) {
                 // basic auth is present
-                (Ok(basic), Err(_), _) => Ok(Credentials::ApiKey(UsernameAndApiKey {
+                (Ok(basic), Err(_), _) => Ok(Credentials::AccessToken(UsernameAndToken {
                     username: basic.user_id().to_string(),
-                    key: basic.password().map(|k| k.to_string()),
+                    access_token: basic.password().map(|k| k.to_string()),
                 })),
                 // bearer auth is present
-                (Err(_), Ok(bearer), _) => Ok(Credentials::Token(bearer.token().to_string())),
+                (Err(_), Ok(bearer), _) => Ok(Credentials::OpenIDToken(bearer.token().to_string())),
                 // token query param is present
-                (Err(_basic), Err(_bearer), Ok(query)) => Ok(Credentials::Token(query.0.token)),
+                (Err(_basic), Err(_bearer), Ok(query)) => {
+                    Ok(Credentials::OpenIDToken(query.0.token))
+                }
 
                 // No headers and no query param (or both headers are invalid, but both invalid should be met with a Bad request anyway)
                 (Err(_basic), Err(_bearer), Err(_query)) => Ok(Credentials::Anonymous),

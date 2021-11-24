@@ -57,7 +57,7 @@ impl UserAuthClient {
         Self::new(client, config.url, token_provider)
     }
 
-    pub async fn authenticate_api_key(
+    pub async fn authenticate_access_token(
         &self,
         request: AuthenticationRequest,
         context: Context,
