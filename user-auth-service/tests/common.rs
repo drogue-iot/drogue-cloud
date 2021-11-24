@@ -19,14 +19,14 @@ macro_rules! test {
             authenticator: None,
             service: service::PostgresAuthorizationService::new(db.config.clone()).unwrap(),
         });
-        let api_key = web::Data::new(drogue_cloud_api_key_service::endpoints::WebData {
-            service: drogue_cloud_api_key_service::mock::MockApiKeyService,
+        let api_key = web::Data::new(drogue_cloud_access_token_service::endpoints::WebData {
+            service: drogue_cloud_access_token_service::mock::MockAccessTokenService,
         });
 
         let auth = drogue_cloud_service_common::mock_auth!();
         let $v = test::init_service(drogue_cloud_user_auth_service::app!(
             data,
-            drogue_cloud_api_key_service::mock::MockApiKeyService,
+            drogue_cloud_access_token_service::mock::MockAccessTokenService,
             api_key,
             16 * 1024,
             false,

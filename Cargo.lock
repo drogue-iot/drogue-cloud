@@ -1681,35 +1681,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "drogue-cloud-admin-service"
-version = "0.8.0"
-dependencies = [
- "actix-http 3.0.0-beta.8",
- "actix-web",
- "anyhow",
- "async-trait",
- "chrono",
- "config 0.11.0",
- "dotenv",
- "drogue-cloud-database-common",
- "drogue-cloud-endpoint-common",
- "drogue-cloud-registry-events",
- "drogue-cloud-service-api",
- "drogue-cloud-service-common",
- "env_logger 0.7.1",
- "futures",
- "futures-core",
- "futures-util",
- "indexmap",
- "log",
- "serde 1.0.130",
- "serde_json",
- "thiserror",
- "tokio 1.11.0",
-]
-
-[[package]]
-name = "drogue-cloud-api-key-service"
+name = "drogue-cloud-access-token-service"
 version = "0.8.0"
 dependencies = [
  "actix-http 3.0.0-beta.8",
@@ -1747,6 +1719,34 @@ dependencies = [
  "thiserror",
  "tokio 1.11.0",
  "url",
+]
+
+[[package]]
+name = "drogue-cloud-admin-service"
+version = "0.8.0"
+dependencies = [
+ "actix-http 3.0.0-beta.8",
+ "actix-web",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "config 0.11.0",
+ "dotenv",
+ "drogue-cloud-database-common",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "env_logger 0.7.1",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "indexmap",
+ "log",
+ "serde 1.0.130",
+ "serde_json",
+ "thiserror",
+ "tokio 1.11.0",
 ]
 
 [[package]]
@@ -1873,7 +1873,7 @@ dependencies = [
  "cloudevents-sdk",
  "dotenv",
  "drogue-client",
- "drogue-cloud-api-key-service",
+ "drogue-cloud-access-token-service",
  "drogue-cloud-console-common",
  "drogue-cloud-event-common",
  "drogue-cloud-integration-common",
@@ -1954,8 +1954,8 @@ dependencies = [
  "deadpool-postgres",
  "dotenv",
  "drogue-client",
+ "drogue-cloud-access-token-service",
  "drogue-cloud-admin-service",
- "drogue-cloud-api-key-service",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
@@ -2303,7 +2303,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dotenv",
- "drogue-cloud-api-key-service",
+ "drogue-cloud-access-token-service",
  "drogue-cloud-authentication-service",
  "drogue-cloud-console-backend",
  "drogue-cloud-device-management-service",
@@ -2531,7 +2531,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "dotenv",
- "drogue-cloud-api-key-service",
+ "drogue-cloud-access-token-service",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-registry-events",
