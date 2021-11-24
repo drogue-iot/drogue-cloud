@@ -115,7 +115,7 @@ impl Component for AccessTokens {
                         <p>{"A new access token was successfully created. The access token is:"}</p>
                         <p>
                         <Clipboard
-                            value=token.key
+                            value=token.token
                             readonly=true
                             name="api-key"
                             />
