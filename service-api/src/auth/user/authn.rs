@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthenticationRequest {
     pub user_id: String,
-    pub api_key: String,
+    pub access_token: String,
 }
 
 /// The result of an authentication request.

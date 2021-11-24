@@ -1,7 +1,7 @@
 use url::Url;
 
 #[inline]
-pub fn enable_api_keys() -> bool {
+pub fn enable_access_token() -> bool {
     true
 }
 

@@ -68,7 +68,7 @@ where
     result
 }
 
-/// Endpoint to authenticate a user key
+/// Endpoint to authenticate a user token
 pub async fn authenticate<S>(
     req: web::Json<AuthenticationRequest>,
     service: web::Data<WebData<S>>,
@@ -76,7 +76,7 @@ pub async fn authenticate<S>(
 where
     S: AccessTokenService + 'static,
 {
-    let result = match service.authenticate(&req.user_id, &req.api_key).await {
+    let result = match service.authenticate(&req.user_id, &req.access_token).await {
         Ok(Some(details)) => Ok(HttpResponse::Ok().json(AuthenticationResponse {
             outcome: Outcome::Known(details),
         })),

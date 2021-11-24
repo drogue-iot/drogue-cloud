@@ -25,8 +25,8 @@ pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    #[serde(default = "defaults::enable_api_keys")]
-    pub enable_api_keys: bool,
+    #[serde(default = "defaults::enable_access_token")]
+    pub enable_access_token: bool,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -43,7 +43,7 @@ pub struct Config {
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
-    let enable_api_keys = config.enable_api_keys;
+    let enable_access_token = config.enable_access_token;
 
     log::info!("Starting WebSocket integration service endpoint");
     log::info!("Kafka servers: {}", config.kafka.bootstrap_servers);
@@ -87,7 +87,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .wrap(AuthN {
                         openid: authenticator.as_ref().cloned(),
                         token: user_auth.clone(),
-                        enable_api_key: enable_api_keys,
+                        enable_access_token,
                     })
                     .service(route::start_connection),
             )

@@ -648,7 +648,7 @@ fn main() {
             let user_auth = user_auth.clone();
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_device_management_service::Config {
-                    enable_api_keys: true,
+                    enable_access_token: true,
                     user_auth,
                     oauth: o,
                     keycloak: k,
@@ -880,7 +880,7 @@ fn main() {
             threads.push(std::thread::spawn(move || {
                 let config = drogue_cloud_websocket_integration::Config {
                     health: None,
-                    enable_api_keys: true,
+                    enable_access_token: true,
                     oauth,
                     bind_addr,
                     registry,

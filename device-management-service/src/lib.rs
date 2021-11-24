@@ -36,8 +36,8 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
-    #[serde(default = "defaults::enable_api_keys")]
-    pub enable_api_keys: bool,
+    #[serde(default = "defaults::enable_access_token")]
+    pub enable_access_token: bool,
 
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
@@ -165,7 +165,7 @@ macro_rules! app {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Running device management service!");
 
-    let enable_api_keys = config.enable_api_keys;
+    let enable_access_token = config.enable_access_token;
 
     // set up authentication
 
@@ -203,7 +203,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         let auth = AuthN {
             openid: authenticator.as_ref().cloned(),
             token: user_auth.clone(),
-            enable_api_key: enable_api_keys,
+            enable_access_token: enable_access_token,
         };
         app!(
             KafkaEventSender,
