@@ -13,10 +13,22 @@ pub struct OpenIdClient {
     pub account_url: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct LoginOptions {
+    pub kc_idp_hint: Option<String>,
+}
+
 #[get("/ui/login")]
-pub async fn login(login_handler: Option<web::Data<OpenIdClient>>) -> impl Responder {
+pub async fn login(
+    query: web::Query<LoginOptions>,
+    login_handler: Option<web::Data<OpenIdClient>>,
+) -> impl Responder {
     if let Some(client) = login_handler {
-        let auth_url = client.client.auth_uri(Some(&client.scopes), None);
+        let mut auth_url = client.client.auth_uri(Some(&client.scopes), None);
+
+        if let Some(hint) = &query.kc_idp_hint {
+            auth_url.query_pairs_mut().append_pair("kc_idp_hint", hint);
+        }
 
         HttpResponse::Found()
             .append_header((http::header::LOCATION, auth_url.to_string()))
