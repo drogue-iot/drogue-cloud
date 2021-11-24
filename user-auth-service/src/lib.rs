@@ -2,7 +2,7 @@ pub mod endpoints;
 pub mod service;
 
 use actix_web::{web, App, HttpServer};
-use drogue_cloud_api_key_service::{
+use drogue_cloud_access_token_service::{
     endpoints::WebData as KeycloakWebData, service::KeycloakAccessTokenService,
 };
 use drogue_cloud_service_common::{
@@ -57,11 +57,9 @@ macro_rules! app {
                         $auth.clone(),
                     ))
                     .service(web::scope("/v1/user").service(endpoints::authorize))
-                    .service(web::resource("/user/v1alpha1/authn").route(
-                        web::post().to(drogue_cloud_api_key_service::endpoints::authenticate::<
-                            $api_key_ty,
-                        >),
-                    )),
+                    .service(web::resource("/user/v1alpha1/authn").route(web::post().to(
+                        drogue_cloud_access_token_service::endpoints::authenticate::<$api_key_ty>,
+                    ))),
             )
     };
 }
