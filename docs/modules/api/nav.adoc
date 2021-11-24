@@ -1,0 +1,4 @@
+* xref:index.adoc[API]
+** xref:index.adoc[Overview]
+** xref:endpoints.adoc[Endpoints]
+** xref:schemas.adoc[Schemas]

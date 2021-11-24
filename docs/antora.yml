@@ -7,3 +7,4 @@ nav:
   - modules/deployment/nav.adoc
   - modules/user-guide/nav.adoc
   - modules/ROOT/nav-integrations.adoc
+  - modules/api/nav.adoc
