@@ -117,7 +117,7 @@ impl Component for AccessTokens {
                         <Clipboard
                             value=token.token
                             readonly=true
-                            name="api-key"
+                            name="access-token"
                             />
                         </p>
                         <p>{"Once you close this alert, you won't have any chance to get the access token ever again. Be sure to copy it somewhere safe."}</p>
@@ -154,7 +154,7 @@ impl Component for AccessTokens {
                                     label="Create token"
                                     variant=Variant::Primary
                                     onclick=self.link.callback(|_|Msg::Create)
-                                    id="create-key"
+                                    id="create-token"
                                 />
                             </ToolbarItem>
                         </ToolbarGroup>
