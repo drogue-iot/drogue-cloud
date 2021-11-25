@@ -5,7 +5,7 @@ set -x
 set -o pipefail
 
 : "${API_URL:=http://localhost:8011}"
-: "${BACKEND_JSON:={}"
+: "${BACKEND_JSON:="{}"}"
 : "${BACKEND_JSON_FILE:=/etc/config/login/backend.json}"
 
 echo "Setting backend endpoint:"
