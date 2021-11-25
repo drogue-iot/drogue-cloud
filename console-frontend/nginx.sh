@@ -5,10 +5,17 @@ set -x
 set -o pipefail
 
 : "${API_URL:=http://localhost:8011}"
+: "${BACKEND_JSON:={}"
+: "${BACKEND_JSON_FILE:=/etc/config/login/backend.json}"
 
 echo "Setting backend endpoint:"
 
-echo '{}' | jq --arg url "$API_URL" '. + {url: $url}' | tee /endpoints/backend.json
+if [ -f "$BACKEND_JSON_FILE" ]; then
+    echo "Using base config from file: $BACKEND_JSON_FILE"
+    BACKEND_JSON="$(cat "$BACKEND_JSON_FILE")"
+fi
+
+echo "$BACKEND_JSON" | jq --arg url "$API_URL" '. + {url: $url}' | tee /endpoints/backend.json
 
 LOGIN_NOTE=/etc/config/login/note.html
 if [ -f "$LOGIN_NOTE" ]; then
