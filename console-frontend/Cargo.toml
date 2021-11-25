@@ -74,5 +74,5 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "a65d37c50adb5ea75d4125c8c835f92873ea87ab" } # FIXME: awaiting release
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "7b02123ce47834cc32723fb7a42106661bca8c03" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }

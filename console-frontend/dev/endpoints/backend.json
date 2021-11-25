@@ -1,4 +1,14 @@
 {
   "url": "http://localhost:8011",
-  "x_login_note": "Foo bar <strong>Foo bar</strong>"
+  "x_login_note": "Foo bar <strong>Foo bar</strong>",
+  "x_footer_band": [
+    "Need an account? <a href=\"https://console-backend/api/console/v1alpha1/ui/login?kc_idp_hint=github\">Sign in</a> with GitHub."
+  ],
+  "x_idps": [
+    {
+      "id": "github",
+      "label": "Sign in with GitHub",
+      "icon_html": "<i class=\"idp-icon fab fa-github\"></i>"
+    }
+  ]
 }

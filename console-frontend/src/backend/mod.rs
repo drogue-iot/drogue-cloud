@@ -12,8 +12,23 @@ use yew::{format::Text, prelude::*, services::fetch::*, utils::window};
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BackendInformation {
     pub url: Url,
-    #[serde(default)]
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub login_note: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub idps: Vec<IdpInfo>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub footer_band: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IdpInfo {
+    pub id: String,
+    pub icon_html: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub href: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 impl BackendInformation {

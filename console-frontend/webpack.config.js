@@ -74,9 +74,9 @@ module.exports = (env, argv) => {
                     // only process modules with this loader
                     // if they live under a 'fonts' or 'pficon' directory
                     include: [
-                        path.resolve(__dirname, 'node_modules/patternfly/dist/fonts'),
                         path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/fonts'),
                         path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/pficon'),
+                        path.resolve(__dirname, 'node_modules/@fortawesome/fontawesome-free/webfonts'),
                     ],
                     use: {
                         loader: 'file-loader',
@@ -120,7 +120,8 @@ module.exports = (env, argv) => {
                         (input.indexOf(BG_IMAGES_DIRNAME) === -1) &&
                         (input.indexOf('fonts') === -1) &&
                         (input.indexOf('background-filter') === -1) &&
-                        (input.indexOf('pficon') === -1)
+                        (input.indexOf('pficon') === -1) &&
+                        (input.indexOf('@fortawesome') === -1)
                     ),
                     use: {
                         loader: 'raw-loader',
@@ -131,7 +132,6 @@ module.exports = (env, argv) => {
                     test: /\.(jpg|jpeg|png|gif)$/i,
                     include: [
                         path.resolve(__dirname, 'src'),
-                        path.resolve(__dirname, 'node_modules/patternfly'),
                         path.resolve(__dirname, 'node_modules/@patternfly/patternfly/assets/images'),
                         path.resolve(__dirname, 'node_modules/@patternfly/react-styles/css/assets/images'),
                         path.resolve(__dirname, 'node_modules/@patternfly/react-core/dist/styles/assets/images'),

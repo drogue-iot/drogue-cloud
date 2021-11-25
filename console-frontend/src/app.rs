@@ -1,8 +1,8 @@
-use crate::error::error;
 use crate::{
     backend::{Backend, BackendInformation, RequestOptions, Token},
     components::placeholder::Placeholder,
     data::{SharedDataBridge, SharedDataOps},
+    error::error,
     page::AppPage,
     preferences::Preferences,
 };
@@ -168,6 +168,10 @@ impl Component for Main {
                 self.endpoints =
                     Some(Rc::try_unwrap(endpoints).unwrap_or_else(|err| (*err).clone()));
                 self.task = None;
+
+                // we finished logging in the user
+                self.authenticating = false;
+
                 true
             }
             Msg::FetchBackendFailed => {
@@ -216,7 +220,6 @@ impl Component for Main {
             Msg::SetAccessToken(Some(token)) => {
                 log::info!("Token: {:?}", token);
                 self.task = None;
-                self.authenticating = false;
                 Preferences::update_or_default(|mut prefs| {
                     prefs.refresh_token = token.refresh_token.as_ref().cloned();
                     prefs.id_token = token.id_token.clone();
@@ -326,8 +329,8 @@ impl Component for Main {
                                 />
                         }
 
-                    } else if self.need_login() {
-                        html!{ <Placeholder/> }
+                    } else if let Some(backend) = self.need_login() {
+                        html!{ <Placeholder info=backend.info /> }
                     } else {
                         html!{}
                     }
@@ -345,7 +348,7 @@ impl Main {
             self.app_failure,
             Backend::get(),
             Backend::token(),
-            self.endpoints.as_ref().cloned(),
+            self.endpoints.clone(),
         ) {
             (true, ..) => None,
             (false, Some(backend), Some(token), Some(endpoints)) => {
@@ -355,8 +358,15 @@ impl Main {
         }
     }
 
-    fn need_login(&self) -> bool {
-        !self.app_failure && Backend::get().is_some() && !self.authenticating
+    fn need_login(&self) -> Option<Backend> {
+        match (self.app_failure, Backend::get(), self.is_authenticating()) {
+            (false, Some(backend), false) => Some(backend),
+            _ => None,
+        }
+    }
+
+    fn is_authenticating(&self) -> bool {
+        self.authenticating || self.access_code.is_some()
     }
 
     fn fetch_backend(&self) -> Result<FetchTask, anyhow::Error> {
