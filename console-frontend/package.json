@@ -27,6 +27,6 @@
   "dependencies": {
     "@patternfly/patternfly": "^4.159.1",
     "@fortawesome/fontawesome-free": "^5.15.4",
-    "swagger-ui": "^4.1.0"
+    "swagger-ui": "^4.1.2"
   }
 }
