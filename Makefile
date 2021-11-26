@@ -47,7 +47,7 @@ ALL_IMAGES=\
 	websocket-integration \
 
 # allow skipping the server image
-ifndef (SKIP_SERVER)
+ifeq ($(SKIP_SERVER),)
 ALL_IMAGES += server
 endif
 
@@ -191,12 +191,15 @@ cargo-check-frontend:
 #
 # Run the cargo build.
 #
+ifeq ($(SKIP_SERVER),)
+cargo-build: CARGO_BUILD_ARGS=--exclude drogue-cloud-server
+endif
 cargo-build:
 	@#
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
 	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
-	cargo build --release --workspace
+	cargo build --release --workspace $(CARGO_BUILD_ARGS)
 
 
 #
