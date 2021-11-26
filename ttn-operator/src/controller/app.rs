@@ -7,14 +7,14 @@ use crate::{
 use async_trait::async_trait;
 use drogue_client::{
     meta::{self, v1::CommonMetadataMut},
+    openid::OpenIdTokenProvider,
     registry, Translator,
 };
 use drogue_cloud_operator_common::controller::{
     base::{ControllerOperation, ProcessOutcome},
     reconciler::{ReconcileError, ReconcileProcessor, ReconcileState, Reconciler},
 };
-use headers::authorization::Credentials;
-use headers::Authorization;
+use headers::{authorization::Credentials, Authorization};
 use maplit::{convert_args, hashmap};
 use serde_json::{json, Value};
 use std::{collections::HashMap, ops::Deref};
@@ -25,13 +25,17 @@ const TTN_GATEWAY_NAME: &str = "ttn-gateway";
 const TTN_WEBHOOK_NAME: &str = "drogue-iot";
 
 pub struct ApplicationController {
-    registry: registry::v1::Client,
+    registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
     ttn: ttn::Client,
     endpoint_url: Url,
 }
 
 impl ApplicationController {
-    pub fn new(registry: registry::v1::Client, ttn: ttn::Client, endpoint_url: Url) -> Self {
+    pub fn new(
+        registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
+        ttn: ttn::Client,
+        endpoint_url: Url,
+    ) -> Self {
         Self {
             registry,
             ttn,
@@ -74,7 +78,7 @@ impl ControllerOperation<String, registry::v1::Application, registry::v1::Applic
 }
 
 impl Deref for ApplicationController {
-    type Target = registry::v1::Client;
+    type Target = registry::v1::Client<Option<OpenIdTokenProvider>>;
 
     fn deref(&self) -> &Self::Target {
         &self.registry
@@ -95,7 +99,7 @@ pub struct DeconstructContext {
 
 pub struct ApplicationReconciler<'a> {
     pub ttn: &'a ttn::Client,
-    pub registry: &'a registry::v1::Client,
+    pub registry: &'a registry::v1::Client<Option<OpenIdTokenProvider>>,
     pub endpoint_url: &'a Url,
 }
 

@@ -2,6 +2,7 @@ mod v1alpha1;
 
 use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
+use drogue_client::openid::OpenIdTokenProvider;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
@@ -108,7 +109,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                         enable_access_token,
                     })
                     .wrap(Cors::permissive())
-                    .route("", web::post().to(v1alpha1::command::<KafkaSink>)),
+                    .route(
+                        "",
+                        web::post().to(v1alpha1::command::<KafkaSink, Option<OpenIdTokenProvider>>),
+                    ),
             )
     })
     .bind(config.bind_addr)?

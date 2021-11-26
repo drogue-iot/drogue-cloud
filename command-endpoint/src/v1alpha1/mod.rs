@@ -1,5 +1,6 @@
 use actix_web::{http::header, web, HttpResponse};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
+use drogue_client::openid::TokenProvider;
 use drogue_client::{registry, Context};
 use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender, sink::Sink};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
@@ -10,18 +11,19 @@ pub struct CommandQuery {
     pub command: String,
 }
 
-pub async fn command<S>(
+pub async fn command<S, TP>(
     sender: web::Data<UpstreamSender<S>>,
     client: web::Data<reqwest::Client>,
     path: web::Path<(String, String)>,
     web::Query(opts): web::Query<CommandQuery>,
     req: web::HttpRequest,
     body: web::Bytes,
-    registry: web::Data<registry::v1::Client>,
+    registry: web::Data<registry::v1::Client<TP>>,
     token: BearerAuth,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
     S: Sink,
+    TP: TokenProvider,
 {
     let (app_name, device_name) = path.into_inner();
 

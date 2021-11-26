@@ -1,12 +1,13 @@
-use crate::messages::{Disconnect, StreamError, Subscribe, WsEvent};
-use crate::service::Service;
-use actix::prelude::*;
-use actix::{
-    fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
-    Running, WrapFuture,
+use crate::{
+    messages::{Disconnect, StreamError, Subscribe, WsEvent},
+    service::Service,
 };
-use actix_web_actors::ws;
-use actix_web_actors::ws::Message::Text;
+use actix::{
+    fut, prelude::*, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner,
+    Handler, Running, WrapFuture,
+};
+use actix_web_actors::ws::{self, Message::Text};
+use drogue_client::openid::OpenIdTokenProvider;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -21,12 +22,16 @@ pub struct WsHandler {
     group_id: Option<String>,
     // to exit the actor if the client was disconnected
     heartbeat: Instant,
-    service_addr: Addr<Service>,
+    service_addr: Addr<Service<Option<OpenIdTokenProvider>>>,
     id: Uuid,
 }
 
 impl WsHandler {
-    pub fn new(app: String, group_id: Option<String>, service_addr: Addr<Service>) -> WsHandler {
+    pub fn new(
+        app: String,
+        group_id: Option<String>,
+        service_addr: Addr<Service<Option<OpenIdTokenProvider>>>,
+    ) -> WsHandler {
         WsHandler {
             application: app,
             group_id,

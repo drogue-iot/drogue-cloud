@@ -47,7 +47,7 @@ drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-admin-service = { path = "../admin-service"  }
 drogue-cloud-access-token-service = { path = "../access-token-service" }
 
-drogue-client = "0.7.1"
+drogue-client = "0.8"
 
 deadpool = "0.7"
 deadpool-postgres = { version = "0.7", features = ["config"] }

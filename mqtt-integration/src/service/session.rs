@@ -4,7 +4,7 @@ use crate::service::{
 };
 use async_trait::async_trait;
 use cloudevents::Data;
-use drogue_client::{registry, Context};
+use drogue_client::{openid::OpenIdTokenProvider, registry, Context};
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
 use drogue_cloud_integration_common::{
     self,
@@ -42,7 +42,7 @@ pub struct Session<S: SenderSink> {
 
     pub sender: UpstreamSender<S>,
     pub client: reqwest::Client,
-    pub registry: registry::v1::Client,
+    pub registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
 
     pub token: Option<String>,
 }
@@ -59,7 +59,7 @@ where
         client_id: String,
         sender: UpstreamSender<S>,
         client: reqwest::Client,
-        registry: registry::v1::Client,
+        registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
         token: Option<String>,
     ) -> Self {
         Session {

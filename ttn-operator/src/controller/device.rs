@@ -3,6 +3,7 @@ use crate::{data::*, ttn};
 use async_trait::async_trait;
 use drogue_client::{
     meta::{self, v1::CommonMetadataMut},
+    openid::TokenProvider,
     registry, Dialect, Translator,
 };
 use drogue_cloud_operator_common::controller::{
@@ -14,24 +15,24 @@ use std::ops::Deref;
 
 const FINALIZER: &str = "ttn";
 
-pub struct DeviceController {
-    registry: registry::v1::Client,
+pub struct DeviceController<TP: TokenProvider> {
+    registry: registry::v1::Client<TP>,
     ttn: ttn::Client,
 }
 
-impl DeviceController {
-    pub fn new(registry: registry::v1::Client, ttn: ttn::Client) -> Self {
+impl<TP: TokenProvider> DeviceController<TP> {
+    pub fn new(registry: registry::v1::Client<TP>, ttn: ttn::Client) -> Self {
         Self { registry, ttn }
     }
 }
 
 #[async_trait]
-impl
+impl<TP: TokenProvider>
     ControllerOperation<
         (String, String),
         (registry::v1::Application, registry::v1::Device),
         registry::v1::Device,
-    > for DeviceController
+    > for DeviceController<TP>
 {
     async fn process_resource(
         &self,
@@ -60,8 +61,8 @@ impl
     }
 }
 
-impl Deref for DeviceController {
-    type Target = registry::v1::Client;
+impl<TP: TokenProvider> Deref for DeviceController<TP> {
+    type Target = registry::v1::Client<TP>;
 
     fn deref(&self) -> &Self::Target {
         &self.registry

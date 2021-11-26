@@ -1,12 +1,13 @@
 use crate::controller::base::{OperationOutcome, ResourceOperations};
 use async_trait::async_trait;
-use drogue_client::{core, error::ClientError, registry, Translator};
+use drogue_client::{core, error::ClientError, openid::TokenProvider, registry, Translator};
 use std::ops::Deref;
 
 #[async_trait]
-impl<S> ResourceOperations<String, registry::v1::Application, registry::v1::Application> for S
+impl<S, TP> ResourceOperations<String, registry::v1::Application, registry::v1::Application> for S
 where
-    S: Deref<Target = registry::v1::Client> + Send + Sync,
+    S: Deref<Target = registry::v1::Client<TP>> + Send + Sync,
+    TP: TokenProvider,
 {
     async fn get(
         &self,

@@ -1,30 +1,23 @@
-use anyhow::{anyhow, Result};
-
-//use actix::prelude::{Actor, Context, Handler, Recipient};
-use actix::prelude::*;
-
-use std::collections::HashMap;
-
 use crate::messages::{Disconnect, StreamError, Subscribe, WsEvent};
-use actix::{AsyncContext, SpawnHandle, WrapFuture};
+use actix::{prelude::*, AsyncContext, SpawnHandle, WrapFuture};
+use anyhow::{anyhow, Result};
+use drogue_client::{openid::TokenProvider, registry::v1::Client};
 use drogue_cloud_integration_common::stream::{EventStream, EventStreamConfig};
-
 use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfigExt, KafkaEventType};
-
-use drogue_client::registry::v1::Client;
 use drogue_cloud_service_common::error::ServiceError;
 use futures::StreamExt;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 // Service Actor.
 // Read from the kafka and forwards messages to the Web socket actors
-pub struct Service {
+pub struct Service<TP: TokenProvider> {
     pub clients: HashMap<Uuid, Stream>,
     pub kafka_config: KafkaClientConfig,
-    pub registry: Client,
+    pub registry: Client<TP>,
 }
 
-impl Actor for Service {
+impl<TP: TokenProvider + Unpin + 'static> Actor for Service<TP> {
     type Context = Context<Self>;
 }
 
@@ -35,7 +28,7 @@ pub struct Stream {
 }
 
 /// Handle subscribe messages from the WsHandler actor.
-impl Handler<Subscribe> for Service {
+impl<TP: TokenProvider + Unpin + 'static> Handler<Subscribe> for Service<TP> {
     type Result = ();
 
     fn handle(&mut self, msg: Subscribe, ctx: &mut Context<Self>) -> Self::Result {
@@ -51,7 +44,7 @@ impl Handler<Subscribe> for Service {
                 Service::get_stream(registry_client, &kafka, app.clone(), consumer_group).await;
             // run the stream
             let _ = match stream {
-                Ok(s) => Service::run_stream(s, addr.clone(), app.clone().as_str()).await,
+                Ok(s) => Service::<TP>::run_stream(s, addr.clone(), app.clone().as_str()).await,
                 Err(s) => Err(anyhow!(s)),
             };
         }
@@ -79,7 +72,7 @@ impl Handler<Subscribe> for Service {
     }
 }
 
-impl Handler<Disconnect> for Service {
+impl<TP: TokenProvider + Unpin + 'static> Handler<Disconnect> for Service<TP> {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, ctx: &mut Context<Self>) {
@@ -101,7 +94,7 @@ impl Handler<Disconnect> for Service {
 }
 
 // if there is an error with the stream, notify the WsClient and release the stream handle
-impl Handler<StreamError> for Service {
+impl<TP: TokenProvider + Unpin + 'static> Handler<StreamError> for Service<TP> {
     type Result = ();
 
     fn handle(&mut self, msg: StreamError, ctx: &mut Context<Self>) {
@@ -125,9 +118,9 @@ impl Handler<StreamError> for Service {
     }
 }
 
-impl Service {
+impl<TP: TokenProvider> Service<TP> {
     async fn get_stream(
-        registry: Client,
+        registry: Client<TP>,
         kafka_config: &KafkaClientConfig,
         application: String,
         group_id: Option<String>,
