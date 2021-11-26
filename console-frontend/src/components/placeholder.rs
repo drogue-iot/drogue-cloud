@@ -69,9 +69,10 @@ impl Component for Placeholder {
                             <Form>
                                 <ActionGroup>
                                     <Button
-                                        label="Log In via SSO"
+                                        label="Log in via SSO"
                                         variant=Variant::Primary
                                         onclick=onclick
+                                        block=true
                                         />
                                 </ActionGroup>
                             </Form>
