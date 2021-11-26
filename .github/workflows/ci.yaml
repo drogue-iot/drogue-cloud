@@ -391,11 +391,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: drogue-server-linux-amd64
+          path: drogue-server-linux-amd64
 
       - name: Fetch static server binary (macos-amd64)
         uses: actions/download-artifact@v2
         with:
           name: drogue-server-macos-amd64
+          path: drogue-server-macos-amd64
 
       - name: Rename static server binaries
         run: |
