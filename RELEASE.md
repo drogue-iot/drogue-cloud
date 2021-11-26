@@ -9,6 +9,7 @@ Preparing for a new version (not release, like a milestone):
 
 ## Overall process
 
+* Get rid of as many as possible "needs release" patches in `Cargo.toml` and `console-frontend/Cargo.toml`
 * Create a new tag
   * Start with a `v0.x.0-rc1` version
   * The final version should be `v0.x.0`
