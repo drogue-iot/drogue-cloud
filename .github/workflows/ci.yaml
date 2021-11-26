@@ -293,10 +293,10 @@ jobs:
 
       - name: Tag images
         run: |
-          make tag-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
+          make tag-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }} SKIP_SERVER=1
 
       - name: Load images in kind
-        run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }}
+        run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }} SKIP_SERVER=1
 
       - name: Delete loaded images
         run: rm all.tar
