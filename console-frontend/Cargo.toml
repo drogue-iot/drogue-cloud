@@ -74,6 +74,6 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "7eef5444e47e0460103f8d584a8ec67aa57c55ba" } # FIXME: awaiting release
+#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "7eef5444e47e0460103f8d584a8ec67aa57c55ba" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }
 drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "916829633f49e08d32d8dfe91586e76ca68fc7de" } # FIXME: awaiting release
