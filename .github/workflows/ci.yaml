@@ -178,7 +178,7 @@ jobs:
           make install
           cd ..
 
-          PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static
+          PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static -p drogue-cloud-server
           # also build the container image
           make build-image(server)
           make -C server save-images
