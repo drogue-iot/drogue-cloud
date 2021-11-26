@@ -7,7 +7,7 @@ use crate::{
     page::AppRoute,
     pages::{
         apps::ApplicationContext,
-        devices::{DetailsSection, Pages},
+        devices::{CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
     utils::{navigate_to, url_encode},
@@ -68,6 +68,7 @@ pub enum Msg {
     AppSearch(String),
 
     ShowOverview(String),
+    TriggerModal,
 }
 
 pub struct Index {
@@ -148,6 +149,15 @@ impl Component for Index {
             Msg::AppSearch(value) => {
                 self.app_filter = value;
             }
+            Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <CreateDialog
+                        backend=self.props.backend.clone()
+                        on_close=self.link.callback_once(move |_| Msg::Load)
+                        app=self.app.clone()
+                        />
+                }),
+            }),
         };
         true
     }
@@ -197,7 +207,18 @@ impl Component for Index {
                 </PageSection>
                 <PageSection variant=PageSectionVariant::Light>
                     <Content>
-                        <Title>{"Devices"}</Title>
+                        <Flex>
+                        <FlexItem>
+                            <Title>{"Devices"}</Title>
+                        </FlexItem>
+                        <FlexItem modifiers=vec![FlexModifier::Align(Alignement::Right).all()]>
+                            <Button
+                                    label="New device"
+                                    variant=Variant::Primary
+                                    onclick=self.link.callback(|_|Msg::TriggerModal)
+                            />
+                        </FlexItem>
+                        </Flex>
                     </Content>
                 </PageSection>
             { if self.app.is_empty() {html!{

@@ -131,14 +131,18 @@ impl Component for Index {
             <>
                 <PageSection variant=PageSectionVariant::Light limit_width=true>
                     <Content>
-                        <Title>{"Applications"}</Title>
-                        <ToolbarItem modifiers=vec![ToolbarElementModifier::Right.all()]>
+                       <Flex>
+                        <FlexItem>
+                            <Title>{"Applications"}</Title>
+                        </FlexItem>
+                        <FlexItem modifiers=vec![FlexModifier::Align(Alignement::Right).all()]>
                             <Button
                                     label="New Application"
                                     variant=Variant::Primary
                                     onclick=self.link.callback(|_|Msg::TriggerModal)
                             />
-                        </ToolbarItem>
+                        </FlexItem>
+                        </Flex>
                     </Content>
                 </PageSection>
                 <PageSection>
