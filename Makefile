@@ -45,8 +45,11 @@ ALL_IMAGES=\
 	topic-strimzi-operator \
 	topic-admin-operator \
 	websocket-integration \
-	server \
 
+# allow skipping the server image
+ifndef (SKIP_SERVER)
+ALL_IMAGES += server
+endif
 
 #
 # Active images to build

@@ -130,11 +130,11 @@ jobs:
 
       - name: Run build
         run: |
-          make build
+          make build SKIP_SERVER=1
 
       - name: Save images
         run: |
-          make save-images
+          make save-images SKIP_SERVER=1
 
       - name: Fix permissions
         run: make fix-permissions
@@ -146,36 +146,16 @@ jobs:
           path: build/images/all.tar
           if-no-files-found: error
 
-      - name: Upload server binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: server-binary
-          path: target/release/drogue-cloud-server
-          if-no-files-found: error
-
-  static-binary:
+  server-linux:
     needs: [check]
-    strategy:
-      matrix:
-        os: [ubuntu-18.04, macos-10.15] #, windows-2019]
-        include:
-          - os: ubuntu-18.04
-            suffix: "linux-amd64"
-            pkg: "tar.gz"
-          - os: macos-10.15
-            suffix: "macos-amd64"
-            pkg: "tar.gz"
-              #- os: windows-2019
-              #  suffix: "windows-amd64"
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-18.04
     env:
       VERSION: ${{needs.check.outputs.version}}
-
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Build binary for Linux
+      - name: Build binary
         if: ${{ matrix.os == 'ubuntu-18.04' }}
         run: |
           sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
@@ -191,14 +171,43 @@ jobs:
           cd ..
 
           PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static
-          
-      - name: Build binary for Mac OS X
+          # also build the container image
+          make build-image(server)
+          make -C server save-images
+          mv build/images/all.tar build/images/server.tar
+
+      - name: Upload server binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: drogue-server-linux-amd64
+          path: target/release/drogue-cloud-server
+          if-no-files-found: error
+
+      - name: Upload images
+        uses: actions/upload-artifact@v2
+        with:
+          name: container-image-server
+          path: build/images/server.tar
+          if-no-files-found: error
+
+
+  server-macos:
+    needs: [check]
+    runs-on: macos-10.15
+    env:
+      VERSION: ${{needs.check.outputs.version}}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Build binary
         if: ${{ matrix.os == 'macos-10.15' }}
         shell: bash
         run: |
           brew update
           brew install librdkafka openssl
-      
+
           # Build and install postgresql dep
           curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
           tar xvf postgresql-11.13.tar.gz
@@ -208,7 +217,14 @@ jobs:
           make install
           cd ..
           PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl DEP_OPENSSL_DIR=/usr/local/opt/openssl RUSTFLAGS="-C target-feature=+crt-static" cargo build --release -p drogue-cloud-server --features static
-      
+
+      - name: Upload server binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: drogue-server-macos-amd64
+          path: target/release/drogue-cloud-server
+          if-no-files-found: error
+
           #- name: Build binary for Windows
           #  if: ${{ matrix.os == 'windows-2019' }}
           #  run: |
@@ -225,12 +241,6 @@ jobs:
           #    $env:OPENSSL_STATIC = "1"
           #    $env:RUSTFLAGS = "-C target-feature=+crt-static"
           #    cargo build --release -p drogue-cloud-server --features static
-      - name: Upload server binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: drogue-server-${{matrix.suffix}}
-          path: target/release/drogue-cloud-server
-          if-no-files-found: error
 
 
   deploy:
@@ -320,7 +330,7 @@ jobs:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
       VERSION: ${{needs.check.outputs.version}}
 
-    needs: [check, deploy, test]
+    needs: [check, deploy, test, server-linux, server-macos]
 
     steps:
 
@@ -357,8 +367,32 @@ jobs:
         with:
           name: container-images
 
+      - name: Fetch container image server
+        uses: actions/download-artifact@v2
+        with:
+          name: container-image-server
+
+      - name: Fetch static server binary (linux-amd64)
+        uses: actions/download-artifact@v2
+        with:
+          name: drogue-server-linux-amd64
+
+      - name: Fetch static server binary (macos-amd64)
+        uses: actions/download-artifact@v2
+        with:
+          name: drogue-server-macos-amd64
+
+      - name: Rename static server binaries
+        run: |
+          mkdir server-binaries
+          mv drogue-server-linux-amd64/drogue-cloud-server server-binaries/drogue-cloud-server-linux-amd64
+          mv drogue-server-macos-amd64/drogue-cloud-server server-binaries/drogue-cloud-server-macos-amd64
+
       - name: Load images in docker
-        run: docker load -i all.tar
+        run: |
+          docker load -i all.tar
+          docker load -i server.tar
+          docker images
 
       - name: Login to github container repository
         run: echo "${{ secrets.GHCR_PAT }}" | docker login https://ghcr.io -u ${{ github.actor }} --password-stdin
@@ -388,5 +422,14 @@ jobs:
         run: |
           # add install ZIPs
           hub release edit -m "" $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") $TAG
+          # add static server binaries
+          hub release edit -m "" $(find server-binaries -type f -printf "-a %p ") $TAG
+
+      - name: Remove draft status
+        if: ${{ needs.check.outputs.release }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ needs.check.outputs.version }}
+        run: |
           # finally, remove the draft status
           hub release edit -m "" --draft=false $TAG
