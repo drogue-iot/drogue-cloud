@@ -21,7 +21,7 @@ impl KeycloakClient for KeycloakAdminMock {
         Ok(username.to_string())
     }
 
-    async fn admin<'a>(&self) -> Result<KeycloakAdmin<'a>, Error> {
+    async fn admin<'a>(&self) -> Result<KeycloakAdmin, Error> {
         todo!()
     }
 

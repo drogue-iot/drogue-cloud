@@ -7,7 +7,7 @@ use drogue_cloud_service_api::{
 };
 use drogue_cloud_service_common::keycloak::{error::Error, KeycloakClient};
 use serde_json::Value;
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 const ATTR_PREFIX: &str = "access_token_";
 
@@ -37,7 +37,7 @@ pub struct KeycloakAccessTokenService<K: KeycloakClient> {
 
 impl<K: KeycloakClient> KeycloakAccessTokenService<K> {
     fn insert_entry(
-        attributes: &mut HashMap<Cow<str>, Value>,
+        attributes: &mut HashMap<String, Value>,
         prefix: String,
         entry: AccessTokenData,
     ) -> Result<(), Error> {
@@ -47,8 +47,8 @@ impl<K: KeycloakClient> KeycloakAccessTokenService<K> {
         Ok(())
     }
 
-    fn make_key(prefix: String) -> Cow<'static, str> {
-        Cow::Owned(format!("{}{}", ATTR_PREFIX, prefix))
+    fn make_key(prefix: String) -> String {
+        format!("{}{}", ATTR_PREFIX, prefix)
     }
 
     /// Decode a keycloak attribute value into an [`AccessTokenData`], if possible.
@@ -210,7 +210,7 @@ where
                 None,
                 None,
                 None,
-                Some(username),
+                Some(username.to_string()),
             )
             .await?
             .pop();

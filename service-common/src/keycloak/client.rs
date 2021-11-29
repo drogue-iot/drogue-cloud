@@ -71,7 +71,7 @@ impl KeycloakClient for KeycloakAdminClient {
                 None,
                 None,
                 None,
-                Some(username),
+                Some(username.to_string()),
             )
             .await?
             .pop()
@@ -81,7 +81,7 @@ impl KeycloakClient for KeycloakAdminClient {
         }
     }
 
-    async fn admin<'a>(&self) -> Result<KeycloakAdmin<'a>, Error> {
+    async fn admin<'a>(&self) -> Result<KeycloakAdmin, Error> {
         let token = self.token().await?;
         Ok(KeycloakAdmin::new(&self.url, token, self.client.clone()))
     }
@@ -92,7 +92,7 @@ impl KeycloakClient for KeycloakAdminClient {
 }
 
 impl KeycloakAdminClient {
-    async fn token<'a>(&self) -> Result<KeycloakAdminToken<'a>, Error> {
+    async fn token<'a>(&self) -> Result<KeycloakAdminToken, Error> {
         // Refresh token if needed is WIP.
         Ok(KeycloakAdminToken::acquire(
             &self.url,

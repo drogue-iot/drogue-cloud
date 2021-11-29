@@ -19,7 +19,7 @@ actix-rt = "2"
 ntex = "0.4"
 http = "0.2"
 
-keycloak = "12"
+keycloak = "14"
 
 tokio = "1"
 futures-util = { version = "0.3.7", default-features = false }

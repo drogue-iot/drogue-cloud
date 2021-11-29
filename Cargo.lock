@@ -2317,7 +2317,7 @@ dependencies = [
  "drogue-cloud-service-common",
  "drogue-cloud-user-auth-service",
  "drogue-cloud-websocket-integration",
- "keycloak 14.0.0",
+ "keycloak",
  "log",
  "ntex",
  "ntex-rt",
@@ -2383,7 +2383,7 @@ dependencies = [
  "humantime 2.1.0",
  "humantime-serde",
  "k8s-openapi",
- "keycloak 12.0.1",
+ "keycloak",
  "kube",
  "log",
  "ntex",
@@ -3400,17 +3400,6 @@ checksum = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 dependencies = [
  "winapi 0.2.8",
  "winapi-build",
-]
-
-[[package]]
-name = "keycloak"
-version = "12.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4fe5c911cdbca25fd3e8d7292fd5b80a8f450e641b28861b153d6e92e606e74"
-dependencies = [
- "reqwest",
- "serde 1.0.130",
- "serde_json",
 ]
 
 [[package]]

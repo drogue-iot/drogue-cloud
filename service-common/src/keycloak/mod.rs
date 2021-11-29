@@ -17,7 +17,7 @@ pub trait KeycloakClient: Clone {
     async fn username_from_id(&self, id: &str) -> Result<String, error::Error>;
     async fn id_from_username(&self, username: &str) -> Result<String, error::Error>;
 
-    async fn admin<'a>(&self) -> Result<KeycloakAdmin<'a>, error::Error>;
+    async fn admin<'a>(&self) -> Result<KeycloakAdmin, error::Error>;
 
     fn realm(&self) -> String;
 }
