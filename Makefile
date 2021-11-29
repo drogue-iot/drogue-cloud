@@ -124,21 +124,21 @@ container-test: cargo-test
 # Run pre-checks on the host, forking off into the build container.
 #
 host-pre-check:
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
+	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
 
 
 #
 # Run checks on the host, forking off into the build container.
 #
 host-check:
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check
+	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check
 
 
 #
 # Run a build on the host, forking off into the build container.
 #
 host-build:
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
+	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
 
 
 #
@@ -146,7 +146,7 @@ host-build:
 #
 host-test:
 	if [ -z "$$($(CONTAINER) network ls --format '{{.Name}}' | grep drogue)" ]; then $(CONTAINER) network create drogue; fi
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
+	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
 
 
 #
@@ -161,7 +161,7 @@ fix-permissions:
 # Run an interactive shell inside the build container.
 #
 build-shell:
-	$(CONTAINER) run --rm -it -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
+	$(CONTAINER) run --rm -it -u "$(shell id -u)" -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
 
 
 #
