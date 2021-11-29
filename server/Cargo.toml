@@ -9,6 +9,7 @@ edition = "2021"
 clap = { version = "2.33.3" }
 drogue-cloud-console-backend = { path = "../console-backend" }
 drogue-cloud-mqtt-endpoint = { path = "../mqtt-endpoint" }
+drogue-cloud-coap-endpoint = { path = "../coap-endpoint" }
 drogue-cloud-http-endpoint = { path = "../http-endpoint" }
 drogue-cloud-mqtt-integration = { path = "../mqtt-integration" }
 drogue-cloud-websocket-integration = { path = "../websocket-integration" }

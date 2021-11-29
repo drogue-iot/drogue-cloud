@@ -425,6 +425,11 @@ fn main() {
                         .help("enable device authentication service"),
                 )
                 .arg(
+                    Arg::with_name("enable-coap-endpoint")
+                        .long("--enable-coap-endpoint")
+                        .help("enable coap endpoint"),
+                )
+                .arg(
                     Arg::with_name("enable-http-endpoint")
                         .long("--enable-http-endpoint")
                         .help("enable http endpoint"),
@@ -808,7 +813,7 @@ fn main() {
 
         if matches.is_present("enable-mqtt-endpoint") || matches.is_present("enable-all") {
             log::info!("Enabling MQTT endpoint");
-            let a = auth;
+            let a = auth.clone();
             let command_source_kafka = command_source("mqtt_endpoint");
             let bind_addr_mqtt = server.mqtt.clone().into();
             let kafka = server.kafka.clone();
@@ -898,6 +903,30 @@ fn main() {
                 })
                 .block_on(drogue_cloud_websocket_integration::run(config))
                 .unwrap();
+            }));
+        }
+
+        if matches.is_present("enable-coap-endpoint") || matches.is_present("enable-all") {
+            log::info!("Enabling CoAP endpoint");
+            let a = auth;
+            let command_source_kafka = command_source("coap_endpoint");
+            let bind_addr = server.coap.clone().into();
+            let kafka = server.kafka.clone();
+            threads.push(std::thread::spawn(move || {
+                let config = drogue_cloud_coap_endpoint::Config {
+                    auth: a,
+                    health: None,
+                    bind_addr_coap: Some(bind_addr),
+                    instance: "drogue".to_string(),
+                    command_source_kafka,
+                    kafka_downstream_config: kafka.clone(),
+                    kafka_command_config: kafka,
+                    check_kafka_topic_ready: false,
+                };
+
+                ntex::rt::System::new("coap-endpoint")
+                    .block_on(drogue_cloud_coap_endpoint::run(config))
+                    .unwrap();
             }));
         }
 
