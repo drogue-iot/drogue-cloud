@@ -686,7 +686,7 @@ fn main() {
                         },
 
                         health: None,
-                        bind_addr: server.device_auth.clone().into(),
+                        bind_addr: server.registry.clone().into(),
                         kafka_sender: kafka_sender("registry", &server.kafka.clone()),
                     };
 
