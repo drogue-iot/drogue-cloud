@@ -53,7 +53,7 @@ pub struct Config {
     pub instance: String,
 
     #[serde(default)]
-    pub workers: Option<usize>
+    pub workers: Option<usize>,
 }
 
 impl TlsConfig for Config {
