@@ -18,6 +18,7 @@ use drogue_cloud_service_common::{
     },
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
+use futures::future::{select, Either};
 use std::collections::HashMap;
 use url::Url;
 
@@ -804,9 +805,7 @@ fn main() {
                 }
 
                 runner.block_on(async move {
-                    println!("Waiting for actix to finish");
                     futures::future::join_all(handles).await;
-                    println!("Actix finished");
                 });
             }));
         }
@@ -888,19 +887,22 @@ fn main() {
                 }
 
                 runner.block_on(async move {
-                    println!("Waiting for ntex to finish");
                     futures::future::join_all(handles).await;
-                    println!("Ntex finished!");
                 });
             }));
         }
         if matches.is_present("enable-coap-endpoint") || matches.is_present("enable-all") {
             let server = server.clone();
             threads.push(std::thread::spawn(move || {
-                let runner = tokio::runtime::Runtime::new().unwrap();
-                let mut handles: Vec<
-                    core::pin::Pin<Box<dyn core::future::Future<Output = anyhow::Result<()>>>>,
-                > = Vec::new();
+                let runner = actix_rt::System::with_tokio_rt(|| {
+                    tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .worker_threads(1)
+                        .max_blocking_threads(1)
+                        .thread_name("actix coap")
+                        .build()
+                        .unwrap()
+                });
 
                 log::info!("Enabling CoAP endpoint");
                 let command_source_kafka = command_source("coap_endpoint");
@@ -917,14 +919,16 @@ fn main() {
                     check_kafka_topic_ready: false,
                 };
 
-                use anyhow::Context;
-                handles.push(Box::pin(drogue_cloud_coap_endpoint::run(config)));
-                handles.push(Box::pin(async move {
-                    tokio::signal::ctrl_c().await.context("coap")
-                }));
-
                 runner.block_on(async move {
-                    futures::future::join_all(handles).await;
+                    match select(
+                        Box::pin(drogue_cloud_coap_endpoint::run(config)),
+                        Box::pin(tokio::signal::ctrl_c()),
+                    )
+                    .await
+                    {
+                        Either::Left((r, _)) => r.unwrap(),
+                        Either::Right(_) => {}
+                    }
                 });
             }));
         }
