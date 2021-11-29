@@ -427,7 +427,8 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "drogue-client"
 version = "0.8.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=916829633f49e08d32d8dfe91586e76ca68fc7de#916829633f49e08d32d8dfe91586e76ca68fc7de"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc2d7b2a561d644f52ee38b2c09536f2b2857dd0bc79eef154d2195fadfd2eb8"
 dependencies = [
  "async-std",
  "async-trait",
