@@ -30,7 +30,7 @@ pub struct MqttServerOptions {
     pub handshake_timeout: Option<Duration>,
 
     #[serde(default)]
-    pub workers: Option<usize>
+    pub workers: Option<usize>,
 }
 
 fn create_server<Svc, S, Io>(
