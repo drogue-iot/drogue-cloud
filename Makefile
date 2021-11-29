@@ -7,7 +7,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.16
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.17
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -15,12 +15,19 @@ ifneq ($(MODULE),)
 	IMAGES=$(MODULE)
 endif
 
+ifeq (, $(shell which podman 2>/dev/null))
 CONTAINER ?= docker
+else
+CONTAINER ?= podman
+endif
+
 ifeq ($(CONTAINER),docker)
 TEST_CONTAINER_ARGS ?= -v /var/run/docker.sock:/var/run/docker.sock:z --network drogue
+CONTAINER_ARGS ?= -u "$(shell id -u)"
 endif
 ifeq ($(CONTAINER),podman)
 TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
+CONTAINER_ARGS ?= --userns=keep-id
 endif
 
 
@@ -124,21 +131,21 @@ container-test: cargo-test
 # Run pre-checks on the host, forking off into the build container.
 #
 host-pre-check:
-	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
 
 
 #
 # Run checks on the host, forking off into the build container.
 #
 host-check:
-	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check
 
 
 #
 # Run a build on the host, forking off into the build container.
 #
 host-build:
-	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
 
 
 #
@@ -146,22 +153,15 @@ host-build:
 #
 host-test:
 	if [ -z "$$($(CONTAINER) network ls --format '{{.Name}}' | grep drogue)" ]; then $(CONTAINER) network create drogue; fi
-	$(CONTAINER) run --rm -t -u "$(shell id -u)" -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-test
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 CONTAINER=$(CONTAINER) -C /usr/src/$(MODULE) container-test
 
-
-#
-# Change the permissions from inside the build container. Required for GitHub Actions, to make the build artifacts
-# accessible the build runner.
-#
-fix-permissions:
-	$(CONTAINER) run --rm -t -v "$(TOP_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash -c 'chown $${FIX_UID} -R $${CARGO_HOME} /usr/src/target'
 
 
 #
 # Run an interactive shell inside the build container.
 #
 build-shell:
-	$(CONTAINER) run --rm -it -u "$(shell id -u)" -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -ti -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
 
 
 #
