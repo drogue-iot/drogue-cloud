@@ -1,12 +1,12 @@
-= Running as a single binary
+= Deploying on bare metal
 
-In order to make it possible to run Drogue Cloud in other environments, we provide a `drogue-server` binary to run a single or multiple Drogue Cloud services. This does not require Kubernetes or containers to run.
+In order to make it possible to run Drogue Cloud in other environments, we provide a `drogue-cloud-server` binary to run a single or multiple Drogue Cloud services. This does not require Kubernetes or containers to run.
 
-You do need to run an instance of Kafka, Keycloak and PostgreSQL in order to use this binary.
+You do need to have running instances of Kafka, Keycloak and PostgreSQL in order to use this form of deployment.
 
 == Pre-requisites
 
-The binary assumes the following services being available locally:
+The binary assumes the following services being available locally by default:
 
 * Kafka bootstrap: localhost:9092
 * Keycloak:
@@ -17,6 +17,8 @@ The binary assumes the following services being available locally:
 ** Database name: drogue
 ** Database user: admin
 ** Database password: admin123456
+
+Have a look at the `--help` options for other ways to configure it.
 
 == (Optional) Starting pre-requisites
 
@@ -54,7 +56,7 @@ services:
 Make sure all dependencies are running correcrly. To start the drogue server, run:
 
 ```
-drogue-server --enable-all
+drogue-cloud-server --enable-all
 ```
 
 This will perform the following steps:
@@ -68,3 +70,7 @@ You should be able to connect to the local drogue instance using the `drg` clien
 ```
 drg login http://localhost:10001
 ```
+
+== Enabling TLS
+
+To enable TLS for the protocol endpoints, you can pass the certificate and key using `--server-cert` and `--server-key`.
