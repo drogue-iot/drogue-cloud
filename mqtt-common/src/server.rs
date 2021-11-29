@@ -28,6 +28,9 @@ pub struct MqttServerOptions {
     #[serde(default)]
     #[serde(with = "humantime_serde")]
     pub handshake_timeout: Option<Duration>,
+
+    #[serde(default)]
+    pub workers: Option<usize>
 }
 
 fn create_server<Svc, S, Io>(
@@ -89,6 +92,12 @@ where
 {
     let builder = ServerBuilder::new();
 
+    let builder = if let Some(workers) = opts.workers {
+        builder.workers(workers)
+    } else {
+        builder
+    };
+
     let addr = opts
         .bind_addr
         .as_ref()
@@ -109,6 +118,12 @@ where
     S: mqtt::Session + 'static,
 {
     let builder = ServerBuilder::new();
+
+    let builder = if let Some(workers) = opts.workers {
+        builder.workers(workers)
+    } else {
+        builder
+    };
 
     let addr = opts
         .bind_addr

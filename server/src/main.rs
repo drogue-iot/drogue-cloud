@@ -836,6 +836,7 @@ fn main() {
                     log::info!("Enabling MQTT endpoint");
 
                     let config = drogue_cloud_mqtt_endpoint::Config {
+                        workers: Some(1),
                         auth: auth.clone(),
                         health: None,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
@@ -864,6 +865,7 @@ fn main() {
                     let registry = registry.clone();
                     let oauth = oauth.clone();
                     let config = drogue_cloud_mqtt_integration::Config {
+                        workers: Some(1),
                         health: None,
                         oauth,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
