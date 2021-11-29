@@ -4,6 +4,11 @@ info:
   version: "0.8"
   contact:
     url: https://drogue.io
+  description: |
+    This describes the Drogue IoT cloud management API. It is intended to be used to manage and configure cloud side
+    aspects of Drogue IoT cloud.
+
+    For device-facing endpoints, see the different protocol endpoints documentation.
 
 servers:
   - url: "http://localhost:8080"
