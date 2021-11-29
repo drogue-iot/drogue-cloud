@@ -51,6 +51,9 @@ pub struct Config {
 
     #[serde(default = "defaults::instance")]
     pub instance: String,
+
+    #[serde(default)]
+    pub workers: Option<usize>
 }
 
 impl TlsConfig for Config {
@@ -129,6 +132,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let srv = build(
         MqttServerOptions {
             bind_addr: config.bind_addr_mqtt.clone(),
+            workers: config.workers,
             ..Default::default()
         },
         app,
