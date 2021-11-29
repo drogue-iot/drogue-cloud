@@ -32,6 +32,8 @@ dotenv = "0.15"
 ntex-rt = "0.3"
 actix-rt = { version = "2.2.0" }
 deadpool = "0.7"
+anyhow = "1"
+futures = "0.3"
 deadpool-postgres = { version = "0.7", features = ["config"] }
 diesel = { version = "1.4.0", features = ["postgres"] }
 diesel_migrations = { version = "1.4.0", features = ["postgres"] }

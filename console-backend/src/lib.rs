@@ -75,6 +75,9 @@ pub struct Config {
 
     #[serde(default = "defaults::enable_kube")]
     pub enable_kube: bool,
+
+    #[serde(default)]
+    pub workers: Option<usize>,
 }
 
 pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
@@ -240,8 +243,13 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         app
 
     })
-    .bind(bind_addr)?
-    .run();
+    .bind(bind_addr)?;
+
+    let main = if let Some(workers) = config.workers {
+        main.workers(workers).run()
+    } else {
+        main.run()
+    };
 
     // run
 

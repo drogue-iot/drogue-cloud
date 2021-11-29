@@ -40,6 +40,9 @@ pub struct Config {
     pub registry: RegistryConfig,
 
     pub oauth: AuthenticatorConfig,
+
+    #[serde(default)]
+    pub workers: Option<usize>,
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
@@ -92,8 +95,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .service(route::start_connection),
             )
     })
-    .bind(config.bind_addr)?
-    .run();
+    .bind(config.bind_addr)?;
+
+    let main = if let Some(workers) = config.workers {
+        main.workers(workers).run()
+    } else {
+        main.run()
+    };
 
     // run
     if let Some(health) = config.health {

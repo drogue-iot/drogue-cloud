@@ -36,6 +36,9 @@ pub struct Config {
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
+
+    #[serde(default)]
+    pub workers: Option<usize>,
 }
 
 #[macro_export]
@@ -83,8 +86,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         });
         app!(data, max_json_payload_size, enable_auth, auth)
     })
-    .bind(config.bind_addr)?
-    .run();
+    .bind(config.bind_addr)?;
+
+    let main = if let Some(workers) = config.workers {
+        main.workers(workers).run()
+    } else {
+        main.run()
+    };
 
     // run
 
