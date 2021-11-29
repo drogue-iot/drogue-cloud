@@ -968,6 +968,10 @@ fn main() {
         println!("\tdrg create device --app example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
         println!();
 
+        println!("Streaming telemetry data for an application:");
+        println!("\tdrg stream example-app");
+        println!();
+
         println!("Publishing data to the HTTP endpoint:");
         println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if matches.is_present("server-cert") && matches.is_present("server-key") { "-k https" } else {"http"}, server.http.host, server.http.port);
         println!();
