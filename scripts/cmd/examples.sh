@@ -40,8 +40,10 @@ bold "---------------------"
 echo
 echo "  drg login $API_URL"
 echo
-bold "Create an initial application and device:"
-bold "------------------------------"
+bold "Initial application and device:"
+bold "--------------------------------"
+echo
+echo "The installer created a default application 'example-app' and device 'device1' for you. The following commands were used:"
 echo
 echo "  drg create app example-app"
 echo "  drg create device --app example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"foobar\" }]}}'"
