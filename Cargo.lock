@@ -2305,6 +2305,7 @@ dependencies = [
  "dotenv",
  "drogue-cloud-access-token-service",
  "drogue-cloud-authentication-service",
+ "drogue-cloud-coap-endpoint",
  "drogue-cloud-console-backend",
  "drogue-cloud-device-management-service",
  "drogue-cloud-endpoint-common",

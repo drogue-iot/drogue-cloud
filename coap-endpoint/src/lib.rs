@@ -52,7 +52,7 @@ pub struct Config {
     pub auth: AuthConfig,
 
     #[serde(default)]
-    pub health: HealthServerConfig,
+    pub health: Option<HealthServerConfig>,
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
@@ -256,9 +256,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         config.kafka_command_config,
         config.command_source_kafka,
     )?;
-    let health = HealthServer::new(config.health, vec![Box::new(command_source)]);
 
-    futures::try_join!(health.run(), device_to_endpoint.err_into())?;
+    if let Some(health) = config.health {
+        let health = HealthServer::new(health, vec![Box::new(command_source)]);
+        futures::try_join!(health.run(), device_to_endpoint.err_into())?;
+    } else {
+        futures::try_join!(device_to_endpoint)?;
+    }
     Ok(())
 }
 
