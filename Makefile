@@ -191,7 +191,7 @@ cargo-check-frontend:
 #
 # Run the cargo build.
 #
-ifeq ($(SKIP_SERVER),)
+ifneq ($(SKIP_SERVER),)
 cargo-build: CARGO_BUILD_ARGS=--exclude drogue-cloud-server
 endif
 cargo-build:
