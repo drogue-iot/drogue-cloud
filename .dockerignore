@@ -10,6 +10,7 @@ target/wasm32-unknown-unknown
 
 console-frontend/node_modules
 console-frontend/pkg
+console-frontend/target
 
 **/Dockerfile
 
