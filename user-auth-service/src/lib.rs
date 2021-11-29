@@ -40,6 +40,9 @@ pub struct Config {
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
+
+    #[serde(default)]
+    pub workers: Option<usize>,
 }
 
 #[macro_export]
@@ -105,10 +108,14 @@ where
             auth
         )
     })
-    .bind(config.bind_addr)?
-    .run();
+    .bind(config.bind_addr)?;
 
     // run
+    let main = if let Some(workers) = config.workers {
+        main.workers(workers).run()
+    } else {
+        main.run()
+    };
 
     if let Some(health) = config.health {
         let health = HealthServer::new(health, vec![Box::new(data_service)]);

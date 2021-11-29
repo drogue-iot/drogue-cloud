@@ -54,6 +54,9 @@ pub struct Config {
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
+
+    #[serde(default)]
+    pub workers: Option<usize>,
 }
 
 #[get("/")]
@@ -151,7 +154,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         }
     };
 
-    let http_server = http_server.run();
+    let http_server = if let Some(workers) = config.workers {
+        http_server.workers(workers).run()
+    } else {
+        http_server.run()
+    };
 
     let command_source = KafkaCommandSource::new(
         commands,

@@ -50,6 +50,9 @@ pub struct Config {
     pub kafka_sender: KafkaSenderConfig,
 
     pub keycloak: KeycloakAdminClientConfig,
+
+    #[serde(default)]
+    pub workers: Option<usize>,
 }
 
 #[macro_export]
@@ -219,8 +222,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         }))
     })
     .bind(config.bind_addr)
-    .context("error starting server")?
-    .run();
+    .context("error starting server")?;
+
+    let main = if let Some(workers) = config.workers {
+        main.workers(workers).run()
+    } else {
+        main.run()
+    };
 
     // run
 

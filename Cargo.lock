@@ -2297,6 +2297,7 @@ name = "drogue-cloud-server"
 version = "0.8.0"
 dependencies = [
  "actix-rt 2.2.0",
+ "anyhow",
  "clap",
  "deadpool",
  "deadpool-postgres",
@@ -2319,6 +2320,7 @@ dependencies = [
  "drogue-cloud-user-auth-service",
  "drogue-cloud-websocket-integration",
  "keycloak",
+ "futures",
  "log",
  "ntex",
  "ntex-rt",
