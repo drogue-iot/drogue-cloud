@@ -1,0 +1,21 @@
+drogueCloudCore:
+  kafka: &external-kafka
+    external:
+      enabled: true
+      bootstrapServer: localhost:9092
+      tls:
+        enabled: true
+      sasl:
+        enabled: true
+        username: admin
+        password: admin
+        mechanism: PLAIN
+  services:
+    registry:
+      topicOperator:
+        type: admin
+        numberOfPartitions: 1
+        numberOfReplicas: 3
+
+drogueCloudExamples:
+  kafka: *external-kafka

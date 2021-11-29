@@ -29,7 +29,7 @@ In any case, you will need:
 
 * Linux, Mac OS X, or Windows on an AMD64 platform (aka `x86_64`)
 * Podman or Docker
-  * Windows containers will not work, you need to use Linux based containers, and again `x86_64`. 
+  * Windows containers will not work, you need to use Linux based containers, and again `x86_64`.
 * Some tools
   * git
   * GNU Make
@@ -40,7 +40,7 @@ In any case, you will need:
 * A lot of cores, patience, memory, and disk space
 * Some form of Kubernetes cluster
   * **Minikube** is what seems to work best for development, and is easy to get started with.
-  * **Kind** also works, uses less resources, but is less tested. 
+  * **Kind** also works, uses less resources, but is less tested.
   * **OpenShift** also works and make several things easier (like proper DNS names and certs), but is
     also more complex to set up.
 
@@ -50,7 +50,7 @@ In any case, you will need:
   need to install Rust on your local machine. However, having Rust installed might come in handy at some point. If you
   want to use an IDE, that might require a Rust installation. Or if you want to quickly run tests, maybe from inside
   your IDE, then this will require Rust as well.
-  
+
   In any case, you need to be sure that you install at least the version of Rust mentioned above. If you installed
   Rust using `rustup` and default options, then performing an upgrade should be as easy as running `rustup update`.
 
@@ -154,6 +154,23 @@ Once the instance is up, and you have ensured that you can access the cluster wi
 the following command to run the deployment:
 
     make deploy CONTAINER_REGISTRY=quay.io/rodney
+
+If you need to pass additional arguments to the deploy script, you can use `DEPLOY_ARGS` environment variable like:
+
+~~~shell
+env INSTALL_STRIMZI=false DEPLOY_ARGS="-f deploy/examples/managed_kafka.yaml" make deploy
+~~~
+
+## Helm charts
+
+Helm charts are maintained in the separate repository: https://github.com/drogue-iot/drogue-cloud-helm-charts
+
+They are however included as a git submodule at the `deploy/helm` path. A `deploy` target will initialize the submodule.
+If you wish to do it manually run:
+
+~~~shell
+git submodule update --init
+~~~
 
 ## Contributing your work
 
