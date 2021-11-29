@@ -2,12 +2,12 @@
 
 set -e
 
-: "${NGINX_VERSION:=3.15.2}"
+: "${NGINX_VERSION:=1.1.0}"
 
 echo "Installing NGINX Ingress Controller: ${NGINX_VERSION}"
 
 progress -n "  🏗 Deploying operator ... "
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/ingress-nginx-${NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v${NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml
 progress "done!"
 
 if [[ "$MINIMIZE" == true ]]; then
