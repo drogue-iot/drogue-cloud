@@ -1,4 +1,4 @@
-use crate::utils::success;
+use crate::utils::{success, ToastBuilder};
 use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
     pages::apps::details::Props,
@@ -384,7 +384,7 @@ impl Admin {
             self.link
                 .callback(move |response: Response<Text>| match response.status() {
                     StatusCode::ACCEPTED => {
-                        success(html! {
+                        let body = html! {
                             <Content>
                                 <p>{"Ownership transfer initiated. Share this link with the user:"}</p>
                                 <p>
@@ -393,7 +393,11 @@ impl Admin {
                                     />
                                 </p>
                             </Content>
-                        });
+                        };
+                        ToastBuilder::success()
+                            .title("Success")
+                            .body(body)
+                            .toast();
                         Msg::Reset
                     }
                     _ => Msg::Error(response.notify("Transfer failed")),
