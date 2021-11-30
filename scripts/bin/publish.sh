@@ -4,7 +4,7 @@ set -x
 
 : "${APP:=example-app}"
 : "${DEVICE:=device1}"
-: "${PASS:=keycloak =}"
+: "${PASS:=keycloak}"
 TEMP=${1:-42}
 
 BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"
