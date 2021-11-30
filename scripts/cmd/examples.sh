@@ -61,7 +61,10 @@ echo
 echo "Binary content mode (MQTT v5 only):"
 echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'" -up content-mode=binary
 echo
-echo "You can also subscribe to data using drg, receiving Cloud Events:"
+echo "You can also subscribe to data using WebSockets, receiving Cloud Events:"
+echo "  websocat  -H=\"Authorization: Bearer \$(drg whoami -t)\" $WEBSOCKET_INTEGRATION_URL/example-app"
+echo
+echo "Or simply through drg:"
 echo "  drg stream example-app"
 echo
 bold "Publish data:"
@@ -98,6 +101,9 @@ fi
 echo
 echo "Then, send a command to that device from another terminal window:"
 echo
+echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device1 command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg whoami -t\)\"
+echo
+echo "Or simply through drg:"
 echo "  drg cmd set-temp device1 --app example-app --payload '{\"target-temp\:25}' "
 echo
 
