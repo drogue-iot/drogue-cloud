@@ -203,7 +203,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         let auth = AuthN {
             openid: authenticator.as_ref().cloned(),
             token: user_auth.clone(),
-            enable_access_token: enable_access_token,
+            enable_access_token,
         };
         app!(
             KafkaEventSender,

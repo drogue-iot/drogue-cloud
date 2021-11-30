@@ -48,7 +48,7 @@ impl KeycloakClient for KeycloakAdminClient {
             .await
         {
             // fixme Is the unwrap unsafe ? The user should always have a username
-            Ok(user) => Ok(user.username.unwrap().to_string()),
+            Ok(user) => Ok(user.username.unwrap()),
             Err(_) => Err(Error::NotFound),
         }
     }
@@ -76,7 +76,7 @@ impl KeycloakClient for KeycloakAdminClient {
             .await?
             .pop()
         {
-            Some(user) => Ok(user.id.unwrap().to_string()),
+            Some(user) => Ok(user.id.unwrap()),
             None => Err(Error::NotFound),
         }
     }

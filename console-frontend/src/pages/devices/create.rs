@@ -69,10 +69,10 @@ impl Component for CreateDialog {
     }
 
     fn view(&self) -> Html {
-        let is_valid = self.new_device_name.len() > 0 && self.new_device_name.len() < 255;
-        let v = |value: &str| match value.len() > 0 && value.len() < 255 {
-            false => InputState::Error,
-            true => InputState::Default,
+        let is_valid = matches!(self.new_device_name.len(), 1..=255);
+        let v = |value: &str| match value.len() {
+            1..=255 => InputState::Default,
+            _ => InputState::Error,
         };
 
         return html! {

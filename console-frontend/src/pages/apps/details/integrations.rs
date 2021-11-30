@@ -49,7 +49,7 @@ impl IntegrationDetails<'_> {
         }
 
         if let Some(ws) = &self.endpoints.websocket_integration {
-            items.push(Self::wrap_card("Websocket", self.render_ws(&ws)));
+            items.push(Self::wrap_card("Websocket", self.render_ws(ws)));
         }
 
         return html! {

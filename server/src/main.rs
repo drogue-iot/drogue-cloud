@@ -200,7 +200,7 @@ fn configure_keycloak(server: &Keycloak) {
         let admin_token = keycloak::KeycloakAdminToken::acquire(url, &user, &password, &client)
             .await
             .unwrap();
-        let admin = keycloak::KeycloakAdmin::new(&url, admin_token, client);
+        let admin = keycloak::KeycloakAdmin::new(url, admin_token, client);
 
         let mut mapper_config = HashMap::new();
         mapper_config.insert("included.client.audience".into(), "drogue".into());

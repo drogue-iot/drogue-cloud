@@ -254,7 +254,7 @@ where
         Ok(match provided_hash == expected_hash {
             true => {
                 let details = UserDetails {
-                    user_id: user_id.into(),
+                    user_id,
                     roles: vec![], // FIXME: we should be able to store scopes/roles as well
                 };
                 Some(details)

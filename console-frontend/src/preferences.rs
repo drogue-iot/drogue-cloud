@@ -21,7 +21,7 @@ pub struct Preferences {
 
 impl Preferences {
     fn storage() -> anyhow::Result<StorageService> {
-        Ok(StorageService::new(Area::Local).map_err(|err| anyhow!(err))?)
+        StorageService::new(Area::Local).map_err(|err| anyhow!(err))
     }
 
     /// Store preferences to local store.

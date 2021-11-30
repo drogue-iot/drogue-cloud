@@ -133,7 +133,7 @@ impl Component for Index {
             }
             Msg::SetApp(app) => {
                 if self.app != app {
-                    let ctx = ApplicationContext::Single(app.clone());
+                    let ctx = ApplicationContext::Single(app);
                     SharedDataDispatcher::new().set(ctx.clone());
                     navigate_to(AppRoute::Devices(Pages::Index { app: ctx }));
                 }

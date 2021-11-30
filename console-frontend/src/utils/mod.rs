@@ -21,7 +21,7 @@ pub trait ToHtml {
 impl ToHtml for dyn AsRef<str> {
     fn to_html(&self) -> Html {
         let ele = yew::utils::document().create_element("div").unwrap();
-        ele.set_inner_html(self.as_ref().into());
+        ele.set_inner_html(self.as_ref());
 
         VNode::VRef(Node::from(ele))
     }
@@ -30,7 +30,7 @@ impl ToHtml for dyn AsRef<str> {
 impl ToHtml for String {
     fn to_html(&self) -> Html {
         let ele = yew::utils::document().create_element("div").unwrap();
-        ele.set_inner_html(&self);
+        ele.set_inner_html(self);
 
         VNode::VRef(Node::from(ele))
     }

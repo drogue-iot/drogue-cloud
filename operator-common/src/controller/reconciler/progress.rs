@@ -55,7 +55,7 @@ where
                             ..Default::default()
                         },
                     );
-                    while let Some(s) = i.next() {
+                    for s in i {
                         let condition_type = s.type_name();
                         let (c, status) = s.when_skipped(context);
                         conditions.update(condition_type, status);

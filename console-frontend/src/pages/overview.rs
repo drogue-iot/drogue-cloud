@@ -95,14 +95,14 @@ impl Overview {
             endpoint_cards.push(self.render_card("HTTP endpoint", &http.url, false));
         }
         if let Some(mqtt) = &endpoints.mqtt {
-            endpoint_cards.push(self.render_mqtt_endpoint(&mqtt, "MQTT endpoint"));
+            endpoint_cards.push(self.render_mqtt_endpoint(mqtt, "MQTT endpoint"));
         }
         if let Some(url) = &endpoints.command_url {
             endpoint_cards.push(self.render_card("Command endpoint", url, false));
         }
 
         if let Some(mqtt) = &endpoints.mqtt_integration {
-            integration_cards.push(self.render_mqtt_endpoint(&mqtt, "MQTT integration"));
+            integration_cards.push(self.render_mqtt_endpoint(mqtt, "MQTT integration"));
         }
         if let Some(ws) = &endpoints.websocket_integration {
             integration_cards.push(self.render_card("Websocket integration", &ws.url, false));
