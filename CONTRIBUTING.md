@@ -106,6 +106,12 @@ To perform a full build execute:
 
 This builds the cargo based projects, the frontend, and the container images.
 
+Builds are done using Docker or Podman container runtimes. Podman is preferred if it is present on the system. However, it is
+required that Podman supports bind mounts feature properly which is not the case for all platforms today. In that case you can
+force Docker runtime with
+
+    CONTAINER=docker make build
+
 ## Testing
 
 To run all tests:
