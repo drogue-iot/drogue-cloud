@@ -284,13 +284,14 @@ progress "🥳 Deployment ready!"
 progress
 progress "To get started, you can:"
 progress
-progress "  * Log in using 'drg':"
-progress "      drg login ${API_URL}"
-progress
 progress "  * Navigate to the web console:"
 progress "      URL:      ${CONSOLE_URL}"
 progress "      User:     admin"
 progress "      Password: admin123456"
+progress
+progress "  * Get drg: https://github.com/drogue-iot/drg/releases/latest"
+progress "  * Log in using 'drg':"
+progress "      drg login ${API_URL}"
 progress
 progress "  * Execute: "
 if is_default_cluster; then
