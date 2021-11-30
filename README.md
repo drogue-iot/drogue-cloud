@@ -47,31 +47,39 @@ our [documentation](https://book.drogue.io/).
 
 </td></tr></table>
 
-## Installation
+## Getting started
 
-Take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/).
+You can easily play with Drogue Cloud, using our public sandbox: [https://sandbox.drogue.cloud](https://sandbox.drogue.cloud)
 
-If you know what you are doing, the next sections give you a quick may of deploying the "latest" version of Drogue Cloud.
+### For users
 
-### Minikube
+Download a release from the [releases page](https://github.com/drogue-iot/drogue-cloud/releases), and follow our
+[quick start instructions](https://github.com/drogue-iot/drogue-cloud/blob/main/installer/README.md).
+
+Or take a look at the [deployment instructions](https://book.drogue.io/drogue-cloud/dev/deployment/), and read about
+the deployment in more detail.
+
+### For developers
+
+If you know what you are doing, and have a cluster running, and a clone of the repository, you can deploy the
+"latest" version of Drogue Cloud by executing the following command:
 
 ~~~shell
-minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
-minikube tunnel # run this in a separate terminal, as it needs to keep running
-make deploy CLUSTER=minikube
+make deploy CLUSTER=<type>
 ~~~
 
-### Kind
+For Minikube this would be:
 
 ~~~shell
-kind create cluster --config=deploy/kind/cluster-config.yaml
-make deploy CLUSTER=kind
+make deploy CLUSTER=minikube
 ~~~
 
 ## Useful Links
 
+* [Blog](https://blog.drogue.io/)
 * [Documentation](https://book.drogue.io/drogue-cloud/dev/index.html)
-* [Drogue IoT Blog: Articles that talk about the design,  use-cases and project updates](https://blog.drogue.io/)
+* [Workshops](https://book.drogue.io/drogue-workshops/index.html)
+* [Public sandbox](https://sandbox.drogue.cloud)
 
 ## Contributing
 
