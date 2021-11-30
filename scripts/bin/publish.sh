@@ -2,9 +2,9 @@
 
 set -x
 
-: "${APP:=app_id}"
-: "${DEVICE:=device_id}"
-: "${PASS:=foobar}"
+: "${APP:=example-app}"
+: "${DEVICE:=device1}"
+: "${PASS:=keycloak =}"
 TEMP=${1:-42}
 
 BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. >/dev/null 2>&1 && pwd)"

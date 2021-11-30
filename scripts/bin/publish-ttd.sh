@@ -7,7 +7,7 @@
 : "${ENDPOINT:="https://http.sandbox.drogue.cloud"}"
 : "${APP:=lora-app}"
 : "${DEVICE:=ttn-service}"
-: "${PASS:=foobar}"
+: "${PASS:=hey-rodney}"
 
 while true; do
     data=`echo -n "{\"temp\":$((20 + $RANDOM % 5))}" | base64`
