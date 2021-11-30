@@ -64,14 +64,8 @@ the deployment in more detail.
 If you know what you are doing, and have a cluster running, and a clone of the repository, you can deploy the
 "latest" version of Drogue Cloud by executing the following command:
 
-~~~shell
-make deploy CLUSTER=<type>
 ~~~
-
-For Minikube this would be:
-
-~~~shell
-make deploy CLUSTER=minikube
+make deploy CLUSTER=<minikube|kind|openshift>
 ~~~
 
 ## Useful Links
