@@ -41,6 +41,7 @@ drogue-install-%-$(VERSION).zip: $(shell find $(TOPDIR)/../deploy -type f) $(she
 	# inject release version to the scripts
 	sed -i 's/test-cert-generator:latest/test-cert-generator:$(VERSION)/g' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
 	sed -i 's/CLUSTER:=minikube/CLUSTER:=$*/' $(OUTDIR)/stage/$(INSTALLER)/scripts/lib/common.sh
+	cp README.md $(OUTDIR)/stage/$(INSTALLER)
 	# zip it up
 	@echo "::group::Create archives"
 	cd build/stage/ && zip -r $(OUTDIR)/$@ $(INSTALLER)
