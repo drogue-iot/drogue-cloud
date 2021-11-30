@@ -15,19 +15,20 @@ ifneq ($(MODULE),)
 	IMAGES=$(MODULE)
 endif
 
+# evaluate which container tool we use
 ifeq (, $(shell which podman 2>/dev/null))
-CONTAINER ?= docker
+	CONTAINER ?= docker
 else
-CONTAINER ?= podman
+	CONTAINER ?= podman
 endif
 
+# evaluate the arguments we need for this container tool
 ifeq ($(CONTAINER),docker)
-TEST_CONTAINER_ARGS ?= -v /var/run/docker.sock:/var/run/docker.sock:z --network drogue
-CONTAINER_ARGS ?= -u "$(shell id -u)"
-endif
-ifeq ($(CONTAINER),podman)
-TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
-CONTAINER_ARGS ?= --userns=keep-id
+	TEST_CONTAINER_ARGS ?= -v /var/run/docker.sock:/var/run/docker.sock:z --network drogue
+	CONTAINER_ARGS ?= -u "$(shell id -u):$(shell id -g)" $(patsubst %,--group-add %,$(shell id -G ))
+else ifeq ($(CONTAINER),podman)
+	TEST_CONTAINER_ARGS ?= --security-opt label=disable -v $(XDG_RUNTIME_DIR)/podman/podman.sock:/var/run/docker.sock:z
+	CONTAINER_ARGS ?= --userns=keep-id
 endif
 
 
@@ -53,10 +54,12 @@ ALL_IMAGES=\
 	topic-admin-operator \
 	websocket-integration \
 
+
 # allow skipping the server image
 ifeq ($(SKIP_SERVER),)
 ALL_IMAGES += server
 endif
+
 
 #
 # Active images to build
@@ -153,7 +156,10 @@ host-build:
 #
 host-test:
 	if [ -z "$$($(CONTAINER) network ls --format '{{.Name}}' | grep drogue)" ]; then $(CONTAINER) network create drogue; fi
-	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" make -j1 CONTAINER=$(CONTAINER) -C /usr/src/$(MODULE) container-test
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t \
+		$${RUST_LOG+-e RUST_LOG=$${RUST_LOG}} $${RUST_BACKTRACE+-e RUST_BACKTRACE=$${RUST_BACKTRACE}} \
+		-v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" \
+		make -j1 CONTAINER=$(CONTAINER) -C /usr/src/$(MODULE) container-test
 
 
 
@@ -162,6 +168,17 @@ host-test:
 #
 build-shell:
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -ti -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
+
+
+#
+# Run an interactive shell inside the build container, like for testing.
+#
+.PHONY: test-shell
+test-shell:
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t \
+		$${RUST_LOG+-e RUST_LOG=$${RUST_LOG}} $${RUST_BACKTRACE+-e RUST_BACKTRACE=$${RUST_BACKTRACE}} \
+		-v "$(TOP_DIR):/usr/src:z" $(TEST_CONTAINER_ARGS) "$(BUILDER_IMAGE)" \
+		bash
 
 
 #
