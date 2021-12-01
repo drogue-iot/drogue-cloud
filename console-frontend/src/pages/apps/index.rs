@@ -129,7 +129,7 @@ impl Component for Index {
     fn view(&self) -> Html {
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
+                <PageSection variant=PageSectionVariant::Light>
                     <Content>
                        <Flex>
                         <FlexItem>
