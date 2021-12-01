@@ -1682,7 +1682,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-access-token-service"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-http 3.0.0-beta.8",
  "actix-rt 2.2.0",
@@ -1723,7 +1723,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-admin-service"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-http 3.0.0-beta.8",
  "actix-web",
@@ -1751,7 +1751,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-authentication-service"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-service 2.0.0",
@@ -1794,7 +1794,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-coap-endpoint"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-web",
@@ -1825,7 +1825,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-command-endpoint"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -1857,7 +1857,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-backend"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "actix-cors",
@@ -1900,7 +1900,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "drogue-cloud-service-api",
@@ -1909,7 +1909,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-database-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-web",
  "anyhow",
@@ -1937,7 +1937,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-device-management-service"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-cors",
  "actix-http 3.0.0-beta.8",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-endpoint-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-broker",
  "actix-tls",
@@ -2031,7 +2031,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-event-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "cloudevents-sdk",
  "config 0.11.0",
@@ -2049,7 +2049,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-http-endpoint"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-tls",
@@ -2086,7 +2086,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-integration-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-web",
  "async-trait",
@@ -2111,7 +2111,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-mqtt-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2129,7 +2129,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-mqtt-endpoint"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2166,7 +2166,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-mqtt-integration"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2208,7 +2208,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-operator-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-service 2.0.0",
@@ -2240,7 +2240,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-outbox-controller"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "anyhow",
@@ -2269,7 +2269,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-registry-events"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2294,7 +2294,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-server"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-rt 2.2.0",
  "anyhow",
@@ -2336,7 +2336,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-service-api"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-web",
  "async-trait",
@@ -2361,7 +2361,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-service-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "actix-http 3.0.0-beta.8",
@@ -2404,7 +2404,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-test-common"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "deadpool",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-topic-admin-operator"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "anyhow",
@@ -2448,7 +2448,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-topic-operator"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "anyhow",
@@ -2482,7 +2482,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-ttn-operator"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "anyhow",
@@ -2521,7 +2521,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-user-auth-service"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix-rt 2.2.0",
  "actix-service 2.0.0",
@@ -2560,7 +2560,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-websocket-integration"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "actix",
  "actix-http 3.0.0-beta.8",

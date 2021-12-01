@@ -1,7 +1,7 @@
 [package]
 name = "drogue-cloud-device-management-service"
 description = "Device management service"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
