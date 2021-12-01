@@ -24,7 +24,8 @@ Have a look at the `--help` options for other ways to configure it.
 
 You thought you didn't need containers, HAH! Well, to make it simpler to get the prerequisites running, here is a docker compose file for running them and making them available at the above ports:
 
-```
+[source,yaml]
+----
 version: "3.9"
 services:
   postgres:
@@ -49,15 +50,16 @@ services:
       - DB_VENDOR=h2
     ports:
       - "8080:8080"
-```
+----
 
 == Running
 
-Make sure all dependencies are running correcrly. To start the drogue server, run:
+Make sure all dependencies are running correctly. To start the drogue server, run:
 
-```
-drogue-cloud-server --enable-all
-```
+[source,shell]
+----
+drogue-cloud-server run --enable-all
+----
 
 This will perform the following steps:
 
@@ -67,9 +69,10 @@ This will perform the following steps:
 
 You should be able to connect to the local drogue instance using the `drg` client:
 
-```
+[source,shell]
+----
 drg login http://localhost:10001
-```
+----
 
 == Enabling TLS
 
