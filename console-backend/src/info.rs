@@ -12,7 +12,10 @@ pub async fn get_info(
     let info = EndpointInformation {
         endpoints: endpoints.get_ref().clone(),
         demos: if let Some(config_maps) = config_maps {
-            get_demos(&config_maps).await.unwrap_or_default()
+            get_demos(&config_maps)
+                .await
+                .map_err(|err| log::info!("Failed to get demos: {}", err))
+                .unwrap_or_default()
         } else {
             Vec::new()
         },
