@@ -2012,45 +2012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "drogue-cloud-ditto-operator"
-version = "0.8.0"
-dependencies = [
- "actix",
- "anyhow",
- "async-std",
- "async-trait",
- "bcrypt",
- "chrono",
- "config 0.11.0",
- "dotenv",
- "drogue-client",
- "drogue-cloud-database-common",
- "drogue-cloud-operator-common",
- "drogue-cloud-registry-events",
- "drogue-cloud-service-api",
- "drogue-cloud-service-common",
- "env_logger 0.7.1",
- "futures",
- "headers",
- "http",
- "humantime 2.1.0",
- "humantime-serde",
- "indexmap",
- "lazy_static 1.4.0",
- "log",
- "maplit",
- "rand 0.7.3",
- "reqwest",
- "rust-crypto",
- "serde 1.0.130",
- "serde_json",
- "thiserror",
- "tokio 1.11.0",
- "url",
- "x509-parser",
-]
-
-[[package]]
 name = "drogue-cloud-endpoint-common"
 version = "0.9.0"
 dependencies = [
