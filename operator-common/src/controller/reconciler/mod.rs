@@ -1,4 +1,5 @@
 mod error;
+pub mod operation;
 pub mod progress;
 
 pub use error::*;

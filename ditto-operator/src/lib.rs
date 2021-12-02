@@ -1,9 +1,7 @@
 mod controller;
-mod data;
-mod utils;
+mod ditto;
 
-use crate::controller::{app::ApplicationController, device::DeviceController};
-use anyhow::anyhow;
+use crate::controller::{app::ApplicationController, ControllerConfig};
 use async_std::sync::Mutex;
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
@@ -15,13 +13,11 @@ use drogue_cloud_registry_events::{
 use drogue_cloud_service_common::{
     client::RegistryConfig,
     defaults,
-    endpoints::create_endpoint_source,
     health::{HealthServer, HealthServerConfig},
 };
-use futures::TryFutureExt;
+use futures::{select, FutureExt};
 use serde::Deserialize;
 use std::sync::Arc;
-use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -39,75 +35,41 @@ pub struct Config {
     pub work_queue: WorkQueueConfig,
 
     pub kafka_source: KafkaStreamConfig,
+
+    pub controller: ControllerConfig,
 }
 
 fn is_app_relevant(event: &Event) -> Option<String> {
     match event {
         Event::Application {
             path, application, ..
-        } if path == "." || path == ".metadata" || path == ".spec.ttn" => Some(application.clone()),
-        _ => None,
-    }
-}
-
-fn is_device_relevant(event: &Event) -> Option<(String, String)> {
-    match event {
-        Event::Device {
-            path,
-            application,
-            device,
-            ..
-        } if path == "."
-            || path == ".metadata"
-            || path == ".spec.ttn"
-            || path == ".spec.gatewaySelector" =>
-        {
-            Some((application.clone(), device.clone()))
+        } if path == "." || path == ".metadata" || path == ".spec.ditto" => {
+            Some(application.clone())
         }
         _ => None,
     }
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
-    let endpoint_source = create_endpoint_source()?;
-    let endpoints = endpoint_source.eval_endpoints().await?;
+    log::debug!("Config: {:#?}", config);
 
-    let endpoint_url = endpoints
-        .http
-        .map(|http| http.url)
-        .ok_or_else(|| anyhow!("Missing HTTP endpoint information"))
-        .and_then(|url| Ok(Url::parse(&url)?))?
-        .join("/ttn/v3")?;
+    // client
 
     let client = reqwest::Client::new();
-
     let registry = config.registry.into_client(client.clone()).await?;
+
+    // controller
 
     let app_processor = BaseController::new(
         config.work_queue.clone(),
         "app",
-        ApplicationController::new(
-            registry.clone(),
-            ttn::Client::new(client.clone()),
-            endpoint_url,
-        ),
-    )?;
-    let device_processor = BaseController::new(
-        config.work_queue,
-        "device",
-        DeviceController::new(registry, ttn::Client::new(client)),
+        ApplicationController::new(config.controller, registry),
     )?;
 
-    let controller = EventDispatcher::new(vec![
-        Box::new(FnEventProcessor::new(
-            Arc::new(Mutex::new(device_processor)),
-            is_device_relevant,
-        )),
-        Box::new(FnEventProcessor::new(
-            Arc::new(Mutex::new(app_processor)),
-            is_app_relevant,
-        )),
-    ]);
+    let controller = EventDispatcher::new(vec![Box::new(FnEventProcessor::new(
+        Arc::new(Mutex::new(app_processor)),
+        is_app_relevant,
+    ))]);
 
     // event source
 
@@ -119,12 +81,15 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Running service ...");
     if let Some(health) = config.health {
         let health = HealthServer::new(health, vec![]);
-        futures::try_join!(health.run(), source.err_into())?;
+        select! {
+            _ = health.run().fuse() => (),
+            _ = source.fuse() => (),
+        }
     } else {
-        futures::try_join!(source)?;
+        source.await?;
     }
 
     // exiting
-
+    log::info!("Exiting main!");
     Ok(())
 }

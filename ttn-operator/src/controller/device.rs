@@ -229,7 +229,7 @@ impl<'a> Reconciler for DeviceReconciler<'a> {
 
         // remove the finalizer
 
-        ctx.device.metadata.finalizers.retain(|f| f != FINALIZER);
+        ctx.device.metadata.remove_finalizer(FINALIZER);
 
         // done
 

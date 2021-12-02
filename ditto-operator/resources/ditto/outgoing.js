@@ -1,0 +1,3 @@
+function mapFromDittoProtocolMsg() {
+    return null;
+}

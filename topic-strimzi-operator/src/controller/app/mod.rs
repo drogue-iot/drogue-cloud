@@ -13,9 +13,11 @@ use drogue_client::{
     registry::{self, v1::KafkaAppStatus},
     Translator,
 };
+use drogue_cloud_operator_common::controller::reconciler::operation::MetadataContext;
 use drogue_cloud_operator_common::controller::{
     base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
+        operation::HasFinalizer,
         progress::{
             self, application::ApplicationAccessor, OperationOutcome, Progressor, RunConstructor,
         },
@@ -125,6 +127,12 @@ pub struct ConstructContext {
     pub app_user_name: Option<String>,
 }
 
+impl MetadataContext for ConstructContext {
+    fn as_metadata_mut(&mut self) -> &mut dyn CommonMetadataMut {
+        &mut self.app.metadata
+    }
+}
+
 pub struct DeconstructContext {
     pub app: registry::v1::Application,
     pub status: Option<KafkaAppStatus>,
@@ -175,15 +183,7 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
         ctx: Self::Construct,
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         Progressor::<Self::Construct>::new(vec![
-            Box::new(("HasFinalizer", |mut ctx: Self::Construct| async {
-                // ensure we have a finalizer
-                if ctx.app.metadata.ensure_finalizer(FINALIZER) {
-                    // early return
-                    Ok(OperationOutcome::Retry(ctx, None))
-                } else {
-                    Ok(OperationOutcome::Continue(ctx))
-                }
-            })),
+            Box::new(HasFinalizer(FINALIZER)),
             Box::new(CreateTopic {
                 api: self.kafka_topics,
                 resource: self.kafka_topic_resource,
@@ -238,7 +238,7 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
 
         // remove finalizer
 
-        ctx.app.metadata.finalizers.retain(|f| f != FINALIZER);
+        ctx.app.metadata.remove_finalizer(FINALIZER);
 
         // done
 

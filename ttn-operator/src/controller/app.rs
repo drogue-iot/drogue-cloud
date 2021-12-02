@@ -215,7 +215,7 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             self.ttn.delete_app(app_id, &ttn_ctx).await?;
         }
 
-        ctx.app.metadata.finalizers.retain(|f| f != FINALIZER);
+        ctx.app.metadata.remove_finalizer(FINALIZER);
 
         // done
 

@@ -1,8 +1,8 @@
-mod topic;
+mod ditto;
 
-use topic::*;
+use ditto::*;
 
-use crate::{controller::ControllerConfig, kafka::TopicErrorConverter};
+use crate::{controller::ControllerConfig, ditto::Client as DittoClient};
 use async_trait::async_trait;
 use drogue_client::{
     core::v1::Conditions,
@@ -11,41 +11,36 @@ use drogue_client::{
     registry::{self, v1::KafkaAppStatus},
     Translator,
 };
-use drogue_cloud_operator_common::controller::reconciler::operation::MetadataContext;
 use drogue_cloud_operator_common::controller::{
     base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
-        operation::HasFinalizer,
+        operation::{HasFinalizer, MetadataContext},
         progress::{application::ApplicationAccessor, Progressor, RunConstructor},
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
-use drogue_cloud_service_api::kafka::{make_kafka_resource_name, ResourceType};
-use rdkafka::{
-    admin::{AdminClient, AdminOptions},
-    client::DefaultClientContext,
-    error::{KafkaError, RDKafkaErrorCode},
-};
 use std::ops::Deref;
 
-const FINALIZER: &str = "kafka-topic";
+const FINALIZER: &str = "ditto";
 
 pub struct ApplicationController<TP: TokenProvider> {
     config: ControllerConfig,
     registry: registry::v1::Client<TP>,
-    admin: AdminClient<DefaultClientContext>,
+    ditto: DittoClient,
 }
 
 impl<TP: TokenProvider> ApplicationController<TP> {
-    pub fn new(
-        config: ControllerConfig,
-        registry: registry::v1::Client<TP>,
-        admin: AdminClient<DefaultClientContext>,
-    ) -> Self {
+    pub fn new(config: ControllerConfig, registry: registry::v1::Client<TP>) -> Self {
+        let ditto = config.ditto_devops.clone();
         Self {
-            config: config.translate(),
+            config,
             registry,
-            admin,
+            ditto: DittoClient::new(
+                reqwest::Client::default(),
+                ditto.url,
+                ditto.username,
+                ditto.password,
+            ),
         }
     }
 }
@@ -62,7 +57,7 @@ impl<TP: TokenProvider>
         ReconcileProcessor(ApplicationReconciler {
             config: &self.config,
             registry: &self.registry,
-            admin: &self.admin,
+            ditto: &self.ditto,
         })
         .reconcile(application)
         .await
@@ -97,7 +92,6 @@ impl<TP: TokenProvider> Deref for ApplicationController<TP> {
 
 pub struct ConstructContext {
     pub app: registry::v1::Application,
-    pub events_topic_name: Option<String>,
 }
 
 impl MetadataContext for ConstructContext {
@@ -114,7 +108,7 @@ pub struct DeconstructContext {
 pub struct ApplicationReconciler<'a, TP: TokenProvider> {
     pub config: &'a ControllerConfig,
     pub registry: &'a registry::v1::Client<TP>,
-    pub admin: &'a AdminClient<DefaultClientContext>,
+    pub ditto: &'a DittoClient,
 }
 
 #[async_trait]
@@ -135,10 +129,7 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
         let deleted = app.metadata.deletion_timestamp.is_some();
 
         Ok(match (configured, deleted) {
-            (_, false) => ReconcileState::Construct(ConstructContext {
-                app,
-                events_topic_name: None,
-            }),
+            (_, false) => ReconcileState::Construct(ConstructContext { app }),
             (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
             (false, true) => ReconcileState::Ignore(app),
         })
@@ -150,9 +141,9 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         Progressor::<Self::Construct>::new(vec![
             Box::new(HasFinalizer(FINALIZER)),
-            Box::new(CreateTopic {
+            Box::new(CreateApplication {
                 config: self.config,
-                admin: self.admin,
+                ditto: self.ditto,
             }),
         ])
         .run_with::<KafkaAppStatus>(ctx)
@@ -163,39 +154,12 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
         &self,
         mut ctx: Self::Deconstruct,
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
-        // delete
-
-        let topic_name =
-            make_kafka_resource_name(ResourceType::Events(ctx.app.metadata.name.clone()));
-
-        match self
-            .admin
-            .delete_topics(&[&topic_name], &AdminOptions::new())
-            .await
-            .single_topic_response()
-        {
-            Ok(_) => {
-                log::info!("Topic {} deleted", topic_name);
-            }
-            Err(KafkaError::AdminOp(RDKafkaErrorCode::UnknownTopic)) => {
-                log::info!("Topic {} was already deleted", topic_name);
-            }
-            Err(KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure)) => {
-                let err = KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure);
-                log::warn!("Failed to create topic ({}): {:?}", topic_name, err);
-                return Err(ReconcileError::temporary(format!(
-                    "Failed to create topic: {}",
-                    err
-                )));
-            }
-            Err(err) => {
-                log::warn!("Failed to delete topic: {:?}", err);
-                return Err(ReconcileError::permanent(format!(
-                    "Failed to delete topic: {}",
-                    err
-                )));
-            }
+        DeleteApplication {
+            config: self.config,
+            ditto: self.ditto,
         }
+        .run(&mut ctx)
+        .await?;
 
         // remove finalizer
 
