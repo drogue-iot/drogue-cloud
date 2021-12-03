@@ -214,6 +214,7 @@ impl Component for Index {
                         <FlexItem modifiers=vec![FlexModifier::Align(Alignement::Right).all()]>
                             <Button
                                     label="New device"
+                                    disabled=self.app.is_empty()
                                     variant=Variant::Primary
                                     onclick=self.link.callback(|_|Msg::TriggerModal)
                             />
