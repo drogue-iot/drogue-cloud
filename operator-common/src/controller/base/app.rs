@@ -1,4 +1,4 @@
-use crate::controller::base::{OperationOutcome, ResourceOperations};
+use crate::controller::{base::ResourceOperations, reconciler::ReconcileError};
 use async_trait::async_trait;
 use drogue_client::{core, error::ClientError, openid::TokenProvider, registry, Translator};
 use std::ops::Deref;
@@ -20,21 +20,25 @@ where
         &self,
         original: &registry::v1::Application,
         mut current: registry::v1::Application,
-    ) -> Result<OperationOutcome, ()> {
-        current
-            .update_section(core::v1::Conditions::aggregate_ready)
-            .map_err(|_| ())?;
+    ) -> Result<(), ReconcileError> {
+        current.update_section(core::v1::Conditions::aggregate_ready)?;
 
         if original != &current {
             match self.update_app(&current, Default::default()).await {
-                Ok(_) => Ok(OperationOutcome::Complete),
+                Ok(_) => Ok(()),
                 Err(err) => match err {
-                    ClientError::Syntax(_) => Ok(OperationOutcome::Complete),
-                    _ => Ok(OperationOutcome::RetryNow),
+                    ClientError::Syntax(msg) => Err(ReconcileError::permanent(format!(
+                        "Failed to reconcile: {}",
+                        msg
+                    ))),
+                    err => Err(ReconcileError::temporary(format!(
+                        "Failed to reconcile: {}",
+                        err
+                    ))),
                 },
             }
         } else {
-            Ok(OperationOutcome::Complete)
+            Ok(())
         }
     }
 

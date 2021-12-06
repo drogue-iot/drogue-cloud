@@ -162,17 +162,23 @@ where
     pub async fn process(&mut self, key: K) -> Result<Option<(K, Duration)>, ()> {
         let mut retries: usize = 0;
         loop {
-            match self.operation.process(&key).await? {
-                OperationOutcome::Complete => break Ok(None),
-                OperationOutcome::RetryNow => {
+            let result = self.operation.process(&key).await;
+            log::debug!("Processing({:?}/{}) -> {:?}", key, retries, result);
+            match result {
+                Ok(OperationOutcome::Complete) | Err(ReconcileError::Permanent(_)) => {
+                    break Ok(None)
+                }
+                Ok(OperationOutcome::RetryNow) | Err(ReconcileError::Temporary(_)) => {
                     retries += 1;
                     if retries > Self::MAX_RETRIES {
+                        log::debug!("Max retries reached, reschedule ...");
                         break Ok(Some((key, Duration::ZERO)));
                     } else {
+                        log::debug!("Retry ...");
                         continue;
                     }
                 }
-                OperationOutcome::RetryLater(delay) => {
+                Ok(OperationOutcome::RetryLater(delay)) => {
                     break Ok(Some((key, delay)));
                 }
             }
@@ -180,6 +186,7 @@ where
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum OperationOutcome {
     Complete,
     RetryNow,
@@ -206,7 +213,7 @@ where
     async fn get(&self, key: &K) -> Result<Option<RI>, ClientError<reqwest::Error>>;
 
     /// Update the resource if it did change.
-    async fn update_if(&self, original: &RO, current: RO) -> Result<OperationOutcome, ()>;
+    async fn update_if(&self, original: &RO, current: RO) -> Result<(), ReconcileError>;
 
     fn ref_output(input: &RI) -> &RO;
 }
@@ -221,8 +228,8 @@ where
     async fn process_resource(&self, application: RI)
         -> Result<ProcessOutcome<RO>, ReconcileError>;
 
-    /// Process the key, any error returned is a fatal error,
-    async fn process(&self, key: &K) -> Result<OperationOutcome, ()> {
+    /// Process the key, any permanent error returned is a fatal error,
+    async fn process(&self, key: &K) -> Result<OperationOutcome, ReconcileError> {
         // read the resource ...
         match self.get(key).await {
             // ... and process it
@@ -238,12 +245,18 @@ where
                     Ok(OperationOutcome::retry(delay))
                 }
                 Err(ReconcileError::Temporary(msg)) => {
-                    let outcome = self.recover(&msg, resource.clone()).await?;
+                    let outcome = self
+                        .recover(&msg, resource.clone())
+                        .await
+                        .map_err(|_| ReconcileError::permanent("Failed to recover"))?;
                     self.update_if(Self::ref_output(&resource), outcome).await?;
                     Ok(OperationOutcome::RetryNow)
                 }
                 Err(ReconcileError::Permanent(msg)) => {
-                    let outcome = self.recover(&msg, resource.clone()).await?;
+                    let outcome = self
+                        .recover(&msg, resource.clone())
+                        .await
+                        .map_err(|_| ReconcileError::permanent("Failed to recover"))?;
                     self.update_if(Self::ref_output(&resource), outcome).await?;
                     Ok(OperationOutcome::Complete)
                 }
@@ -254,7 +267,10 @@ where
                 Ok(OperationOutcome::Complete)
             }
             // ... error -> retry
-            Err(_) => Ok(OperationOutcome::RetryNow),
+            Err(err) => {
+                log::debug!("Reconciliation failed (RetryNow): {}", err);
+                Ok(OperationOutcome::RetryNow)
+            }
         }
     }
 
