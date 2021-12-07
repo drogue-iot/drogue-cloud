@@ -5,6 +5,7 @@ set +e
 # defaults
 
 : "${DEPLOY_TWIN:=false}"
+: "${DEPLOY_EXAMPLES:=true}"
 
 # process arguments
 
@@ -24,6 +25,7 @@ Options:
   -S <key>=<value>   Set a Helm option (as string), can be repeated:
                        -S foo=bar -S bar=baz -S foo.bar=baz
   -k                 Don't install dependencies
+  -e                 Don't install examples
   -f <vales.yaml>    Add a Helm values files
   -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
   -t <timeout>       Helm installation timeout (default: 15m)
@@ -40,7 +42,7 @@ EOF
     exit 1
 }
 
-while getopts mhkp:c:n:d:s:S:t:Tf: FLAG; do
+while getopts mhkep:c:n:d:s:S:t:Tf: FLAG; do
   case $FLAG in
     c)
         CLUSTER="$OPTARG"
@@ -75,6 +77,9 @@ while getopts mhkp:c:n:d:s:S:t:Tf: FLAG; do
     T)
         DEPLOY_TWIN="true"
         ;;
+    e)
+        DEPLOY_EXAMPLES="false"
+        ;;
     h)
         help >&3
         exit 0
@@ -101,10 +106,15 @@ echo "Minimize: $MINIMIZE"
 
 : "${INSTALL_DEPS:=true}"
 : "${INSTALL_STRIMZI:=${INSTALL_DEPS}}"
-: "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
 : "${INSTALL_KEYCLOAK_OPERATOR:=${INSTALL_DEPS}}"
 : "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 : "${HELM_TIMEOUT:=15m}"
+
+INSTALL_KNATIVE="false"
+
+if [[ "$DEPLOY_TWIN" == true ]] || [[ "$DEPLOY_EXAMPLES" == true ]]; then
+    INSTALL_KNATIVE="true"
+fi
 
 case $CLUSTER in
     kind)
@@ -187,6 +197,7 @@ HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
 HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 HELM_ARGS="$HELM_ARGS --set drogueCloudTwin.enabled=$DEPLOY_TWIN"
+HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.enabled=$DEPLOY_EXAMPLES"
 
 echo "Helm arguments: $HELM_ARGS"
 
@@ -266,9 +277,11 @@ fi
 
 # wait for other Knative services
 
-progress -n "⏳ Waiting for Knative services to become ready ... "
-wait_for_ksvc timescaledb-pusher
-progress "done!"
+if [[ "$INSTALL_KNATIVE" == true ]]; then
+    progress -n "⏳ Waiting for Knative services to become ready ... "
+    wait_for_ksvc timescaledb-pusher
+    progress "done!"
+fi
 
 # wait for the rest of the deployments
 

@@ -2,6 +2,7 @@ drogueCloudTwin:
   enabled: false
 
 drogueCloudExamples:
+  enabled: true
   drogueApplication:
     name: example-app
   autoCreate:
