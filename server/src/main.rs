@@ -42,6 +42,7 @@ impl From<Endpoint> for String {
 #[derive(Clone)]
 struct ServerConfig {
     pub console: Endpoint,
+    pub frontend: Endpoint,
     pub mqtt: Endpoint,
     pub http: Endpoint,
     pub coap: Endpoint,
@@ -126,9 +127,13 @@ impl ServerConfig {
                     .unwrap_or("admin123456")
                     .to_string(),
             },
+            frontend: Endpoint {
+                host: iface.to_string(),
+                port: 8010,
+            },
             console: Endpoint {
                 host: iface.to_string(),
-                port: 10001,
+                port: 8011,
             },
             mqtt: Endpoint {
                 host: iface.to_string(),
@@ -190,8 +195,9 @@ fn run_migrations(db: &Database) {
 
 const SERVICE_CLIENT_SECRET: &str = "a73d4e96-461b-11ec-8d66-d45ddf138840";
 
-fn configure_keycloak(server: &Keycloak) {
+fn configure_keycloak(config: &ServerConfig) {
     print!("Configuring keycloak... ");
+    let server = &config.keycloak;
     let rt = tokio::runtime::Runtime::new().unwrap();
     let failed: usize = rt.block_on(async {
         let url = &server.url;
@@ -550,7 +556,7 @@ fn main() {
 
         run_migrations(&server.database);
 
-        configure_keycloak(&server.keycloak);
+        configure_keycloak(&server);
         /*
         let kafka_stream = |topic: &str, consumer_group: &str| KafkaStreamConfig {
             client: kafka_config(topic),
@@ -733,6 +739,8 @@ fn main() {
                 if matches.is_present("enable-console-backend") || matches.is_present("enable-all")
                 {
                     log::info!("Enabling console backend service");
+                    let mut console_token_config = token_config.clone();
+                    console_token_config.client_id = "drogue".to_string();
                     let config = drogue_cloud_console_backend::Config {
                         workers: Some(1),
                         oauth: oauth.clone(),
@@ -742,7 +750,7 @@ fn main() {
                         kafka: server.kafka.clone(),
                         keycloak: keycloak.clone(),
                         registry: registry.clone(),
-                        console_token_config: Some(token_config.clone()),
+                        console_token_config: Some(console_token_config),
                         disable_account_url: false,
                         scopes: "openid profile email".into(),
                         user_auth: user_auth.clone(),
@@ -994,10 +1002,13 @@ fn main() {
 
 fn endpoints(config: &ServerConfig) -> Endpoints {
     Endpoints {
-        api: None,
-        console: Some(format!(
+        api: Some(format!(
             "http://{}:{}",
             config.console.host, config.console.port
+        )),
+        console: Some(format!(
+            "http://{}:{}",
+            config.frontend.host, config.frontend.port
         )),
         coap: Some(CoapEndpoint {
             url: format!("coap://{}:{}", config.coap.host, config.coap.port),
@@ -1026,7 +1037,7 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
         )),
         redirect_url: Some(format!(
             "http://{}:{}",
-            config.console.host, config.console.port
+            config.frontend.host, config.frontend.port
         )),
         registry: Some(RegistryEndpoint {
             url: format!("http://{}:{}", config.registry.host, config.registry.port),

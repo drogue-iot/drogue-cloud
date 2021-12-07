@@ -26,6 +26,7 @@ use drogue_cloud_service_common::{
     openid::{AuthenticatorConfig, TokenConfig},
 };
 use futures::TryFutureExt;
+use info::DemoFetcher;
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
 use serde::Deserialize;
@@ -94,9 +95,9 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         let kube = kube::client::Client::try_default()
             .await
             .context("Failed to create Kubernetes client")?;
-        Some(Api::<ConfigMap>::default_namespaced(kube))
+        DemoFetcher::Kube(Api::<ConfigMap>::default_namespaced(kube))
     } else {
-        None
+        DemoFetcher::None
     };
 
     let client = reqwest::Client::new();
