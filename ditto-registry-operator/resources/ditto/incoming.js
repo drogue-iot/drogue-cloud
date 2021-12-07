@@ -5,6 +5,8 @@ function mapToDittoProtocolMsg(
     contentType
 ) {
 
+    let subject = headers["ce_subject"];
+
     let application = headers["ce_application"];
     let device = headers["ce_device"];
 
@@ -12,11 +14,11 @@ function mapToDittoProtocolMsg(
     let dataschema = headers["ce_dataschema"];
     let type = headers["ce_type"];
 
-    if (datacontenttype !== "application/json") {
+    if (datacontenttype !== "application/json" && !datacontenttype.endsWith("+json")) {
         return null;
     }
 
-    if (dataschema !== "urn:eclipse:ditto" ) {
+    if (dataschema !== "urn:eclipse:ditto" && datacontenttype !== "application/vnd.eclipse.ditto+json" ) {
         return null;
     }
 
@@ -24,24 +26,15 @@ function mapToDittoProtocolMsg(
         return null;
     }
 
-    // let payload = JSON.parse(textPayload);
-
-    let attributesObj = {
-        drogue: {
-            instance: headers["ce_instance"],
-            application: headers["ce_application"],
-            device: headers["ce_device"],
-        }
-    };
-
-    let featuresObj = {
-    };
+    let payload = JSON.parse(textPayload);
 
     let dittoHeaders = {
         "response-required": false,
-        "content-type": "application/merge-patch+json",
-        "If-Match": "*"
+        "content-type": datacontenttype
     };
+
+    let path = payload["path"] || "/";
+    let value = payload["value"] || {};
 
     return Ditto.buildDittoProtocolMsg(
         application,
@@ -49,12 +42,9 @@ function mapToDittoProtocolMsg(
         "things",
         "twin",
         "commands",
-        "merge",
-        "/",
+        subject,
+        path,
         dittoHeaders,
-        {
-            attributes: attributesObj,
-            features: featuresObj
-        }
+        value
     );
 }

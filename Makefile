@@ -54,7 +54,7 @@ ALL_IMAGES=\
 	topic-strimzi-operator \
 	topic-admin-operator \
 	websocket-integration \
-	ditto-operator \
+	ditto-registry-operator \
 
 
 

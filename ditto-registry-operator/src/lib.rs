@@ -1,7 +1,8 @@
 mod controller;
+mod data;
 mod ditto;
 
-use crate::controller::{app::ApplicationController, ControllerConfig};
+use crate::controller::{app::ApplicationController, device::DeviceController, ControllerConfig};
 use async_std::sync::Mutex;
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
@@ -50,6 +51,20 @@ fn is_app_relevant(event: &Event) -> Option<String> {
     }
 }
 
+fn is_device_relevant(event: &Event) -> Option<(String, String)> {
+    match event {
+        Event::Device {
+            path,
+            application,
+            device,
+            ..
+        } if path == "." || path == ".metadata" || path == ".spec.ditto" => {
+            Some((application.clone(), device.clone()))
+        }
+        _ => None,
+    }
+}
+
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::debug!("Config: {:#?}", config);
 
@@ -63,13 +78,26 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let app_processor = BaseController::new(
         config.work_queue.clone(),
         "app",
-        ApplicationController::new(config.controller, registry),
+        ApplicationController::new(config.controller.clone(), registry.clone(), client.clone())
+            .await?,
     )?;
 
-    let controller = EventDispatcher::new(vec![Box::new(FnEventProcessor::new(
-        Arc::new(Mutex::new(app_processor)),
-        is_app_relevant,
-    ))]);
+    let device_processor = BaseController::new(
+        config.work_queue.clone(),
+        "device",
+        DeviceController::new(config.controller, registry, client).await?,
+    )?;
+
+    let controller = EventDispatcher::new(vec![
+        Box::new(FnEventProcessor::new(
+            Arc::new(Mutex::new(app_processor)),
+            is_app_relevant,
+        )),
+        Box::new(FnEventProcessor::new(
+            Arc::new(Mutex::new(device_processor)),
+            is_device_relevant,
+        )),
+    ]);
 
     // event source
 

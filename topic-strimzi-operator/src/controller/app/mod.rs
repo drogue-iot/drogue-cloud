@@ -18,9 +18,7 @@ use drogue_cloud_operator_common::controller::{
     base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
         operation::HasFinalizer,
-        progress::{
-            self, application::ApplicationAccessor, OperationOutcome, Progressor, RunConstructor,
-        },
+        progress::{self, OperationOutcome, Progressor, ResourceAccessor, RunConstructor},
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
@@ -246,12 +244,14 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
     }
 }
 
-impl ApplicationAccessor for ConstructContext {
-    fn app(&self) -> &registry::v1::Application {
+impl ResourceAccessor for ConstructContext {
+    type Resource = registry::v1::Application;
+
+    fn resource(&self) -> &registry::v1::Application {
         &self.app
     }
 
-    fn app_mut(&mut self) -> &mut registry::v1::Application {
+    fn resource_mut(&mut self) -> &mut registry::v1::Application {
         &mut self.app
     }
 

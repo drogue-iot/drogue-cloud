@@ -9,6 +9,17 @@ pub struct KafkaClientConfig {
     pub properties: HashMap<String, String>,
 }
 
+impl KafkaClientConfig {
+    pub fn translate(mut self) -> Self {
+        let mut result = HashMap::with_capacity(self.properties.len());
+        for (k, v) in self.properties {
+            result.insert(k.replace('_', "."), v);
+        }
+        self.properties = result;
+        self
+    }
+}
+
 impl Default for KafkaClientConfig {
     fn default() -> Self {
         Self {
