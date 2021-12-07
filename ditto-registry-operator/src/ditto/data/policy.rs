@@ -187,10 +187,14 @@ mod test {
                 "policyId": "ns:policy",
                 "entries": {
                     "FOO": {
-                        "subjects": {"some:subject": {"type": "foo"}}
+                        "subjects": {"some:subject": {"type": "foo"}},
+                        "resources": {"thing:/foo": {
+                           "grant": [],
+                            "revoke": [],
+                        }}
                     }
                 },
-                "resources": {"thing:/foo": {}}
+
             })
         )
     }
