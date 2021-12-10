@@ -4,6 +4,8 @@ all: check build
 EBASE ?= endpoints
 EGEN ?= $(EBASE)/generated
 
+DROGUE_NS ?= drogue-iot
+
 .PHONY: clean
 clean:
 	rm -fR $(EGEN)
@@ -53,7 +55,7 @@ $(EGEN)/ca-bundle.pem: $(EGEN)/ca-cert.pem $(EGEN)/root-cert.pem
 
 $(EGEN)/root-key.pem $(EGEN)/root-cert.pem: $(EBASE)/ca.cnf
 	# Generate root key and convert to PKCS8
-	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/root-key-ec.pem" 
+	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/root-key-ec.pem"
 	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/root-key-ec.pem" -out "$(EGEN)/root-key.pem"
 
 	# Generate root certificate
@@ -62,7 +64,7 @@ $(EGEN)/root-key.pem $(EGEN)/root-cert.pem: $(EBASE)/ca.cnf
 
 $(EGEN)/ca-cert.req: $(EBASE)/ca.cnf
 	# Generate CA key and convert to PKCS8
-	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/ca-key-ec.pem" 
+	openssl ecparam -genkey -name prime256v1 -noout -out "$(EGEN)/ca-key-ec.pem"
 	openssl pkcs8 -topk8 -nocrypt -in "$(EGEN)/ca-key-ec.pem" -out "$(EGEN)/ca-key.pem"
 
 	# Generate CA certificate
@@ -92,3 +94,8 @@ $(EGEN)/%-endpoint.fullchain.crt: $(EGEN)/%-endpoint.crt $(EGEN)/ca-bundle.pem
 	cat $^ > $@
 	chmod a+r $@
 
+deploy: check build
+	kubectl -n "$(DROGUE_NS)" create secret tls http-endpoint-tls --key $(EGEN)/http-endpoint.key --cert $(EGEN)/http-endpoint.fullchain.crt --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
+	kubectl -n "$(DROGUE_NS)" create secret tls mqtt-endpoint-tls --key $(EGEN)/mqtt-endpoint.key --cert $(EGEN)/mqtt-endpoint.fullchain.crt --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
+	kubectl -n "$(DROGUE_NS)" create secret tls coap-endpoint-tls --key $(EGEN)/coap-endpoint.key --cert $(EGEN)/coap-endpoint.fullchain.crt --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
+	kubectl -n "$(DROGUE_NS)" create secret tls root-endpoint-tls --key $(EGEN)/root-key.pem --cert $(EGEN)/root-cert.pem --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
