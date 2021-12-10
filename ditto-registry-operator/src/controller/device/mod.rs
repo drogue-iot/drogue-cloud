@@ -6,14 +6,17 @@ use crate::{controller::ControllerConfig, data::DittoDeviceStatus, ditto::Client
 use async_trait::async_trait;
 use drogue_client::{
     core::v1::Conditions,
-    meta::v1::CommonMetadataMut,
+    meta::v1::{CommonMetadataExt, CommonMetadataMut},
     openid::{AccessTokenProvider, OpenIdTokenProvider, TokenProvider},
     registry, Translator,
 };
 use drogue_cloud_operator_common::controller::{
-    base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
+    base::{
+        ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, StatusSection,
+        CONDITION_RECONCILED,
+    },
     reconciler::{
-        operation::{HasFinalizer, MetadataContext},
+        operation::HasFinalizer,
         progress::{Progressor, ResourceAccessor, RunConstructor},
         ByDevice, ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
@@ -127,12 +130,6 @@ pub struct ConstructContext {
     pub device: registry::v1::Device,
 }
 
-impl MetadataContext for ConstructContext {
-    fn as_metadata_mut(&mut self) -> &mut dyn CommonMetadataMut {
-        &mut self.device.metadata
-    }
-}
-
 pub struct DeconstructContext {
     pub app: registry::v1::Application,
     pub device: registry::v1::Device,
@@ -166,7 +163,7 @@ where
     ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>
     {
         Self::eval_by_finalizer(
-            true,
+            device.metadata.has_label_flag("ditto"),
             ByDevice(app, device),
             FINALIZER,
             |ByDevice(app, device)| ConstructContext { app, device },
@@ -209,6 +206,12 @@ where
         }
         .run(&ctx)
         .await?;
+
+        // cleanup
+
+        ctx.device.clear_section::<DittoDeviceStatus>();
+        ctx.device
+            .update_section(|c: Conditions| c.clear_ready(DittoDeviceStatus::ready_name()))?;
 
         // remove finalizer
 

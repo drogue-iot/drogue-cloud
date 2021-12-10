@@ -15,7 +15,7 @@ use drogue_client::{
 use drogue_cloud_operator_common::controller::{
     base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
-        operation::{HasFinalizer, MetadataContext},
+        operation::HasFinalizer,
         progress::{Progressor, ResourceAccessor, RunConstructor},
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
@@ -121,12 +121,6 @@ where
 
 pub struct ConstructContext {
     pub app: registry::v1::Application,
-}
-
-impl MetadataContext for ConstructContext {
-    fn as_metadata_mut(&mut self) -> &mut dyn CommonMetadataMut {
-        &mut self.app.metadata
-    }
 }
 
 pub struct DeconstructContext {

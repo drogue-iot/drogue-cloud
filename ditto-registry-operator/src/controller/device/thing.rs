@@ -16,6 +16,7 @@ use drogue_cloud_operator_common::controller::reconciler::{
     progress::{OperationOutcome, ProgressOperation},
     ReconcileError,
 };
+use http::StatusCode;
 
 pub struct CreateThing<'o> {
     pub config: &'o ControllerConfig,
@@ -72,9 +73,15 @@ impl<'o> DeleteThing<'o> {
                 self.provider,
                 ThingOperation::Delete(thing_id(&ctx.app, &ctx.device)),
             )
-            .await
-            .map_err(map_ditto_error)?;
+            .await;
 
+        if let Err(ditto::Error::Response(StatusCode::NOT_FOUND)) = resp {
+            // already gone
+            log::debug!("Thing was already gone");
+            return Ok(());
+        }
+
+        let resp = resp.map_err(map_ditto_error)?;
         log::debug!("Response: {:#?}", resp);
 
         Ok(())

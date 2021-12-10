@@ -8,7 +8,7 @@ use drogue_client::{
         self,
         v1::{ConditionStatus, Conditions},
     },
-    meta::v1::CommonMetadata,
+    meta::v1::{CommonMetadata, CommonMetadataMut},
     Translator,
 };
 use std::{
@@ -162,7 +162,12 @@ pub trait RunConstructor {
 }
 
 pub trait ResourceAccessor {
-    type Resource: Clone + Translator + AsRef<dyn CommonMetadata> + Send + Sync;
+    type Resource: Clone
+        + Translator
+        + AsRef<dyn CommonMetadata>
+        + AsMut<dyn CommonMetadataMut>
+        + Send
+        + Sync;
     fn resource(&self) -> &Self::Resource;
     fn resource_mut(&mut self) -> &mut Self::Resource;
     fn into(self) -> Self::Resource;

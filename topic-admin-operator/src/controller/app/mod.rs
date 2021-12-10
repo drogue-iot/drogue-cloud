@@ -11,7 +11,6 @@ use drogue_client::{
     registry::{self, v1::KafkaAppStatus},
     Translator,
 };
-use drogue_cloud_operator_common::controller::reconciler::operation::MetadataContext;
 use drogue_cloud_operator_common::controller::{
     base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
@@ -98,12 +97,6 @@ impl<TP: TokenProvider> Deref for ApplicationController<TP> {
 pub struct ConstructContext {
     pub app: registry::v1::Application,
     pub events_topic_name: Option<String>,
-}
-
-impl MetadataContext for ConstructContext {
-    fn as_metadata_mut(&mut self) -> &mut dyn CommonMetadataMut {
-        &mut self.app.metadata
-    }
 }
 
 pub struct DeconstructContext {
