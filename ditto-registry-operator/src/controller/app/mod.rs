@@ -160,16 +160,17 @@ where
         app: Self::Input,
     ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>
     {
-        let status = app.section::<DittoAppStatus>().and_then(|s| s.ok());
-
-        let configured = app.metadata.finalizers.iter().any(|f| f == FINALIZER);
-        let deleted = app.metadata.deletion_timestamp.is_some();
-
-        Ok(match (configured, deleted) {
-            (_, false) => ReconcileState::Construct(ConstructContext { app }),
-            (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
-            (false, true) => ReconcileState::Ignore(app),
-        })
+        Self::eval_by_finalizer(
+            true,
+            app,
+            FINALIZER,
+            |app| ConstructContext { app },
+            |app| {
+                let status = app.section::<DittoAppStatus>().and_then(|s| s.ok());
+                DeconstructContext { app, status }
+            },
+            |app| app,
+        )
     }
 
     async fn construct(

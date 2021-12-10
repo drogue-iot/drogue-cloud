@@ -15,7 +15,7 @@ use drogue_cloud_operator_common::controller::{
     reconciler::{
         operation::{HasFinalizer, MetadataContext},
         progress::{Progressor, ResourceAccessor, RunConstructor},
-        ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
+        ByDevice, ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
 use std::ops::Deref;
@@ -165,20 +165,21 @@ where
         (app, device): Self::Input,
     ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>
     {
-        let status = device.section::<DittoDeviceStatus>().and_then(|s| s.ok());
-
-        let configured = device.metadata.finalizers.iter().any(|f| f == FINALIZER);
-        let deleted = device.metadata.deletion_timestamp.is_some();
-
-        Ok(match (configured, deleted) {
-            (_, false) => ReconcileState::Construct(ConstructContext { app, device }),
-            (true, true) => ReconcileState::Deconstruct(DeconstructContext {
-                app,
-                device,
-                status,
-            }),
-            (false, true) => ReconcileState::Ignore(device),
-        })
+        Self::eval_by_finalizer(
+            true,
+            ByDevice(app, device),
+            FINALIZER,
+            |ByDevice(app, device)| ConstructContext { app, device },
+            |ByDevice(app, device)| {
+                let status = device.section::<DittoDeviceStatus>().and_then(|s| s.ok());
+                DeconstructContext {
+                    app,
+                    device,
+                    status,
+                }
+            },
+            |ByDevice(_, device)| device,
+        )
     }
 
     async fn construct(

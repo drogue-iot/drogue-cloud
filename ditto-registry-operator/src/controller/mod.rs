@@ -24,6 +24,7 @@ pub struct DittoDevops {
     pub password: Option<String>,
 }
 
+/// generate the ID for the default, application wide ditto policy
 pub fn policy_id(app: &Application) -> EntityId {
     EntityId(app.metadata.name.clone(), "default".to_string())
 }

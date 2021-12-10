@@ -6,7 +6,9 @@ pub use error::*;
 
 use crate::controller::base::ProcessOutcome;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use core::fmt::{Debug, Formatter};
+use drogue_client::meta::v1::CommonMetadata;
 
 pub enum ReconcileState<I, C, D> {
     Ignore(I),
@@ -24,6 +26,44 @@ impl<I, C, D> Debug for ReconcileState<I, C, D> {
     }
 }
 
+pub trait EvalMetadata {
+    fn finalizers(&self) -> &[String];
+    fn deletion_timestamp(&self) -> &Option<DateTime<Utc>>;
+}
+
+impl<T> EvalMetadata for T
+where
+    T: AsRef<dyn CommonMetadata>,
+{
+    fn finalizers(&self) -> &[String] {
+        self.as_ref().finalizers()
+    }
+
+    fn deletion_timestamp(&self) -> &Option<DateTime<Utc>> {
+        self.as_ref().deletion_timestamp()
+    }
+}
+
+/// Make it easier to reconcile an app, device combination "by device".
+pub struct ByDevice<A, D>(pub A, pub D)
+where
+    D: AsRef<dyn CommonMetadata>;
+
+impl<A, D> EvalMetadata for ByDevice<A, D>
+where
+    D: AsRef<dyn CommonMetadata>,
+{
+    fn finalizers(&self) -> &[String] {
+        self.1.finalizers()
+    }
+
+    fn deletion_timestamp(&self) -> &Option<DateTime<Utc>> {
+        self.1.deletion_timestamp()
+    }
+}
+
+pub type ReconcileResult<T> = Result<T, ReconcileError>;
+
 #[async_trait]
 pub trait Reconciler {
     type Input;
@@ -34,7 +74,40 @@ pub trait Reconciler {
     async fn eval_state(
         &self,
         input: Self::Input,
-    ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>;
+    ) -> ReconcileResult<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>>;
+
+    /// A default implementation for `eval_state`. When creation is requested
+    /// (either by static program logic, or by e.g. the present of a spec section) the function will
+    /// eval, based on the presence of the finalizer and the deletion timestamp, if the state is
+    /// ignored, construct, or deconstruct.
+    ///
+    /// An implementor, using this function, should:
+    /// * When constructing, first set the finalizer (and RetryNow), then perform all necessary operations.
+    /// * When deconstructing, first perform all necessary options. At last, remove the finalizer.
+    fn eval_by_finalizer<CTX, FC, FD, FI>(
+        requested: bool,
+        ctx: CTX,
+        finalizer: &str,
+        construct: FC,
+        deconstruct: FD,
+        ignore: FI,
+    ) -> ReconcileResult<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>>
+    where
+        CTX: EvalMetadata,
+        FC: FnOnce(CTX) -> Self::Construct,
+        FD: FnOnce(CTX) -> Self::Deconstruct,
+        FI: FnOnce(CTX) -> Self::Output,
+    {
+        let configured = ctx.finalizers().iter().any(|f| f == finalizer);
+        let deleted = ctx.deletion_timestamp().is_some();
+
+        Ok(match (requested, configured, deleted) {
+            (false, false, _) => ReconcileState::Ignore(ignore(ctx)),
+            (false, true, _) => ReconcileState::Deconstruct(deconstruct(ctx)),
+            (true, _, false) => ReconcileState::Construct(construct(ctx)),
+            (_, _, true) => ReconcileState::Deconstruct(deconstruct(ctx)),
+        })
+    }
 
     async fn construct(
         &self,
