@@ -1,5 +1,6 @@
 //! The Ditto WS protocol mapping
 
+use crate::ditto::data::*;
 use chrono::{DateTime, Utc};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,29 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+#[allow(unused)]
+pub enum PolicyOperation {
+    Create(Policy),
+    Update(Policy),
+    Delete(EntityId),
+}
+
+#[allow(unused)]
+pub enum ThingOperation {
+    CreateOrUpdate(Thing),
+    Delete(EntityId),
+}
+
+pub trait ToTopic {
+    fn to_topic(&self, path: &str) -> String;
+}
+
+impl ToTopic for EntityId {
+    fn to_topic(&self, path: &str) -> String {
+        format!("{}/{}/{}", self.0, self.1, path)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RequestEnvelope<T>
@@ -17,7 +41,8 @@ where
 {
     pub topic: String,
     pub path: String,
-    pub value: T,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<T>,
     #[serde(flatten)]
     pub options: RequestOptions,
 }
@@ -37,10 +62,10 @@ pub struct RequestOptions {
     pub timestamp: Option<DateTime<Utc>>,
 }
 
-pub trait Request<'de>: Clone + Debug + Serialize + Deserialize<'de> {
-    type Options;
-    type Response;
-    fn request(self, options: Self::Options) -> RequestEnvelope<Self>;
+pub trait Request {
+    type Request: Serialize + Clone + Debug;
+    type Response: for<'de> Deserialize<'de>;
+    fn request(self, options: RequestOptions) -> RequestEnvelope<Self::Request>;
 }
 
 impl<T> Deref for RequestEnvelope<T>
@@ -79,18 +104,45 @@ where
     pub status: u32,
 }
 
-/*
+impl Request for PolicyOperation {
+    type Request = Policy;
+    type Response = Policy;
+
+    fn request(self, options: RequestOptions) -> RequestEnvelope<Self::Request> {
+        match self {
+            Self::Create(policy) => RequestEnvelope {
+                topic: policy.policy_id.to_topic("policies/commands/create"),
+                path: "/".to_string(),
+                value: Some(policy),
+                options,
+            },
+            Self::Update(policy) => RequestEnvelope {
+                topic: policy.policy_id.to_topic("policies/commands/modify"),
+                path: "/".to_string(),
+                value: Some(policy),
+                options,
+            },
+            Self::Delete(policy_id) => RequestEnvelope {
+                topic: policy_id.to_topic("policies/commands/delete"),
+                path: "/".to_string(),
+                value: None,
+                options,
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ditto::messages::*;
+    use crate::ditto::data::Policy;
     use serde_json::json;
 
     #[test]
     fn test_2() {
         assert_eq!(
             serde_json::to_value(
-                Policy {
+                PolicyOperation::Create(Policy {
                     policy_id: ("ns", "policy").into(),
                     entries: {
                         let mut map = IndexMap::new();
@@ -121,7 +173,7 @@ mod test {
                         );
                         map
                     },
-                }
+                })
                 .request(Default::default())
             )
             .unwrap(),
@@ -132,13 +184,19 @@ mod test {
                     "policyId": "ns:policy",
                     "entries": {
                         "FOO": {
-                            "subjects": {"some:subject": {"type": "foo"}}
+                            "subjects": {
+                                "some:subject": {"type": "foo"}
+                            },
+                            "resources": {
+                                "thing:/foo": {
+                                    "grant": [],
+                                    "revoke": [],
+                                },
+                            }
                         }
                     },
-                    "resources": {"thing:/foo": {}}
                 }
             })
         )
     }
 }
-*/

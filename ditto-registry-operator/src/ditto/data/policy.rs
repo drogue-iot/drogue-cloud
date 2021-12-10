@@ -112,36 +112,6 @@ impl FromStr for Resource {
     }
 }
 
-#[allow(unused)]
-pub enum PolicyOperation {
-    Create(Policy),
-    Update(Policy),
-    Delete(EntityId),
-}
-
-/*
-impl<'de> protocol::Request<'de> for PolicyOperation {
-    type Options = IndexMap<String, String>;
-    type Response = Value;
-
-    fn request(self, options: Self::Options) -> protocol::RequestEnvelope<Self> {
-        let topic = format!(
-            "{}/{}/policies/commands/create",
-            self.policy_id.0, self.policy_id.1
-        );
-        protocol::RequestEnvelope {
-            topic,
-            path: "/".to_string(),
-            value: self,
-            options: protocol::RequestOptions {
-                headers: options,
-                ..Default::default()
-            },
-        }
-    }
-}
- */
-
 #[cfg(test)]
 mod test {
     use super::*;

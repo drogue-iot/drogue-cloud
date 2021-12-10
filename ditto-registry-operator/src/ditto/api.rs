@@ -26,6 +26,12 @@ pub enum PolicyOperation {
     Delete(EntityId),
 }
 
+#[allow(unused)]
+pub enum ThingOperation {
+    CreateOrUpdate(Thing),
+    Delete(EntityId),
+}
+
 impl Request for PolicyOperation {
     type Response = Value;
 
@@ -46,12 +52,6 @@ impl Request for PolicyOperation {
             )?,
         })
     }
-}
-
-#[allow(unused)]
-pub enum ThingOperation {
-    CreateOrUpdate(Thing),
-    Delete(EntityId),
 }
 
 impl Request for ThingOperation {
