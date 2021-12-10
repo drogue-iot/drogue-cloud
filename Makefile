@@ -208,7 +208,9 @@ cargo-check-frontend:
 #
 # Run the cargo build.
 #
-ifneq ($(SKIP_SERVER),)
+ifneq ($(MODULE),)
+cargo-build: CARGO_BUILD_ARGS=--package drogue-cloud-$(MODULE)
+else ifneq ($(SKIP_SERVER),)
 cargo-build: CARGO_BUILD_ARGS=--exclude drogue-cloud-server
 endif
 cargo-build:
