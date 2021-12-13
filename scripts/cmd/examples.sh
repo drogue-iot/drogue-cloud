@@ -5,6 +5,7 @@ set -e
 # Dump out the dashboard URL and sample commands for http and mqtt
 
 : "${DIGITAL_TWIN:=false}"
+: "${EXAMPLES:=true}"
 
 SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 
@@ -28,12 +29,16 @@ echo
 bold "------------------------------------------------------------------------------------------"
 bold "Examples"
 bold "------------------------------------------------------------------------------------------"
+
+if [[ "$EXAMPLES" == "true" ]]; then
 echo
-bold "View the example dashboard:"
+bold "View the example dashboard (if it's installed):"
 bold "----------------------------"
 echo
 echo "* Login to Grafana (using SSO): $DASHBOARD_URL"
-echo "* Search for the 'Examples' dashboard"
+echo "* You will be presented with the 'Temperatures dashboard'"
+fi
+
 echo
 bold "Login with 'drg':"
 bold "---------------------"

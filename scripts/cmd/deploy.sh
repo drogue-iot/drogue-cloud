@@ -250,6 +250,8 @@ progress -n "⏳ Waiting for deployments to become ready ... "
 kubectl wait deployment -l '!serving.knative.dev/service' --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
 progress "done!"
 
+# download root certificate
+
 mkdir -p build/certs/endpoints/
 kubectl -n drogue-iot get secret root-endpoint-tls -o jsonpath="{.data.tls\\.crt}" | base64 -d > build/certs/endpoints/root-cert.pem
 
@@ -271,9 +273,19 @@ progress "  * Log in using 'drg':"
 progress "      drg login ${API_URL}"
 progress
 progress "  * Execute: "
+
+ARGS=""
+if [[ "$DEPLOY_TWIN" == true ]]; then
+    ARGS+="DIGITAL_TWIN=true "
+fi
+
+if [[ "$DEPLOY_EXAMPLES" == false ]]; then
+    ARGS+="EXAMPLES=false"
+fi
+
 if is_default_cluster; then
-progress "      $BASEDIR/drgadm examples"
+progress "      env $ARGS $BASEDIR/drgadm examples"
 else
-progress "      env CLUSTER=$CLUSTER $BASEDIR/drgadm examples"
+progress "      env $ARGS CLUSTER=$CLUSTER $BASEDIR/drgadm examples"
 fi
 progress
