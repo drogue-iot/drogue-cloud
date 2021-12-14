@@ -10,9 +10,6 @@ is assumed, which includes Mac OS X.
 * `mqtt` - aka https://github.com/hivemq/mqtt-cli[MQTT CLI]
 * `kubectl` - https://kubernetes.io/docs/tasks/tools/install-kubectl/
 * `helm` – https://helm.sh/docs/intro/install/[Helm CLI]
-* `podman` or `docker` – Both work, also in rootless mode.
-+
-NOTE: For `podman` you need to also set an alias for `docker` to `podman`
 
 == Kubernetes Cluster
 

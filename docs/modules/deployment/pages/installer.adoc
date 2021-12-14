@@ -1,6 +1,6 @@
 = Installer script
 
-Most of the deployment of Drogue Cloud uses `kustomize` as part of `kubectl`. However, we do require a few steps
+Most of the deployment of Drogue Cloud uses `Helm` in combination with `kubectl` for installing dependencies. However, we do require a few steps
 before and after the deployment. Installing dependencies on the cluster and setting URLs afterwards.
 
 For this we have a _magic_ installer script, that does everything for you. It is suited for an easy start on a
@@ -28,7 +28,6 @@ The installer will create a new instance of Drogue Cloud on the cluster you are 
 
 By default, this includes:
 
-* Installing Knative
 * Installing Strimzi
 * Creating a Kafka cluster
 * Installing the Keycloak operator
@@ -37,11 +36,14 @@ By default, this includes:
 If you want to install those dependencies manually, for example using OLM, you can opt-out of the installation
 (see below).
 
+Additionally, it installs Knative and an example application and can install digital twin feature as well. Deployment of these components can be
+ configured using installer arguments as explained below.
+
 == Running the installer
 
 Run the installer script `./script/drgadm deploy`, adding the options appropriate for your setup.
 
-You can use the environment variable `CLUSTER` to define which cluster type you have.
+You can use the `-c` argument to define which cluster type you have.
 
 [NOTE]
 .Default cluster type
@@ -51,7 +53,7 @@ value will be changed to the installer type you downloaded. You can still overri
 
 [source,shell]
 ----
-env CLUSTER=kind ./script/drgadm deploy
+./script/drgadm deploy -c kind
 ----
 
 ====
@@ -66,37 +68,55 @@ The `deploy` command of `drgadm` supports the following argument
 `-d` or `DOMAIN`:: Manually provide the application DNS domain.
 `-c` or  `CLUSTER`:: Specify the cluster type (any of `minikube`, `kind`, `openshift`, `kubernetes`).
 `-p <profile>`:: Adds an additional Helm value file, named `deploy/helm/profiles/<profile>.yaml`.
+`-t  <timeout>`:: Helm installation timeout (default: 15m)
 `-n <namespace>` or `DROGUE_NS`:: Changes the target Drogue IoT namespace.
+`-T`:: Install digital twin feature.
+`-e`:: Don't install examples.
+
+Example: Install Drogue Cloud on `kind` cluster without dependencies.
+
+[source,shell]
+----
+./script/drgadm deploy -c kind -k
+----
+
+=== Skip the dependency installation
+
+The `-k` argument will skip installing all dependencies. If you want to install of just some of the dependencies (like Strimzi or Keycloak) yourself,
+you can opt out of installing them by the script.
 
 The installer has a few additional options which are controlled by using environment variables.
 You can set them by prefixing the call to the installation script, using `env` and the variable assignment:
 
 [source,shell]
 ----
-env CLUSTER=kind INSTALL_DEPS=false ./script/drgadm deploy
+env INSTALL_STRIMZI=false ./script/drgadm deploy
 ----
-
-=== Skip the dependency installation
-
-If you want to install the dependencies (like Strimzi, KNative) yourself, you can opt out of installing the
-dependencies.
 
 |===
 |Variable Name | Default value | Description
 
-| `INSTALL_DEPS`
-| `true`
-| Control the installation of all dependencies.
-
-| `INSTALL_KNATIVE`
+| `INSTALL_STRIMZI`
 | `$\{INSTALL_DEPS}`
-| Control the installation of the Knative stack.
+| Control the installation of Strimzi.
 
 | `INSTALL_KEYCLOAK_OPERATOR`
 | `$\{INSTALL_DEPS}`
 | Control the installation of the Keycloak operator.
 
 |===
+
+=== Install additional examples
+
+By default the example dashboard is installed by the script. You can turn it off by using `-e` argument.
+Additionally, digital twin feature can be installed by specifying `-T` argument.
+Knative will be installed only if either examples or digital twin feature are installed.
+To deploy minimal installation without any examples (and Knative) use:
+
+[source,shell]
+----
+./script/drgadm deploy -e
+----
 
 === Change the target namespace
 
