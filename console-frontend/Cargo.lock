@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-common"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "anyhow",
  "drogue-cloud-service-api",
@@ -454,7 +454,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-console-frontend"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "anyhow",
  "base64 0.13.0",
@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "drogue-cloud-service-api"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "async-trait",
  "base64 0.13.0",

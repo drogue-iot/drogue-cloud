@@ -1,7 +1,7 @@
 [package]
 name = "drogue-cloud-topic-admin-operator"
 description = "Topic operator using Kafka Admin"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
