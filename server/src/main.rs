@@ -746,6 +746,7 @@ fn main() {
                         disable_account_url: false,
                         scopes: "openid profile email".into(),
                         user_auth: user_auth.clone(),
+                        enable_access_token: true,
                     };
 
                     handles.push(Box::pin(drogue_cloud_console_backend::run(
