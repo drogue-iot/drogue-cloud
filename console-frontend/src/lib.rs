@@ -17,7 +17,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn run_app() -> Result<(), JsValue> {
-    wasm_logger::init(wasm_logger::Config::new(log::Level::Info));
+    wasm_logger::init(wasm_logger::Config::new(log::Level::Trace));
     log::info!("Getting ready...");
     yew::start_app::<Main>();
     Ok(())

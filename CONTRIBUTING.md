@@ -234,32 +234,7 @@ Error: Not able to find or install a local wasm-bindgen.
 
 #### Running
 
-You will need set a bunch of environment variables and start the `console-backend` with it:
-
-~~~
-# SSO_URL: must be replaced with your SSO instance, you can get it from the `./scripts/status.sh` script
-# export SSO_URL=https://keycloak-drogue-dev.apps.wonderful.iot-playground.org
-export REDIRECT_URL=http://localhost:8010
-export BIND_ADDR=localhost:8011
-export UI__CLIENT_ID=drogue
-export UI__CLIENT_SECRET=$(kubectl get secret keycloak-client-secret-services -o jsonpath="{.data['CLIENT_SECRET']}" | base64 -d)
-export NAMESPACE=drogue-dev
-export RUST_LOG=debug
-export ENDPOINT_SOURCE=env
-export HTTP_ENDPOINT_URL=http://http-endpoint
-export DEVICE_REGISTRY_URL=http://device-registry
-export MQTT_ENDPOINT_HOST=mqtt-endpoint
-export MQTT_ENDPOINT_PORT=443
-export MQTT_INTEGRATION_HOST=mqtt-integration
-export MQTT_INTEGRATION_PORT=443
-export USER_AUTH__CLIENT_ID=services
-export USER_AUTH__CLIENT_SECRET=$(kubectl get secret keycloak-client-secret-services -o jsonpath="{.data['CLIENT_SECRET']}" | base64 -d)
-export OAUTH__DROGUE__CLIENT_ID=drogue
-export OAUTH__DROGUE__CLIENT_SECRET=$(kubectl get secret keycloak-client-secret-services -o jsonpath="{.data['CLIENT_SECRET']}" | base64 -d)
-cargo run --package drogue-cloud-console-backend
-~~~
-
-Then you can start the `console-frontend` in the development mode:
+The simplest way to run the `console-backend` is to use [`drogue-cloud-server`](https://github.com/drogue-iot/drogue-cloud/tree/main/server). Once you have it running (bound to localhost which is the default), you can start the `console-frontend` in the development mode:
 
 ~~~
 cd console-frontend

@@ -5,22 +5,29 @@ use drogue_cloud_service_api::{endpoints::Endpoints, version::DrogueVersion};
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
 
+#[derive(Clone)]
+pub enum DemoFetcher {
+    None,
+    Kube(Api<ConfigMap>),
+}
+
+impl DemoFetcher {
+    async fn get_demos(&self) -> Vec<(String, String)> {
+        match self {
+            DemoFetcher::None => Vec::new(),
+            DemoFetcher::Kube(config_maps) => get_demos(&config_maps).await.unwrap_or_default(),
+        }
+    }
+}
+
 pub async fn get_info(
     endpoints: web::Data<Endpoints>,
-    config_maps: Option<web::Data<Api<ConfigMap>>>,
+    demos: web::Data<DemoFetcher>,
 ) -> impl Responder {
     let info = EndpointInformation {
         endpoints: endpoints.get_ref().clone(),
-        demos: if let Some(config_maps) = config_maps {
-            get_demos(&config_maps)
-                .await
-                .map_err(|err| log::info!("Failed to get demos: {}", err))
-                .unwrap_or_default()
-        } else {
-            Vec::new()
-        },
+        demos: demos.get_ref().get_demos().await,
     };
-
     HttpResponse::Ok().json(info)
 }
 
