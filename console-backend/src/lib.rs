@@ -17,13 +17,13 @@ use actix_web::{
 use anyhow::Context;
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
 use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
+use drogue_cloud_service_common::actix_auth::authentication::AuthN;
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
-    openid::{Authenticator, AuthenticatorConfig, TokenConfig},
-    openid_auth,
+    openid::{AuthenticatorConfig, TokenConfig},
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::ConfigMap;
@@ -63,6 +63,9 @@ pub struct Config {
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
 
+    #[serde(default = "defaults::enable_access_token")]
+    pub enable_access_token: bool,
+
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
 
@@ -101,8 +104,9 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
     // OpenIdConnect
 
     let app_config = config.clone();
+    let enable_access_token = config.enable_access_token;
 
-    let authenticator = config.oauth.into_client().await?.map(web::Data::new);
+    let authenticator = config.oauth.into_client().await?;
 
     let (openid_client, user_auth) = if let Some(user_auth) = config.user_auth {
         let console_token_config = config
@@ -135,7 +139,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                 scopes: config.scopes.clone(),
                 account_url,
             }),
-            Some(web::Data::new(user_auth)),
+            Some(user_auth),
         )
     } else {
         (None, None)
@@ -165,7 +169,11 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     #[allow(clippy::let_and_return)]
     let main = HttpServer::new(move || {
-        let auth = openid_auth!(req -> req.app_data::<web::Data<Authenticator>>().map(|data|data.get_ref()));
+        let auth = AuthN {
+            openid: authenticator.as_ref().cloned(),
+            token: user_auth.clone(),
+            enable_access_token,
+        };
 
         let app = App::new()
             .wrap(Cors::permissive())
@@ -193,50 +201,56 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
         let app = app.app_data(keycloak_service.clone());
         let app = app.app_data(web::Data::new(registry.clone()));
-        let app = if let Some(config_maps ) = &config_maps {
+        let app = if let Some(config_maps) = &config_maps {
             app.app_data(web::Data::new(config_maps.clone()))
         } else {
             app
         };
 
-        let app = app.app_data(web::Data::new(endpoints.clone()))
-            .service(
-                web::scope("/api/tokens/v1alpha1")
-                    .wrap(auth.clone())
-                    .service(
-                        web::resource("")
-                            .route(web::post().to(keys::create::<KeycloakAccessTokenService<KeycloakAdminClient>>))
-                            .route(web::get().to(keys::list::<KeycloakAccessTokenService<KeycloakAdminClient>>)),
-                    )
-                    .service(
-                        web::resource("/{prefix}")
-                            .route(web::delete().to(keys::delete::<KeycloakAccessTokenService<KeycloakAdminClient>>)),
-                    ),
-            )
-            .service(
-                web::scope("/api/admin/v1alpha1")
-                    .wrap(auth.clone())
-                    .service(web::resource("/user/whoami").route(web::get().to(admin::whoami))),
-            )
-            // everything from here on is unauthenticated or not using the middleware
-            .service(
-                web::scope("/api/console/v1alpha1")
-                    .service(
-                        web::resource("/info")
-                            .wrap(auth.clone())
-                            .route(web::get().to(info::get_info)),
-                    )
-                    .service(auth::login)
-                    .service(auth::logout)
-                    .service(auth::code)
-                    .service(auth::refresh),
-            )
-            .service(index)
-            .service(
-                web::scope("/.well-known")
-                    .service(info::get_public_endpoints)
-                    .service(info::get_drogue_version),
-            );
+        let app =
+            app.app_data(web::Data::new(endpoints.clone()))
+                .service(
+                    web::scope("/api/tokens/v1alpha1")
+                        .wrap(auth.clone())
+                        .service(
+                            web::resource("")
+                                .route(web::post().to(keys::create::<
+                                    KeycloakAccessTokenService<KeycloakAdminClient>,
+                                >))
+                                .route(web::get().to(keys::list::<
+                                    KeycloakAccessTokenService<KeycloakAdminClient>,
+                                >)),
+                        )
+                        .service(web::resource("/{prefix}").route(
+                            web::delete().to(keys::delete::<
+                                KeycloakAccessTokenService<KeycloakAdminClient>,
+                            >),
+                        )),
+                )
+                .service(
+                    web::scope("/api/admin/v1alpha1")
+                        .wrap(auth.clone())
+                        .service(web::resource("/user/whoami").route(web::get().to(admin::whoami))),
+                )
+                // everything from here on is unauthenticated or not using the middleware
+                .service(
+                    web::scope("/api/console/v1alpha1")
+                        .service(
+                            web::resource("/info")
+                                .wrap(auth.clone())
+                                .route(web::get().to(info::get_info)),
+                        )
+                        .service(auth::login)
+                        .service(auth::logout)
+                        .service(auth::code)
+                        .service(auth::refresh),
+                )
+                .service(index)
+                .service(
+                    web::scope("/.well-known")
+                        .service(info::get_public_endpoints)
+                        .service(info::get_drogue_version),
+                );
 
         #[cfg(feature = "forward")]
         let app = app
@@ -245,7 +259,6 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             .default_service(web::route().to(forward::forward));
 
         app
-
     })
     .bind(bind_addr)?;
 
