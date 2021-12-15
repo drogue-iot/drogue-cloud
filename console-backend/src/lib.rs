@@ -23,8 +23,7 @@ use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
-    openid::{Authenticator, AuthenticatorConfig, TokenConfig},
-    openid_auth,
+    openid::{AuthenticatorConfig, TokenConfig},
 };
 use futures::TryFutureExt;
 use k8s_openapi::api::core::v1::ConfigMap;
