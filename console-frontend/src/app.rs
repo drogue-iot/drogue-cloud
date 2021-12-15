@@ -236,7 +236,7 @@ impl Component for Main {
                 if let Some(timeout) = token.valid_for() {
                     log::info!("Token expires in {:?}", timeout);
 
-                    let mut rem = (timeout.as_secs() as i64) - 30;
+                    let mut rem = timeout.as_secs() as i64;
                     if rem < 0 {
                         // ensure we are non-negative
                         rem = 0;

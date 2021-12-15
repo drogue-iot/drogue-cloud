@@ -105,7 +105,7 @@ impl BackendInformation {
                 cache: Some(Cache::NoCache),
                 credentials: Some(Credentials::Include),
                 redirect: Some(Redirect::Follow),
-                mode: Some(Mode::NoCors),
+                mode: Some(Mode::Cors),
                 ..Default::default()
             },
             callback.reform(move |response: Response<_>| {
