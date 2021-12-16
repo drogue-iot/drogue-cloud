@@ -133,15 +133,20 @@ certificate, you can instruct the installer to use these. There are two options 
 
 ==== Manually create the TLS secrets
 
-The installer will check if the secrets `http-endpoint-tls` and `mqtt-endpoint-tls` exist. If they don't it will
-create them either using provided or generated key and certificate material.
+The installer will check if the secrets `http-endpoint-tls`, `mqtt-endpoint-tls` and `coap-endpoint-tls` exist. If they don't it will
+create them using generated key and certificate material.
 
 If you manually create these TLS secrets, using those names, *before* running the installer, it will not override
-these existing secrets.
+these existing secrets. You can do that by running shell commands similar to these:
 
-==== Using local key and certificate files
+[source,shell]
+----
+kubectl -n drogue-iot create secret tls http-endpoint-tls --key $PATH_TO_CERT/tls.key --cert $PATH_TO_CERT/tls.crt --dry-run=client -o json | kubectl -n drogue-iot apply -f -
+kubectl -n drogue-iot create secret tls mqtt-endpoint-tls --key $PATH_TO_CERT/tls.key --cert $PATH_TO_CERT/tls.crt --dry-run=client -o json | kubectl -n drogue-iot apply -f -
+kubectl -n drogue-iot create secret tls coap-endpoint-tls --key $PATH_TO_CERT/tls.key --cert $PATH_TO_CERT/tls.crt --dry-run=client -o json | kubectl -n drogue-iot apply -f -
+----
 
-You can set the environment variable `TLS_KEY` and `TLS_CRT`, pointing them to PEM encoded key and certificate.
+Where `$PATH_TO_CERT` should point to the path location of your certificate.
 
 == Re-running the installer
 
