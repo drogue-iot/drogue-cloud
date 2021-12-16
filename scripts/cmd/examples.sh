@@ -61,10 +61,10 @@ echo
 echo "Data published by devices can be received via MQTT. Possibly start this in another terminal."
 echo
 echo "Structured content mode (MQTT v3.1.1 and v5):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'"
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/mqtt-endpoint.crt -t 'app/example-app'"
 echo
 echo "Binary content mode (MQTT v5 only):"
-echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/root-cert.pem -t 'app/example-app'" -up content-mode=binary
+echo "  mqtt sub -v -h $MQTT_INTEGRATION_HOST -p $MQTT_INTEGRATION_PORT -pw \"\$(drg whoami -t)\" -s --cafile build/certs/endpoints/mqtt-endpoint.crt -t 'app/example-app'" -up content-mode=binary
 echo
 echo "You can also subscribe to data using WebSockets, receiving Cloud Events:"
 echo "  websocat  -H=\"Authorization: Bearer \$(drg whoami -t)\" $WEBSOCKET_INTEGRATION_URL/example-app"
@@ -77,9 +77,9 @@ bold "---------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
-if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -s --cafile build/certs/endpoints/root-cert.pem -t temp -m '{\"temp\":42}'"
+if test -f build/certs/endpoints/http-endpoint.crt; then
+  echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/http-endpoint.crt POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -s --cafile build/certs/endpoints/mqtt-endpoint.crt -t temp -m '{\"temp\":42}'"
 else
   echo "  http --auth device1@example-app:hey-rodney POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
   echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -s -t temp -m '{\"temp\":42}'"
@@ -90,16 +90,16 @@ bold "------------------------------"
 echo
 echo "Publish data from the device and specify how long will you wait for a command with 'ct' parameter (in seconds):"
 echo
-if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
+if test -f build/certs/endpoints/http-endpoint.crt; then
+  echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/http-endpoint.crt POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 else
   echo "  http --auth device1@example-app:hey-rodney POST $HTTP_ENDPOINT_URL/v1/foo?ct=30 temp:=42"
 fi
 echo
 echo "Or, subscribe with the MQTT device:"
 echo
-if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -i device1 -s --cafile build/certs/endpoints/root-cert.pem -t command/inbox/#"
+if test -f build/certs/endpoints/mqtt-endpoint.crt; then
+  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -i device1 -s --cafile build/certs/endpoints/mqtt-endpoint.crt -t command/inbox/#"
 else
   echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -i device1 -s -t command/inbox/#"
 fi
@@ -152,7 +152,7 @@ echo "  http --auth device1@example-app:hey-rodney POST $HTTP_ENDPOINT_URL/v1/fo
 echo
 echo "Local test certificates:"
 echo
-echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
+echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/http-endpoint.crt POST $HTTP_ENDPOINT_URL/v1/foo data_schema==vorto:io.drogue.demo:FirstTestDevice:1.0.0 temp:=24"
 echo
 echo "Check the twin status:"
 echo "-----------------------"

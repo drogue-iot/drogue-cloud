@@ -98,4 +98,3 @@ deploy: check build
 	kubectl -n "$(DROGUE_NS)" create secret tls http-endpoint-tls --key $(EGEN)/http-endpoint.key --cert $(EGEN)/http-endpoint.fullchain.crt --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
 	kubectl -n "$(DROGUE_NS)" create secret tls mqtt-endpoint-tls --key $(EGEN)/mqtt-endpoint.key --cert $(EGEN)/mqtt-endpoint.fullchain.crt --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
 	kubectl -n "$(DROGUE_NS)" create secret tls coap-endpoint-tls --key $(EGEN)/coap-endpoint.key --cert $(EGEN)/coap-endpoint.fullchain.crt --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -
-	kubectl -n "$(DROGUE_NS)" create secret tls root-endpoint-tls --key $(EGEN)/root-key.pem --cert $(EGEN)/root-cert.pem --dry-run=client -o json | kubectl -n "$(DROGUE_NS)" apply -f -

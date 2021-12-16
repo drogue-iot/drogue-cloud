@@ -250,10 +250,12 @@ progress -n "⏳ Waiting for deployments to become ready ... "
 kubectl wait deployment -l '!serving.knative.dev/service' --timeout=-1s --for=condition=Available -n "$DROGUE_NS"
 progress "done!"
 
-# download root certificate
+# download certificates
 
 mkdir -p build/certs/endpoints/
-kubectl -n drogue-iot get secret root-endpoint-tls -o jsonpath="{.data.tls\\.crt}" | base64 -d > build/certs/endpoints/root-cert.pem
+kubectl -n drogue-iot get secret http-endpoint-tls -o jsonpath="{.data.tls\\.crt}" | base64 -d > build/certs/endpoints/http-endpoint.crt
+kubectl -n drogue-iot get secret mqtt-endpoint-tls -o jsonpath="{.data.tls\\.crt}" | base64 -d > build/certs/endpoints/mqtt-endpoint.crt
+kubectl -n drogue-iot get secret coap-endpoint-tls -o jsonpath="{.data.tls\\.crt}" | base64 -d > build/certs/endpoints/coap-endpoint.crt
 
 # show status
 
