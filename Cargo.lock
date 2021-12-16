@@ -1053,7 +1053,7 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk"
 version = "0.4.0"
-source = "git+https://github.com/cloudevents/sdk-rust?branch=actix-web-4.0.0-beta.8#114627cf7a47f74f6f71308ca1e7e33eae0390d5"
+source = "git+https://github.com/cloudevents/sdk-rust?branch=actix-web-4.0.0-beta.8#3a6332c3a6780d1499a871d8aede25ba730372a4"
 dependencies = [
  "actix-web",
  "async-trait",
