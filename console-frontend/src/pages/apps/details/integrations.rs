@@ -1,5 +1,6 @@
 use crate::{
     backend::{Backend, Token},
+    html_prop,
     utils::{shell_single_quote, to_model, to_yaml_model},
 };
 use bstr::ByteVec;
@@ -120,11 +121,11 @@ impl IntegrationDetails<'_> {
 
         if let Ok(model) = model {
             html! {
-                <CodeEditor model=model options=options />
+                <CodeEditor model={model} options={options} />
             }
         } else {
             html! {
-                <Alert title="Failed to load editor" r#type=Type::Warning inline=true />
+                <Alert title="Failed to load editor" r#type={Type::Warning} inline=true />
             }
         }
     }
@@ -132,8 +133,8 @@ impl IntegrationDetails<'_> {
     fn render_mqtt(&self, mqtt: &MqttEndpoint) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[6]>{ self.render_mqtt_basic(mqtt) }</GridItem>
-                <GridItem cols=[6]>{ self.render_mqtt_quarkus(mqtt) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_mqtt_basic(mqtt) }</GridItem>
+                <GridItem cols= {[6]}>{ self.render_mqtt_quarkus(mqtt) }</GridItem>
             </Grid>
         };
     }
@@ -150,10 +151,10 @@ impl IntegrationDetails<'_> {
         return html! {
             <DescriptionList>
                 <DescriptionGroup term="Host">
-                    <Clipboard readonly=true value=mqtt.host.clone() />
+                    <Clipboard readonly=true value={mqtt.host.clone()} />
                 </DescriptionGroup>
                 <DescriptionGroup term="Port">
-                    <Clipboard readonly=true value=mqtt.port.to_string() />
+                    <Clipboard readonly=true value={mqtt.port.to_string()} />
                 </DescriptionGroup>
                 <DescriptionGroup term="Version">
                     <strong>{ "v3.1.1" }</strong> {" or "} <strong> { "v5" } </strong>
@@ -166,14 +167,14 @@ impl IntegrationDetails<'_> {
                         <Tab label="OAuth2 Token">
                             <DescriptionList>
                                 <DescriptionGroup term="Username (access token)">
-                                    <Clipboard readonly=true value=self.token.access_token.clone() />
+                                    <Clipboard readonly=true value={self.token.access_token.clone()} />
                                 </DescriptionGroup>
                             </DescriptionList>
                         </Tab>
                         <Tab label="API key">
                             <DescriptionList>
                                 <DescriptionGroup term="Username">
-                                    <Clipboard readonly=true value=user />
+                                    <Clipboard readonly=true value={user} />
                                 </DescriptionGroup>
                                 <DescriptionGroup term="Password (API key)">
                                     <TextInput readonly=true value="<api key>" />
@@ -185,15 +186,15 @@ impl IntegrationDetails<'_> {
                 <DescriptionGroup term="Device-to-Cloud subscription">
                     <Tabs>
                         <Tab label="Normal">
-                            <Clipboard readonly=true value=format!("app/{}", self.application.metadata.name) />
+                            <Clipboard readonly=true value={format!("app/{}", self.application.metadata.name)} />
                         </Tab>
                         <Tab label="Shared group">
-                            <Clipboard readonly=true value=format!("$shared/<group>/app/{}", self.application.metadata.name) />
+                            <Clipboard readonly=true value={format!("$shared/<group>/app/{}", self.application.metadata.name)} />
                         </Tab>
                     </Tabs>
                 </DescriptionGroup>
                 <DescriptionGroup term="Cloud-to-Device publishing">
-                    <Clipboard readonly=true value=format!("command/{}/<device>/<command>", self.application.metadata.name) />
+                    <Clipboard readonly=true value={format!("command/{}/<device>/<command>", self.application.metadata.name)} />
                 </DescriptionGroup>
             </DescriptionList>
         };
@@ -223,8 +224,8 @@ impl IntegrationDetails<'_> {
     fn render_kafka(&self, info: &KafkaInfo) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[6]>{ self.render_kafka_basic(&info) }</GridItem>
-                <GridItem cols=[6]>{ self.render_kafka_examples(&info) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_kafka_basic(&info) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_kafka_examples(&info) }</GridItem>
             </Grid>
         };
     }
@@ -350,8 +351,8 @@ stringData:
                 <Tabs>
                     <Tab label="Command line">
                         <Clipboard
-                            code=true readonly=true variant=ClipboardVariant::Expanded
-                            value=podman/>
+                            code=true readonly=true variant={ClipboardVariant::Expanded}
+                            value={podman}/>
                     </Tab>
                     <Tab label="Quarkus">
                         <div><code>{"application.properties"}</code></div>
@@ -376,10 +377,10 @@ stringData:
                             html! {
                                 <>
                                 <DescriptionGroup term="Device-to-Cloud topic">
-                                    <Clipboard code=true readonly=true value=topic/>
+                                    <Clipboard code=true readonly=true value={topic.clone()}/>
                                 </DescriptionGroup>
                                 <DescriptionGroup term="Bootstrap Servers">
-                                    <Clipboard code=true readonly=true value=&info.bootstrap/>
+                                    <Clipboard code=true readonly=true value={info.bootstrap.clone()}/>
                                 </DescriptionGroup>
                                 </>
                             }
@@ -387,7 +388,7 @@ stringData:
                         KafkaTarget::External { config } => {
                             html! {
                                  <DescriptionGroup term="Device-to-Cloud topic">
-                                    <Clipboard code=true readonly=true value=&config.topic/>
+                                    <Clipboard code=true readonly=true value={config.topic.clone()}/>
                                 </DescriptionGroup>
                             }
                         }
@@ -395,21 +396,21 @@ stringData:
                 }
 
                 <DescriptionGroup term="User">
-                    <Clipboard code=true readonly=true value=&info.user.username/>
+                    <Clipboard code=true readonly=true value={info.user.username.clone()}/>
                 </DescriptionGroup>
                 <DescriptionGroup term="Password">
-                    <Clipboard code=true readonly=true value=&info.user.password/>
+                    <Clipboard code=true readonly=true value={info.user.password.clone()}/>
                 </DescriptionGroup>
                 <DescriptionGroup term="Mechanism">
-                    <Clipboard code=true readonly=true value=&info.user.mechanism/>
+                    <Clipboard code=true readonly=true value={info.user.mechanism.clone()}/>
                 </DescriptionGroup>
                 <DescriptionGroup term="JAAS Config">
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
-                        value=Self::jaas_config(&info.user)/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable}
+                        value={Self::jaas_config(&info.user)}/>
                 </DescriptionGroup>
                 <DescriptionGroup term="Consumer Properties">
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable
-                        value=Self::consumer_properties_str(&info.user)/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable}
+                        value={Self::consumer_properties_str(&info.user)}/>
                 </DescriptionGroup>
             </DescriptionList>
             </>
@@ -419,8 +420,8 @@ stringData:
     fn render_ws(&self, ws: &HttpEndpoint) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[6]>{ self.render_ws_basic(ws) }</GridItem>
-                <GridItem cols=[6]>{ self.render_ws_example(ws) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_ws_basic(ws) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_ws_example(ws) }</GridItem>
             </Grid>
         };
     }
@@ -437,7 +438,7 @@ stringData:
         return html! {
             <DescriptionList>
                 <DescriptionGroup term="URL">
-                    <Clipboard readonly=true value=ws.url.clone() />
+                    <Clipboard readonly=true value={ws.url.clone()} />
                 </DescriptionGroup>
                 <DescriptionGroup term="TLS required">
                     <Switch checked=true disabled=true />
@@ -447,14 +448,14 @@ stringData:
                         <Tab label="OAuth2 Token">
                             <DescriptionList>
                                 <DescriptionGroup term="Bearer token">
-                                    <Clipboard readonly=true value=self.token.access_token.clone() />
+                                    <Clipboard readonly=true value={self.token.access_token.clone()} />
                                 </DescriptionGroup>
                             </DescriptionList>
                         </Tab>
                         <Tab label="API key">
                             <DescriptionList>
                                 <DescriptionGroup term="Username">
-                                    <Clipboard readonly=true value=user />
+                                    <Clipboard readonly=true value={user} />
                                 </DescriptionGroup>
                                 <DescriptionGroup term="Password (API key)">
                                     <TextInput readonly=true value="<api key>" />
@@ -464,7 +465,7 @@ stringData:
                     </Tabs>
                 </DescriptionGroup>
                 <DescriptionGroup term="Application events subscription">
-                    <Clipboard readonly=true value=self.application.metadata.name.clone() />
+                    <Clipboard readonly=true value={self.application.metadata.name.clone()} />
                 </DescriptionGroup>
             </DescriptionList>
         };
@@ -483,8 +484,8 @@ stringData:
                 <Tabs>
                     <Tab label="Command line">
                         <Clipboard
-                            code=true readonly=true variant=ClipboardVariant::Expanded
-                            value=websocat/>
+                            code=true readonly=true variant={ClipboardVariant::Expanded}
+                            value={websocat}/>
                     </Tab>
                 </Tabs>
                 </>
@@ -494,7 +495,7 @@ stringData:
     fn wrap_card(title: &str, html: Html) -> Html {
         return html! {
             <Card
-                title={html_nested!{<>{title}</>}}
+                title={html_prop!({title})}
                 expandable=true large=true
                 >
                 { html }

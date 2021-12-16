@@ -1,4 +1,4 @@
-use crate::backend::Token;
+use crate::{backend::Token, html_prop};
 use patternfly_yew::*;
 use yew::prelude::*;
 
@@ -7,51 +7,42 @@ pub struct Props {
     pub token: Token,
 }
 
-pub struct CurrentToken {
-    props: Props,
-}
+pub struct CurrentToken {}
 
 impl Component for CurrentToken {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self { props }
+    fn create(_: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        true
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
-        let token = self.props.token.refresh_token.as_deref().unwrap_or("");
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let token = ctx
+            .props()
+            .token
+            .refresh_token
+            .as_ref()
+            .cloned()
+            .unwrap_or_default();
 
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
+                <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
                         <Title>{"Current API token"}</Title>
                     </Content>
                 </PageSection>
                 <PageSection>
                     <Card
-                        title={html!{"Current API refresh token"}}
+                        title={html_prop!({"Current API refresh token"})}
                         >
                         <Clipboard
                             readonly=true
                             code=true
-                            variant=ClipboardVariant::Expandable
-                            value=token>
-                        </Clipboard>
+                            variant={ClipboardVariant::Expandable}
+                            value={token}
+                        />
                     </Card>
                 </PageSection>
             </>

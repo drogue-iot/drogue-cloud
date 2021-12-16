@@ -2,7 +2,7 @@ use core::fmt::{Display, Formatter};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferOwnership {
     pub new_user: String,

@@ -9,6 +9,7 @@ pub use consume::*;
 pub use publish::*;
 pub use register::*;
 
+use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::{
     backend::{Backend, Token},
     data::SharedDataBridge,
@@ -17,13 +18,10 @@ use crate::{
 use anyhow::Error;
 use data::CoreExampleData;
 use drogue_cloud_service_api::endpoints::Endpoints;
+use http::Method;
 use patternfly_yew::*;
 use std::rc::Rc;
-use yew::{
-    format::{Json, Nothing},
-    prelude::*,
-    services::fetch::*,
-};
+use yew::prelude::*;
 use yew_router::prelude::*;
 
 #[derive(Switch, Debug, Clone, PartialEq, Eq)]
@@ -55,10 +53,7 @@ pub struct Props {
 }
 
 pub struct ExamplePage {
-    props: Props,
-    link: ComponentLink<Self>,
-
-    ft: Option<FetchTask>,
+    ft: Option<RequestHandle>,
     endpoints: Option<Endpoints>,
 
     data: Option<ExampleData>,
@@ -82,19 +77,16 @@ impl Component for ExamplePage {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let mut data_agent = SharedDataBridge::from(&link, Msg::ExampleData);
+    fn create(ctx: &Context<Self>) -> Self {
+        let mut data_agent = SharedDataBridge::from(&ctx.link(), Msg::ExampleData);
         data_agent.request_state();
 
-        let mut token_agent = SharedDataBridge::from(&link, Msg::SetToken);
+        let mut token_agent = SharedDataBridge::from(&ctx.link(), Msg::SetToken);
         token_agent.request_state();
 
-        link.send_message(Msg::FetchOverview);
+        ctx.link().send_message(Msg::FetchOverview);
 
         Self {
-            props,
-            link,
-
             ft: None,
             endpoints: None,
 
@@ -106,10 +98,10 @@ impl Component for ExamplePage {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::FetchOverview => {
-                self.ft = Some(self.fetch_overview().unwrap());
+                self.ft = Some(self.fetch_overview(ctx).unwrap());
             }
             Msg::FetchOverviewFailed => return false,
             Msg::OverviewUpdate(e) => {
@@ -125,25 +117,16 @@ impl Component for ExamplePage {
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
+                <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
                         <h1>{"Getting started"}</h1>
                     </Content>
                 </PageSection>
                 <PageSection>
-                    { self.render_overview() }
+                    { self.render_overview(ctx) }
                 </PageSection>
             </>
         };
@@ -151,28 +134,22 @@ impl Component for ExamplePage {
 }
 
 impl ExamplePage {
-    fn fetch_overview(&self) -> Result<FetchTask, Error> {
-        Backend::request(
+    fn fetch_overview(&self, ctx: &Context<Self>) -> Result<RequestHandle, Error> {
+        Ok(Backend::request(
             Method::GET,
             "/api/console/v1alpha1/info",
             Nothing,
-            self.link
-                .callback(|response: Response<Json<Result<Endpoints, Error>>>| {
-                    let parts = response.into_parts();
-                    if let (meta, Json(Ok(body))) = parts {
-                        if meta.status.is_success() {
-                            return Msg::OverviewUpdate(Rc::new(body));
-                        }
-                    }
-                    Msg::FetchOverviewFailed
-                }),
-        )
+            ctx.callback_api::<Json<Endpoints>, _>(|response| match response {
+                ApiResponse::Success(endpoints, _) => Msg::OverviewUpdate(Rc::new(endpoints)),
+                ApiResponse::Failure(_) => Msg::FetchOverviewFailed,
+            }),
+        )?)
     }
 
-    fn render_overview(&self) -> Html {
+    fn render_overview(&self, ctx: &Context<Self>) -> Html {
         match (&self.endpoints, &self.data, &self.token) {
             (Some(endpoints), Some(data), Some(token)) => {
-                self.render_main(endpoints.clone(), data.clone(), token.clone())
+                self.render_main(ctx, endpoints.clone(), data.clone(), token.clone())
             }
             _ => html! {
                 <div>{"Loading..."}</div>
@@ -180,45 +157,51 @@ impl ExamplePage {
         }
     }
 
-    fn render_main(&self, endpoints: Endpoints, data: ExampleData, token: Token) -> Html {
+    fn render_main(
+        &self,
+        ctx: &Context<Self>,
+        endpoints: Endpoints,
+        data: ExampleData,
+        token: Token,
+    ) -> Html {
         return html! {
             <Grid gutter=true>
 
                 <GridItem
-                    cols=[10]
+                    cols={[10]}
                     >
                     <Stack gutter=true>
 
                         <StackItem>
-                            <Title size=Size::XXLarge>{self.props.example.title()}</Title>
+                            <Title size={Size::XXLarge}>{ctx.props().example.title()}</Title>
                         </StackItem>
 
                         {
-                            match self.props.example {
+                            match ctx.props().example {
                                 Examples::Register => html!{
                                     <RegisterDevices
-                                        endpoints=endpoints.clone()
-                                        data=data.clone()
+                                        endpoints={endpoints.clone()}
+                                        data={data.clone()}
                                         />
                                 },
                                 Examples::Consume => html!{
                                     <ConsumeData
-                                        endpoints=endpoints.clone()
-                                        data=data.clone()
-                                        token=token.clone()
+                                        endpoints={endpoints.clone()}
+                                        data={data.clone()}
+                                        token={token.clone()}
                                         />
                                 },
                                 Examples::Publish => html!{
                                     <PublishData
-                                        endpoints=endpoints.clone()
-                                        data=data.clone()
+                                        endpoints={endpoints.clone()}
+                                        data={data.clone()}
                                         />
                                 },
                                 Examples::Commands => html!{
                                     <CommandAndControl
-                                        endpoints=endpoints.clone()
-                                        data=data.clone()
-                                        token=token.clone()
+                                        endpoints={endpoints.clone()}
+                                        data={data.clone()}
+                                        token={token.clone()}
                                         />
                                 },
                             }
@@ -227,9 +210,9 @@ impl ExamplePage {
                     </Stack>
                 </GridItem>
 
-                <GridItem cols=[2]>
+                <GridItem cols={[2]}>
                     <CoreExampleData
-                        endpoints=endpoints.clone()
+                        endpoints={endpoints.clone()}
                         />
                 </GridItem>
 
@@ -241,7 +224,7 @@ impl ExamplePage {
 fn note_local_certs(local_certs: bool) -> Html {
     match local_certs {
         true => html! {
-            <Alert  r#type=Type::Warning title="Check your path!" inline=true>
+            <Alert  r#type={Type::Warning} title="Check your path!" inline=true>
                 <Content>
                     <p>{r#"
                     This command uses the locally generated certificate bundle. The command will fail if you are not executing it from the root directory of the installer or repository."#}

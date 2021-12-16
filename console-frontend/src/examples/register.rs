@@ -1,6 +1,7 @@
 use crate::{
     backend::Backend,
     examples::data::ExampleData,
+    html_prop,
     utils::{shell_quote, shell_single_quote},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
@@ -14,36 +15,21 @@ pub struct Props {
     pub data: ExampleData,
 }
 
-pub struct RegisterDevices {
-    props: Props,
-}
+pub struct RegisterDevices {}
 
 impl Component for RegisterDevices {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self { props }
+    fn create(_: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let mut cards: Vec<_> = vec![html! {
             <Alert
                 title="Requirements"
-                r#type=Type::Info inline=true
+                r#type={Type::Info} inline=true
                 >
                 <Content>
                 <p>
@@ -64,38 +50,38 @@ impl Component for RegisterDevices {
         if let Some(api) = Backend::url("") {
             let login_cmd = format!(r#"drg login {url}"#, url = shell_quote(api));
             cards.push(html!{
-                <Card title=html!{"Log in"}>
+                <Card title={html_prop!({"Log in"})}>
                     <div>
                     {"Log in to the backend. This will ask you to open the login URL in the browser, in order to follow the OpenID Connect login flow."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=login_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={login_cmd}/>
                 </Card>
             });
         }
 
-        let create_app_cmd = format!(r#"drg create app {name}"#, name = self.props.data.app_id);
+        let create_app_cmd = format!(r#"drg create app {name}"#, name = ctx.props().data.app_id);
         let create_device_cmd = format!(
             r#"drg create device --app {app} {device} --spec {spec}"#,
-            app = self.props.data.app_id,
-            device = shell_quote(&self.props.data.device_id),
+            app = ctx.props().data.app_id,
+            device = shell_quote(&ctx.props().data.device_id),
             spec = shell_single_quote(json!({"credentials": {"credentials":[
-                {"pass": self.props.data.password},
+                {"pass": ctx.props().data.password},
             ]}})),
         );
         cards.push(html!{
-                <Card title={html!{"Create a new application"}}>
+                <Card title={html_prop!({"Create a new application"})}>
                     <div>
                     {"As a first step, you will need to create a new application."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_app_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={create_app_cmd}/>
                 </Card>
             });
         cards.push(html!{
-                <Card title={html!{"Create a new device"}}>
+                <Card title={html_prop!({"Create a new device"})}>
                     <div>
                     {"As part of your application, you can then create a new device."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=create_device_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={create_device_cmd}/>
                 </Card>
             });
 

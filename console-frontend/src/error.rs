@@ -1,8 +1,5 @@
-use crate::utils::{Failed, JsonResponse, Succeeded};
-use drogue_cloud_service_api::error::ErrorResponse;
-use http::Response;
+use crate::backend::{ApiError, ApiResponse};
 use patternfly_yew::{Toast, ToastDispatcher, Type};
-use yew::format::Text;
 use yew::prelude::*;
 
 pub trait ErrorProvider {
@@ -74,73 +71,24 @@ impl ErrorProvider for anyhow::Error {
     }
 }
 
-impl ErrorProvider for Response<Text> {
-    fn description(self) -> String {
-        self.into_body().description()
-    }
-}
-
-impl<T> ErrorProvider for JsonResponse<T> {
-    fn description(self) -> String {
-        match self.into_body().0 {
-            Ok(text) => text.description(),
-            Err(err) => err.description(),
-        }
-    }
-}
-
-impl ErrorProvider for Text {
+impl ErrorProvider for ApiError {
     fn description(self) -> String {
         match self {
-            Ok(t) => match serde_json::from_str::<ErrorResponse>(&t) {
-                Ok(response) => response.message,
-                Err(_) => t,
-            },
-            Err(err) => err.to_string(),
+            ApiError::Response(response, _) => response.message,
+            ApiError::Internal(err) => format!("Internal error: {}", err),
+            ApiError::Unknown(_, code) => format!("Unknown response (code: {})", code),
         }
     }
 }
 
-impl<E> ErrorProvider for Succeeded<yew::format::Text, E> {
+/// Error provider for an API response
+impl<T> ErrorProvider for ApiResponse<T> {
     fn description(self) -> String {
-        self.data.description()
-    }
-}
-
-impl<E> ErrorProvider for Failed<yew::format::Text, E> {
-    fn description(self) -> String {
-        self.data.description()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use http::Response;
-    use yew::format::Text;
-
-    #[test]
-    fn test_error_response() {
-        let response = Response::builder()
-            .status(400)
-            .body(Text::Ok(
-                r#"{ "error": "BadRequest", "message": "Failed to perform operation" }"#
-                    .to_string(),
-            ))
-            .unwrap();
-
-        let description = response.description();
-        assert_eq!("Failed to perform operation", description);
-    }
-
-    #[test]
-    fn test_unparsable_error() {
-        let response = Response::builder()
-            .status(400)
-            .body(Text::Ok(r#"Failed to execute"#.to_string()))
-            .unwrap();
-
-        let description = response.description();
-        assert_eq!("Failed to execute", description);
+        match self {
+            // if we need to provide an error for a successful API response, then obviously the code wasn't correct
+            Self::Success(_, code) => format!("Invalid response code: {}", code),
+            // standard error
+            Self::Failure(err) => err.description(),
+        }
     }
 }

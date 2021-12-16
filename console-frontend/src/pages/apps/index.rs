@@ -1,5 +1,6 @@
+use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::error::{ErrorNotification, ErrorNotifier};
-use crate::utils::{url_encode, JsonResponse};
+use crate::utils::url_encode;
 use crate::{
     backend::Backend,
     error::error,
@@ -10,8 +11,9 @@ use crate::{
     },
 };
 use drogue_client::registry::v1::Application;
+use http::{Method, StatusCode};
 use patternfly_yew::*;
-use yew::{format::*, prelude::*, services::fetch::*};
+use yew::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -25,7 +27,7 @@ impl TableRenderer for ApplicationEntry {
     fn render(&self, column: ColumnIndex) -> Html {
         match column.index {
             0 => html! {
-                <a onclick=self.on_overview.clone().reform(|_|())>{self.app.metadata.name.clone()}</a>
+                <a onclick={self.on_overview.clone().reform(|_|())}>{self.app.metadata.name.clone()}</a>
             },
             1 => self.app.render_state(),
             2 => self
@@ -41,7 +43,7 @@ impl TableRenderer for ApplicationEntry {
     fn actions(&self) -> Vec<DropdownChildVariant> {
         vec![html_nested! {
         <DropdownItem
-            onclick=self.on_delete.clone()
+            onclick={self.on_delete.clone()}
         >
             {"Delete"}
         </DropdownItem>}
@@ -66,30 +68,26 @@ pub enum Msg {
 }
 
 pub struct Index {
-    props: Props,
-    link: ComponentLink<Self>,
     entries: Vec<ApplicationEntry>,
 
-    fetch_task: Option<FetchTask>,
+    fetch_task: Option<RequestHandle>,
 }
 
 impl Component for Index {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::Load);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::Load);
         Self {
-            props,
-            link,
             entries: Vec::new(),
             fetch_task: None,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::Load => match self.load() {
+            Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to fetch", err),
             },
@@ -106,15 +104,15 @@ impl Component for Index {
                     details: DetailsSection::Overview,
                 }))),
             ),
-            Msg::Delete(name) => match self.delete(name) {
+            Msg::Delete(name) => match self.delete(ctx, name) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to delete", err),
             },
             Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
                 content: (html! {
                     <CreateDialog
-                        backend=self.props.backend.clone()
-                        on_close=self.link.callback_once(move |_| Msg::Load)
+                        backend={ctx.props().backend.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
                         />
                 }),
             }),
@@ -122,98 +120,90 @@ impl Component for Index {
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        true
-    }
-
-    fn view(&self) -> Html {
-        return html! {
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        html! {
             <>
-                <PageSection variant=PageSectionVariant::Light>
+                <PageSection variant={PageSectionVariant::Light}>
                     <Content>
                        <Flex>
-                        <FlexItem>
-                            <Title>{"Applications"}</Title>
-                        </FlexItem>
-                        <FlexItem modifiers=vec![FlexModifier::Align(Alignement::Right).all()]>
-                            <Button
-                                    label="New Application"
-                                    variant=Variant::Primary
-                                    onclick=self.link.callback(|_|Msg::TriggerModal)
-                            />
-                        </FlexItem>
+                            <FlexItem>
+                                <Title>{"Applications"}</Title>
+                            </FlexItem>
+                            <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
+                                <Button
+                                        label="New Application"
+                                        variant={Variant::Primary}
+                                        onclick={ctx.link().callback(|_|Msg::TriggerModal)}
+                                />
+                            </FlexItem>
                         </Flex>
                     </Content>
                 </PageSection>
                 <PageSection>
-                    <Table<SimpleTableModel<ApplicationEntry>>
-                        entries=SimpleTableModel::from(self.entries.clone())
-                        header={html_nested!{
+                    <Table<SharedTableModel<ApplicationEntry>>
+                        entries={SharedTableModel::from(self.entries.clone())}
+                        header={{html_nested!{
                             <TableHeader>
                                 <TableColumn label="Name"/>
                                 <TableColumn label="Status"/>
                                 <TableColumn label="Created"/>
                             </TableHeader>
-                        }}
+                        }}}
                         >
-                    </Table<SimpleTableModel<ApplicationEntry>>>
+                    </Table<SharedTableModel<ApplicationEntry>>>
                 </PageSection>
             </>
-        };
+        }
     }
 }
 
 impl Index {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
-        let link = self.link.clone();
+    fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        let link = ctx.link().clone();
 
-        self.props.backend.info.request(
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             "/api/registry/v1alpha1/apps",
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: JsonResponse<Vec<Application>>| {
-                    match response.into_body().0 {
-                        Ok(entries) => {
-                            let link = link.clone();
-                            let entries = entries
-                                .value
-                                .into_iter()
-                                .map(move |app| {
-                                    let name = app.metadata.name.clone();
-                                    let name_copy = app.metadata.name.clone();
+            ctx.callback_api::<Json<Vec<Application>>, _>(move |response| match response {
+                ApiResponse::Success(entries, _) => {
+                    let link = link.clone();
+                    let entries = entries
+                        .into_iter()
+                        .map(move |app| {
+                            let name = app.metadata.name.clone();
+                            let name_copy = app.metadata.name.clone();
 
-                                    let on_overview =
-                                        link.callback_once(move |_| Msg::ShowOverview(name));
+                            let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
 
-                                    ApplicationEntry {
-                                        app,
-                                        on_overview,
-                                        on_delete: link
-                                            .callback_once(move |_| Msg::Delete(name_copy)),
-                                    }
-                                })
-                                .collect();
-                            Msg::SetData(entries)
-                        }
-                        Err(err) => Msg::Error(err.notify("Failed to load")),
-                    }
-                }),
-        )
+                            ApplicationEntry {
+                                app,
+                                on_overview,
+                                on_delete: link.callback_once(move |_| Msg::Delete(name_copy)),
+                            }
+                        })
+                        .collect();
+                    Msg::SetData(entries)
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load")),
+            }),
+        )?)
     }
 
-    fn delete(&self, name: String) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn delete(&self, ctx: &Context<Self>, name: String) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::DELETE,
             format!("/api/registry/v1alpha1/apps/{}", url_encode(name)),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::NO_CONTENT => Msg::Load,
-                    _ => Msg::Error(response.notify("Failed to delete")),
-                }),
-        )
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::Load,
+                ApiResponse::Success(_, code) => {
+                    Msg::Error(format!("Unknown message code: {}", code).notify("Failed to delete"))
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
+            }),
+        )?)
     }
 }

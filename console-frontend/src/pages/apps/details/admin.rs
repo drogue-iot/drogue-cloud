@@ -1,20 +1,21 @@
+use crate::backend::{ApiError, ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
+use crate::html_prop;
 use crate::utils::{success, ToastBuilder};
 use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
     pages::apps::details::Props,
-    utils::{url_encode, Json, JsonResponse},
+    utils::url_encode,
 };
 use anyhow::{anyhow, Result};
 use drogue_cloud_service_api::admin::{MemberEntry, Members, Role, TransferOwnership};
+use http::{Method, StatusCode};
 use indexmap::IndexMap;
 use patternfly_yew::*;
-use serde_json::json;
-use yew::{format::*, prelude::*, services::fetch::*, Html};
+use yew::html::Scope;
+use yew::{prelude::*, Html};
 
 pub struct Admin {
-    props: Props,
-    fetch: Option<FetchTask>,
-    link: ComponentLink<Self>,
+    fetch: Option<RequestHandle>,
 
     members: Option<Users>,
     new_member_id: String,
@@ -22,7 +23,7 @@ pub struct Admin {
 
     new_owner: String,
     pending_transfer: bool,
-    transfer_fetch: Option<FetchTask>,
+    transfer_fetch: Option<RequestHandle>,
     can_transfer: bool,
 
     stop: bool,
@@ -49,7 +50,7 @@ pub enum Msg {
     CancelTransfer,
     Error(ErrorNotification),
     Reset,
-    Stop(String),
+    Stop(Option<ErrorNotification>),
 }
 
 #[derive(Clone, Debug)]
@@ -85,7 +86,7 @@ impl TableRenderer for User {
     fn actions(&self) -> Vec<DropdownChildVariant> {
         vec![html_nested! {
         <DropdownItem
-            onclick=self.on_delete.clone()
+            onclick={self.on_delete.clone()}
         >
             {"Remove"}
         </DropdownItem>}
@@ -97,13 +98,11 @@ impl Component for Admin {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::LoadMembers);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::LoadMembers);
 
         Self {
-            props,
             fetch: None,
-            link,
             members: None,
             new_member_id: Default::default(),
             new_member_role: Role::Reader,
@@ -114,9 +113,9 @@ impl Component for Admin {
             can_transfer: false,
         }
     }
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::LoadMembers => match self.load() {
+            Msg::LoadMembers => match self.load(ctx) {
                 Ok((members, transfer)) => {
                     self.fetch = Some(members);
                     self.transfer_fetch = Some(transfer);
@@ -124,16 +123,16 @@ impl Component for Admin {
                 Err(err) => error("Failed to load", err),
             },
             Msg::SetMembers(members) => {
-                self.members = Some(Users::from(members, self.props.name.clone(), &self.link));
+                self.members = Some(Users::from(members, ctx.props().name.clone(), &ctx.link()));
                 self.fetch = None;
             }
             Msg::AddMember => {
                 let (id, entry) = (&self.new_member_id, &self.new_member_role);
                 if let Some(m) = self.members.as_mut() {
-                    if let Err(e) = m.add(id.clone(), *entry, &self.link) {
+                    if let Err(e) = m.add(id.clone(), *entry, &ctx.link()) {
                         error("Failed to add user", e);
                     } else {
-                        match self.submit() {
+                        match self.submit(ctx) {
                             Ok(task) => self.fetch = Some(task),
                             Err(err) => error("Failed to update", err),
                         }
@@ -143,7 +142,7 @@ impl Component for Admin {
             Msg::DeleteMember(id) => {
                 if let Some(m) = self.members.as_mut() {
                     m.delete(id);
-                    match self.submit() {
+                    match self.submit(ctx) {
                         Ok(task) => self.fetch = Some(task),
                         Err(err) => error("Failed to update", err),
                     }
@@ -154,7 +153,7 @@ impl Component for Admin {
             Msg::NewMemberRole(role) => self.new_member_role = role,
 
             Msg::NewOwner(id) => self.new_owner = id,
-            Msg::TransferOwner => match self.transfer() {
+            Msg::TransferOwner => match self.transfer(ctx) {
                 Ok(task) => self.fetch = Some(task),
                 Err(err) => error("Failed to transfer app", err),
             },
@@ -171,134 +170,125 @@ impl Component for Admin {
                     }
                 }
             }
-            Msg::CancelTransfer => match self.cancel_transfer() {
+            Msg::CancelTransfer => match self.cancel_transfer(ctx) {
                 Ok(task) => self.transfer_fetch = Some(task),
                 Err(err) => error("Failed to cancel", err),
             },
             Msg::Error(err) => {
                 err.toast();
-                self.reset();
+                self.reset(ctx);
             }
             Msg::Reset => {
-                self.reset();
+                self.reset(ctx);
             }
-            Msg::Stop(msg) => {
-                if !msg.is_empty() {
-                    error("Error", msg);
-                }
+            Msg::Stop(err) => {
                 self.stop = true;
-                return false;
+                if let Some(err) = err {
+                    err.toast();
+                }
             }
         }
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.stop {
-            false
-        } else if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
+    fn changed(&mut self, _: &Context<Self>) -> bool {
+        !self.stop
     }
 
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         if let Some(m) = &self.members {
-            return html! {
+            html! {
                 <Stack gutter=true>
                     <StackItem>
-                    <Card title={html!{"Application Members"}}>
-                        <Table<SimpleTableModel<User>>
-                                mode=TableMode::Compact
-                                entries=SimpleTableModel::from(m.members.clone())
-                                    header={html_nested!{
+                        <Card title={html_prop!({"Application Members"})}>
+                            <Table<SharedTableModel<User>>
+                                mode={TableMode::Compact}
+                                entries={SharedTableModel::from(m.members.clone())}
+                                    header={{html_nested!{
                                         <TableHeader>
                                             <TableColumn label="User name"/>
                                             <TableColumn label="Role"/>
                                         </TableHeader>
-                                    }}
-                                >
-                        </Table<SimpleTableModel<User>>>
-                    </Card>
+                                    }}}
+                            />
+                        </Card>
                     </StackItem>
                     <StackItem>
                         <Card>
                             <Toolbar>
                                 <ToolbarItem>
                                     <TextInput
-                                            disabled=self.fetch.is_some()
-                                            onchange=self.link.callback(|id|Msg::NewMemberId(id))
+                                            disabled={self.fetch.is_some()}
+                                            onchange={ctx.link().callback(|id|Msg::NewMemberId(id))}
                                             placeholder="User id"/>
                                     </ToolbarItem>
                                     <ToolbarItem>
-                                        <Select<Role> placeholder="Select user role" variant=SelectVariant::Single(self.link.callback(Msg::NewMemberRole))>
-                                            <SelectOption<Role> value=Role::Reader description="Read-only access" />
-                                            <SelectOption<Role> value=Role::Manager description="Read-write access" />
-                                            <SelectOption<Role> value=Role::Admin description="Administrative access" />
+                                        <Select<Role>
+                                                placeholder="Select user role"
+                                                variant={SelectVariant::Single(ctx.link().callback(Msg::NewMemberRole))}>
+                                            <SelectOption<Role> value={Role::Reader} description="Read-only access" />
+                                            <SelectOption<Role> value={Role::Manager} description="Read-write access" />
+                                            <SelectOption<Role> value={Role::Admin} description="Administrative access" />
                                         </Select<Role>>
                                     </ToolbarItem>
                                     <ToolbarItem>
                                         <Button
                                             label="Add"
-                                            icon=Icon::PlusCircleIcon
-                                            onclick=self.link.callback(|_|Msg::AddMember)
+                                            icon={Icon::PlusCircleIcon}
+                                            onclick={ctx.link().callback(|_|Msg::AddMember)}
                                         />
                                 </ToolbarItem>
                             </Toolbar>
                         </Card>
                     </StackItem>
-                    { if self.can_transfer {
-                        html!{
-                            <StackItem>
-                                <Card title={html!{"Transfer application ownership"}}>
-                                { if self.pending_transfer {
-                                        html!{<p>{format!("Pending transfer to user: {}", self.new_owner)}</p>}
-                                } else {html!{}}}
-                                   <Toolbar>
-                                        <ToolbarGroup>
-                                            <ToolbarItem>
-                                                <TextInput
-                                                    onchange=self.link.callback(|user|Msg::NewOwner(user))
-                                                    placeholder="Username"/>
-                                            </ToolbarItem>
-                                            <ToolbarItem>
-                                                <Button
-                                                        disabled=self.transfer_fetch.is_some()
-                                                        label="Transfer"
-                                                        variant=Variant::Primary
-                                                        onclick=self.link.callback(|_|Msg::TransferOwner)
-                                                />
-                                            </ToolbarItem>
-                                            <ToolbarItem>
-                                                <Button
-                                                        disabled=!self.pending_transfer
-                                                        label="Cancel"
-                                                        variant=Variant::Secondary
-                                                        onclick=self.link.callback(|_|Msg::CancelTransfer)
-                                                />
-                                            </ToolbarItem>
-                                        </ToolbarGroup>
-                                </Toolbar>
-                                </Card>
-                            </StackItem>
-                        }
-                    } else {
-                    html!{}
-                    }}
+
+                    if self.can_transfer {
+                    <StackItem>
+                        <Card title={html_prop!({"Transfer application ownership"})}>
+                            if self.pending_transfer {
+                                <p>{format!("Pending transfer to user: {}", self.new_owner)}</p>
+                            }
+                           <Toolbar>
+                                <ToolbarGroup>
+                                    <ToolbarItem>
+                                        <TextInput
+                                            onchange={ctx.link().callback(|user|Msg::NewOwner(user))}
+                                            placeholder="Username"/>
+                                    </ToolbarItem>
+                                    <ToolbarItem>
+                                        <Button
+                                                disabled={self.transfer_fetch.is_some()}
+                                                label="Transfer"
+                                                variant={Variant::Primary}
+                                                onclick={ctx.link().callback(|_|Msg::TransferOwner)}
+                                        />
+                                    </ToolbarItem>
+                                    <ToolbarItem>
+                                        <Button
+                                                disabled={!self.pending_transfer}
+                                                label="Cancel"
+                                                variant={Variant::Secondary}
+                                                onclick={ctx.link().callback(|_|Msg::CancelTransfer)}
+                                        />
+                                    </ToolbarItem>
+                                </ToolbarGroup>
+                        </Toolbar>
+                        </Card>
+                    </StackItem>
+                    }
+
                 </Stack>
-            };
+            }
         } else {
-            return html! {};
+            html! {}
         }
     }
 }
 
 impl Admin {
-    fn load(&self) -> Result<(FetchTask, FetchTask), anyhow::Error> {
-        let members = self.load_members();
-        let transfer = self.load_transfer_state();
+    fn load(&self, ctx: &Context<Self>) -> Result<(RequestHandle, RequestHandle), anyhow::Error> {
+        let members = self.load_members(ctx);
+        let transfer = self.load_transfer_state(ctx);
 
         match (members, transfer) {
             (Ok(members), Ok(transfer)) => Ok((members, transfer)),
@@ -307,151 +297,151 @@ impl Admin {
         }
     }
 
-    fn load_members(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn load_members(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             format!(
                 "/api/admin/v1alpha1/apps/{}/members",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: JsonResponse<Members>| match response.status() {
-                    StatusCode::OK => match response.into_body().0 {
-                        Ok(content) => Msg::SetMembers(content.value),
-                        Err(err) => Msg::Error(err.notify("Failed to fetch members")),
-                    },
-                    StatusCode::NOT_FOUND => {
-                        Msg::Stop("You are not an administrator for this app".to_string())
-                    }
-                    _ => Msg::Error(response.notify("Failed to fetch members")),
-                },
-            ),
-        )
+            ctx.callback_api::<Json<Members>, _>(move |response| match response {
+                ApiResponse::Success(members, _) => Msg::SetMembers(members),
+                ApiResponse::Failure(ApiError::Response(_, StatusCode::NOT_FOUND)) => {
+                    Msg::Stop(Some(
+                        "You are not an administrator for this app"
+                            .notify("Failed to fetch members"),
+                    ))
+                }
+                ApiResponse::Failure(err) => Msg::Stop(Some(err.notify("Failed to fetch members"))),
+            }),
+        )?)
     }
 
-    fn submit(&self) -> Result<FetchTask, anyhow::Error> {
+    fn submit(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         if let Some(m) = &self.members {
             let members = m.serialize();
-            self.props.backend.info.request(
+            Ok(ctx.props().backend.info.request(
                 Method::PUT,
                 format!(
                     "/api/admin/v1alpha1/apps/{}/members",
-                    url_encode(&self.props.name)
+                    url_encode(&ctx.props().name)
                 ),
-                Json(&members),
-                vec![("Content-Type", "application/json")],
-                self.link
-                    .callback(move |response: Response<Text>| match response.status() {
-                        StatusCode::NO_CONTENT => {
-                            success("Application members saved.");
-                            Msg::LoadMembers
-                        }
-                        _ => Msg::Error(response.notify("Update failed")),
-                    }),
-            )
+                Json(members),
+                vec![],
+                ctx.callback_api::<(), _>(move |response| match response {
+                    ApiResponse::Success(_, StatusCode::NO_CONTENT) => {
+                        success("Application members saved.");
+                        Msg::LoadMembers
+                    }
+                    ApiResponse::Success(_, code) => Msg::Error(
+                        format!("Unknown response code: {}", code).notify("Update failed"),
+                    ),
+                    ApiResponse::Failure(err) => Msg::Error(err.notify("Update failed")),
+                }),
+            )?)
         } else {
             Err(anyhow!("Nothing to save"))
         }
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, ctx: &Context<Self>) {
         self.fetch = None;
-        self.link.send_message(Msg::LoadMembers);
+        ctx.link().send_message(Msg::LoadMembers);
     }
 
-    fn transfer(&self) -> Result<FetchTask, anyhow::Error> {
-        let payload = json!(TransferOwnership {
-            new_user: self.new_owner.clone()
-        });
-        let link = self
-            .props
+    fn transfer(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        let payload = TransferOwnership {
+            new_user: self.new_owner.clone(),
+        };
+        let link = ctx
+            .props()
             .endpoints
             .console
             .clone()
-            .map(|console| format!("{}/transfer/{}", console, url_encode(&self.props.name)))
+            .map(|console| format!("{}/transfer/{}", console, url_encode(&ctx.props().name)))
             .unwrap_or_else(|| "Error while creating the link".into());
 
-        self.props.backend.info.request(
+        Ok(ctx.props().backend.info.request(
             Method::PUT,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
-            Json(&payload),
-            vec![("Content-Type", "application/json")],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::ACCEPTED => {
-                        let body = html! {
-                            <Content>
-                                <p>{"Ownership transfer initiated. Share this link with the user:"}</p>
-                                <p>
-                                    <Clipboard value=link.clone()
-                                        readonly=true
-                                    />
-                                </p>
-                            </Content>
-                        };
-                        ToastBuilder::success()
-                            .title("Success")
-                            .body(body)
-                            .toast();
-                        Msg::Reset
-                    }
-                    _ => Msg::Error(response.notify("Transfer failed")),
-                }),
-        )
+            Json(payload),
+            vec![],
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::ACCEPTED) => {
+                    let body = html! {
+                        <Content>
+                            <p>{"Ownership transfer initiated. Share this link with the user:"}</p>
+                            <p>
+                                <Clipboard value={link.clone()}
+                                    readonly=true
+                                />
+                            </p>
+                        </Content>
+                    };
+                    ToastBuilder::success().title("Success").body(body).toast();
+                    Msg::Reset
+                }
+                ApiResponse::Success(_, code) => {
+                    Msg::Error(format!("Invalid response code: {}", code).notify("Transfer failed"))
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Transfer failed")),
+            }),
+        )?)
     }
 
-    fn cancel_transfer(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn cancel_transfer(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::DELETE,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::NO_CONTENT => Msg::TransferPending(None),
-                    _ => Msg::Error(response.notify("Unable to cancel transfer")),
-                }),
-        )
+            ctx.callback_api::<(), _>(|response| match response {
+                ApiResponse::Success(..) => Msg::TransferPending(None),
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Unable to cancel transfer")),
+            }),
+        )?)
     }
 
-    fn load_transfer_state(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn load_transfer_state(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: JsonResponse<TransferOwnership>| {
-                    match response.status() {
-                        StatusCode::OK => match response.into_body().0 {
-                            Ok(user) => Msg::TransferPending(Some(user.value)),
-                            Err(err) => Msg::Error(err.notify("Failed to fetch transfer state")),
-                        },
-                        StatusCode::NO_CONTENT => Msg::TransferPending(None),
-                        StatusCode::NOT_FOUND => Msg::Stop("".to_string()),
-                        status => Msg::Error(
-                            response
-                                .notify(format!("Error while fetching transfer state: {}", status)),
-                        ),
+            ctx.callback_api::<Option<Json<TransferOwnership>>, _>(move |response| {
+                log::info!("Response: {:?}", response);
+                match response {
+                    ApiResponse::Success(transfer, StatusCode::OK | StatusCode::NO_CONTENT) => {
+                        Msg::TransferPending(transfer)
                     }
-                }),
-        )
+                    ApiResponse::Success(..) => Msg::Stop(Some(
+                        format!("Unknown response").notify("Failed to load transfer state"),
+                    )),
+                    ApiResponse::Failure(ApiError::Response(_, StatusCode::NOT_FOUND)) => {
+                        Msg::Stop(None)
+                    }
+                    ApiResponse::Failure(err) => {
+                        Msg::Stop(Some(err.notify("Failed loading transfer state")))
+                    }
+                }
+            }),
+        )?)
     }
 }
 
 impl Users {
-    pub fn from(members: Members, app: String, link: &ComponentLink<Admin>) -> Self {
+    pub fn from(members: Members, app: String, link: &Scope<Admin>) -> Self {
         let mut new_members: Vec<User> = Vec::new();
 
         for (user, role) in members.members {
@@ -487,7 +477,7 @@ impl Users {
         self.members.retain(|u| *u.id != id);
     }
 
-    pub fn add(&mut self, id: String, role: Role, link: &ComponentLink<Admin>) -> Result<()> {
+    pub fn add(&mut self, id: String, role: Role, link: &Scope<Admin>) -> Result<()> {
         let copy_id = id.clone();
         let user = User {
             id: id.clone(),

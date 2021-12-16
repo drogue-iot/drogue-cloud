@@ -67,9 +67,6 @@ pub enum Msg {
 }
 
 pub struct CoreExampleData {
-    props: Props,
-    link: ComponentLink<Self>,
-
     data: Option<ExampleData>,
     data_agent: SharedDataBridge<ExampleData>,
 }
@@ -78,22 +75,20 @@ impl Component for CoreExampleData {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let data_callback = link.batch_callback(|output| match output {
+    fn create(ctx: &Context<Self>) -> Self {
+        let data_callback = ctx.link().batch_callback(|output| match output {
             data::Response::State(data) => vec![Msg::SetData(data)],
         });
         let mut data_agent = SharedDataBridge::new(data_callback);
         data_agent.request_state();
 
         Self {
-            props,
-            link,
             data: None,
             data_agent,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::SetApplicationId(app) => self.data_agent.update(|mut data| data.app_id = app),
             Msg::SetDeviceId(device) => self.data_agent.update(|mut data| data.device_id = device),
@@ -107,93 +102,92 @@ impl Component for CoreExampleData {
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         match &self.data {
-            Some(data) => self.render_view(data),
+            Some(data) => self.render_view(ctx, data),
             _ => html! {},
         }
     }
 }
 
 impl CoreExampleData {
-    fn render_view(&self, data: &ExampleData) -> Html {
+    fn render_view(&self, ctx: &Context<Self>, data: &ExampleData) -> Html {
         let v = |value: &str| match value {
             "" => InputState::Error,
             _ => InputState::Default,
         };
 
+        let title_app = html! {"App & Device"};
+        let title_creds = html! {"Credentials"};
+        let title_payload = html! {"Payload"};
+        let title_certs = html! {"Certificates"};
+
         return html! {
             <Stack gutter=true>
                 <StackItem>
-                    <Title size=Size::XXLarge>{"Example Data"}</Title>
+                    <Title size={Size::XXLarge}>{"Example Data"}</Title>
                 </StackItem>
                 <StackItem>
-                    <Card title=html!{"App & Device"}>
+                    <Card title={title_app}>
                         <Form>
                             <FormGroup label="Application ID">
                                 <TextInput
-                                    value=&data.app_id
+                                    value={data.app_id.clone()}
                                     required=true
-                                    onchange=self.link.callback(|app|Msg::SetApplicationId(app))
-                                    validator=Validator::from(v)
+                                    onchange={ctx.link().callback(|app|Msg::SetApplicationId(app))}
+                                    validator={Validator::from(v)}
                                     />
                             </FormGroup>
                             <FormGroup label="Device ID">
                                 <TextInput
-                                    value=&data.device_id
+                                    value={data.device_id.clone()}
                                     required=true
-                                    onchange=self.link.callback(|device|Msg::SetDeviceId(device))
-                                    validator=Validator::from(v)
+                                    onchange={ctx.link().callback(|device|Msg::SetDeviceId(device))}
+                                    validator={Validator::from(v)}
                                     />
                             </FormGroup>
                         </Form>
                     </Card>
                 </StackItem>
                 <StackItem>
-                    <Card title=html!{"Credentials"}>
+                    <Card title={title_creds}>
                         <Form>
                             <FormGroup label="Password">
                                 <TextInput
-                                    value=&data.password
+                                    value={data.password.clone()}
                                     required=true
-                                    onchange=self.link.callback(|password|Msg::SetPassword(password))
-                                    validator=Validator::from(v)
+                                    onchange={ctx.link().callback(|password|Msg::SetPassword(password))}
+                                    validator={Validator::from(v)}
                                     />
                             </FormGroup>
                         </Form>
                     </Card>
                 </StackItem>
                 <StackItem>
-                    <Card title=html!{"Payload"}>
+                    <Card title={title_payload}>
                         <Form>
                             <TextArea
-                                value=&data.payload
-                                onchange=self.link.callback(|payload|Msg::SetPayload(payload))
-                                validator=Validator::from(v)
+                                value={data.payload.clone()}
+                                onchange={ctx.link().callback(|payload|Msg::SetPayload(payload))}
+                                validator={Validator::from(v)}
                                 />
                         </Form>
                     </Card>
                 </StackItem>
-            {if self.props.endpoints.local_certs {html!{
+
+            if ctx.props().endpoints.local_certs {
                 <StackItem>
-                    <Card title=html!{"Certificates"}>
+                    <Card title={title_certs}>
                         <Switch
-                            checked=data.enable_local_cert
-                            label="Use local test certificates" label_off="Use system default certificates"
-                            on_change=self.link.callback(|data| Msg::SetLocalCerts(data))
+                            checked={data.enable_local_cert}
+                            label="Use local test certificates"
+                            label_off="Use system default certificates"
+                            on_change={ctx.link().callback(|data| Msg::SetLocalCerts(data))}
                             />
                     </Card>
                 </StackItem>
-            }} else {html!{}}}
+            }
+
             </Stack>
         };
     }

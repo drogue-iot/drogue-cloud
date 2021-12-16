@@ -24,8 +24,6 @@ pub struct Props {
 }
 
 pub struct Spy {
-    props: Props,
-    link: ComponentLink<Self>,
     ws: Option<WebSocket>,
     events: SharedTableModel<Entry>,
 
@@ -54,12 +52,10 @@ impl Component for Spy {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let application = props.application.clone().unwrap_or_default();
+    fn create(ctx: &Context<Self>) -> Self {
+        let application = ctx.props().application.clone().unwrap_or_default();
         Self {
-            props,
             events: Default::default(),
-            link,
             ws: None,
             running: false,
             total_received: 0,
@@ -67,14 +63,14 @@ impl Component for Spy {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Start(app_id) => {
                 log::info!("Starting: {:?}", app_id);
-                self.start(app_id);
+                self.start(ctx, app_id);
             }
             Msg::StartPressed => {
-                self.link.send_message(Msg::Start(self.app_id_filter()));
+                ctx.link().send_message(Msg::Start(self.app_id_filter()));
             }
             Msg::Stop => {
                 self.stop();
@@ -105,11 +101,7 @@ impl Component for Spy {
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let is_valid = self.app_id_filter().is_some();
         let is_running = self.running;
 
@@ -118,79 +110,78 @@ impl Component for Spy {
             _ => InputState::Default,
         };
 
-        return html! {
+        let header = html_nested! {
+            <TableHeader>
+                <TableColumn label="Timestamp (UTC)"/>
+                <TableColumn label="Device ID"/>
+                <TableColumn label="Payload"/>
+            </TableHeader>
+        };
+
+        html! {
             <>
                 <Toolbar>
                     <ToolbarGroup>
 
-                        { if self.props.application.is_none() { html!{
+                        if ctx.props().application.is_none() {
                         <ToolbarItem>
                             <TextInput
-                                disabled=self.running
-                                onchange=self.link.callback(|app|Msg::SetApplication(app))
-                                validator=Validator::from(v)
+                                disabled={self.running}
+                                onchange={ctx.link().callback(|app|Msg::SetApplication(app))}
+                                validator={Validator::from(v)}
                                 placeholder="Application ID to spy on"/>
                         </ToolbarItem>
-                        }} else { html!{} }}
+                        }
 
                         <ToolbarItem>
-                            {if is_running {
-                                html!{<Button
+                            if is_running {
+                                <Button
                                         label="Stop"
-                                        icon=Icon::Pause
-                                        variant=Variant::Secondary
-                                        onclick=self.link.callback(|_|Msg::Stop)
-                                />}
+                                        icon={Icon::Pause}
+                                        variant={Variant::Secondary}
+                                        onclick={ctx.link().callback(|_|Msg::Stop)}
+                                />
                             } else {
-                                html!{<Button
-                                        disabled=!is_valid
+                                <Button
+                                        disabled={!is_valid}
                                         label="Start"
-                                        icon=Icon::Play
-                                        variant=Variant::Primary
-                                        onclick=self.link.callback(|_|Msg::StartPressed)
-                                />}
-                            }}
+                                        icon={Icon::Play}
+                                        variant={Variant::Primary}
+                                        onclick={ctx.link().callback(|_|Msg::StartPressed)}
+                                />
+                            }
                         </ToolbarItem>
                         <ToolbarItem>
                             <Button
                                 label="Clear"
-                                icon=Icon::Times
-                                variant=Variant::Secondary
-                                onclick=self.link.callback(|_|Msg::Clear)
+                                icon={Icon::Times}
+                                variant={Variant::Secondary}
+                                onclick={ctx.link().callback(|_|Msg::Clear)}
                                 />
                         </ToolbarItem>
                     </ToolbarGroup>
-                    <ToolbarItem modifiers=vec![ToolbarElementModifier::Right.all()]>
-                        { if self.running { html!{
+                    <ToolbarItem modifiers={[ToolbarElementModifier::Right.all()]}>
+                        if self.running {
                             <strong>{"Events received: "}{self.total_received}</strong>
-                        } } else { html!{} } }
-
+                        }
                     </ToolbarItem>
                 </Toolbar>
 
                 <Table<SharedTableModel<Entry>>
-                    entries=self.events.clone()
-                    mode=TableMode::CompactExpandable
-                    header={html_nested!{
-                        <TableHeader>
-                            <TableColumn label="Timestamp (UTC)"/>
-                            <TableColumn label="Device ID"/>
-                            <TableColumn label="Payload"/>
-                        </TableHeader>
-                    }}
+                    entries={self.events.clone()}
+                    mode={TableMode::CompactExpandable}
+                    header={header}
                     >
                 </Table<SharedTableModel<Entry>>>
 
-                { if self.events.is_empty() {
-                    self.render_empty()
-                } else {
-                    html!{}
-                }}
+                if self.events.is_empty() {
+                    { self.render_empty() }
+                }
             </>
-        };
+        }
     }
 
-    fn destroy(&mut self) {
+    fn destroy(&mut self, _: &Context<Self>) {
         if let Some(ws) = self.ws.take() {
             let _ = ws.close();
         }
@@ -206,8 +197,8 @@ impl Spy {
         }
     }
 
-    fn start(&mut self, app_id: Option<String>) {
-        let ws_endpoint = &self.props.endpoints.endpoints.websocket_integration;
+    fn start(&mut self, ctx: &Context<Self>, app_id: Option<String>) {
+        let ws_endpoint = &ctx.props().endpoints.endpoints.websocket_integration;
 
         let url = match (ws_endpoint, app_id) {
             (Some(ws), Some(app)) => {
@@ -225,7 +216,7 @@ impl Spy {
             let ws = WebSocket::new(url.as_str()).unwrap();
 
             // setup on_message callback
-            let link = self.link.clone();
+            let link = ctx.link().clone();
             let onmessage_callback = Closure::wrap(Box::new(move |event: &MessageEvent| {
                 web_sys::console::debug_2(&wasm_bindgen::JsValue::from("event: "), event);
 
@@ -243,7 +234,7 @@ impl Spy {
             onmessage_callback.forget();
 
             // setup onerror
-            let link = self.link.clone();
+            let link = ctx.link().clone();
             let on_error = Closure::wrap(Box::new(move |e: ErrorEvent| {
                 log::warn!("error event: {:?}", e);
                 link.send_message(Msg::Failed);
@@ -270,8 +261,8 @@ impl Spy {
             <Bullseye>
             <EmptyState
                 title="No new messages"
-                icon=Icon::Pending
-                size=Size::XLarge
+                icon={Icon::Pending}
+                size={Size::XLarge}
                 >
                 { "The " } <q> {"message spy"} </q> { " will only show "} <strong> {"new"} </strong> {" messages received by the system.
                 When the next message arrives, you will see it right here." }
@@ -376,17 +367,17 @@ fn render_data_short(event: &Event) -> Html {
         None => html! {},
         Some(Data::String(text)) => html! {
             <pre>
-                <Label label="String" color=Color::Purple/>{" "}{truncate_str(100, text)}
+                <Label label="String" color={Color::Purple}/>{" "}{truncate_str(100, text)}
             </pre>
         },
         Some(Data::Binary(blob)) => html! {
             <pre>
-                <Label label="BLOB" color=Color::Blue/>{" "}{render_blob(&blob)}
+                <Label label="BLOB" color={Color::Blue}/>{" "}{render_blob(&blob)}
             </pre>
         },
         Some(Data::Json(value)) => html! {
             <pre>
-                <Label label="JSON" color=Color::Cyan/>{" "}{truncate_str(100, &value.to_string())}
+                <Label label="JSON" color={Color::Cyan}/>{" "}{truncate_str(100, &value.to_string())}
             </pre>
         },
     }
@@ -434,20 +425,22 @@ fn render_details(event: &Event) -> Html {
 
     attrs.sort_by(|a, b| a.0.cmp(&b.0));
 
+    let header = html_nested! {
+        <TableHeader>
+            <TableColumn label="Key"/>
+            <TableColumn label="Value"/>
+        </TableHeader>
+    };
+
     return html! {
         <>
             <h3>{"Attributes"}</h3>
-            <Table<SimpleTableModel<AttributeEntry>>
-                entries=SimpleTableModel::from(attrs)
-                mode=TableMode::CompactNoBorders
-                header=html_nested!{
-                    <TableHeader>
-                        <TableColumn label="Key"/>
-                        <TableColumn label="Value"/>
-                    </TableHeader>
-                }
+            <Table<SharedTableModel<AttributeEntry>>
+                entries={SharedTableModel::from(attrs)}
+                mode={TableMode::CompactNoBorders}
+                header={header}
                 >
-            </Table<SimpleTableModel<AttributeEntry>>>
+            </Table<SharedTableModel<AttributeEntry>>>
 
             <h3>{"Payload"}</h3>
             { render_data(event) }
