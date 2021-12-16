@@ -1,5 +1,6 @@
 use crate::{
     examples::{data::ExampleData, note_local_certs},
+    html_prop,
     utils::{shell_quote, shell_single_quote, url_encode},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
@@ -12,110 +13,95 @@ pub struct Props {
     pub data: ExampleData,
 }
 
-pub struct PublishData {
-    props: Props,
-}
+pub struct PublishData {}
 
 impl Component for PublishData {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self { props }
+    fn create(_: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let mut cards: Vec<_> = Vec::new();
 
-        let local_certs = self
-            .props
+        let local_certs = ctx
+            .props()
             .data
-            .local_certs(self.props.endpoints.local_certs);
+            .local_certs(ctx.props().endpoints.local_certs);
 
-        if let Some(http) = &self.props.endpoints.http {
+        if let Some(http) = &ctx.props().endpoints.http {
             let publish_http_cmd = format!(
                 "echo '{payload}' | http --auth '{auth}' {certs}POST {url}/v1/foo",
-                payload = shell_quote(&self.props.data.payload),
+                payload = shell_quote(&ctx.props().data.payload),
                 url = http.url,
                 auth = shell_quote(format!(
                     "{device_id}@{app_id}:{password}",
-                    app_id = self.props.data.app_id,
-                    device_id = url_encode(&self.props.data.device_id),
-                    password = &self.props.data.password,
+                    app_id = ctx.props().data.app_id,
+                    device_id = url_encode(&ctx.props().data.device_id),
+                    password = &ctx.props().data.password,
                 )),
                 certs = local_certs
                     .then(|| "--verify build/certs/endpoints/root-cert.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
-                <Card title={html!{"Publish data using HTTP"}}>
+                <Card title={html_prop!({"Publish data using HTTP"})}>
                     <div>
                         {"You can now publish data to the cloud using HTTP."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={publish_http_cmd}/>
                     {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
-        if let Some(coap) = &self.props.endpoints.coap {
+        if let Some(coap) = &ctx.props().endpoints.coap {
             let publish_coap_cmd = format!(
                 "echo '{payload}' | coap post -O '4209,Basic {auth}' {url}/v1/foo",
-                payload = shell_quote(&self.props.data.payload),
+                payload = shell_quote(&ctx.props().data.payload),
                 url = coap.url,
                 auth = shell_quote(base64::encode_config(
                     format!(
                         "{device_id}@{app_id}:{password}",
-                        app_id = self.props.data.app_id,
-                        device_id = url_encode(&self.props.data.device_id),
-                        password = &self.props.data.password,
+                        app_id = ctx.props().data.app_id,
+                        device_id = url_encode(&ctx.props().data.device_id),
+                        password = &ctx.props().data.password,
                     ),
                     base64::STANDARD_NO_PAD
                 )),
             );
             cards.push(html!{
-                <Card title={html!{"Publish data using CoAP"}}>
+                <Card title={html_prop!({"Publish data using CoAP"})}>
                     <div>
                         {"You can now publish data to the cloud using CoAP."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_coap_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={publish_coap_cmd}/>
                     {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
-        if let Some(mqtt) = &self.props.endpoints.mqtt {
+        if let Some(mqtt) = &ctx.props().endpoints.mqtt {
             let publish_mqtt_cmd = format!(
                 r#"mqtt pub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t temp -m {payload}"#,
                 host = mqtt.host,
                 port = mqtt.port,
-                app_id = &self.props.data.app_id,
-                device_id = shell_quote(url_encode(&self.props.data.device_id)),
-                password = shell_quote(&self.props.data.password),
-                payload = shell_single_quote(&self.props.data.payload),
+                app_id = &ctx.props().data.app_id,
+                device_id = shell_quote(url_encode(&ctx.props().data.device_id)),
+                password = shell_quote(&ctx.props().data.password),
+                payload = shell_single_quote(&ctx.props().data.payload),
                 certs = local_certs
                     .then(|| "--cafile build/certs/endpoints/root-cert.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
-                <Card title={html!{"Publish data using MQTT"}}>
+                <Card title={html_prop!({"Publish data using MQTT"})}>
                     <div>
                         {"You can now publish data to the cloud using MQTT."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_mqtt_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={publish_mqtt_cmd}/>
                     {note_local_certs(local_certs)}
                 </Card>
             });

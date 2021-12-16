@@ -1,8 +1,11 @@
-use crate::backend::BackendInformation;
-use crate::error::error;
+use crate::backend::{
+    ApiResponse, BackendInformation, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
+};
+use crate::error::{error, ErrorNotification, ErrorNotifier};
 use drogue_cloud_service_api::version::DrogueVersion;
+use http::Method;
 use patternfly_yew::*;
-use yew::{format::*, prelude::*, services::fetch::*};
+use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Properties)]
 pub struct Props {
@@ -12,88 +15,72 @@ pub struct Props {
 pub enum Msg {
     FetchInfo,
     Info(DrogueVersion),
-    Error(String),
+    Error(ErrorNotification),
 }
 
 pub struct AboutModal {
-    props: Props,
-    link: ComponentLink<Self>,
     info: Option<DrogueVersion>,
-    task: Option<FetchTask>,
+    task: Option<RequestHandle>,
 }
 
 impl Component for AboutModal {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::FetchInfo);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::FetchInfo);
         Self {
-            props,
-            link,
             info: None,
             task: None,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::FetchInfo => match self.fetch_info() {
+            Msg::FetchInfo => match self.fetch_info(ctx) {
                 Ok(task) => self.task = Some(task),
                 Err(err) => error("Failed to fetch information", err),
             },
             Msg::Info(info) => self.info = Some(info),
-            Msg::Error(err) => error("Failed to fetch information", err),
+            Msg::Error(msg) => {
+                msg.toast();
+            }
         }
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
-        return html! {
+    fn view(&self, _: &Context<Self>) -> Html {
+        html! {
             <Bullseye plain=true>
                 <About
                     brand_src="/images/logo.svg"
                     title="Drogue IoT Cloud"
                     hero_style=r#"--pf-c-about-modal-box__hero--sm--BackgroundImage: url("/images/about.jpg"); --pf-c-about-modal-box__hero--sm--BackgroundPosition: bottom right; --pf-c-about-modal-box__hero--sm--BackgroundSize: contain; background-attachment: local;"#
                 >
-                <Content>
-                    { if let Some(info) = &self.info {html!{
-                        <dl style="width: 100%">
-                            <dt>{"Version"}</dt><dd>{&info.version}</dd>
-                        </dl>
-                    }} else { html!{}}}
-                </Content>
+                    <Content>
+                        if let Some(info) = &self.info {
+                            <dl style="width: 100%">
+                                <dt>{"Version"}</dt><dd>{&info.version}</dd>
+                            </dl>
+                        }
+                    </Content>
                 </About>
             </Bullseye>
-        };
+        }
     }
 }
 
 impl AboutModal {
-    fn fetch_info(&self) -> anyhow::Result<FetchTask> {
-        self.props.backend.request(
+    fn fetch_info(&self, ctx: &Context<Self>) -> anyhow::Result<RequestHandle> {
+        Ok(ctx.props().backend.request(
             Method::GET,
             "/.well-known/drogue-version",
             Nothing,
             vec![],
-            self.link.callback(
-                move |response: Response<Json<Result<DrogueVersion, anyhow::Error>>>| match response
-                    .into_body()
-                    .0
-                {
-                    Ok(info) => Msg::Info(info),
-                    Err(err) => Msg::Error(err.to_string()),
-                },
-            ),
-        )
+            ctx.callback_api::<Json<DrogueVersion>, _>(|response| match response {
+                ApiResponse::Success(info, _) => Msg::Info(info),
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load information")),
+            }),
+        )?)
     }
 }

@@ -15,39 +15,24 @@ pub struct Props {
 
 pub enum Msg {}
 
-pub struct Debug {
-    props: Props,
-}
+pub struct Debug {}
 
 impl Component for Debug {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self { props }
+    fn create(_: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
-        return html! {
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        html! {
             <Spy
-                backend=&self.props.backend
-                token=&self.props.token
-                endpoints=&self.props.endpoints
-                application=&self.props.application
+                backend={ctx.props().backend.clone()}
+                token={ctx.props().token.clone()}
+                endpoints={ctx.props().endpoints.clone()}
+                application={ctx.props().application.clone()}
                 />
-        };
+        }
     }
 }

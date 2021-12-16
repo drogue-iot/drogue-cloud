@@ -1,9 +1,10 @@
+use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::error::{ErrorNotification, ErrorNotifier};
-use crate::utils::JsonResponse;
 use crate::{backend::Backend, error::error};
 use drogue_cloud_service_api::token::{AccessToken, AccessTokenCreated};
+use http::Method;
 use patternfly_yew::*;
-use yew::{format::*, prelude::*, services::fetch::*};
+use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AccessTokenEntry {
@@ -30,7 +31,7 @@ impl TableRenderer for AccessTokenEntry {
     fn actions(&self) -> Vec<DropdownChildVariant> {
         vec![html_nested! {
         <DropdownItem
-            onclick=self.on_delete.clone()
+            onclick={self.on_delete.clone()}
         >
             {"Delete"}
         </DropdownItem>}
@@ -54,30 +55,26 @@ pub enum Msg {
 }
 
 pub struct AccessTokens {
-    props: Props,
-    link: ComponentLink<Self>,
     tokens: Vec<AccessTokenEntry>,
 
-    fetch_task: Option<FetchTask>,
+    fetch_task: Option<RequestHandle>,
 }
 
 impl Component for AccessTokens {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::Load);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::Load);
         Self {
-            props,
-            link,
             tokens: Vec::new(),
             fetch_task: None,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::Load => match self.load() {
+            Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to fetch", err),
             },
@@ -88,7 +85,7 @@ impl Component for AccessTokens {
             Msg::Error(msg) => {
                 msg.toast();
             }
-            Msg::Delete(token) => match self.delete(token) {
+            Msg::Delete(token) => match self.delete(ctx, token) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to delete token", err),
             },
@@ -100,9 +97,9 @@ impl Component for AccessTokens {
                     r#type: Type::Success,
                     ..Default::default()
                 });
-                self.link.send_message(Msg::Load);
+                ctx.link().send_message(Msg::Load);
             }
-            Msg::Create => match self.create() {
+            Msg::Create => match self.create(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to create token", err),
             },
@@ -115,7 +112,7 @@ impl Component for AccessTokens {
                         <p>{"A new access token was successfully created. The access token is:"}</p>
                         <p>
                         <Clipboard
-                            value=token.token
+                            value={token.token}
                             readonly=true
                             name="access-token"
                             />
@@ -126,20 +123,23 @@ impl Component for AccessTokens {
                     r#type: Type::Success,
                     ..Default::default()
                 });
-                self.link.send_message(Msg::Load);
+                ctx.link().send_message(Msg::Load);
             }
         };
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        true
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let header = html_nested! {
+            <TableHeader>
+                <TableColumn label="Prefix"/>
+                <TableColumn label="Timestamp (UTC)"/>
+                <TableColumn label="Description"/>
+            </TableHeader>
+        };
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
+                <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
                         <Title>{"Access tokens"}</Title>
                     </Content>
@@ -147,29 +147,23 @@ impl Component for AccessTokens {
                 <PageSection>
                     <Toolbar>
                         <ToolbarGroup
-                            modifiers=vec![ToolbarElementModifier::Right.all()]
+                            modifiers={[ToolbarElementModifier::Right.all()]}
                             >
                             <ToolbarItem>
                                 <Button
                                     label="Create token"
-                                    variant=Variant::Primary
-                                    onclick=self.link.callback(|_|Msg::Create)
+                                    variant={Variant::Primary}
+                                    onclick={ctx.link().callback(|_|Msg::Create)}
                                     id="create-token"
                                 />
                             </ToolbarItem>
                         </ToolbarGroup>
                     </Toolbar>
-                    <Table<SimpleTableModel<AccessTokenEntry>>
-                        entries=SimpleTableModel::from(self.tokens.clone())
-                        header={html_nested!{
-                            <TableHeader>
-                                <TableColumn label="Prefix"/>
-                                <TableColumn label="Timestamp (UTC)"/>
-                                <TableColumn label="Description"/>
-                            </TableHeader>
-                        }}
+                    <Table<SharedTableModel<AccessTokenEntry>>
+                        entries={SharedTableModel::from(self.tokens.clone())}
+                        header={header}
                         >
-                    </Table<SimpleTableModel<AccessTokenEntry>>>
+                    </Table<SharedTableModel<AccessTokenEntry>>>
                 </PageSection>
             </>
         };
@@ -177,64 +171,58 @@ impl Component for AccessTokens {
 }
 
 impl AccessTokens {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
-        let link = self.link.clone();
+    fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        let link = ctx.link().clone();
 
-        self.props.backend.info.request(
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             "/api/tokens/v1alpha1",
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: JsonResponse<Vec<AccessToken>>| {
-                    match response.into_body().0 {
-                        Ok(tokens) => {
-                            let link = link.clone();
-                            let tokens = tokens
-                                .value
-                                .into_iter()
-                                .map(move |token| AccessTokenEntry {
-                                    token: token.clone(),
-                                    on_delete: link.clone().callback_once(|_| Msg::Delete(token)),
-                                })
-                                .collect();
-                            Msg::SetData(tokens)
-                        }
-                        Err(err) => Msg::Error(err.notify("Failed to load")),
-                    }
-                }),
-        )
+            ctx.callback_api::<Json<Vec<AccessToken>>, _>(move |response| match response {
+                ApiResponse::Success(tokens, _) => {
+                    let link = link.clone();
+                    let tokens = tokens
+                        .into_iter()
+                        .map(move |token| AccessTokenEntry {
+                            token: token.clone(),
+                            on_delete: link.clone().callback_once(|_| Msg::Delete(token)),
+                        })
+                        .collect();
+                    Msg::SetData(tokens)
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load")),
+            }),
+        )?)
     }
 
-    fn delete(&self, token: AccessToken) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn delete(
+        &self,
+        ctx: &Context<Self>,
+        token: AccessToken,
+    ) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::DELETE,
             format!("/api/tokens/v1alpha1/{}", token.prefix),
             Nothing,
             vec![],
-            self.link.callback(move |response: Response<Text>| {
-                if response.status().is_success() {
-                    Msg::Deleted
-                } else {
-                    Msg::Error(response.notify("Failed to delete"))
-                }
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, _) => Msg::Deleted,
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
             }),
-        )
+        )?)
     }
 
-    fn create(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn create(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::POST,
             "/api/tokens/v1alpha1",
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: JsonResponse<AccessTokenCreated>| {
-                    match response.into_body().0 {
-                        Ok(token) => Msg::Created(token.value),
-                        Err(err) => Msg::Error(err.notify("Creation failed")),
-                    }
-                }),
-        )
+            ctx.callback_api::<Json<AccessTokenCreated>, _>(move |response| match response {
+                ApiResponse::Success(token, _) => Msg::Created(token),
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Creation failed")),
+            }),
+        )?)
     }
 }

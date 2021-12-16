@@ -1,8 +1,6 @@
-use anyhow::anyhow;
 use drogue_cloud_console_common::UserInfo;
+use gloo_storage::{LocalStorage, Storage};
 use serde::{Deserialize, Serialize};
-use yew::format::Json;
-use yew::services::storage::*;
 
 const KEY: &str = "preferences";
 
@@ -20,21 +18,15 @@ pub struct Preferences {
 }
 
 impl Preferences {
-    fn storage() -> anyhow::Result<StorageService> {
-        StorageService::new(Area::Local).map_err(|err| anyhow!(err))
-    }
-
     /// Store preferences to local store.
     pub fn store(&self) -> anyhow::Result<()> {
-        let mut storage = Self::storage()?;
-        storage.store(KEY, Json(self));
+        LocalStorage::set(KEY, self)?;
         Ok(())
     }
 
     /// Load preferences from local store.
     pub fn load() -> anyhow::Result<Preferences> {
-        let storage = Self::storage()?;
-        storage.restore::<Json<anyhow::Result<Preferences>>>(KEY).0
+        Ok(LocalStorage::get(KEY)?)
     }
 
     /// A function to conveniently load, update, and store preferences.

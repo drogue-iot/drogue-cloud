@@ -1,16 +1,17 @@
+use crate::backend::{ApiResponse, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::utils::{success, url_encode};
 use crate::{
     backend::Backend,
     error::error,
+    html_prop,
     page::AppRoute,
     pages::apps::{DetailsSection, Pages},
 };
+use gloo_timers::callback::Timeout;
+use http::{Method, StatusCode};
 use patternfly_yew::*;
-use std::time::Duration;
-use yew::services::timeout::TimeoutTask;
-use yew::services::TimeoutService;
-use yew::{format::*, prelude::*, services::fetch::*};
+use yew::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, PartialEq, Eq, Properties)]
@@ -30,11 +31,8 @@ pub enum Msg {
 }
 
 pub struct Ownership {
-    props: Props,
-    link: ComponentLink<Self>,
-
-    fetch_task: Option<FetchTask>,
-    timeout: Option<TimeoutTask>,
+    fetch_task: Option<RequestHandle>,
+    timeout: Option<Timeout>,
 
     transfer_active: bool,
 }
@@ -43,29 +41,27 @@ impl Component for Ownership {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::Load);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::Load);
 
         Self {
-            props,
-            link,
             fetch_task: None,
             timeout: None,
             transfer_active: false,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::Load => match self.load() {
+            Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to load transfer state", err),
             },
-            Msg::Accept => match self.accept() {
+            Msg::Accept => match self.accept(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to fetch", err),
             },
-            Msg::Decline => match self.cancel() {
+            Msg::Decline => match self.cancel(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to cancel", err),
             },
@@ -74,7 +70,7 @@ impl Component for Ownership {
             }
             Msg::Done => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
                 Route::from(AppRoute::Applications(Pages::Details {
-                    name: self.props.name.clone(),
+                    name: ctx.props().name.clone(),
                     details: DetailsSection::Overview,
                 })),
             )),
@@ -92,10 +88,10 @@ impl Component for Ownership {
                 success("Ownership transfer completed. You are now the owner of this application.");
 
                 // Set a timeout before leaving the page.
-                let handle = TimeoutService::spawn(
-                    Duration::from_secs(3),
-                    self.link.callback(|_| Msg::Done),
-                );
+                let link = ctx.link().clone();
+                let handle = Timeout::new(3_000, move || {
+                    link.send_message(Msg::Done);
+                });
 
                 // Keep the task or timer will be cancelled
                 self.timeout = Some(handle);
@@ -104,31 +100,27 @@ impl Component for Ownership {
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        true
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
-                    <Card title={html!{"Application ownership transfer"}}>
-                        <p>{html!{format!("Application name: {}", &self.props.name)}}</p>
+                <PageSection variant={PageSectionVariant::Light} limit_width=true>
+                    <Card title={html_prop!({"Application ownership transfer"})}>
+                        <p>{format!("Application name: {}", &ctx.props().name)}</p>
                         <Toolbar>
                         <ToolbarGroup>
                             <ToolbarItem>
                                     <Button
-                                            disabled=self.fetch_task.is_some() || !self.transfer_active
+                                            disabled={self.fetch_task.is_some() || !self.transfer_active}
                                             label="Accept"
-                                            icon=Icon::CheckCircle
-                                            variant=Variant::Primary
-                                            onclick=self.link.callback(|_|Msg::Accept)
+                                            icon={Icon::CheckCircle}
+                                            variant={Variant::Primary}
+                                            onclick={ctx.link().callback(|_|Msg::Accept)}
                                     />
                                     <Button
-                                            disabled=self.fetch_task.is_some() || !self.transfer_active
+                                            disabled={self.fetch_task.is_some() || !self.transfer_active}
                                             label="Decline"
-                                            variant=Variant::Secondary
-                                            onclick=self.link.callback(|_|Msg::Decline)
+                                            variant={Variant::Secondary}
+                                            onclick={ctx.link().callback(|_|Msg::Decline)}
                                     />
                             </ToolbarItem>
                         </ToolbarGroup>
@@ -141,55 +133,52 @@ impl Component for Ownership {
 }
 
 impl Ownership {
-    fn load(&mut self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn load(&mut self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::OK => Msg::TransferPending(true),
-                    StatusCode::NO_CONTENT => Msg::TransferPending(false),
-                    _ => Msg::Error(response.notify("Failed to fetch transfer state")),
-                }),
-        )
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::OK) => Msg::TransferPending(true),
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::TransferPending(false),
+                response => Msg::Error(response.notify("Failed to fetch transfer state")),
+            }),
+        )?)
     }
 
-    fn accept(&mut self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn accept(&mut self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::PUT,
             format!(
                 "/api/admin/v1alpha1/apps/{}/accept-ownership",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::NO_CONTENT => Msg::Success,
-                    _ => Msg::Error(response.notify("Failed to accept ownership")),
-                }),
-        )
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::Success,
+                response => Msg::Error(response.notify("Failed to accept ownership")),
+            }),
+        )?)
     }
 
-    fn cancel(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn cancel(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::DELETE,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    StatusCode::NO_CONTENT => Msg::TransferPending(false),
-                    _ => Msg::Error(response.notify("Failed to cancel transfer")),
-                }),
-        )
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::TransferPending(false),
+                response => Msg::Error(response.notify("Failed to cancel transfer")),
+            }),
+        )?)
     }
 }

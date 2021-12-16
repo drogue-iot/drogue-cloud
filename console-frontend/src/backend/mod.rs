@@ -1,12 +1,28 @@
+mod request;
+
+pub use request::*;
+
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::UserInfo;
-use http::{Response, Uri};
+use gloo_utils::window;
+use http::Uri;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{sync::RwLock, time::Duration};
+use thiserror::Error;
 use url::Url;
-use yew::{format::Text, prelude::*, services::fetch::*, utils::window};
+use web_sys::{RequestCache, RequestMode, RequestRedirect};
+
+#[derive(Debug, Error)]
+pub enum RequestError<E> {
+    #[error("Payload conversion error: {0}")]
+    PayloadConversion(E),
+    #[error("Missing token (reauth?: {0})")]
+    Token(bool),
+    #[error("Missing backend")]
+    Backend,
+}
 
 /// Backend information
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -46,81 +62,79 @@ impl BackendInformation {
         self.url(path).into()
     }
 
-    pub fn request<S, IN, OUT: 'static>(
+    pub fn request<S, IN, H>(
         &self,
         method: http::Method,
         path: S,
         payload: IN,
         headers: Vec<(&str, &str)>,
-        callback: Callback<Response<OUT>>,
-    ) -> Result<FetchTask, anyhow::Error>
+        handler: H,
+    ) -> Result<RequestHandle, RequestError<IN::Error>>
     where
         S: AsRef<str>,
-        IN: Into<Text>,
-        OUT: From<Text>,
+        IN: RequestPayload,
+        H: RequestHandler<anyhow::Result<Response>>,
     {
-        self.request_with(method, path, payload, headers, Default::default(), callback)
+        self.request_with(method, path, payload, headers, Default::default(), handler)
     }
 
-    pub fn request_with<S, IN, OUT: 'static>(
+    pub fn request_with<S, IN, H>(
         &self,
         method: http::Method,
         path: S,
         payload: IN,
         headers: Vec<(&str, &str)>,
         options: RequestOptions,
-        callback: Callback<Response<OUT>>,
-    ) -> Result<FetchTask, anyhow::Error>
+        handler: H,
+    ) -> Result<RequestHandle, RequestError<IN::Error>>
     where
         S: AsRef<str>,
-        IN: Into<Text>,
-        OUT: From<Text>,
+        IN: RequestPayload,
+        H: RequestHandler<anyhow::Result<Response>>,
     {
-        let request = http::request::Builder::new()
-            .method(method)
-            .uri(self.uri(path));
+        let mut request = RequestBuilder::new(method, self.url(path));
 
         let token = match Backend::access_token() {
             Some(token) => token,
             None => {
-                if !options.disable_reauth {
+                return if !options.disable_reauth {
                     Backend::reauthenticate().ok();
-                    return Err(anyhow::anyhow!("Performing re-auth"));
-                }
-                return Err(anyhow::anyhow!("Missing token"));
+                    Err(RequestError::Token(true))
+                } else {
+                    Err(RequestError::Token(false))
+                };
             }
         };
 
-        let mut request = request.header("Authorization", format!("Bearer {}", token));
+        request = request.header("Authorization".into(), format!("Bearer {}", token).into());
 
         for (k, v) in headers {
-            request = request.header(k, v);
+            request = request.header(k.into(), v.into());
         }
 
-        let request = request.body(payload).context("Failed to create request")?;
+        request = request
+            .body(payload)
+            .map_err(RequestError::PayloadConversion)?;
 
-        let task = FetchService::fetch_with_options(
-            request,
-            FetchOptions {
-                cache: Some(Cache::NoCache),
-                credentials: Some(Credentials::Include),
-                redirect: Some(Redirect::Follow),
-                mode: Some(Mode::Cors),
-                ..Default::default()
-            },
-            callback.reform(move |response: Response<_>| {
-                log::info!("Backend response code: {}", response.status().as_u16());
-                match response.status().as_u16() {
-                    401 | 403 | 408 if !options.disable_reauth => {
-                        // 408 is "sent" by yew if the request fails, which it does when CORS is in play
+        request = request
+            .cache(RequestCache::NoCache)
+            .redirect(RequestRedirect::Follow)
+            .mode(RequestMode::Cors);
+
+        let disable_reauth = options.disable_reauth;
+
+        let task = request.send(MappingHandler::new(
+            handler,
+            move |response: anyhow::Result<Response>| {
+                match response.as_ref().map(|r| r.response.status()) {
+                    Ok(401 | 403 | 408) if !disable_reauth => {
                         Backend::reauthenticate().ok();
                     }
                     _ => {}
-                };
+                }
                 response
-            }),
-        )
-        .map_err(|err| anyhow::anyhow!("Failed to fetch: {:?}", err))?;
+            },
+        ));
 
         Ok(task)
     }
@@ -224,36 +238,36 @@ impl Backend {
         self.info.url.to_string()
     }
 
-    pub fn request<S, IN, OUT: 'static>(
+    pub fn request<S, IN, H>(
         method: http::Method,
         path: S,
         payload: IN,
-        callback: Callback<Response<OUT>>,
-    ) -> Result<FetchTask, anyhow::Error>
+        handler: H,
+    ) -> Result<RequestHandle, RequestError<IN::Error>>
     where
         S: AsRef<str>,
-        IN: Into<Text>,
-        OUT: From<Text>,
+        IN: RequestPayload,
+        H: RequestHandler<anyhow::Result<Response>>,
     {
-        Self::request_with(method, path, payload, Default::default(), callback)
+        Self::request_with(method, path, payload, Default::default(), handler)
     }
 
-    pub fn request_with<S, IN, OUT: 'static>(
+    pub fn request_with<S, IN, H>(
         method: http::Method,
         path: S,
         payload: IN,
         options: RequestOptions,
-        callback: Callback<Response<OUT>>,
-    ) -> Result<FetchTask, anyhow::Error>
+        handler: H,
+    ) -> Result<RequestHandle, RequestError<IN::Error>>
     where
         S: AsRef<str>,
-        IN: Into<Text>,
-        OUT: From<Text>,
+        IN: RequestPayload,
+        H: RequestHandler<anyhow::Result<Response>>,
     {
         Self::get()
-            .ok_or_else(|| anyhow::anyhow!("Missing backend"))?
+            .ok_or_else(|| RequestError::Backend)?
             .info
-            .request_with(method, path, payload, vec![], options, callback)
+            .request_with(method, path, payload, vec![], options, handler)
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {

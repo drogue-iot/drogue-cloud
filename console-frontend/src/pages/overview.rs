@@ -1,4 +1,4 @@
-use crate::backend::Backend;
+use crate::{backend::Backend, html_prop};
 use drogue_cloud_console_common::EndpointInformation;
 use drogue_cloud_service_api::endpoints::MqttEndpoint;
 use patternfly_yew::*;
@@ -9,41 +9,26 @@ pub struct Props {
     pub endpoints: Option<EndpointInformation>,
 }
 
-pub struct Overview {
-    props: Props,
-}
+pub struct Overview {}
 
 impl Component for Overview {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Self { props }
+    fn create(_: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
+                <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
                         <h1>{"Overview"}</h1>
                     </Content>
                 </PageSection>
                 <PageSection>
-                    { self.render_overview() }
+                    { self.render_overview(ctx) }
                 </PageSection>
             </>
         }
@@ -51,8 +36,8 @@ impl Component for Overview {
 }
 
 impl Overview {
-    fn render_overview(&self) -> Html {
-        match &self.props.endpoints {
+    fn render_overview(&self, ctx: &Context<Self>) -> Html {
+        match &ctx.props().endpoints {
             Some(endpoints) => self.render_endpoints(endpoints),
             None => html! {
                 <div>{"Loading..."}</div>
@@ -114,16 +99,16 @@ impl Overview {
 
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[3]>
+                <GridItem cols={[3]}>
                     { Self::render_cards("Services", service_cards) }
                 </GridItem>
-                <GridItem cols=[3]>
+                <GridItem cols={[3]}>
                     { Self::render_cards("Endpoints", endpoint_cards) }
                 </GridItem>
-                <GridItem cols=[3]>
+                <GridItem cols={[3]}>
                     { Self::render_cards("Integrations", integration_cards) }
                 </GridItem>
-                <GridItem cols=[3]>
+                <GridItem cols={[3]}>
                     { if !demo_cards.is_empty() {
                         Self::render_cards("Demos", demo_cards)
                     } else {
@@ -137,9 +122,9 @@ impl Overview {
     fn render_cards(label: &str, cards: Vec<Html>) -> VChild<Flex> {
         html_nested! {
             <Flex>
-                <Flex modifiers=vec![FlexModifier::Column.all(), FlexModifier::FullWidth.all()]>
+                <Flex modifiers={[FlexModifier::Column.all(), FlexModifier::FullWidth.all()]}>
                     <FlexItem>
-                        <Title size=Size::XLarge>{label}</Title>
+                        <Title size={Size::XLarge}>{label}</Title>
                     </FlexItem>
                     { cards.into_flex_items() }
                 </Flex>
@@ -147,7 +132,7 @@ impl Overview {
         }
     }
 
-    fn render_linked_card<S: AsRef<str>>(
+    fn render_linked_card<S: Into<String>>(
         &self,
         label: &str,
         url: S,
@@ -155,18 +140,20 @@ impl Overview {
     ) -> Html {
         let footer = {
             if let Some(link) = link {
-                html! { <a class="pf-c-button pf-m-link pf-m-inline" href=link.0 target="_blank"> { link.1 }</a> }
+                html! { <a class="pf-c-button pf-m-link pf-m-inline" href={link.0.to_string()} target="_blank"> { link.1 }</a> }
             } else {
                 html! {}
             }
         };
 
+        let title = html! {{label}};
+
         html! {
             <Card
-                title={html_nested!{<>{label}</>}}
-                footer=footer
+                title={title}
+                footer={footer}
                 >
-                <Clipboard readonly=true value=url.as_ref()/>
+                <Clipboard readonly=true value={url.into()}/>
             </Card>
         }
     }
@@ -183,9 +170,9 @@ impl Overview {
     fn render_mqtt_endpoint(&self, mqtt: &MqttEndpoint, label: &str) -> Html {
         html! {
             <Card
-                title={html_nested!{<>{label}</>}}
+                title={html_prop!({label})}
                 >
-                <Clipboard readonly=true value=&mqtt.host/>
+                <Clipboard readonly=true value={mqtt.host.clone()}/>
                 <Clipboard readonly=true value={format!("{}", mqtt.port)}/>
             </Card>
         }

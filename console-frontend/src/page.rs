@@ -41,9 +41,6 @@ pub struct Props {
 }
 
 pub struct AppPage {
-    props: Props,
-    link: ComponentLink<Self>,
-
     _app_ctx_bridge: SharedDataBridge<ApplicationContext>,
     app_ctx: ApplicationContext,
 }
@@ -59,26 +56,24 @@ impl Component for AppPage {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let app_ctx_bridge = SharedDataBridge::from(&link, Msg::SetAppCtx);
+    fn create(ctx: &Context<Self>) -> Self {
+        let app_ctx_bridge = SharedDataBridge::from(&ctx.link(), Msg::SetAppCtx);
 
         Self {
-            props,
-            link,
             _app_ctx_bridge: app_ctx_bridge,
             app_ctx: Default::default(),
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Logout => {
-                self.props.on_logout.emit(());
+                ctx.props().on_logout.emit(());
             }
             Msg::About => BackdropDispatcher::default().open(Backdrop {
                 content: (html! {
                     <AboutModal
-                        backend=self.props.backend.info.clone()
+                        backend={ctx.props().backend.info.clone()}
                         />
                 }),
             }),
@@ -97,37 +92,28 @@ impl Component for AppPage {
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let app = self.app_ctx.clone();
         let sidebar = html_nested! {
             <PageSidebar>
                 <Nav>
                     <NavList>
                         <NavRouterExpandable<AppRoute> title="Home">
-                            <NavRouterItem<AppRoute> to=AppRoute::Overview>{"Overview"}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Applications(pages::apps::Pages::Index)>{"Applications"}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Devices(pages::devices::Pages::Index{app})>{"Devices"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Overview}>{"Overview"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Applications(pages::apps::Pages::Index)}>{"Applications"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Devices(pages::devices::Pages::Index{app})}>{"Devices"}</NavRouterItem<AppRoute>>
                         </NavRouterExpandable<AppRoute>>
                         <NavRouterExpandable<AppRoute> title="Getting started">
-                            <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Register)>{Examples::Register.title()}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Consume)>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Publish)>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to=AppRoute::Examples(Examples::Commands)>{Examples::Commands.title()}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Register)}>{Examples::Register.title()}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Consume)}>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Publish)}>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Commands)}>{Examples::Commands.title()}</NavRouterItem<AppRoute>>
                         </NavRouterExpandable<AppRoute>>
                         <NavRouterExpandable<AppRoute> title="Tools">
-                            <NavRouterItem<AppRoute> to=AppRoute::Spy>{"Spy"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Spy}>{"Spy"}</NavRouterItem<AppRoute>>
                         </NavRouterExpandable<AppRoute>>
                         <NavRouterExpandable<AppRoute> title="API">
-                            <NavRouterItem<AppRoute> to=AppRoute::AccessTokens>{"Access tokens"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::AccessTokens}>{"Access tokens"}</NavRouterItem<AppRoute>>
                             <NavItem to="/api" target="_blank">{"API specification"}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAlt}</span></NavItem>
                         </NavRouterExpandable<AppRoute>>
                     </NavList>
@@ -137,7 +123,7 @@ impl Component for AppPage {
 
         let tools = vec![{
             let (id, name, full_name, account_url) =
-                if let Some(userinfo) = self.props.token.userinfo.as_ref() {
+                if let Some(userinfo) = ctx.props().token.userinfo.as_ref() {
                     let id = userinfo.id.clone();
                     let name = userinfo.name.clone();
                     let full_name = userinfo.full_name.as_ref().cloned();
@@ -146,8 +132,8 @@ impl Component for AppPage {
                     (String::new(), String::new(), None, None)
                 };
 
-            let src = self
-                .props
+            let src = ctx
+                .props()
                 .token
                 .userinfo
                 .as_ref()
@@ -191,35 +177,37 @@ impl Component for AppPage {
             // links
             items.push({
                 let mut items = Vec::new();
-                items.push(html_nested!{<DropdownItem onclick=self.link.callback(|_|Msg::CurrentToken)>{"Current Token"}</DropdownItem>});
+                items.push(html_nested!{<DropdownItem onclick={ctx.link().callback(|_|Msg::CurrentToken)}>{"Current Token"}</DropdownItem>});
                 if let Some(account_url) = account_url {
                     items.push(html_nested! {
-                        <DropdownItem target="_blank" href=account_url>{"Account"} <span class="pf-u-pl-sm">{Icon::ExternalLinkAlt}</span></DropdownItem>
+                        <DropdownItem target="_blank" href={account_url}>{"Account"} <span class="pf-u-pl-sm">{Icon::ExternalLinkAlt}</span></DropdownItem>
                     });
                 }
-                items.push(html_nested!{<DropdownItem onclick=self.link.callback(|_|Msg::Logout)>{"Logout"}</DropdownItem>});
+                items.push(html_nested!{<DropdownItem onclick={ctx.link().callback(|_|Msg::Logout)}>{"Logout"}</DropdownItem>});
 
                 (html_nested!{<DropdownItemGroup>{items}</DropdownItemGroup>}).into()
             });
 
             // render
 
+            let app_toggle = html! {Icon::QuestionCircle};
+            let user_toggle = html! {<UserToggle name={full_name.unwrap_or(name)} src={src} />};
             html! {
                 <>
                 <AppLauncher
-                    position=Position::Right
-                    toggle=html!{Icon::QuestionCircle}
+                    position={Position::Right}
+                    toggle={app_toggle}
                     >
                     <AppLauncherItem external=true href="https://book.drogue.io">{"Documentation"}</AppLauncherItem>
                     <Divider/>
-                    <AppLauncherItem onclick=self.link.callback(|_|Msg::About)>{"About"}</AppLauncherItem>
+                    <AppLauncherItem onclick={ctx.link().callback(|_|Msg::About)}>{"About"}</AppLauncherItem>
                 </AppLauncher>
                 <Dropdown
                     id="user-dropdown"
                     plain=true
-                    position=Position::Right
+                    position={Position::Right}
                     toggle_style="display: flex;"
-                    toggle=html!{<UserToggle name=full_name.unwrap_or(name) src=src />}
+                    toggle={user_toggle}
                     >
                 {items}
                 </Dropdown>
@@ -227,64 +215,64 @@ impl Component for AppPage {
             }
         }];
 
-        let endpoints = self.props.endpoints.clone();
-        let backend = self.props.backend.clone();
-        let token = self.props.token.clone();
+        let endpoints = ctx.props().endpoints.clone();
+        let backend = ctx.props().backend.clone();
+        let token = ctx.props().token.clone();
 
+        let logo = html_nested! {
+            <Logo src="/images/logo.png" alt="Drogue IoT" />
+        };
         return html! {
             <Page
-                logo={html_nested!{
-                    <Logo src="/images/logo.png" alt="Drogue IoT" />
-                }}
-                sidebar=sidebar
-                tools=Children::new(tools)
+                logo={logo}
+                sidebar={sidebar}
+                tools={Children::new(tools)}
                 >
                     <Router<AppRoute, ()>
-                            redirect = Router::redirect(|_|AppRoute::Overview)
-                            render = Router::render(move |switch: AppRoute| {
+                            redirect = {Router::redirect(|_|AppRoute::Overview)}
+                            render = {Router::render(move |switch: AppRoute| {
                                 match switch {
-                                    AppRoute::Overview => html!{<pages::Overview endpoints=endpoints.clone()/>},
+                                    AppRoute::Overview => html!{<pages::Overview endpoints={endpoints.clone()}/>},
                                     AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index
-                                        backend=backend.clone()
+                                        backend={backend.clone()}
                                     />},
                                     AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
-                                        backend=backend.clone()
-                                        token=token.clone()
-                                        endpoints=endpoints.clone()
-                                        name=url_decode(&name)
-                                        details=details
+                                        backend={backend.clone()}
+                                        token={token.clone()}
+                                        endpoints={endpoints.clone()}
+                                        name={url_decode(&name)}
+                                        details={details}
                                     />},
                                     AppRoute::Ownership(id) => html!{<pages::apps::ownership::Ownership
-                                        backend=backend.clone()
-                                        name=url_decode(&id)
+                                        backend={backend.clone()}
+                                        name={url_decode(&id)}
                                     />},
                                     AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
-                                        app=app.to_string()
-                                        backend=backend.clone()
+                                        app={app.to_string()}
+                                        backend={backend.clone()}
                                     />},
                                     AppRoute::Devices(pages::devices::Pages::Details{app, name, details}) => html!{<pages::devices::Details
-                                        backend=backend.clone()
-                                        app=url_decode(&app.to_string())
-                                        name=url_decode(&name)
-                                        details=details
+                                        backend={backend.clone()}
+                                        app={url_decode(&app.to_string())}
+                                        name={url_decode(&name)}
+                                        details={details}
                                     />},
                                     AppRoute::Spy => html!{<Spy
-                                        backend=backend.clone()
-                                        token=token.clone()
-                                        endpoints=endpoints.clone()
+                                        backend={backend.clone()}
+                                        token={token.clone()}
+                                        endpoints={endpoints.clone()}
                                     />},
                                     AppRoute::AccessTokens => html!{<pages::AccessTokens
-                                        backend=backend.clone()
+                                        backend={backend.clone()}
                                     />},
                                     AppRoute::CurrentToken => html!{<pages::CurrentToken
-                                        token=token.clone()
+                                        token={token.clone()}
                                     />},
-
                                     AppRoute::Examples(example) => html!{
-                                        <examples::ExamplePage example=example/>
+                                        <examples::ExamplePage example={example}/>
                                     },
                                 }
-                            })
+                            })}
                         />
             </Page>
         };

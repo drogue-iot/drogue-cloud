@@ -1,3 +1,6 @@
+use crate::backend::{
+    ApiResponse, Json, JsonHandlerScopeExt, JsonResponse, Nothing, RequestBuilder, RequestHandle,
+};
 use crate::{
     backend::{Backend, BackendInformation, RequestOptions, Token},
     components::placeholder::Placeholder,
@@ -6,28 +9,23 @@ use crate::{
     page::AppPage,
     preferences::Preferences,
 };
-use anyhow::Error;
 use chrono::{DateTime, Utc};
 use drogue_cloud_console_common::{EndpointInformation, UserInfo};
+use gloo_timers::callback::Timeout;
+use gloo_utils::window;
+use http::Method;
 use patternfly_yew::*;
+use serde_json::Value;
 use std::{rc::Rc, time::Duration};
 use url::Url;
 use wasm_bindgen::JsValue;
-use yew::{
-    format::{Json, Nothing},
-    prelude::*,
-    services::{
-        fetch::{Request, *},
-        timeout::*,
-    },
-    utils::window,
-};
+use web_sys::RequestCache;
+use yew::prelude::*;
 
 pub struct Main {
-    link: ComponentLink<Self>,
     access_code: Option<String>,
-    task: Option<FetchTask>,
-    refresh_task: Option<TimeoutTask>,
+    task: Option<RequestHandle>,
+    refresh_task: Option<Timeout>,
     token_holder: SharedDataBridge<Option<Token>>,
     /// Something failed, we can no longer work.
     app_failure: bool,
@@ -66,8 +64,8 @@ pub enum Msg {
 impl Component for Main {
     type Message = Msg;
     type Properties = ();
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::FetchBackend);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::FetchBackend);
 
         let location = window().location();
         let url = Url::parse(&location.href().unwrap()).unwrap();
@@ -94,11 +92,14 @@ impl Component for Main {
         log::debug!("Login error: {:?}", error);
 
         if let Some(error) = error {
-            link.send_message(Msg::AppFailure(Toast {
+            ctx.link().send_message(Msg::AppFailure(Toast {
                 title: "Failed to log in".into(),
                 body: html! {<p>{error}</p>},
                 r#type: Type::Danger,
-                actions: vec![link.callback(|_| Msg::RetryLogin).into_action("Retry")],
+                actions: vec![ctx
+                    .link()
+                    .callback(|_| Msg::RetryLogin)
+                    .into_action("Retry")],
                 ..Default::default()
             }));
         }
@@ -115,10 +116,9 @@ impl Component for Main {
                 .ok();
         }
 
-        let token_holder = SharedDataBridge::from(&link, Msg::SetAccessToken);
+        let token_holder = SharedDataBridge::from(&ctx.link(), Msg::SetAccessToken);
 
         Self {
-            link,
             access_code: code,
             task: None,
             refresh_task: None,
@@ -129,13 +129,13 @@ impl Component for Main {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         log::info!("Message: {:?}", msg);
 
         match msg {
             Msg::FetchBackend => {
                 self.task = Some(
-                    self.fetch_backend()
+                    self.fetch_backend(ctx)
                         .expect("Failed to get backend information"),
                 );
                 true
@@ -149,7 +149,7 @@ impl Component for Main {
                         // exchange code for token if we have a code and no app failure
                         log::info!("Exchange access code for token");
                         self.authenticating = true;
-                        self.link.send_message(Msg::GetToken(access_code));
+                        ctx.link().send_message(Msg::GetToken(access_code));
                     } else if let Some(refresh) = Preferences::load()
                         .ok()
                         .and_then(|prefs| prefs.refresh_token)
@@ -157,7 +157,7 @@ impl Component for Main {
                         log::info!("Re-using existing refresh token");
                         self.authenticating = true;
                         // try using existing refresh token
-                        self.link.send_message(Msg::RefreshToken(Some(refresh)))
+                        ctx.link().send_message(Msg::RefreshToken(Some(refresh)))
                     }
                 }
 
@@ -205,7 +205,7 @@ impl Component for Main {
                 // this can only be called once the backend information
                 if Backend::get().is_some() {
                     self.task = Some(
-                        self.fetch_token(&access_code)
+                        self.fetch_token(ctx, &access_code)
                             .expect("Failed to create request"),
                     );
                 } else {
@@ -245,18 +245,18 @@ impl Component for Main {
                     if rem < 30 {
                         // refresh now
                         log::debug!("Scheduling refresh now (had {} s remaining)", rem);
-                        self.link
+                        ctx.link()
                             .send_message(Msg::RefreshToken(token.refresh_token.as_ref().cloned()));
                     } else {
                         log::debug!("Scheduling refresh in {} seconds", rem);
                         let refresh_token = token.refresh_token.as_ref().cloned();
-                        self.refresh_task = Some(TimeoutService::spawn(
-                            Duration::from_secs(rem as u64),
-                            self.link.callback_once(move |_| {
+                        let delay = Duration::from_secs(rem as u64);
+                        let link = ctx.link().clone();
+                        self.refresh_task =
+                            Some(Timeout::new(delay.as_millis() as u32, move || {
                                 log::info!("Token timer expired, refreshing...");
-                                Msg::RefreshToken(refresh_token)
-                            }),
-                        ));
+                                link.send_message(Msg::RefreshToken(refresh_token))
+                            }));
                     }
                 } else {
                     log::debug!("Token has no expiration set");
@@ -265,7 +265,10 @@ impl Component for Main {
                 // fetch endpoints
 
                 if self.endpoints.is_none() {
-                    self.task = Some(self.fetch_endpoints().expect("Failed to fetch endpoints"));
+                    self.task = Some(
+                        self.fetch_endpoints(ctx)
+                            .expect("Failed to fetch endpoints"),
+                    );
                 }
 
                 // done
@@ -278,7 +281,7 @@ impl Component for Main {
 
                 match refresh_token {
                     Some(refresh_token) => {
-                        self.task = match self.refresh_token(&refresh_token) {
+                        self.task = match self.refresh_token(ctx, &refresh_token) {
                             Ok(task) => Some(task),
                             Err(_) => {
                                 Backend::reauthenticate().ok();
@@ -307,11 +310,7 @@ impl Component for Main {
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         return html! {
             <>
                 <BackdropViewer/>
@@ -322,15 +321,15 @@ impl Component for Main {
 
                         html!{
                             <AppPage
-                                backend=ready.0
-                                token=ready.1
-                                endpoints=ready.2
-                                on_logout=self.link.callback(|_|Msg::Logout)
+                                backend={ready.0}
+                                token={ready.1}
+                                endpoints={ready.2}
+                                on_logout={ctx.link().callback(|_|Msg::Logout)}
                                 />
                         }
 
                     } else if let Some(backend) = self.need_login() {
-                        html!{ <Placeholder info=backend.info /> }
+                        html!{ <Placeholder info={backend.info} /> }
                     } else {
                         html!{}
                     }
@@ -369,112 +368,73 @@ impl Main {
         self.authenticating || self.access_code.is_some()
     }
 
-    fn fetch_backend(&self) -> Result<FetchTask, anyhow::Error> {
-        let req = Request::get("/endpoints/backend.json").body(Nothing)?;
-
-        let opts = FetchOptions {
-            cache: Some(Cache::NoCache),
-            ..Default::default()
-        };
-
-        FetchService::fetch_with_options(
-            req,
-            opts,
-            self.link.callback(
-                |response: Response<Json<Result<BackendInformation, Error>>>| {
-                    log::info!("Backend: {:?}", response);
-                    if let (meta, Json(Ok(body))) = response.into_parts() {
-                        if meta.status.is_success() {
-                            return Msg::Backend(body);
-                        }
-                    }
-                    Msg::FetchBackendFailed
-                },
-            ),
-        )
+    fn fetch_backend(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(RequestBuilder::new(Method::GET, "/endpoints/backend.json")
+            .cache(RequestCache::NoCache)
+            .send(
+                ctx.callback_json::<BackendInformation, Value, _>(|response| match response {
+                    Ok(JsonResponse::Success(_, backend)) => Msg::Backend(backend),
+                    _ => Msg::FetchBackendFailed,
+                }),
+            ))
     }
 
-    fn fetch_endpoints(&self) -> Result<FetchTask, anyhow::Error> {
-        Backend::request_with(
+    fn fetch_endpoints(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(Backend::request_with(
             Method::GET,
             "/api/console/v1alpha1/info",
             Nothing,
             RequestOptions {
                 disable_reauth: true,
             },
-            self.link.callback(
-                |response: Response<Json<Result<EndpointInformation, Error>>>| {
-                    let parts = response.into_parts();
-                    if let (meta, Json(Ok(body))) = parts {
-                        log::info!("Meta: {:?}", meta);
-                        if meta.status.is_success() {
-                            return Msg::Endpoints(Rc::new(body));
-                        }
-                    }
-                    Msg::FetchBackendFailed
-                },
-            ),
-        )
+            ctx.callback_api::<Json<EndpointInformation>, _>(|response| match response {
+                ApiResponse::Success(info, _) => Msg::Endpoints(Rc::new(info)),
+                _ => Msg::FetchBackendFailed,
+            }),
+        )?)
     }
 
-    fn refresh_token(&self, refresh_token: &str) -> Result<FetchTask, anyhow::Error> {
+    fn refresh_token(
+        &self,
+        ctx: &Context<Self>,
+        refresh_token: &str,
+    ) -> Result<RequestHandle, anyhow::Error> {
         let mut url = Backend::url("/api/console/v1alpha1/ui/refresh")
             .ok_or_else(|| anyhow::anyhow!("Missing backend information"))?;
 
         url.query_pairs_mut()
             .append_pair("refresh_token", refresh_token);
 
-        let req = Request::get(url.to_string()).body(Nothing)?;
+        let req = RequestBuilder::new(Method::GET, url).cache(RequestCache::NoCache);
 
-        let opts = FetchOptions {
-            cache: Some(Cache::NoCache),
-            ..Default::default()
-        };
-
-        FetchService::fetch_with_options(
-            req,
-            opts,
-            self.link.callback(
-                |response: Response<Json<Result<serde_json::Value, Error>>>| {
-                    log::info!("Response from refreshing token: {:?}", response);
-                    Self::from_response(response, true)
-                },
-            ),
-        )
+        Ok(req.send(
+            ctx.callback_json::<Value, Value, _>(|response| Self::from_response(response, true)),
+        ))
     }
 
-    fn fetch_token<S: AsRef<str>>(&self, access_code: S) -> Result<FetchTask, anyhow::Error> {
+    fn fetch_token<S: AsRef<str>>(
+        &self,
+        ctx: &Context<Self>,
+        access_code: S,
+    ) -> Result<RequestHandle, anyhow::Error> {
         let mut url = Backend::url("/api/console/v1alpha1/ui/token")
             .ok_or_else(|| anyhow::anyhow!("Missing backend information"))?;
 
         url.query_pairs_mut()
             .append_pair("code", access_code.as_ref());
 
-        let req = Request::get(url.to_string()).body(Nothing)?;
+        let req = RequestBuilder::new(Method::GET, url).cache(RequestCache::NoCache);
 
-        let opts = FetchOptions {
-            cache: Some(Cache::NoCache),
-            ..Default::default()
-        };
-
-        FetchService::fetch_with_options(
-            req,
-            opts,
-            self.link.callback(
-                |response: Response<Json<Result<serde_json::Value, Error>>>| {
-                    log::info!("Code to token response: {:?}", response);
-                    Self::from_response(response, false)
-                },
-            ),
-        )
+        Ok(req.send(ctx.callback_json(|response| Self::from_response(response, false))))
     }
 
     fn from_response(
-        response: Response<Json<Result<serde_json::Value, Error>>>,
+        response: anyhow::Result<JsonResponse<Value, Value>>,
         is_refresh: bool,
     ) -> Msg {
-        if let (meta, Json(Ok(value))) = response.into_parts() {
-            if meta.status.is_success() {
+        log::info!("Response from refreshing token: {:?}", response);
+        match response {
+            Ok(JsonResponse::Success(_, value)) => {
                 let access_token = value["bearer"]["access_token"]
                     .as_str()
                     .map(|s| s.to_string());
@@ -523,11 +483,8 @@ impl Main {
                     Some(token) => Msg::ShareAccessToken(Some(token)),
                     None => Msg::FetchTokenFailed,
                 }
-            } else {
-                Msg::FetchTokenFailed
             }
-        } else {
-            Msg::FetchTokenFailed
+            _ => Msg::FetchTokenFailed,
         }
     }
 }

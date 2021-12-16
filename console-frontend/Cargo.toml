@@ -11,24 +11,45 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 anyhow = "1"
+thiserror = "1"
 
 drogue-cloud-console-common = { path = "../console-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-client = { version = "0.8", default-features = false }
 
-yew = "0.17"
-yew-router = "0.14"
-patternfly-yew = "0.0.27"
-monaco = { version = "0.2", features = ["yew-components"] }
+yew = "0.19"
+yew-router = "0.15"
+yew-agent = "0.1"
+gloo-utils = "0.1"
+gloo-timers = "0.2"
+gloo-storage = "0.2"
+patternfly-yew = "0.1.0"
+monaco = { version = "0.3", features = ["yew-components"] }
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
 #  * Update the dependency version here
 #  * Create a new builder image, with the same version of wasm-bindgen pre-installed
 wasm-bindgen = "=0.2.78"
+wasm-bindgen-futures = "0.4"
 
 js-sys = "0.3.50"
-web-sys = { version = "0.3", features = ["MessageEvent", "Window", "Location", "WebSocket"] }
+web-sys = { version = "0.3", features = [
+    "AbortController",
+    "AbortSignal",
+    "Headers",
+    "Location",
+    "Request",
+    "RequestCache",
+    "RequestCredentials",
+    "RequestInit",
+    "RequestMode",
+    "RequestRedirect",
+    "Response",
+    "MessageEvent",
+    "WebSocket",
+    "Window",
+]}
 
 once_cell = "1"
 
@@ -74,6 +95,10 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "7eef5444e47e0460103f8d584a8ec67aa57c55ba" } # FIXME: awaiting release
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "a764e28c9e8085c78da3ababebc53f5a37eaec12" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "916829633f49e08d32d8dfe91586e76ca68fc7de" } # FIXME: awaiting release
+
+monaco = { git = "https://github.com/ctron/rust-monaco", rev = "44db18f0f87ec77d98b0b8b768d5baa7a0193c38" } # FIXME: awaiting release
+#monaco = { path = "../../rust-monaco" }
+yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" } # FIXME: thing about releasing as fork

@@ -2,6 +2,7 @@ use crate::{
     backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
+    html_prop,
     utils::{shell_quote, shell_single_quote, url_encode},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
@@ -16,9 +17,6 @@ pub struct Props {
 }
 
 pub struct CommandAndControl {
-    props: Props,
-    link: ComponentLink<Self>,
-
     data_agent: SharedDataDispatcher<ExampleData>,
 }
 
@@ -34,15 +32,13 @@ impl Component for CommandAndControl {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         Self {
-            props,
-            link,
             data_agent: SharedDataDispatcher::new(),
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Self::Message::SetCommandEmptyMessage(cmd_empty_message) => self
                 .data_agent
@@ -60,20 +56,11 @@ impl Component for CommandAndControl {
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let mut cards: Vec<_> = vec![html! {
             <Alert
                 title="Command & control"
-                r#type=Type::Info inline=true
+                r#type={Type::Info} inline=true
                 >
                 <Content>
                 <p>
@@ -89,17 +76,17 @@ impl Component for CommandAndControl {
             </Alert>
         }];
 
-        let local_certs = self
-            .props
+        let local_certs = ctx
+            .props()
             .data
-            .local_certs(self.props.endpoints.local_certs);
+            .local_certs(ctx.props().endpoints.local_certs);
 
-        if let Some(http) = &self.props.endpoints.http {
-            let payload = match self.props.data.cmd_empty_message {
+        if let Some(http) = &ctx.props().endpoints.http {
+            let payload = match ctx.props().data.cmd_empty_message {
                 true => "".into(),
                 false => format!(
                     "echo {payload} | ",
-                    payload = shell_single_quote(&self.props.data.payload)
+                    payload = shell_single_quote(&ctx.props().data.payload)
                 ),
             };
             let publish_http_cmd = format!(
@@ -108,16 +95,16 @@ impl Component for CommandAndControl {
                 url = http.url,
                 auth = shell_quote(format!(
                     "{device_id}@{app_id}:{password}",
-                    app_id = self.props.data.app_id,
-                    device_id = url_encode(&self.props.data.device_id),
-                    password = &self.props.data.password,
+                    app_id = ctx.props().data.app_id,
+                    device_id = url_encode(&ctx.props().data.device_id),
+                    password = &ctx.props().data.password,
                 )),
                 certs = local_certs
                     .then(|| "--verify build/certs/endpoints/root-cert.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
-                <Card title={html!{"Receive commands using HTTP long-polling"}}>
+                <Card title={html_prop!({"Receive commands using HTTP long-polling"})}>
                     <div>
                         {r#"
                         A device can receive commands using HTTP long-polling, when it publishes data to the cloud. To do this, a device needs to inform the HTTP endpoint,
@@ -126,9 +113,9 @@ impl Component for CommandAndControl {
                     </div>
                     <div>
                         <Switch
-                            checked=self.props.data.cmd_empty_message
+                            checked={ctx.props().data.cmd_empty_message}
                             label="Send empty message" label_off="Send example payload"
-                            on_change=self.link.callback(|data| Msg::SetCommandEmptyMessage(data))
+                            on_change={ctx.link().callback(|data| Msg::SetCommandEmptyMessage(data))}
                             />
                     </div>
                     <Alert title="Hurry up!" inline=true>
@@ -137,18 +124,18 @@ impl Component for CommandAndControl {
                         expires, the device will stop waiting and return with an empty response.
                         "#}
                     </Alert>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={publish_http_cmd}/>
                     {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
-        if let Some(coap) = &self.props.endpoints.coap {
-            let payload = match self.props.data.cmd_empty_message {
+        if let Some(coap) = &ctx.props().endpoints.coap {
+            let payload = match ctx.props().data.cmd_empty_message {
                 true => "".into(),
                 false => format!(
                     "echo {payload} | ",
-                    payload = shell_single_quote(&self.props.data.payload)
+                    payload = shell_single_quote(&ctx.props().data.payload)
                 ),
             };
             let publish_http_cmd = format!(
@@ -158,15 +145,15 @@ impl Component for CommandAndControl {
                 auth = shell_quote(base64::encode_config(
                     format!(
                         "{device_id}@{app_id}:{password}",
-                        app_id = self.props.data.app_id,
-                        device_id = url_encode(&self.props.data.device_id),
-                        password = &self.props.data.password,
+                        app_id = ctx.props().data.app_id,
+                        device_id = url_encode(&ctx.props().data.device_id),
+                        password = &ctx.props().data.password,
                     ),
                     base64::STANDARD_NO_PAD
                 )),
             );
             cards.push(html!{
-                <Card title={html!{"Receive commands using CoAP long-polling"}}>
+                <Card title={html_prop!({"Receive commands using CoAP long-polling"})}>
                     <div>
                         {r#"
                         A device can receive commands using CoAP long-polling, when it publishes data to the cloud. To do this, a device needs to inform the CoAP endpoint,
@@ -175,9 +162,9 @@ impl Component for CommandAndControl {
                     </div>
                     <div>
                         <Switch
-                            checked=self.props.data.cmd_empty_message
+                            checked={ctx.props().data.cmd_empty_message}
                             label="Send empty message" label_off="Send example payload"
-                            on_change=self.link.callback(|data| Msg::SetCommandEmptyMessage(data))
+                            on_change={ctx.link().callback(|data| Msg::SetCommandEmptyMessage(data))}
                             />
                     </div>
                     <Alert title="Hurry up!" inline=true>
@@ -186,55 +173,55 @@ impl Component for CommandAndControl {
                         expires, the device will stop waiting and return with an empty response.
                         "#}
                     </Alert>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_http_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={publish_http_cmd} />
                     {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
-        if let Some(mqtt) = &self.props.endpoints.mqtt {
+        if let Some(mqtt) = &ctx.props().endpoints.mqtt {
             let publish_mqtt_cmd = format!(
                 r#"mqtt sub -h {host} -p {port} -u '{device_id}@{app_id}' -pw '{password}' -s {certs}-t command/inbox/#"#,
                 host = mqtt.host,
                 port = mqtt.port,
-                app_id = &self.props.data.app_id,
-                device_id = shell_quote(url_encode(&self.props.data.device_id)),
-                password = shell_quote(&self.props.data.password),
+                app_id = &ctx.props().data.app_id,
+                device_id = shell_quote(url_encode(&ctx.props().data.device_id)),
+                password = shell_quote(&ctx.props().data.password),
                 certs = local_certs
                     .then(|| "--cafile build/certs/endpoints/root-cert.pem ")
                     .unwrap_or("")
             );
             cards.push(html!{
-                <Card title={html!{"Receive commands using MQTT subscriptions"}}>
+                <Card title={html_prop!({"Receive commands using MQTT subscriptions"})}>
                     <div>
                         {"Using MQTT, you can simply subscribe to commands."}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=publish_mqtt_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={publish_mqtt_cmd}/>
                     {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
-        if let Some(cmd) = &self.props.endpoints.command_url {
+        if let Some(cmd) = &ctx.props().endpoints.command_url {
             let v = |value: &str| match value {
                 "" => InputState::Error,
                 _ => InputState::Default,
             };
-            let token = match self.props.data.drg_token {
+            let token = match ctx.props().data.drg_token {
                 true => "$(drg whoami -t)",
-                false => self.props.token.access_token.as_str(),
+                false => ctx.props().token.access_token.as_str(),
             };
             let send_command_cmd = format!(
                 r#"echo {payload} | http POST {url}/api/command/v1alpha1/apps/{app}/devices/{device} command=={cmd} "Authorization:Bearer {token}""#,
-                payload = shell_single_quote(&self.props.data.cmd_payload),
+                payload = shell_single_quote(&ctx.props().data.cmd_payload),
                 url = cmd,
-                app = url_encode(&self.props.data.app_id),
-                device = url_encode(&self.props.data.device_id),
+                app = url_encode(&ctx.props().data.app_id),
+                device = url_encode(&ctx.props().data.device_id),
                 token = token,
-                cmd = shell_quote(&self.props.data.cmd_name),
+                cmd = shell_quote(&ctx.props().data.cmd_name),
             );
             cards.push(html!{
-                <Card title={html!{"Send a command"}}>
+                <Card title={html_prop!({"Send a command"})}>
                     <div>
                         {r#"
                         Once the device is waiting for commands, you can send one.
@@ -243,27 +230,27 @@ impl Component for CommandAndControl {
                     <Form>
                         <FormGroup label="Command name">
                             <TextInput
-                                value=&self.props.data.cmd_name
+                                value={ctx.props().data.cmd_name.clone()}
                                 required=true
-                                onchange=self.link.callback(|name|Msg::SetCommandName(name))
-                                validator=Validator::from(v)
+                                onchange={ctx.link().callback(|name|Msg::SetCommandName(name))}
+                                validator={Validator::from(v)}
                                 />
                         </FormGroup>
                         <FormGroup label="Command payload">
                             <TextArea
-                                value=&self.props.data.cmd_payload
-                                onchange=self.link.callback(|payload|Msg::SetCommandPayload(payload))
+                                value={ctx.props().data.cmd_payload.clone()}
+                                onchange={ctx.link().callback(|payload|Msg::SetCommandPayload(payload))}
                                 />
                         </FormGroup>
                         <FormGroup>
                             <Switch
-                                checked=self.props.data.drg_token
+                                checked={ctx.props().data.drg_token}
                                 label="Use 'drg' to get the access token" label_off="Show current token in example"
-                                on_change=self.link.callback(|data| Msg::SetDrgToken(data))
+                                on_change={ctx.link().callback(|data| Msg::SetDrgToken(data))}
                                 />
                         </FormGroup>
                     </Form>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=send_command_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={send_command_cmd} />
                 </Card>
             });
         }

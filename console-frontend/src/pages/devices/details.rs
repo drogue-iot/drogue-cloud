@@ -1,18 +1,19 @@
 use super::{DevicesTabs, Pages};
-use crate::error::{ErrorNotification, ErrorNotifier};
-use crate::utils::JsonResponse;
+use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::{
     backend::Backend,
-    error::error,
+    error::{error, ErrorNotification, ErrorNotifier},
+    html_prop,
     page::AppRoute,
     pages::{apps::ApplicationContext, devices::DetailsSection},
     utils::url_encode,
 };
 use drogue_client::registry::v1::Device;
+use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::rc::Rc;
-use yew::{format::*, prelude::*, services::fetch::*};
+use yew::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -31,10 +32,7 @@ pub enum Msg {
 }
 
 pub struct Details {
-    props: Props,
-    link: ComponentLink<Self>,
-
-    fetch_task: Option<FetchTask>,
+    fetch_task: Option<RequestHandle>,
 
     content: Option<Rc<Device>>,
     yaml: Option<TextModel>,
@@ -44,21 +42,19 @@ impl Component for Details {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::Load);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::Load);
 
         Self {
-            props,
-            link,
             content: None,
             yaml: None,
             fetch_task: None,
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::Load => match self.load() {
+            Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to load", err),
             },
@@ -73,7 +69,7 @@ impl Component for Details {
             Msg::SaveEditor => {
                 if let Some(model) = &self.yaml {
                     let new_content = model.get_value();
-                    match self.update_yaml(&new_content) {
+                    match self.update_yaml(ctx, &new_content) {
                         Ok(task) => self.fetch_task = Some(task),
                         Err(err) => error("Failed to update", err),
                     }
@@ -86,25 +82,16 @@ impl Component for Details {
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
+                <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
-                        <Title>{&self.props.name}</Title>
+                        <Title>{&ctx.props().name}</Title>
                     </Content>
                 </PageSection>
             { if let Some(app) = &self.content {
-                self.render_content(app)
+                self.render_content(ctx, app)
             } else {
                 html!{<PageSection><Grid></Grid></PageSection>}
             } }
@@ -114,47 +101,44 @@ impl Component for Details {
 }
 
 impl Details {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices/{}",
-                url_encode(&self.props.app),
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().app),
+                url_encode(&ctx.props().name)
             ),
             Nothing,
             vec![],
-            self.link.callback(move |response: JsonResponse<Device>| {
-                match response.into_body().0 {
-                    Ok(content) => Msg::SetData(Rc::new(content.value)),
-                    Err(err) => Msg::Error(err.notify("Failed to load")),
-                }
+            ctx.callback_api::<Json<Device>, _>(move |response| match response {
+                ApiResponse::Success(device, _) => Msg::SetData(Rc::new(device)),
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load")),
             }),
-        )
+        )?)
     }
 
-    fn update(&self, app: Device) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn update(&self, ctx: &Context<Self>, app: Device) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::PUT,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices/{}",
-                url_encode(&self.props.app),
-                url_encode(&self.props.name)
+                url_encode(&ctx.props().app),
+                url_encode(&ctx.props().name)
             ),
-            Json(&app),
-            vec![("Content-Type", "application/json")],
-            self.link
-                .callback(move |response: Response<Text>| match response.status() {
-                    status if status.is_success() => Msg::Load,
-                    _ => Msg::Error(response.notify("Failed to update")),
-                }),
-        )
+            Json(app),
+            vec![],
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(..) => Msg::Load,
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to update")),
+            }),
+        )?)
     }
 
-    fn update_yaml(&self, yaml: &str) -> Result<FetchTask, anyhow::Error> {
+    fn update_yaml(&self, ctx: &Context<Self>, yaml: &str) -> Result<RequestHandle, anyhow::Error> {
         let app = serde_yaml::from_str(yaml)?;
         log::info!("Updating to: {:#?}", app);
-        self.update(app)
+        self.update(ctx, app)
     }
 
     fn reset(&mut self) {
@@ -168,7 +152,7 @@ impl Details {
         }
     }
 
-    fn render_content(&self, device: &Device) -> Html {
+    fn render_content(&self, ctx: &Context<Self>, device: &Device) -> Html {
         let app = device.metadata.application.clone();
         let name = device.metadata.name.clone();
         let transformer = SwitchTransformer::new(
@@ -187,19 +171,19 @@ impl Details {
 
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light>
+                <PageSection variant={PageSectionVariant::Light}>
                     <DevicesTabs
-                        transformer=transformer
+                        transformer={transformer}
                         >
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Overview label="Overview"/>
-                        <TabRouterItem<DetailsSection> to=DetailsSection::Yaml label="YAML"/>
+                        <TabRouterItem<DetailsSection> to={DetailsSection::Overview} label="Overview"/>
+                        <TabRouterItem<DetailsSection> to={DetailsSection::Yaml} label="YAML"/>
                     </DevicesTabs>
                 </PageSection>
                 <PageSection>
                 {
-                    match self.props.details {
+                    match ctx.props().details {
                         DetailsSection::Overview => self.render_overview(device),
-                        DetailsSection::Yaml => self.render_editor(),
+                        DetailsSection::Yaml => self.render_editor(ctx),
                     }
                 }
                 </PageSection>
@@ -210,9 +194,9 @@ impl Details {
     fn render_overview(&self, device: &Device) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols=[3]>
+                <GridItem cols={[3]}>
                     <Card
-                        title={html_nested!{<>{"Details"}</>}}
+                        title={html_prop!({"Details"})}
                     >
                     <DescriptionList>
                         <DescriptionGroup term="Application">
@@ -224,9 +208,9 @@ impl Details {
                         <DescriptionGroup term="Labels">
                             { for device.metadata.labels.iter().map(|(k,v)|
                                 if v.is_empty() {
-                                    html!{ <Label label=k.clone()/>}
+                                    html!{ <Label label={k.clone()}/>}
                                 } else {
-                                    html!{ <Label label=format!("{}={}", k, v)/>}
+                                    html!{ <Label label={format!("{}={}", k, v)}/>}
                                 }
                             ) }
                         </DescriptionGroup>
@@ -237,7 +221,7 @@ impl Details {
         };
     }
 
-    fn render_editor(&self) -> Html {
+    fn render_editor(&self, ctx: &Context<Self>) -> Html {
         let options = CodeEditorOptions::default()
             .with_scroll_beyond_last_line(false)
             .with_language("yaml".to_owned())
@@ -249,14 +233,14 @@ impl Details {
             <>
             <Stack>
                 <StackItem fill=true>
-                    <CodeEditor model=self.yaml.clone() options=options/>
+                    <CodeEditor model={self.yaml.clone()} options={options} />
                 </StackItem>
                 <StackItem>
                     <Form>
                     <ActionGroup>
-                        <Button disabled=self.fetch_task.is_some() label="Save" variant=Variant::Primary onclick=self.link.callback(|_|Msg::SaveEditor)/>
-                        <Button disabled=self.fetch_task.is_some() label="Reload" variant=Variant::Secondary onclick=self.link.callback(|_|Msg::Load)/>
-                        <Button disabled=self.fetch_task.is_some() label="Cancel" variant=Variant::Secondary onclick=self.link.callback(|_|Msg::Reset)/>
+                        <Button disabled={self.fetch_task.is_some()} label="Save" variant={Variant::Primary} onclick={ctx.link().callback(|_|Msg::SaveEditor)}/>
+                        <Button disabled={self.fetch_task.is_some()} label="Reload" variant={Variant::Secondary} onclick={ctx.link().callback(|_|Msg::Load)}/>
+                        <Button disabled={self.fetch_task.is_some()} label="Cancel" variant={Variant::Secondary} onclick={ctx.link().callback(|_|Msg::Reset)}/>
                     </ActionGroup>
                     </Form>
                 </StackItem>

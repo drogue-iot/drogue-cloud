@@ -1,5 +1,5 @@
+use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::error::{ErrorNotification, ErrorNotifier};
-use crate::utils::JsonResponse;
 use crate::{
     backend::Backend,
     data::{SharedDataDispatcher, SharedDataOps},
@@ -13,8 +13,9 @@ use crate::{
     utils::{navigate_to, url_encode},
 };
 use drogue_client::registry::v1::{Application, Device};
+use http::Method;
 use patternfly_yew::*;
-use yew::{format::*, prelude::*, services::fetch::*};
+use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeviceEntry {
@@ -27,7 +28,7 @@ impl TableRenderer for DeviceEntry {
     fn render(&self, column: ColumnIndex) -> Html {
         match column.index {
             0 => html! {
-                <a onclick=self.on_overview.clone().reform(|_|())>{self.device.metadata.name.clone()}</a>
+                <a onclick={self.on_overview.clone().reform(|_|())}>{self.device.metadata.name.clone()}</a>
             },
             1 => self.device.render_state(),
             2 => self
@@ -43,7 +44,7 @@ impl TableRenderer for DeviceEntry {
     fn actions(&self) -> Vec<DropdownChildVariant> {
         vec![html_nested! {
         <DropdownItem
-            onclick=self.on_delete.clone()
+            onclick={self.on_delete.clone()}
         >
             {"Delete"}
         </DropdownItem>}
@@ -72,10 +73,7 @@ pub enum Msg {
 }
 
 pub struct Index {
-    props: Props,
-    link: ComponentLink<Self>,
-
-    fetch_task: Option<FetchTask>,
+    fetch_task: Option<RequestHandle>,
 
     entries: Vec<DeviceEntry>,
     app: String,
@@ -87,14 +85,12 @@ impl Component for Index {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        link.send_message(Msg::LoadApps);
+    fn create(ctx: &Context<Self>) -> Self {
+        ctx.link().send_message(Msg::LoadApps);
 
-        let app = props.app.clone();
+        let app = ctx.props().app.clone();
 
         Self {
-            props,
-            link,
             entries: Vec::new(),
             fetch_task: None,
             app,
@@ -103,13 +99,13 @@ impl Component for Index {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::LoadApps => match self.load_apps() {
+            Msg::LoadApps => match self.load_apps(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to fetch", err),
             },
-            Msg::Load => match self.load() {
+            Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to fetch", err),
             },
@@ -119,10 +115,10 @@ impl Component for Index {
                 if self.app.is_empty() {
                     // if we don't have an app set yet, set the first one
                     if let Some(app) = apps.first() {
-                        self.link.send_message(Msg::SetApp(app.clone()));
+                        ctx.link().send_message(Msg::SetApp(app.clone()));
                     }
                 } else {
-                    self.link.send_message(Msg::Load);
+                    ctx.link().send_message(Msg::Load);
                 }
 
                 self.apps = apps;
@@ -152,9 +148,9 @@ impl Component for Index {
             Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
                 content: (html! {
                     <CreateDialog
-                        backend=self.props.backend.clone()
-                        on_close=self.link.callback_once(move |_| Msg::Load)
-                        app=self.app.clone()
+                        backend={ctx.props().backend.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        app={self.app.clone()}
                         />
                 }),
             }),
@@ -162,31 +158,23 @@ impl Component for Index {
         true
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        let changed = if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        };
-
-        if changed && self.app != self.props.app {
-            self.app = self.props.app.clone();
-            self.link.send_message(Msg::Load);
+    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+        if self.app != ctx.props().app {
+            self.app = ctx.props().app.clone();
+            ctx.link().send_message(Msg::Load);
         }
-
-        changed
+        true
     }
 
-    fn view(&self) -> Html {
-        let link = self.link.clone();
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let link = ctx.link().clone();
         let app_filter = self.app_filter.clone();
         return html! {
             <>
-                <PageSection variant=PageSectionVariant::Light>
+                <PageSection variant={PageSectionVariant::Light}>
                     <ContextSelector
-                        selected=self.app.clone()
-                        onsearch=link.callback(|v|Msg::AppSearch(v))
+                        selected={self.app.clone()}
+                        onsearch={link.callback(|v|Msg::AppSearch(v))}
                         >
                         { for self.apps.iter().filter(|app|{
                             if app_filter.is_empty() {
@@ -199,24 +187,24 @@ impl Component for Index {
                             let onclick = link.callback(move |_|Msg::SetApp(ac.clone()));
                             html_nested!{
                                 <ContextSelectorItem
-                                    label=app.clone()
-                                    onclick=onclick
+                                    label={app.clone()}
+                                    onclick={onclick}
                                 />}
                         })}
                     </ContextSelector>
                 </PageSection>
-                <PageSection variant=PageSectionVariant::Light>
+                <PageSection variant={PageSectionVariant::Light}>
                     <Content>
                         <Flex>
                         <FlexItem>
                             <Title>{"Devices"}</Title>
                         </FlexItem>
-                        <FlexItem modifiers=vec![FlexModifier::Align(Alignement::Right).all()]>
+                        <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
                             <Button
                                     label="New device"
-                                    disabled=self.app.is_empty()
-                                    variant=Variant::Primary
-                                    onclick=self.link.callback(|_|Msg::TriggerModal)
+                                    disabled={self.app.is_empty()}
+                                    variant={Variant::Primary}
+                                    onclick={ctx.link().callback(|_|Msg::TriggerModal)}
                             />
                         </FlexItem>
                         </Flex>
@@ -225,17 +213,17 @@ impl Component for Index {
             { if self.app.is_empty() {html!{
             }} else { html!{
                 <PageSection>
-                    <Table<SimpleTableModel<DeviceEntry>>
-                        entries=SimpleTableModel::from(self.entries.clone())
-                        header={html_nested!{
+                    <Table<SharedTableModel<DeviceEntry>>
+                        entries={SharedTableModel::from(self.entries.clone())}
+                        header={{html_nested!{
                             <TableHeader>
                                 <TableColumn label="Name"/>
                                 <TableColumn label="Status"/>
                                 <TableColumn label="Created"/>
                             </TableHeader>
-                        }}
+                        }}}
                         >
-                    </Table<SimpleTableModel<DeviceEntry>>>
+                    </Table<SharedTableModel<DeviceEntry>>>
                 </PageSection>
             }}}
             </>
@@ -244,10 +232,10 @@ impl Component for Index {
 }
 
 impl Index {
-    fn load(&self) -> Result<FetchTask, anyhow::Error> {
-        let link = self.link.clone();
+    fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        let link = ctx.link().clone();
 
-        self.props.backend.info.request(
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices",
@@ -255,54 +243,45 @@ impl Index {
             ),
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: JsonResponse<Vec<Device>>| {
-                    match response.into_body().0 {
-                        Ok(entries) => {
-                            let link = link.clone();
-                            let entries = entries
-                                .value
-                                .into_iter()
-                                .map(move |device| {
-                                    let name = device.metadata.name.clone();
-                                    let on_overview =
-                                        link.callback_once(move |_| Msg::ShowOverview(name));
+            ctx.callback_api::<Json<Vec<Device>>, _>(move |response| match response {
+                ApiResponse::Success(entries, _) => {
+                    let link = link.clone();
+                    let entries = entries
+                        .into_iter()
+                        .map(move |device| {
+                            let name = device.metadata.name.clone();
+                            let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
 
-                                    DeviceEntry {
-                                        device,
-                                        on_overview,
-                                        on_delete: Default::default(),
-                                    }
-                                })
-                                .collect();
-                            Msg::SetData(entries)
-                        }
-                        Err(err) => Msg::Error(err.notify("Failed to load device")),
-                    }
-                }),
-        )
+                            DeviceEntry {
+                                device,
+                                on_overview,
+                                on_delete: Default::default(),
+                            }
+                        })
+                        .collect();
+                    Msg::SetData(entries)
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load device")),
+            }),
+        )?)
     }
 
-    fn load_apps(&self) -> Result<FetchTask, anyhow::Error> {
-        self.props.backend.info.request(
+    fn load_apps(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
             Method::GET,
             "/api/registry/v1alpha1/apps",
             Nothing,
             vec![],
-            self.link
-                .callback(move |response: JsonResponse<Vec<Application>>| {
-                    match response.into_body().0 {
-                        Ok(entries) => {
-                            let entries = entries
-                                .value
-                                .into_iter()
-                                .map(move |app| app.metadata.name)
-                                .collect();
-                            Msg::SetApps(entries)
-                        }
-                        Err(err) => Msg::Error(err.notify("Failed to load applications")),
-                    }
-                }),
-        )
+            ctx.callback_api::<Json<Vec<Application>>, _>(move |response| match response {
+                ApiResponse::Success(entries, _) => {
+                    let entries = entries
+                        .into_iter()
+                        .map(move |app| app.metadata.name)
+                        .collect();
+                    Msg::SetApps(entries)
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load applications")),
+            }),
+        )?)
     }
 }

@@ -2,6 +2,7 @@ use crate::{
     backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
+    html_prop,
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
@@ -19,9 +20,6 @@ pub struct Props {
 }
 
 pub struct ConsumeData {
-    props: Props,
-    link: ComponentLink<Self>,
-
     data_agent: SharedDataDispatcher<ExampleData>,
 }
 
@@ -38,15 +36,13 @@ impl Component for ConsumeData {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         Self {
-            props,
-            link,
             data_agent: SharedDataDispatcher::new(),
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Self::Message::SetBinaryMode(binary_mode) => self
                 .data_agent
@@ -71,16 +67,7 @@ impl Component for ConsumeData {
         false
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, ctx: &Context<Self>) -> Html {
         let v = |value: &str| match value {
             "" => InputState::Error,
             v => {
@@ -92,31 +79,31 @@ impl Component for ConsumeData {
             }
         };
 
-        let local_certs = self
-            .props
+        let local_certs = ctx
+            .props()
             .data
-            .local_certs(self.props.endpoints.local_certs);
+            .local_certs(ctx.props().endpoints.local_certs);
 
         let mut cards: Vec<_> = Vec::new();
 
-        if let Some(mqtt) = &self.props.endpoints.mqtt_integration {
-            let opts = match self.props.data.binary_mode {
+        if let Some(mqtt) = &ctx.props().endpoints.mqtt_integration {
+            let opts = match ctx.props().data.binary_mode {
                 true => " -up content-mode=binary",
                 false => "",
             };
-            let topic = match self.props.data.consumer_group {
-                None => format!("app/{app}", app = self.props.data.app_id),
+            let topic = match ctx.props().data.consumer_group {
+                None => format!("app/{app}", app = ctx.props().data.app_id),
                 Some(ref group) => {
                     format!(
                         "$shared/{group}/app/{app}",
                         group = group,
-                        app = self.props.data.app_id
+                        app = ctx.props().data.app_id
                     )
                 }
             };
-            let token = match self.props.data.drg_token {
+            let token = match ctx.props().data.drg_token {
                 true => "\"$(drg whoami -t)\"".into(),
-                false => format!("\"{}\"", self.props.token.access_token),
+                false => format!("\"{}\"", ctx.props().token.access_token),
             };
             let consume_mqtt_cmd = format!(
                 r#"mqtt sub -h {host} -p {port} -s {certs}-t '{topic}' {opts} -pw {token}"#,
@@ -130,100 +117,105 @@ impl Component for ConsumeData {
                     .unwrap_or("")
             );
             cards.push(html!{
-                <Card title=html!{"Consume device data using MQTT"}>
+                <Card title={html_prop!({"Consume device data using MQTT"})}>
                     <div>
                         {"The data, published by devices, can also be consumed using MQTT."}
                     </div>
                     <div>
                         <Switch
-                            checked=self.props.data.binary_mode
+                            checked={ctx.props().data.binary_mode}
                             label="Binary content mode" label_off="Structured content mode"
-                            on_change=self.link.callback(|data| Msg::SetBinaryMode(data))
+                            on_change={ctx.link().callback(|data| Msg::SetBinaryMode(data))}
                             />
                     </div>
                     <div>
                         <Switch
-                            checked=self.props.data.drg_token
+                            checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change=self.link.callback(|data| Msg::SetDrgToken(data))
+                            on_change={ctx.link().callback(|data| Msg::SetDrgToken(data))}
                             />
                     </div>
                     <div>
                         <Split gutter=true>
                             <SplitItem>
-                            <div style="border-width: --pf-c-form-control--BorderWidth;">
-                        <Switch
-                            checked=self.props.data.consumer_group.is_some()
-                            label="Shared consumer: " label_off="Default consumer"
-                            on_change=self.link.callback(|data| Msg::SetSharedConsumerMode(data))
-                            />
-                            </div></SplitItem>
+                                <div style="border-width: --pf-c-form-control--BorderWidth;">
+                                <Switch
+                                    checked={ctx.props().data.consumer_group.is_some()}
+                                    label="Shared consumer: " label_off="Default consumer"
+                                    on_change={ctx.link().callback(|data| Msg::SetSharedConsumerMode(data))}
+                                    />
+                                </div>
+                            </SplitItem>
                             <SplitItem>
-                        { if let Some(ref consumer_group) = self.props.data.consumer_group {html!{
+                        if let Some(consumer_group) = &ctx.props().data.consumer_group {
                             <TextInput
-                                value=consumer_group
+                                value={consumer_group.to_owned()}
                                 required=true
-                                onchange=self.link.callback(|consumer_group|Msg::SetConsumerGroup(consumer_group))
-                                validator=Validator::from(v)
+                                onchange={ctx.link().callback(|consumer_group|Msg::SetConsumerGroup(consumer_group))}
+                                validator={Validator::from(v)}
                                 />
-                        }} else { html!{}} }
+                        }
                             </SplitItem>
                         </Split>
                     </div>
                     <div>
                         {"Run the following command in a new terminal window:"}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=consume_mqtt_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={consume_mqtt_cmd} />
                     {note_local_certs(local_certs)}
                 </Card>
             });
         }
 
-        if let Some(ws) = &self.props.endpoints.websocket_integration {
-            let token = match self.props.data.drg_token {
+        if let Some(ws) = &ctx.props().endpoints.websocket_integration {
+            let token = match ctx.props().data.drg_token {
                 true => "$(drg whoami -t)".into(),
-                false => self.props.token.access_token.clone(),
+                false => ctx.props().token.access_token.clone(),
             };
             let consume_websocket_cmd = format!(
                 r#"websocat {}/{} -H="Authorization: Bearer {}""#,
-                ws.url, self.props.data.app_id, token,
+                ws.url,
+                ctx.props().data.app_id,
+                token,
             );
-            let drg_cmd = format!("drg stream {}", self.props.data.app_id,);
+            let drg_cmd = format!("drg stream {}", ctx.props().data.app_id,);
             cards.push(html!{
-                <Card title=html!{"Consume device data using a Websocket"}>
+                <Card title={html_prop!({"Consume device data using a Websocket"})}>
                     <div>
                         {"The data, published by devices, can also be consumed using a websocket."}
                     </div>
                     <div>
                         {"'drg' allows to easily get the stream:"}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=drg_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={drg_cmd}/>
                     <div>
                         {"With a websocket client like 'websocat':"}
                     </div>
                     <div>
                         <Switch
-                            checked=self.props.data.drg_token
+                            checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change=self.link.callback(|data| Msg::SetDrgToken(data))
+                            on_change={ctx.link().callback(|data| Msg::SetDrgToken(data))}
                             />
                     </div>
                     <div>
                         {"Run the following command in a new terminal window:"}
                     </div>
-                    <Clipboard code=true readonly=true variant=ClipboardVariant::Expandable value=consume_websocket_cmd/>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={consume_websocket_cmd} />
                 </Card>
             });
         }
 
-        let actions: Vec<Action> =
-            vec![Action::new("Try it!", self.link.callback(|_| Msg::OpenSpy))];
+        let actions: Vec<Action> = vec![Action::new(
+            "Try it!",
+            ctx.link().callback(|_| Msg::OpenSpy),
+        )];
 
         cards.push(html!{
             <Alert
                 title="Spy Tool"
-                r#type=Type::Info inline=true
-                actions=actions
+                r#type={Type::Info} inline=true
+                actions={actions}
                 >
                 <Content>
                 <p>

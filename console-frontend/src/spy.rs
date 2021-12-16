@@ -10,49 +10,24 @@ pub struct Props {
     pub endpoints: EndpointInformation,
 }
 
-pub struct Spy {
-    props: Props,
-}
+#[function_component(Spy)]
+pub fn spy(props: &Props) -> Html {
+    html! {
+        <>
+            <PageSection variant={PageSectionVariant::Light} limit_width=true>
+                <Content>
+                    <Title>{"Device Message Spy"}</Title>
+                </Content>
+            </PageSection>
+            <PageSection>
 
-impl Component for Spy {
-    type Message = ();
-    type Properties = Props;
+                <crate::components::spy::Spy
+                        backend={props.backend.clone()}
+                        token={props.token.clone()}
+                        endpoints={props.endpoints.clone()}
+                    />
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self { props }
-    }
-
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
-        html! {
-            <>
-                <PageSection variant=PageSectionVariant::Light limit_width=true>
-                    <Content>
-                        <Title>{"Device Message Spy"}</Title>
-                    </Content>
-                </PageSection>
-                <PageSection>
-
-                    <crate::components::spy::Spy
-                            backend=&self.props.backend
-                            token=&self.props.token
-                            endpoints=&self.props.endpoints
-                        />
-
-                </PageSection>
-            </>
-        }
+            </PageSection>
+        </>
     }
 }

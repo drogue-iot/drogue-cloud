@@ -3,7 +3,9 @@ use std::{
     collections::HashSet,
     ops::{Deref, DerefMut},
 };
-use yew::{agent::*, Callback, Component, ComponentLink};
+use yew::html::Scope;
+use yew::{Callback, Component};
+use yew_agent::*;
 
 pub struct SharedDataHolder<T>
 where
@@ -148,7 +150,7 @@ where
         Self(SharedDataHolder::bridge(callback))
     }
 
-    pub fn from<C, F>(link: &ComponentLink<C>, f: F) -> Self
+    pub fn from<C, F>(link: &Scope<C>, f: F) -> Self
     where
         C: Component,
         F: Fn(T) -> C::Message + 'static,
