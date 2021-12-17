@@ -6,9 +6,6 @@ edition = "2021"
 description = "Console Frontend"
 license = "Apache-2.0"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
 anyhow = "1"
 thiserror = "1"
@@ -23,7 +20,7 @@ yew-agent = "0.1"
 gloo-utils = "0.1"
 gloo-timers = "0.2"
 gloo-storage = "0.2"
-patternfly-yew = "0.1.0"
+patternfly-yew = "0.1.1"
 monaco = { version = "0.3", features = ["yew-components"] }
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
@@ -88,6 +85,10 @@ uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
 [dev-dependencies]
 env_logger = "0.7"
 
+[features]
+default = []
+debug = []
+
 [profile.release]
 panic = 'abort'
 codegen-units = 1
@@ -96,7 +97,7 @@ lto = true
 
 [patch.crates-io]
 #patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "a764e28c9e8085c78da3ababebc53f5a37eaec12" } # FIXME: awaiting release
-#patternfly-yew = { path = "../patternfly-yew" }
+#patternfly-yew = { path = "../../patternfly-yew" }
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "916829633f49e08d32d8dfe91586e76ca68fc7de" } # FIXME: awaiting release
 
 monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release

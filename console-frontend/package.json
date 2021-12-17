@@ -3,30 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "webpack --mode development",
-    "build": "webpack --mode production",
-    "start": "webpack serve --mode development"
-  },
-  "devDependencies": {
-    "@wasm-tool/wasm-pack-plugin": "^1.6.0",
-    "copy-webpack-plugin": "^6.2.0",
-    "css-loader": "^4.3.0",
-    "json-loader": "^0.5.7",
-    "sass": "^1.41.1",
-    "sass-loader": "^10.0.2",
-    "style-loader": "^1.3.0",
-    "svg-url-loader": "^6.0.0",
-    "url-loader": "^4.1.0",
-    "wasm-pack": "^0.10.1",
-    "webpack": "^5.30.0",
-    "webpack-cli": "^4.6.0",
-    "webpack-dev-server": "^4.4.0",
-    "yaml-loader": "^0.6.0"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@patternfly/patternfly": "^4.159.1",
-    "@fortawesome/fontawesome-free": "^5.15.4",
-    "swagger-ui": "^4.1.3"
+    "@fortawesome/fontawesome-free": "^5.15.4"
   }
 }
