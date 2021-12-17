@@ -490,7 +490,7 @@ dependencies = [
  "web-sys",
  "yew",
  "yew-agent",
- "yew-router",
+ "yew-router-nested",
 ]
 
 [[package]]
@@ -1253,7 +1253,8 @@ checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 [[package]]
 name = "patternfly-yew"
 version = "0.1.0"
-source = "git+https://github.com/ctron/patternfly-yew?rev=a764e28c9e8085c78da3ababebc53f5a37eaec12#a764e28c9e8085c78da3ababebc53f5a37eaec12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff3c73473f8fc615c68333f606ad32ae4af6e663833f55d8dbd528623c235bbc"
 dependencies = [
  "chrono",
  "gloo-timers",
@@ -1270,7 +1271,7 @@ dependencies = [
  "web-sys",
  "yew",
  "yew-agent",
- "yew-router",
+ "yew-router-nested",
 ]
 
 [[package]]
@@ -1879,9 +1880,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "yew-router"
-version = "0.15.0"
-source = "git+https://github.com/ctron/yew-router?rev=e1012d1bb48dfb1e8e78d84eefddd2b96cd13219#e1012d1bb48dfb1e8e78d84eefddd2b96cd13219"
+name = "yew-router-nested"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cc2675c76f9f05c8fc8fc9f49239ff7ad4deee930f0de0fbe4fef4c5b48a0c6"
 dependencies = [
  "cfg-if",
  "cfg-match",
@@ -1895,25 +1897,27 @@ dependencies = [
  "web-sys",
  "yew",
  "yew-agent",
- "yew-router-macro",
- "yew-router-route-parser",
+ "yew-router-nested-macro",
+ "yew-router-nested-route-parser",
 ]
 
 [[package]]
-name = "yew-router-macro"
-version = "0.15.0"
-source = "git+https://github.com/ctron/yew-router?rev=e1012d1bb48dfb1e8e78d84eefddd2b96cd13219#e1012d1bb48dfb1e8e78d84eefddd2b96cd13219"
+name = "yew-router-nested-macro"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa9c00f04996809851ed8e79b763dba50e4659c879e28a87ec4108672e662875"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
- "yew-router-route-parser",
+ "yew-router-nested-route-parser",
 ]
 
 [[package]]
-name = "yew-router-route-parser"
-version = "0.15.0"
-source = "git+https://github.com/ctron/yew-router?rev=e1012d1bb48dfb1e8e78d84eefddd2b96cd13219#e1012d1bb48dfb1e8e78d84eefddd2b96cd13219"
+name = "yew-router-nested-route-parser"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06ff6455529c0a731a8226f95546a5cbc625f346a7b4b06b3582d5ba5465d35d"
 dependencies = [
  "nom 5.1.2",
 ]

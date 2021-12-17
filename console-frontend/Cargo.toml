@@ -18,7 +18,7 @@ drogue-cloud-service-api = { path = "../service-api" }
 drogue-client = { version = "0.8", default-features = false }
 
 yew = "0.19"
-yew-router = "0.15"
+yew-router = { version = "0.16", package = "yew-router-nested" }
 yew-agent = "0.1"
 gloo-utils = "0.1"
 gloo-timers = "0.2"
@@ -95,10 +95,10 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "a764e28c9e8085c78da3ababebc53f5a37eaec12" } # FIXME: awaiting release
+#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "a764e28c9e8085c78da3ababebc53f5a37eaec12" } # FIXME: awaiting release
 #patternfly-yew = { path = "../patternfly-yew" }
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "916829633f49e08d32d8dfe91586e76ca68fc7de" } # FIXME: awaiting release
 
 monaco = { git = "https://github.com/ctron/rust-monaco", rev = "44db18f0f87ec77d98b0b8b768d5baa7a0193c38" } # FIXME: awaiting release
 #monaco = { path = "../../rust-monaco" }
-yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" } # FIXME: thing about releasing as fork
+#yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" } # FIXME: thing about releasing as fork
