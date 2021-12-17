@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drogue IoT Console</title>
 
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <style>
         #loading {
             background-color: black;
@@ -29,9 +29,19 @@
             100% {opacity:1;}
         }
     </style>
+
+    <link data-trunk rel="scss" href="assets/style.scss">
+    <link data-trunk rel="scss" href="node_modules/@patternfly/patternfly/patternfly.scss">
+    <link data-trunk rel="scss" href="node_modules/@patternfly/patternfly/patternfly-addons.scss">
+
+    <link data-trunk rel="copy-file" href="static/favicon.svg">
+    <link data-trunk rel="copy-dir" href="static/images">
+
+    <link data-trunk rel="copy-dir" href="node_modules/@patternfly/patternfly/assets">
+
+    <link data-trunk rel="copy-dir" href="node_modules/@fortawesome/fontawesome-free/webfonts">
 </head>
 <body>
 <div id="loading"><div id="loading-background"></div></div>
-<script src="/main.js"></script>
 </body>
 </html>

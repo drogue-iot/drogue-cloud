@@ -7,7 +7,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.17
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.18
 SKIP_SERVER ?= false
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
@@ -119,7 +119,7 @@ container-check: cargo-check
 #
 container-build: cargo-build
 ifeq ($(MODULE),)
-container-build: webpack-build
+container-build: frontend-build
 endif
 
 
@@ -233,11 +233,11 @@ cargo-test:
 
 
 #
-# Run the webpack build.
+# Run the frontend build.
 #
-webpack-build: cargo-build
+frontend-build: cargo-build
 	cd console-frontend && npm install
-	cd console-frontend && npm run build
+	cd console-frontend && trunk build --release
 
 
 #

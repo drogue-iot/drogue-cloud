@@ -146,7 +146,7 @@ impl Component for AppPage {
                 })
                 .map(|email| md5::compute(email.as_bytes()))
                 .map(|hash| format!("https://www.gravatar.com/avatar/{:x}?D=mp", hash))
-                .unwrap_or_else(|| "/images/img_avatar.svg".into());
+                .unwrap_or_else(|| "/assets/images/img_avatar.svg".into());
 
             // gather items
 

@@ -15,9 +15,13 @@ mod utils;
 use crate::app::Main;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-pub fn run_app() -> Result<(), JsValue> {
-    wasm_logger::init(wasm_logger::Config::new(log::Level::Trace));
+#[cfg(not(feature = "debug"))]
+const LOG_LEVEL: log::Level = log::Level::Info;
+#[cfg(feature = "debug")]
+const LOG_LEVEL: log::Level = log::Level::Trace;
+
+pub fn main() -> Result<(), JsValue> {
+    wasm_logger::init(wasm_logger::Config::new(LOG_LEVEL));
     log::info!("Getting ready...");
     yew::start_app::<Main>();
     Ok(())
