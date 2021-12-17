@@ -99,6 +99,6 @@ lto = true
 #patternfly-yew = { path = "../patternfly-yew" }
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "916829633f49e08d32d8dfe91586e76ca68fc7de" } # FIXME: awaiting release
 
-monaco = { git = "https://github.com/ctron/rust-monaco", rev = "44db18f0f87ec77d98b0b8b768d5baa7a0193c38" } # FIXME: awaiting release
+monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
 #monaco = { path = "../../rust-monaco" }
-#yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" } # FIXME: thing about releasing as fork
+#yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" }
