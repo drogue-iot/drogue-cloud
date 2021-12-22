@@ -1,3 +1,6 @@
+drogueCloudMetrics:
+  enabled: true
+
 drogueCloudTwin:
   enabled: false
 

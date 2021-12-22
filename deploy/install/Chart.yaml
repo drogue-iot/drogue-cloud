@@ -25,6 +25,10 @@ dependencies:
     version: ^0.5.0-alpha1
     alias: drogueCloudCore
     repository: file://../helm/charts/drogue-cloud-core
+  - name: drogue-cloud-metrics
+    version: ^0.5.0-alpha1
+    alias: drogueCloudMetrics
+    repository: file://../helm/charts/drogue-cloud-metrics
   - name: drogue-cloud-examples
     version: ^0.5.0-alpha1
     alias: drogueCloudExamples
