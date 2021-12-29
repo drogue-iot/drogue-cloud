@@ -1,7 +1,9 @@
 use crate::defaults;
 use actix_web::HttpServer;
+use actix_web_prom::PrometheusMetricsBuilder;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use futures::StreamExt;
+use prometheus::Registry;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::future::Future;
@@ -28,6 +30,7 @@ impl Default for HealthServerConfig {
 pub struct HealthServer {
     config: HealthServerConfig,
     checker: HealthChecker,
+    registry: Option<Registry>,
 }
 
 /// Internal handling of health checking.
@@ -102,10 +105,15 @@ macro_rules! health_app {
 }
 
 impl HealthServer {
-    pub fn new(config: HealthServerConfig, checks: Vec<Box<dyn HealthChecked>>) -> Self {
+    pub fn new(
+        config: HealthServerConfig,
+        checks: Vec<Box<dyn HealthChecked>>,
+        registry: Option<Registry>,
+    ) -> Self {
         Self {
             config,
             checker: HealthChecker { checks },
+            registry,
         }
     }
 
@@ -118,9 +126,20 @@ impl HealthServer {
         health_endpoint!(actix_web);
 
         let checker = web::Data::new(self.checker);
+
+        let prometheus = match self.registry {
+            Some(metrics) => PrometheusMetricsBuilder::new("health")
+                .registry(metrics)
+                .endpoint("/metrics")
+                .build()
+                .unwrap(),
+            _ => PrometheusMetricsBuilder::new("noop").build().unwrap(),
+        };
+
         HttpServer::new(move || {
             use actix_web::App;
-            health_app!(checker)
+
+            health_app!(checker).wrap(prometheus.clone())
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)

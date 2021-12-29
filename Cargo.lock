@@ -441,6 +441,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-web-prom"
+version = "0.6.0-beta.1"
+source = "git+https://github.com/nlopes/actix-web-prom?rev=41a3ff87a3f2bcf30a89474c149c119b30a02880#41a3ff87a3f2bcf30a89474c149c119b30a02880"
+dependencies = [
+ "actix-web",
+ "futures",
+ "pin-project 1.0.8",
+ "prometheus",
+]
+
+[[package]]
 name = "actix_derive"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2079,6 +2090,7 @@ dependencies = [
  "actix-rt 2.6.0",
  "actix-tls",
  "actix-web",
+ "actix-web-prom",
  "anyhow",
  "async-trait",
  "chrono",
@@ -2100,6 +2112,7 @@ dependencies = [
  "openid",
  "openssl",
  "percent-encoding",
+ "prometheus",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2398,6 +2411,7 @@ dependencies = [
  "actix-service 2.0.0",
  "actix-web",
  "actix-web-httpauth",
+ "actix-web-prom",
  "anyhow",
  "async-std",
  "async-trait",
@@ -2421,6 +2435,7 @@ dependencies = [
  "ntex",
  "openid",
  "pem 1.0.0",
+ "prometheus",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -4680,6 +4695,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9f5105d4fdaab20335ca9565e106a5d9b82b6219b5ba735731124ac6711d23d"
 dependencies = [
  "unicode-xid",
+]
+
+[[package]]
+name = "prometheus"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5986aa8d62380092d2f50f8b1cdba9cb9b6731ffd4b25b51fd126b6c3e05b99c"
+dependencies = [
+ "cfg-if 1.0.0",
+ "fnv",
+ "lazy_static 1.4.0",
+ "memchr",
+ "parking_lot",
+ "thiserror",
 ]
 
 [[package]]

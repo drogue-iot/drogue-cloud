@@ -88,7 +88,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     log::info!("Running service ...");
     if let Some(health) = config.health {
-        let health = HealthServer::new(health, vec![]);
+        let health = HealthServer::new(health, vec![], None);
         select! {
             _ = health.run().fuse() => (),
             _ = registry.fuse() => (),

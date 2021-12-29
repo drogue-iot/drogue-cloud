@@ -115,7 +115,7 @@ where
     };
 
     if let Some(health) = config.health {
-        let health = HealthServer::new(health, vec![Box::new(data_service)]);
+        let health = HealthServer::new(health, vec![Box::new(data_service)], None);
         futures::try_join!(health.run(), main.err_into())?;
     } else {
         futures::try_join!(main)?;

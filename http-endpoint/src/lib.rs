@@ -9,6 +9,7 @@ use actix_web::{
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
+use actix_web_prom::PrometheusMetricsBuilder;
 use drogue_cloud_endpoint_common::auth::AuthConfig;
 use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
@@ -22,6 +23,7 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
 };
 use futures::TryFutureExt;
+use prometheus::Registry;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -81,9 +83,16 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let http_server_commands = commands.clone();
 
     let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
+    let endpoint_registry = Registry::new();
+
+    let prometheus = PrometheusMetricsBuilder::new("http_endpoint")
+        .registry(endpoint_registry.clone())
+        .build()
+        .unwrap();
 
     let http_server = HttpServer::new(move || {
         let app = App::new()
+            .wrap(prometheus.clone())
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))
             .app_data(web::JsonConfig::default().limit(max_json_payload_size))
@@ -169,7 +178,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     if let Some(health) = config.health {
-        let health = HealthServer::new(health, vec![Box::new(command_source)]);
+        let health = HealthServer::new(
+            health,
+            vec![Box::new(command_source)],
+            Some(endpoint_registry.clone()),
+        );
         futures::try_join!(health.run(), http_server.err_into())?;
     } else {
         futures::try_join!(http_server)?;

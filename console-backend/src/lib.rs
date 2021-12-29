@@ -268,7 +268,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
     // run
 
     if let Some(health) = config.health {
-        let health = HealthServer::new(health, vec![]);
+        let health = HealthServer::new(health, vec![], None);
         futures::try_join!(health.run(), main.err_into())?;
     } else {
         futures::try_join!(main)?;

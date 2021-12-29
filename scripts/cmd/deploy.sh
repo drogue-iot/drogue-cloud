@@ -199,6 +199,7 @@ HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 HELM_ARGS="$HELM_ARGS --set drogueCloudTwin.enabled=$DEPLOY_TWIN"
 HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.enabled=$DEPLOY_EXAMPLES"
 HELM_ARGS="$HELM_ARGS --set drogueCloudMetrics.grafana.ingress.hosts={metrics${domain}}"
+HELM_ARGS="$HELM_ARGS --set drogueCloudMetrics.prometheus.server.ingress.hosts={prometheus${domain}}"
 
 echo "Helm arguments: $HELM_ARGS"
 
