@@ -5,7 +5,7 @@ use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
     error::HttpEndpointError,
-    sender::{DownstreamSender, Publish, PublishOutcome, Publisher},
+    sender::{DownstreamSender, Publish, PublishOutcome, Publisher, DOWNSTREAM_EVENTS_COUNTER},
     sink::Sink,
 };
 
@@ -47,23 +47,31 @@ where
         );
         match self.publish(publish, body).await {
             // ok, and accepted
-            Ok(PublishOutcome::Accepted) => wait_for_command(commands, filter, ttd).await,
+            Ok(PublishOutcome::Accepted) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["http", "Accepted"]).inc();
+                wait_for_command(commands, filter, ttd).await
+            },
 
             // ok, but rejected
             Ok(PublishOutcome::Rejected) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["http", "Rejected"]).inc();
                 Ok(HttpResponse::build(http::StatusCode::NOT_ACCEPTABLE).finish())
             }
 
             // ok, but rejected
             Ok(PublishOutcome::QueueFull) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["http", "QueueFull"]).inc();
                 Ok(HttpResponse::build(http::StatusCode::SERVICE_UNAVAILABLE).finish())
             }
 
             // internal error
-            Err(err) => Ok(HttpResponse::InternalServerError().json(ErrorInformation {
+            Err(err) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["http", "Error"]).inc();
+                Ok(HttpResponse::InternalServerError().json(ErrorInformation {
                 error: "InternalError".into(),
                 message: err.to_string(),
-            })),
+            }))
+            },
         }
     }
 }

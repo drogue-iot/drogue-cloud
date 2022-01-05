@@ -83,10 +83,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let http_server_commands = commands.clone();
 
     let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
-    let endpoint_registry = Registry::new();
 
     let prometheus = PrometheusMetricsBuilder::new("http_endpoint")
-        .registry(endpoint_registry.clone())
+        .registry(prometheus::default_registry().clone())
         .build()
         .unwrap();
 
@@ -181,7 +180,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         let health = HealthServer::new(
             health,
             vec![Box::new(command_source)],
-            Some(endpoint_registry.clone()),
+            Some(prometheus::default_registry().clone()),
         );
         futures::try_join!(health.run(), http_server.err_into())?;
     } else {
