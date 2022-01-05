@@ -8,6 +8,7 @@ CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
 BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.17
+SKIP_SERVER ?= false
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -56,7 +57,7 @@ ALL_IMAGES=\
 
 
 # allow skipping the server image
-ifeq ($(SKIP_SERVER),)
+ifeq ($(SKIP_SERVER), false)
 ALL_IMAGES += server
 endif
 
@@ -148,7 +149,7 @@ host-check:
 # Run a build on the host, forking off into the build container.
 #
 host-build:
-	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build SKIP_SERVER=$(SKIP_SERVER)
 
 
 #
@@ -209,10 +210,13 @@ cargo-check-frontend:
 # Run the cargo build.
 #
 ifneq ($(MODULE),)
-cargo-build: CARGO_BUILD_ARGS=--package drogue-cloud-$(MODULE)
-else ifneq ($(SKIP_SERVER),)
-cargo-build: CARGO_BUILD_ARGS=--exclude drogue-cloud-server
+cargo-build: CARGO_BUILD_ARGS := --package drogue-cloud-$(MODULE)
 endif
+
+ifneq ($(SKIP_SERVER), false)
+cargo-build: CARGO_BUILD_ARGS := --exclude drogue-cloud-server $(CARGO_BUILD_ARGS)
+endif
+
 cargo-build:
 	@#
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
