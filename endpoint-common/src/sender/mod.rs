@@ -19,6 +19,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use thiserror::Error;
 use prometheus::{Encoder, CounterVec, Opts, Registry};
+use prometheus::{CounterVec, Opts};
 
 use lazy_static::lazy_static;
 

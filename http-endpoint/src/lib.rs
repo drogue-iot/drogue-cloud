@@ -23,7 +23,6 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
 };
 use futures::TryFutureExt;
-use prometheus::Registry;
 use serde::Deserialize;
 use serde_json::json;
 

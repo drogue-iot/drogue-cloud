@@ -7,7 +7,7 @@ use cache::DeviceCache;
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
-    sender::{self, DownstreamSender, PublishOptions, PublishOutcome, Publisher},
+    sender::{self, DownstreamSender, PublishOptions, PublishOutcome, Publisher, DOWNSTREAM_EVENTS_COUNTER},
     sink::Sink,
 };
 use drogue_cloud_mqtt_common::{
@@ -168,10 +168,22 @@ where
             )
             .await
         {
-            Ok(PublishOutcome::Accepted) => Ok(()),
-            Ok(PublishOutcome::Rejected) => Err(PublishError::UnspecifiedError),
-            Ok(PublishOutcome::QueueFull) => Err(PublishError::QuotaExceeded),
-            Err(err) => Err(PublishError::InternalError(err.to_string())),
+            Ok(PublishOutcome::Accepted) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "Accepted"]).inc();
+                Ok(())
+            },
+            Ok(PublishOutcome::Rejected) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "Rejected"]).inc();
+                Err(PublishError::UnspecifiedError)
+            },
+            Ok(PublishOutcome::QueueFull) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "QueueFull"]).inc();
+                Err(PublishError::QuotaExceeded)
+            },
+            Err(err) => {
+                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "Error"]).inc();
+                Err(PublishError::InternalError(err.to_string()))
+            },
         }
     }
 
