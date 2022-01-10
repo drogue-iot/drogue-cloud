@@ -40,55 +40,12 @@ pub fn add_service_cert(
     Ok(client)
 }
 
-#[cfg(feature = "rustls")]
-mod rustls {
-    use rust_tls::{
-        internal::msgs::handshake::DigitallySignedStruct, Certificate, ClientConfig,
-        HandshakeSignatureValid, RootCertStore, ServerCertVerified, ServerCertVerifier, TLSError,
-    };
-    use webpki::DNSNameRef;
-
-    struct NoVerifier;
-
-    impl ServerCertVerifier for NoVerifier {
-        fn verify_server_cert(
-            &self,
-            _roots: &RootCertStore,
-            _presented_certs: &[Certificate],
-            _dns_name: DNSNameRef,
-            _ocsp_response: &[u8],
-        ) -> Result<ServerCertVerified, TLSError> {
-            Ok(ServerCertVerified::assertion())
-        }
-
-        fn verify_tls12_signature(
-            &self,
-            _message: &[u8],
-            _cert: &Certificate,
-            _dss: &DigitallySignedStruct,
-        ) -> Result<HandshakeSignatureValid, TLSError> {
-            Ok(HandshakeSignatureValid::assertion())
-        }
-
-        fn verify_tls13_signature(
-            &self,
-            _message: &[u8],
-            _cert: &Certificate,
-            _dss: &DigitallySignedStruct,
-        ) -> Result<HandshakeSignatureValid, TLSError> {
-            Ok(HandshakeSignatureValid::assertion())
-        }
-    }
-
-    pub fn make_insecure(client: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
-        log::warn!("Disabling TLS verification for client. Do not use this in production!");
-        let mut tls = ClientConfig::new();
-        tls.dangerous()
-            .set_certificate_verifier(std::sync::Arc::new(NoVerifier));
-
-        client.use_preconfigured_tls(tls)
-    }
+pub fn make_insecure(client: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
+    // previously we had to do a few extras for TLS 1.3 with rustls, but that seems fine now.
+    log::warn!("Disabling TLS verification for client. Do not use this in production!");
+    client
+        // me must use rustls, as openssl doesn't support this
+        .use_rustls_tls()
+        .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
 }
-
-#[cfg(feature = "rustls")]
-pub use rustls::*;

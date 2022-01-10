@@ -6,11 +6,17 @@ drogueCloudCore:
     mqtt:
       ingress:
         port: 443
+    mqttWs:
+      ingress:
+        port: 443
     http:
       ingress:
         port: 443
 
   integrations:
     mqtt:
+      ingress:
+        port: 443
+    mqttWs:
       ingress:
         port: 443

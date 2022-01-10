@@ -10,7 +10,6 @@ use crate::error::ServiceError;
 use drogue_cloud_service_api::auth::user::UserInformation;
 use futures_util::future;
 use futures_util::future::LocalBoxFuture;
-use serde::Deserialize;
 use std::rc::Rc;
 
 pub struct AuthMiddleware<S> {

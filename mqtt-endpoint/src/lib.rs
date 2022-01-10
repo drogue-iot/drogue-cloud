@@ -1,10 +1,7 @@
 mod auth;
 mod service;
 
-use crate::{
-    auth::{AcceptAllClientCertVerifier, DeviceAuthenticator},
-    service::App,
-};
+use crate::{auth::DeviceAuthenticator, service::App};
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -18,9 +15,8 @@ use drogue_cloud_service_common::{
     health::{HealthServer, HealthServerConfig},
 };
 use futures::TryFutureExt;
-use rust_tls::ClientCertVerifier;
 use serde::Deserialize;
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -30,8 +26,9 @@ pub struct Config {
     pub cert_bundle_file: Option<String>,
     #[serde(default)]
     pub key_file: Option<String>,
+
     #[serde(default)]
-    pub bind_addr_mqtt: Option<String>,
+    pub mqtt: MqttServerOptions,
 
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
@@ -47,9 +44,6 @@ pub struct Config {
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
-
-    #[serde(default)]
-    pub workers: Option<usize>,
 }
 
 impl TlsConfig for Config {
@@ -57,10 +51,11 @@ impl TlsConfig for Config {
         self.disable_tls
     }
 
-    fn verifier(&self) -> Arc<dyn ClientCertVerifier> {
+    #[cfg(feature = "rustls")]
+    fn verifier_rustls(&self) -> std::sync::Arc<dyn rust_tls::server::ClientCertVerifier> {
         // This seems dangerous, as we simply accept all client certificates. However,
         // we validate them later during the "connect" packet validation.
-        Arc::new(AcceptAllClientCertVerifier)
+        std::sync::Arc::new(auth::AcceptAllClientCertVerifier)
     }
 
     fn key_file(&self) -> Option<&str> {
@@ -91,16 +86,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         commands: commands.clone(),
     };
 
-    let srv = build(
-        MqttServerOptions {
-            bind_addr: config.bind_addr_mqtt.clone(),
-            workers: config.workers,
-            ..Default::default()
-        },
-        app,
-        &config,
-    )?
-    .run();
+    let srv = build(config.mqtt.clone(), app, &config)?.run();
 
     log::info!("Starting web server");
 

@@ -1,4 +1,3 @@
-use rust_tls::{Certificate, DistinguishedNames};
 use std::ops::Deref;
 
 /// A wrapper for [`drogue_cloud_endpoint_common::auth::DeviceAuthenticator`].
@@ -19,25 +18,25 @@ impl Deref for DeviceAuthenticator {
 /// the authentication service involved another network call, and may block. However, the
 /// verifier isn't capable of running asynchronous. So we would block the whole I/O loop of the
 /// endpoint.
+#[cfg(feature = "rustls")]
 pub struct AcceptAllClientCertVerifier;
 
-impl rust_tls::ClientCertVerifier for AcceptAllClientCertVerifier {
-    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> {
+#[cfg(feature = "rustls")]
+impl rust_tls::server::ClientCertVerifier for AcceptAllClientCertVerifier {
+    fn client_auth_mandatory(&self) -> Option<bool> {
         Some(false)
     }
 
-    fn client_auth_root_subjects(
-        &self,
-        _sni: Option<&webpki::DNSName>,
-    ) -> Option<DistinguishedNames> {
-        Some(DistinguishedNames::new())
+    fn client_auth_root_subjects(&self) -> Option<rust_tls::DistinguishedNames> {
+        Some(rust_tls::DistinguishedNames::new())
     }
 
     fn verify_client_cert(
         &self,
-        _presented_certs: &[Certificate],
-        _sni: Option<&webpki::DNSName>,
-    ) -> Result<rust_tls::ClientCertVerified, rust_tls::TLSError> {
-        Ok(rust_tls::ClientCertVerified::assertion())
+        _end_entity: &rust_tls::Certificate,
+        _intermediates: &[rust_tls::Certificate],
+        _now: std::time::SystemTime,
+    ) -> Result<rust_tls::server::ClientCertVerified, rust_tls::Error> {
+        Ok(rust_tls::server::ClientCertVerified::assertion())
     }
 }

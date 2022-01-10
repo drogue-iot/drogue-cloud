@@ -31,14 +31,11 @@ where
     S: SenderSink,
 {
     /// Authenticate a connection from a connect packet
-    async fn authenticate<Io>(
+    async fn authenticate(
         &self,
-        connect: &Connect<'_, Io>,
+        connect: &Connect<'_>,
         auth: &Authenticator,
-    ) -> Result<UserInformation, anyhow::Error>
-    where
-        Io: Sync + Send,
-    {
+    ) -> Result<UserInformation, anyhow::Error> {
         let user = match (connect.credentials(), &self.user_auth) {
             ((Some(username), Some(password)), Some(user_auth)) => {
                 log::debug!("Authenticate with username and password");
@@ -97,13 +94,10 @@ impl<S> mqtt::Service<Session<S>> for App<S>
 where
     S: SenderSink,
 {
-    async fn connect<'a, Io>(
+    async fn connect<'a>(
         &'a self,
-        connect: Connect<'a, Io>,
-    ) -> Result<ConnectAck<Session<S>>, ServerError>
-    where
-        Io: Send + Sync,
-    {
+        connect: Connect<'a>,
+    ) -> Result<ConnectAck<Session<S>>, ServerError> {
         log::debug!("Processing connect request");
 
         if !connect.clean_session() {

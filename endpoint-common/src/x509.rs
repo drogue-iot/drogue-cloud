@@ -73,3 +73,36 @@ impl FromRequest for ClientCertificateChain {
         ready(result.ok_or_else(|| error::ErrorBadRequest("Missing certificate chain")))
     }
 }
+
+#[cfg(all(feature = "ntex", feature = "openssl"))]
+impl ClientCertificateRetriever for ntex::io::IoBoxed {
+    fn client_certs(&self) -> Option<ClientCertificateChain> {
+        use ntex::server::openssl::{PeerCert, PeerCertChain};
+
+        let peer_cert = self.query::<PeerCert>();
+        let peer_cert_chain = self.query::<PeerCertChain>();
+
+        match (
+            peer_cert.as_ref().and_then(|cert| cert.0.to_der().ok()),
+            peer_cert_chain.as_ref(),
+        ) {
+            (Some(peer_cert), Some(peer_cert_chain)) => {
+                let mut certs = (&peer_cert_chain.0)
+                    .into_iter()
+                    .map(|cert| cert.to_der())
+                    .collect::<Result<Vec<_>, _>>()
+                    .map(Option::Some)
+                    .unwrap_or_else(|err| {
+                        log::info!("Failed to retrieve client certificate: {}", err);
+                        None
+                    });
+                if let Some(ref mut certs) = certs {
+                    certs.push(peer_cert);
+                }
+                log::debug!("Client certificates: {:?}", certs);
+                certs.map(ClientCertificateChain)
+            }
+            _ => None,
+        }
+    }
+}

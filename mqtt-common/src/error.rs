@@ -67,8 +67,8 @@ impl MqttResponse<v5::PublishAck, v5::PublishAck> for PublishError {
     }
 }
 
-impl<Io, St> MqttResponse<v3::Handshake<Io>, v3::HandshakeAck<Io, St>> for ServerError {
-    fn ack(&self, ack: v3::Handshake<Io>) -> v3::HandshakeAck<Io, St> {
+impl<St> MqttResponse<v3::Handshake, v3::HandshakeAck<St>> for ServerError {
+    fn ack(&self, ack: v3::Handshake) -> v3::HandshakeAck<St> {
         match self {
             Self::AuthenticationFailed => ack.bad_username_or_pwd(),
             Self::NotAuthorized => ack.not_authorized(),
@@ -77,8 +77,8 @@ impl<Io, St> MqttResponse<v3::Handshake<Io>, v3::HandshakeAck<Io, St>> for Serve
     }
 }
 
-impl<Io, St> MqttResponse<v5::Handshake<Io>, v5::HandshakeAck<Io, St>> for ServerError {
-    fn ack(&self, ack: v5::Handshake<Io>) -> v5::HandshakeAck<Io, St> {
+impl<St> MqttResponse<v5::Handshake, v5::HandshakeAck<St>> for ServerError {
+    fn ack(&self, ack: v5::Handshake) -> v5::HandshakeAck<St> {
         match self {
             Self::AuthenticationFailed => {
                 ack.failed(v5::codec::ConnectAckReason::BadUserNameOrPassword)

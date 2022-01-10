@@ -39,6 +39,11 @@ echo "* Login to Grafana (using SSO): $DASHBOARD_URL"
 echo "* You will be presented with the 'Temperatures dashboard'"
 fi
 
+if test -f build/certs/endpoints/root-cert.pem; then
+    HTTP_VERIFY="--verify build/certs/endpoints/root-cert.pem "
+    MQTT_VERIFY="--cafile build/certs/endpoints/root-cert.pem "
+fi
+
 echo
 bold "Login with 'drg':"
 bold "---------------------"
@@ -77,13 +82,9 @@ bold "---------------"
 echo
 echo "After you created a device, try these commands at a shell prompt:"
 echo
-if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  http --auth device1@example-app:hey-rodney --verify build/certs/endpoints/root-cert.pem POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -s --cafile build/certs/endpoints/root-cert.pem -t temp -m '{\"temp\":42}'"
-else
-  echo "  http --auth device1@example-app:hey-rodney POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
-  echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -s -t temp -m '{\"temp\":42}'"
-fi
+echo "  http --auth device1@example-app:hey-rodney ${HTTP_VERIFY}POST $HTTP_ENDPOINT_URL/v1/foo temp:=42"
+echo "  mqtt pub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -s ${MQTT_VERIFY}-t temp -m '{\"temp\":42}'"
+echo "  mqtt pub -v -ws -h $MQTT_ENDPOINT_WS_HOST -p $MQTT_ENDPOINT_WS_PORT -u device1@example-app -pw hey-rodney -s ${MQTT_VERIFY}-t temp -m '{\"temp\":42}'"
 echo
 bold "Send commands to the device:"
 bold "------------------------------"
@@ -98,18 +99,16 @@ fi
 echo
 echo "Or, subscribe with the MQTT device:"
 echo
-if test -f build/certs/endpoints/root-cert.pem; then
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -i device1 -s --cafile build/certs/endpoints/root-cert.pem -t command/inbox/#"
-else
-  echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -i device1 -s -t command/inbox/#"
-fi
+echo "  mqtt sub -v -h $MQTT_ENDPOINT_HOST -p $MQTT_ENDPOINT_PORT -u device1@example-app -pw hey-rodney -i device1 -s ${MQTT_VERIFY}-t command/inbox/#"
+echo "  mqtt sub -v -ws -h $MQTT_ENDPOINT_WS_HOST -p $MQTT_ENDPOINT_WS_PORT -u device1@example-app -pw hey-rodney -i device1 -s ${MQTT_VERIFY}-t command/inbox/#"
 echo
 echo "Then, send a command to that device from another terminal window:"
 echo
 echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device1 command==set-temp target-temp:=25" \"Authorization:Bearer \$\(drg whoami -t\)\"
 echo
 echo "Or simply through drg:"
-echo "  drg cmd set-temp device1 --app example-app --payload '{\"target-temp\:25}' "
+echo
+echo "  drg cmd set-temp device1 --app example-app --payload '{\"target-temp\":25}' "
 echo
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then

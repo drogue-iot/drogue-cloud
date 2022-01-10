@@ -15,7 +15,7 @@ impl DemoFetcher {
     async fn get_demos(&self) -> Vec<(String, String)> {
         match self {
             DemoFetcher::None => Vec::new(),
-            DemoFetcher::Kube(config_maps) => get_demos(&config_maps).await.unwrap_or_default(),
+            DemoFetcher::Kube(config_maps) => get_demos(config_maps).await.unwrap_or_default(),
         }
     }
 }

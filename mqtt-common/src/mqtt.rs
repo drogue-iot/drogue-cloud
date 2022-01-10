@@ -1,7 +1,7 @@
 use crate::error::{MqttResponse, PublishError, ServerError};
 use async_trait::async_trait;
-use drogue_cloud_endpoint_common::x509::ClientCertificateRetriever;
 use ntex::{
+    io::IoBoxed,
     router::Path,
     util::{ByteString, Bytes},
 };
@@ -20,12 +20,7 @@ pub trait Service<S>
 where
     S: Session,
 {
-    async fn connect<'a, Io>(
-        &'a self,
-        connect: Connect<'a, Io>,
-    ) -> Result<ConnectAck<S>, ServerError>
-    where
-        Io: ClientCertificateRetriever + Sync + Send + Debug;
+    async fn connect<'a>(&'a self, connect: Connect<'a>) -> Result<ConnectAck<S>, ServerError>;
 }
 
 pub type AckOptions = v5::codec::ConnectAck;
@@ -46,14 +41,13 @@ pub trait Session {
     async fn closed(&self) -> Result<(), ServerError>;
 }
 
-pub async fn connect_v3<A, Io, S>(
-    mut connect: v3::Handshake<Io>,
+pub async fn connect_v3<A, S>(
+    mut connect: v3::Handshake,
     app: A,
-) -> Result<v3::HandshakeAck<Io, S>, ServerError>
+) -> Result<v3::HandshakeAck<S>, ServerError>
 where
     A: Service<S>,
     S: Session,
-    Io: Sync + Send + ClientCertificateRetriever + Debug,
 {
     match app.connect(Connect::V3(&mut connect)).await {
         Ok(ack) => Ok(connect.ack(ack.session, ack.ack.session_present)),
@@ -61,14 +55,13 @@ where
     }
 }
 
-pub async fn connect_v5<A, Io, S>(
-    mut connect: v5::Handshake<Io>,
+pub async fn connect_v5<A, S>(
+    mut connect: v5::Handshake,
     app: A,
-) -> Result<v5::HandshakeAck<Io, S>, ServerError>
+) -> Result<v5::HandshakeAck<S>, ServerError>
 where
     A: Service<S>,
     S: Session,
-    Io: Sync + Send + ClientCertificateRetriever + Debug,
 {
     match app.connect(Connect::V5(&mut connect)).await {
         Ok(connect_ack) => Ok(connect.ack(connect_ack.session).with(|ack| {
@@ -112,6 +105,7 @@ where
         v3::ControlMessage::ProtocolError(err) => Ok(err.ack()),
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
+        v3::ControlMessage::PeerGone(g) => Ok(g.ack()),
         v3::ControlMessage::Subscribe(mut s) => {
             session.subscribe(Subscribe::V3(&mut s)).await?;
             Ok(s.ack())
@@ -145,6 +139,7 @@ where
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
         v5::ControlMessage::Disconnect(d) => Ok(d.ack()),
+        v5::ControlMessage::PeerGone(g) => Ok(g.ack()),
         v5::ControlMessage::Subscribe(mut s) => {
             session.subscribe(Subscribe::V5(&mut s)).await?;
             Ok(s.ack())
@@ -188,18 +183,12 @@ impl From<v5::MqttSink> for Sink {
 }
 
 #[derive(Debug)]
-pub enum Connect<'a, Io>
-where
-    Io: Sync + Send,
-{
-    V3(&'a mut v3::Handshake<Io>),
-    V5(&'a mut v5::Handshake<Io>),
+pub enum Connect<'a> {
+    V3(&'a mut v3::Handshake),
+    V5(&'a mut v5::Handshake),
 }
 
-impl<'a, Io> Connect<'a, Io>
-where
-    Io: Sync + Send,
-{
+impl<'a> Connect<'a> {
     /// Return "clean session" for v3 and "clean start" for v5.
     pub fn clean_session(&self) -> bool {
         match self {
@@ -236,7 +225,7 @@ where
         }
     }
 
-    pub fn io(&mut self) -> &mut Io {
+    pub fn io(&mut self) -> &IoBoxed {
         match self {
             Self::V3(connect) => connect.io(),
             Self::V5(connect) => connect.io(),

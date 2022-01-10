@@ -63,13 +63,10 @@ impl<S> Service<Session<S>> for App<S>
 where
     S: Sink,
 {
-    async fn connect<'a, Io>(
+    async fn connect<'a>(
         &'a self,
-        mut connect: Connect<'a, Io>,
-    ) -> Result<ConnectAck<Session<S>>, ServerError>
-    where
-        Io: ClientCertificateRetriever + Sync + Send + Debug + 'a,
-    {
+        mut connect: Connect<'a>,
+    ) -> Result<ConnectAck<Session<S>>, ServerError> {
         log::info!("new connection: {:?}", connect);
 
         if !connect.clean_session() {

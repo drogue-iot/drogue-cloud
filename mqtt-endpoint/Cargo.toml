@@ -12,10 +12,10 @@ anyhow = "1"
 async-trait = "0.1.42"
 clru = "0.5"
 
-ntex = "0.4"
-ntex-rt = "0.3"
-ntex-service = "0.2"
-ntex-mqtt = "0.7"
+ntex = "0.5"
+ntex-rt = "0.4"
+ntex-service = "0.3"
+ntex-mqtt = "0.8"
 
 bytes = "1"
 bytestring = "1"
@@ -44,7 +44,7 @@ webpki = "0.21"
 cloudevents-sdk = "0.4"
 
 drogue-cloud-mqtt-common = { path = "../mqtt-common" }
-drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common", features = ["ntex"] }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-client = "0.8"
@@ -56,7 +56,7 @@ package = "openssl"
 features = ["v111"]
 
 [dependencies.rust-tls]
-version = "0.19"
+version = "0.20"
 optional = true
 package = "rustls"
 # "dangerous" is required in order to implement ther ClientCertVerified trait
@@ -64,6 +64,6 @@ package = "rustls"
 features = ["dangerous_configuration"]
 
 [features]
-default = ["rustls"]
+default = ["openssl"]
 openssl = ["open-ssl", "ntex/openssl"]
 rustls = ["rust-tls", "ntex/rustls"]
