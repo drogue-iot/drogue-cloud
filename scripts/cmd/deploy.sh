@@ -276,18 +276,22 @@ progress "      drg login ${API_URL}"
 progress
 progress "  * Execute: "
 
-ARGS=""
+ENVS=""
 if [[ "$DEPLOY_TWIN" == true ]]; then
-    ARGS+="DIGITAL_TWIN=true "
+    ENVS+="DIGITAL_TWIN=true "
 fi
 
 if [[ "$DEPLOY_EXAMPLES" == false ]]; then
-    ARGS+="EXAMPLES=false"
+    ENVS+="EXAMPLES=false"
 fi
 
-if is_default_cluster; then
-progress "      env $ARGS $BASEDIR/drgadm examples"
-else
-progress "      env $ARGS CLUSTER=$CLUSTER $BASEDIR/drgadm examples"
+if ! is_default_cluster; then
+    ENVS+="CLUSTER=$CLUSTER"
 fi
+
+if [[ -n "$ENVS" ]]; then
+    ENVS="env $ENVS "
+fi
+
+progress "      ${ENVS} $BASEDIR/drgadm examples"
 progress
