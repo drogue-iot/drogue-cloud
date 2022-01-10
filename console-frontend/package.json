@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@patternfly/patternfly": "^4.159.1",
+    "@patternfly/patternfly": "^4.165.2",
     "@fortawesome/fontawesome-free": "^5.15.4"
   }
 }
