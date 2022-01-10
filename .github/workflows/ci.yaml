@@ -301,6 +301,7 @@ jobs:
 
       - name: Deploy drogue
         env:
+          # this is no longer needed for 0.5.x, but be keep it around for 0.4
           TEST_CERTS_IMAGE: "dev.local/test-cert-generator:${{ github.sha }}"
           DEBUG: "true"
         run: |
