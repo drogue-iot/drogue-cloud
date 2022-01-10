@@ -1,7 +1,7 @@
 use crate::x509::ClientCertificateChain;
 use actix_web::{
-    dev::{Payload, PayloadStream},
-    error, {FromRequest, HttpRequest},
+    dev::Payload,
+    error, {FromRequest, HttpMessage, HttpRequest},
 };
 use anyhow::Context;
 use drogue_client::{error::ClientError, registry};
@@ -370,11 +370,10 @@ pub struct DeviceAuthDetails {
 }
 
 impl FromRequest for DeviceAuthDetails {
-    type Config = ();
     type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;
 
-    fn from_request(req: &HttpRequest, _: &mut Payload<PayloadStream>) -> Self::Future {
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         match req.extensions().get::<DeviceAuthDetails>() {
             Some(properties) => ok(properties.clone()),
             None => err(error::ErrorBadRequest("Missing auth details")),

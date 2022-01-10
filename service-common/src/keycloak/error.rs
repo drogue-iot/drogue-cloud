@@ -1,4 +1,4 @@
-use actix_http::http::StatusCode;
+use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
 use drogue_cloud_service_api::error::ErrorResponse;
 use keycloak::KeycloakError;
