@@ -25,7 +25,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref DOWNSTREAM_EVENTS_COUNTER: CounterVec = CounterVec::new(
-        Opts::new("downstream_events", "Downstream events"),
+        Opts::new("drogue_downstream_events", "Downstream events"),
         &["endpoint", "outcome"]
     ).unwrap();
 }

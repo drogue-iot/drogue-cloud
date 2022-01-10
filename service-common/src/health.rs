@@ -9,6 +9,8 @@ use serde_json::{json, Value};
 use std::future::Future;
 use std::sync::Arc;
 
+use prometheus::{Encoder, TextEncoder};
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct HealthServerConfig {
     #[serde(default = "defaults::health_bind_addr")]
@@ -160,6 +162,7 @@ impl HealthServer {
         ntex::web::server(move || {
             use ntex::web::App;
             health_app!(checker)
+            .route("/metrics", web::get().to(HealthServer::metrics))
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)
@@ -167,5 +170,20 @@ impl HealthServer {
         .await?;
 
         Ok(())
+    }
+
+    async fn metrics() -> ntex::web::HttpResponse {
+        let encoder = TextEncoder::new();
+        let mut buffer = vec![];
+        encoder
+            .encode(&prometheus::gather(), &mut buffer)
+            .expect("Failed to encode metrics");
+
+        let response = String::from_utf8(buffer.clone()).expect("Failed to convert bytes to string");
+        buffer.clear();
+
+        ntex::web::HttpResponse::Ok()
+            .set_header(ntex::http::header::CONTENT_TYPE, "text/plain")
+            .body(response)
     }
 }
