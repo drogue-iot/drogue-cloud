@@ -7,9 +7,9 @@ license = "Apache-2.0"
 
 [dependencies]
 
-actix-web = "=4.0.0-beta.8" # we need v4 as we need tokio 1
+actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
 actix-broker = "0.4.0"
-actix-tls = { version = "=3.0.0-beta.5", optional = true }
+actix-tls = { version = "^3.0.0", optional = true }
 
 reqwest = { version = "0.11", features = ["json"] }
 

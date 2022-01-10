@@ -24,7 +24,7 @@ md5 = "0.7"
 
 drogue-client = { version = "0.8", default-features = false }
 
-actix-web = { version = "=4.0.0-beta.8", optional = true } # we need v4 as we need tokio 1
+actix-web = { version = "=4.0.0-beta.19", optional = true } # we need v4 as we need tokio 1
 futures = { version = "0.3", optional = true }
 
 nom = { version = "6", optional = true }

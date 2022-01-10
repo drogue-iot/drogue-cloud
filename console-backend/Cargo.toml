@@ -9,9 +9,9 @@ license = "Apache-2.0"
 [dependencies]
 
 actix = "0.12.0"
-actix-web = "=4.0.0-beta.8" # we need v4 as we need tokio 1
-actix-cors = "=0.6.0-beta.2"
-actix-web-httpauth = "=0.6.0-beta.2"
+actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
+actix-cors = "=0.6.0-beta.8"
+actix-web-httpauth = "=0.6.0-beta.7"
 tokio-stream = { version = "0.1", features = ["time"] }
 
 openid = "0.9"

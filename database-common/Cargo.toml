@@ -12,7 +12,7 @@ futures = "0.3"
 log = "0.4"
 thiserror = "1"
 
-actix-web = "=4.0.0-beta.8" # we need v4 as we need tokio 1
+actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
 
 serde_json = "1"
 serde = "1"

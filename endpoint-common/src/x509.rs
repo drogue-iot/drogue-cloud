@@ -1,7 +1,4 @@
-use actix_web::{
-    dev::{Payload, PayloadStream},
-    error, FromRequest, HttpRequest,
-};
+use actix_web::{dev::Payload, error, FromRequest, HttpMessage, HttpRequest};
 use futures_util::future::{ready, Ready};
 use tokio_rustls::rustls::Session;
 
@@ -63,11 +60,10 @@ impl<T> ClientCertificateRetriever for tokio_openssl::SslStream<T> {
 }
 
 impl FromRequest for ClientCertificateChain {
-    type Config = ();
     type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;
 
-    fn from_request(req: &HttpRequest, _payload: &mut Payload<PayloadStream>) -> Self::Future {
+    fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         let result = req.extensions().get::<ClientCertificateChain>().cloned();
 
         ready(result.ok_or_else(|| error::ErrorBadRequest("Missing certificate chain")))
