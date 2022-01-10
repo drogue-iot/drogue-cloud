@@ -96,6 +96,13 @@ paths:
       description: Create a new access tokens for this user.
       tags:
         - Access Token
+      parameters:
+        - name: description
+          required: false
+          in: query
+          description: A description to attach to the token entry.
+          schema:
+            type: string
       responses:
         "200":
           description: A new access token was created.
