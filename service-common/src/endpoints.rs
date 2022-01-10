@@ -35,9 +35,13 @@ pub struct EndpointConfig {
     #[serde(default = "defaults::mqtts_port")]
     pub mqtt_endpoint_port: u16,
     #[serde(default)]
+    pub mqtt_endpoint_ws_url: Option<String>,
+    #[serde(default)]
     pub mqtt_integration_host: Option<String>,
     #[serde(default = "defaults::mqtts_port")]
     pub mqtt_integration_port: u16,
+    #[serde(default)]
+    pub mqtt_integration_ws_url: Option<String>,
     #[serde(default)]
     pub device_registry_url: Option<String>,
     #[serde(default)]
@@ -77,25 +81,27 @@ impl EndpointSource for EnvEndpointSource {
         let coap = self
             .0
             .coap_endpoint_url
-            .as_ref()
-            .cloned()
+            .clone()
             .map(|url| CoapEndpoint { url });
         let http = self
             .0
             .http_endpoint_url
-            .as_ref()
-            .cloned()
+            .clone()
             .map(|url| HttpEndpoint { url });
         let websocket_integration = self
             .0
             .websocket_integration_url
-            .as_ref()
-            .cloned()
+            .clone()
             .map(|url| HttpEndpoint { url });
         let mqtt = self.0.mqtt_endpoint_host.as_ref().map(|host| MqttEndpoint {
             host: host.clone(),
             port: self.0.mqtt_endpoint_port,
         });
+        let mqtt_ws = self
+            .0
+            .mqtt_endpoint_ws_url
+            .clone()
+            .map(|url| HttpEndpoint { url });
         let mqtt_integration = self
             .0
             .mqtt_integration_host
@@ -104,11 +110,15 @@ impl EndpointSource for EnvEndpointSource {
                 host: host.clone(),
                 port: self.0.mqtt_integration_port,
             });
+        let mqtt_integration_ws = self
+            .0
+            .mqtt_integration_ws_url
+            .clone()
+            .map(|url| HttpEndpoint { url });
         let registry = self
             .0
             .device_registry_url
-            .as_ref()
-            .cloned()
+            .clone()
             .map(|url| RegistryEndpoint { url });
 
         let api = self.0.api_url.clone();
@@ -124,7 +134,9 @@ impl EndpointSource for EnvEndpointSource {
             coap,
             http,
             mqtt,
+            mqtt_ws,
             mqtt_integration,
+            mqtt_integration_ws,
             websocket_integration,
             sso,
             api,

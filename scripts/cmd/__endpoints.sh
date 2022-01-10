@@ -9,8 +9,14 @@ COAP_ENDPOINT_HOST="$(echo "$COAP_ENDPOINT_URL" | sed -E -e 's/:[0-9]+$//' -e 's
 
 MQTT_ENDPOINT_HOST="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_HOST)"
 MQTT_ENDPOINT_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_PORT)"
+MQTT_ENDPOINT_WS_HOST="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_WS_HOST)"
+MQTT_ENDPOINT_WS_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_WS_PORT)"
+MQTT_ENDPOINT_WS_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_ENDPOINT_WS_URL)"
 MQTT_INTEGRATION_HOST="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_HOST)"
 MQTT_INTEGRATION_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_PORT)"
+MQTT_INTEGRATION_WS_HOST="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_WS_HOST)"
+MQTT_INTEGRATION_WS_PORT="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_WS_PORT)"
+MQTT_INTEGRATION_WS_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__MQTT_INTEGRATION_WS_URL)"
 
 WEBSOCKET_INTEGRATION_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__WEBSOCKET_INTEGRATION_URL)"
 WEBSOCKET_INTEGRATION_HOST="$(echo "$WEBSOCKET_INTEGRATION_URL" | sed -E -e 's/:[0-9]+$//' -e 's|^https?://||' )"
@@ -35,8 +41,10 @@ if [[ -z "$SILENT" ]]; then
         echo "CoAP Endpoint:    $COAP_ENDPOINT_URL ($COAP_ENDPOINT_HOST)"
         echo "HTTP Endpoint:    $HTTP_ENDPOINT_URL ($HTTP_ENDPOINT_HOST)"
         echo "MQTT Endpoint:    $MQTT_ENDPOINT_HOST:$MQTT_ENDPOINT_PORT"
+        echo "MQTT/WS Endpoint: $MQTT_ENDPOINT_WS_URL ($MQTT_ENDPOINT_WS_HOST:$MQTT_ENDPOINT_PORT)"
         echo
-        echo "MQTT Integration: $MQTT_INTEGRATION_HOST:$MQTT_INTEGRATION_PORT"
+        echo "MQTT Integration:      $MQTT_INTEGRATION_HOST:$MQTT_INTEGRATION_PORT"
+        echo "MQTT/WS Integration:   $MQTT_INTEGRATION_WS_URL ($MQTT_INTEGRATION_WS_HOST:$MQTT_INTEGRATION_WS_PORT)"
         echo "Websocket Integration: $WEBSOCKET_INTEGRATION_URL ($WEBSOCKET_INTEGRATION_HOST)"
         echo
         bold "========================================================"

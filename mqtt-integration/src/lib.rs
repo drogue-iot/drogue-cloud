@@ -27,11 +27,9 @@ pub struct Config {
     #[serde(default)]
     pub key_file: Option<String>,
     #[serde(default)]
-    pub bind_addr_mqtt: Option<String>,
+    pub mqtt: MqttServerOptions,
 
     pub registry: RegistryConfig,
-
-    pub max_size: Option<u32>,
 
     #[serde(default)]
     pub service: ServiceConfig,
@@ -51,9 +49,6 @@ pub struct Config {
 
     #[serde(default = "defaults::instance")]
     pub instance: String,
-
-    #[serde(default)]
-    pub workers: Option<usize>,
 }
 
 impl TlsConfig for Config {
@@ -129,16 +124,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // create server
 
-    let srv = build(
-        MqttServerOptions {
-            bind_addr: config.bind_addr_mqtt.clone(),
-            workers: config.workers,
-            ..Default::default()
-        },
-        app,
-        &app_config,
-    )?
-    .run();
+    let srv = build(config.mqtt.clone(), app, &app_config)?.run();
 
     log::info!("Starting server");
 

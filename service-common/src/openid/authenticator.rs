@@ -219,7 +219,7 @@ impl Authenticator {
             AuthenticatorError::Failed
         })?;
 
-        log::debug!("Token: {:#?}", token);
+        log::debug!("Token: {:?}", token);
 
         super::validate::validate_token(client, &token, None).map_err(|err| {
             log::info!("Validation failed: {}", err);

@@ -2,23 +2,28 @@ use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
-use drogue_client::registry::v1::Password;
-use drogue_client::{registry, Dialect, Translator};
-use drogue_cloud_database_common::models::Lock;
+use drogue_client::{
+    registry::{self, v1::Password},
+    Dialect, Translator,
+};
 use drogue_cloud_database_common::{
     error::ServiceError,
+    models::Lock,
     models::{app::*, device::*},
     Client, DatabaseService,
 };
-use drogue_cloud_service_api::auth::device::authn::{AuthorizeGatewayRequest, GatewayOutcome};
 use drogue_cloud_service_api::{
-    auth::device::authn::{self, AuthenticationRequest, Outcome},
+    auth::device::authn::{
+        self, AuthenticationRequest, AuthorizeGatewayRequest, GatewayOutcome, Outcome,
+    },
     health::{HealthCheckError, HealthChecked},
 };
-use rustls::{AllowAnyAuthenticatedClient, Certificate, RootCertStore};
+use rustls::{server::AllowAnyAuthenticatedClient, Certificate, RootCertStore};
+use rustls_pemfile::Item;
 use serde::Deserialize;
 use sha_crypt::sha512_check;
 use std::io::Cursor;
+use std::time::SystemTime;
 use tokio_postgres::NoTls;
 
 macro_rules! pass {
@@ -437,6 +442,11 @@ fn validate_trust_anchor(
         not_after,
     } = anchor
     {
+        // early abort, no certificates
+        if presented_certs.is_empty() {
+            return false;
+        }
+
         // quick validity period check before actually checking the chain
         if now < not_before {
             return false;
@@ -447,14 +457,33 @@ fn validate_trust_anchor(
 
         // create root from trust anchor entry
         let mut roots = RootCertStore::empty();
-        let mut c = Cursor::new(certificate);
-        if roots.add_pem_file(&mut c).is_err() {
+
+        // convert to DER
+        let certificate = match rustls_pemfile::read_one(&mut Cursor::new(certificate)) {
+            Ok(Some(Item::X509Certificate(certificate))) => certificate,
+            Ok(Some(_)) => {
+                log::debug!("Trust anchor does not contain a certificate");
+                return false;
+            }
+            Ok(None) => {
+                log::debug!("Trust anchor is empty");
+                return false;
+            }
+            Err(err) => {
+                log::debug!("Failed to parse trust anchor: {}", err);
+                return false;
+            }
+        };
+        // add to temporary root cert store
+        if roots.add(&Certificate(certificate)).is_err() {
             log::debug!("Failed to parse certificates");
             return false;
         }
 
         let v = AllowAnyAuthenticatedClient::new(roots);
-        match v.verify_client_cert(presented_certs, None) {
+        let end = &presented_certs[presented_certs.len() - 1];
+        let intermediates = &presented_certs[..presented_certs.len() - 1];
+        match v.verify_client_cert(end, intermediates, SystemTime::now()) {
             Ok(_) => true,
             Err(err) => {
                 log::debug!("Failed to verify client certificate: {}", err);

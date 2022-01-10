@@ -4,6 +4,7 @@ use diesel_migrations::embed_migrations;
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
+use drogue_cloud_mqtt_common::server::MqttServerOptions;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
 use drogue_cloud_service_api::{
     endpoints::*,
@@ -44,9 +45,11 @@ struct ServerConfig {
     pub console: Endpoint,
     pub frontend: Endpoint,
     pub mqtt: Endpoint,
+    pub mqtt_ws: Endpoint,
     pub http: Endpoint,
     pub coap: Endpoint,
     pub mqtt_integration: Endpoint,
+    pub mqtt_integration_ws: Endpoint,
     pub websocket_integration: Endpoint,
     pub command: Endpoint,
     pub registry: Endpoint,
@@ -143,6 +146,14 @@ impl ServerConfig {
                     1883
                 },
             },
+            mqtt_ws: Endpoint {
+                host: iface.to_string(),
+                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
+                    20443
+                } else {
+                    20880
+                },
+            },
             http: Endpoint {
                 host: iface.to_string(),
                 port: 8088,
@@ -154,6 +165,10 @@ impl ServerConfig {
             mqtt_integration: Endpoint {
                 host: iface.to_string(),
                 port: 18883,
+            },
+            mqtt_integration_ws: Endpoint {
+                host: iface.to_string(),
+                port: 10443,
             },
             websocket_integration: Endpoint {
                 host: iface.to_string(),
@@ -827,7 +842,7 @@ fn main() {
             let matches = matches.clone();
 
             threads.push(std::thread::spawn(move || {
-                let mut runner = ntex::rt::System::new("ntex");
+                let runner = ntex::rt::System::new("ntex");
 
                 let mut handles: Vec<
                     core::pin::Pin<Box<dyn core::future::Future<Output = anyhow::Result<()>>>>,
@@ -835,6 +850,7 @@ fn main() {
 
                 let command_source_kafka = command_source("mqtt_endpoint");
                 let bind_addr_mqtt = server.mqtt.clone().into();
+                let bind_addr_mqtt_ws = server.mqtt_ws.clone().into();
                 let kafka = server.kafka.clone();
                 let cert_bundle_file: Option<String> =
                     matches.value_of("server-cert").map(|s| s.to_string());
@@ -845,13 +861,17 @@ fn main() {
                     log::info!("Enabling MQTT endpoint");
 
                     let config = drogue_cloud_mqtt_endpoint::Config {
-                        workers: Some(1),
+                        mqtt: MqttServerOptions {
+                            workers: Some(1),
+                            bind_addr: Some(bind_addr_mqtt),
+                            bind_addr_ws: Some(bind_addr_mqtt_ws),
+                            ..Default::default()
+                        },
                         auth: auth.clone(),
                         health: None,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                         cert_bundle_file,
                         key_file,
-                        bind_addr_mqtt: Some(bind_addr_mqtt),
                         instance: "drogue".to_string(),
                         command_source_kafka,
                         kafka_downstream_config: kafka.clone(),
@@ -866,6 +886,7 @@ fn main() {
                 {
                     log::info!("Enabling MQTT integration");
                     let bind_addr_mqtt = server.mqtt_integration.clone().into();
+                    let bind_addr_mqtt_ws = server.mqtt_integration_ws.clone().into();
                     let kafka = server.kafka.clone();
                     let cert_bundle_file: Option<String> =
                         matches.value_of("server-cert").map(|s| s.to_string());
@@ -874,15 +895,18 @@ fn main() {
                     let registry = registry.clone();
                     let oauth = oauth.clone();
                     let config = drogue_cloud_mqtt_integration::Config {
-                        workers: Some(1),
+                        mqtt: MqttServerOptions {
+                            workers: Some(1),
+                            bind_addr: Some(bind_addr_mqtt),
+                            bind_addr_ws: Some(bind_addr_mqtt_ws),
+                            ..Default::default()
+                        },
                         health: None,
                         oauth,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                         cert_bundle_file,
                         key_file,
-                        bind_addr_mqtt: Some(bind_addr_mqtt),
                         registry,
-                        max_size: None,
                         service: drogue_cloud_mqtt_integration::ServiceConfig {
                             kafka: kafka.clone(),
                             enable_username_password_auth: false,
@@ -1020,9 +1044,18 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
             host: config.mqtt.host.clone(),
             port: config.mqtt.port,
         }),
+        mqtt_ws: Some(HttpEndpoint {
+            url: format!("http://{}:{}", config.mqtt_ws.host, config.mqtt_ws.port),
+        }),
         mqtt_integration: Some(MqttEndpoint {
             host: config.mqtt_integration.host.clone(),
             port: config.mqtt_integration.port,
+        }),
+        mqtt_integration_ws: Some(HttpEndpoint {
+            url: format!(
+                "http://{}:{}",
+                config.mqtt_integration_ws.host, config.mqtt_integration_ws.port
+            ),
         }),
         websocket_integration: Some(HttpEndpoint {
             url: format!(

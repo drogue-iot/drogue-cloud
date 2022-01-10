@@ -32,7 +32,7 @@ log = "0.4"
 
 native-tls = "0.2"
 sha2 = "0.9"
-rustls = { version = "0.19" }
+rustls = { version = "0.20" }
 
 dotenv = "0.15"
 config = "0.11"

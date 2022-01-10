@@ -12,9 +12,9 @@ log = "0.4"
 async-trait = "0.1"
 futures = "0.3"
 
-ntex = "0.4"
-ntex-mqtt = "0.7"
-ntex-service = "0.2"
+ntex = { version = "0.5", features = ["tokio"] }
+ntex-mqtt = "0.8"
+ntex-service = "0.3"
 
 pem = "1"
 serde = "1"
@@ -22,14 +22,22 @@ humantime-serde = "1"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 
+rustls-pemfile = { version = "0.2", optional = true }
+
 [dependencies.rust-tls]
-version = "0.19"
+version = "0.20"
 optional = true
 package = "rustls"
 # "dangerous" is required in order to implement ther ClientCertVerified trait
 # see: https://github.com/ctz/rustls/issues/467
 features = ["dangerous_configuration"]
 
+[dependencies.open-ssl]
+version = "0.10"
+optional = true
+package = "openssl"
+
 [features]
-default = ["rustls"]
-rustls = ["rust-tls", "ntex/rustls"]
+default = ["openssl"]
+rustls = ["rust-tls", "ntex/rustls", "rustls-pemfile"]
+openssl = ["open-ssl", "ntex/openssl", "rustls-pemfile"]

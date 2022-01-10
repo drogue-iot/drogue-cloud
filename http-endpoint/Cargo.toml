@@ -52,7 +52,7 @@ openid = "0.9"
 chrono = "0.4"
 
 [dependencies.rust-tls]
-version = "0.19"
+version = "0.20"
 package = "rustls"
 
 [dependencies.open-ssl]

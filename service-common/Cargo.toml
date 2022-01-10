@@ -16,7 +16,7 @@ actix-web = "=4.0.0-beta.8" # we need v4 as we need tokio 1
 actix-web-httpauth = "=0.6.0-beta.2"
 actix-service = "2"
 actix-rt = "2"
-ntex = "0.4"
+ntex = { version = "0.5", features = ["tokio"] }
 http = "0.2"
 
 keycloak = "14"
@@ -27,7 +27,7 @@ futures-util = { version = "0.3.7", default-features = false }
 reqwest = "0.11"
 openid = "0.9.2"
 
-rust_tls = { version = "0.19", package = "rustls", optional = true, features = ["dangerous_configuration"] }
+rust_tls = { version = "0.20", package = "rustls", optional = true, features = ["dangerous_configuration"] }
 webpki = { version = "0.21", optional = true }
 
 failure = "0.1" # required for converting error away from failure
