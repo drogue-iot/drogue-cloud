@@ -316,6 +316,7 @@ dependencies = [
  "actix-utils 3.0.0",
  "derive_more",
  "futures-core",
+ "http",
  "log",
  "openssl",
  "pin-project-lite 0.2.7",
@@ -686,30 +687,37 @@ dependencies = [
 
 [[package]]
 name = "awc"
-version = "3.0.0-beta.7"
+version = "3.0.0-beta.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "364ef81705bf38403a3c3da4fab9eeec1e1503cd72dd6cd7c4259d2a6b08aa98"
+checksum = "23e43f507fc706cf150b5a923655c96101692db9360148038678700fc4172e0a"
 dependencies = [
  "actix-codec 0.4.2",
  "actix-http 3.0.0-beta.18",
  "actix-rt 2.6.0",
  "actix-service 2.0.0",
+ "actix-tls",
+ "actix-utils 3.0.0",
+ "ahash",
  "base64 0.13.0",
  "bytes 1.1.0",
  "cfg-if 1.0.0",
- "cookie 0.15.1",
+ "cookie 0.16.0",
  "derive_more",
  "futures-core",
- "itoa 0.4.8",
+ "futures-util",
+ "h2 0.3.10",
+ "http",
+ "itoa 1.0.1",
  "log",
  "mime",
  "percent-encoding",
  "pin-project-lite 0.2.7",
  "rand 0.8.4",
- "rustls 0.19.1",
+ "rustls 0.20.2",
  "serde 1.0.130",
  "serde_json",
  "serde_urlencoded",
+ "tokio 1.15.0",
 ]
 
 [[package]]
@@ -1164,17 +1172,6 @@ name = "cookie"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03a5d7b21829bc7b4bf4754a978a241ae54ea55a40f92bb20216e54096f4b951"
-dependencies = [
- "percent-encoding",
- "time 0.2.27",
- "version_check",
-]
-
-[[package]]
-name = "cookie"
-version = "0.15.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5f1c7727e460397e56abc4bddc1d49e07a1ad78fc98eb2e1c8f032a58a2f80d"
 dependencies = [
  "percent-encoding",
  "time 0.2.27",
@@ -1892,7 +1889,7 @@ dependencies = [
  "actix-web-httpauth",
  "anyhow",
  "async-trait",
- "awc 3.0.0-beta.7",
+ "awc 3.0.0-beta.18",
  "biscuit",
  "cached",
  "chrono",
