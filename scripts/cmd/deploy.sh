@@ -6,6 +6,7 @@ set +e
 
 : "${DEPLOY_TWIN:=false}"
 : "${DEPLOY_EXAMPLES:=true}"
+: "${DEPLOY_METRICS:=FALSE}"
 
 # process arguments
 
@@ -30,6 +31,7 @@ Options:
   -p <profile>       Enable Helm profile (adds 'deploy/profiles/<profile>.yaml')
   -t <timeout>       Helm installation timeout (default: 15m)
   -T                 Deploy the digital twin feature
+  -M                 Deploy metrics
   -h                 Show this help
 
 EOF
@@ -76,6 +78,9 @@ while getopts mhkep:c:n:d:s:S:t:Tf: FLAG; do
         ;;
     T)
         DEPLOY_TWIN="true"
+        ;;
+    M)
+        DEPLOY_METRICS="true"
         ;;
     e)
         DEPLOY_EXAMPLES="false"
@@ -199,7 +204,6 @@ HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 HELM_ARGS="$HELM_ARGS --set drogueCloudTwin.enabled=$DEPLOY_TWIN"
 HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.enabled=$DEPLOY_EXAMPLES"
 HELM_ARGS="$HELM_ARGS --set drogueCloudMetrics.grafana.ingress.hosts={metrics${domain}}"
-HELM_ARGS="$HELM_ARGS --set drogueCloudMetrics.prometheus.server.ingress.hosts={prometheus${domain}}"
 
 echo "Helm arguments: $HELM_ARGS"
 

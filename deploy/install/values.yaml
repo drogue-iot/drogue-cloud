@@ -1,5 +1,9 @@
 drogueCloudMetrics:
   enabled: true
+  prometheus:
+    createInstance: true
+    kubeStateMetrics:
+      enabled: true
 
 drogueCloudTwin:
   enabled: false

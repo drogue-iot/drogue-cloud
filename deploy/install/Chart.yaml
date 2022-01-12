@@ -28,6 +28,7 @@ dependencies:
   - name: drogue-cloud-metrics
     version: ^0.5.0-alpha1
     alias: drogueCloudMetrics
+    condition: drogueCloudMetrics.enabled, global.drogueCloudMetrics.enabled
     repository: file://../helm/charts/drogue-cloud-metrics
   - name: drogue-cloud-examples
     version: ^0.5.0-alpha1
