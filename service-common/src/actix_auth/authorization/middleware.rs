@@ -42,11 +42,6 @@ where
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct Token {
-    token: String,
-}
-
 // 2. Middleware's call method gets called with normal request.
 impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>
 where
