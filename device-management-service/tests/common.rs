@@ -1,6 +1,7 @@
-use actix_http::{http::StatusCode, HttpMessage, Request};
+use actix_http::{HttpMessage, Request};
 use actix_web::{
     dev::{Service, ServiceResponse},
+    http::StatusCode,
     test::TestRequest,
 };
 use chrono::Duration;

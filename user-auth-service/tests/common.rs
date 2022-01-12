@@ -24,7 +24,7 @@ macro_rules! test {
         });
 
         let auth = drogue_cloud_service_common::mock_auth!();
-        let $v = test::init_service(drogue_cloud_user_auth_service::app!(
+        let $v = actix_web::test::init_service(drogue_cloud_user_auth_service::app!(
             data,
             drogue_cloud_access_token_service::mock::MockAccessTokenService,
             api_key,
@@ -42,12 +42,12 @@ macro_rules! test {
 macro_rules! test_auth {
     ($rep:expr => $res:expr) => {
         test!(app => {
-            let resp = test::TestRequest::post().uri("/api/v1/user/authz").set_json(&$rep).send_request(&app).await;
+            let resp = actix_web::test::TestRequest::post().uri("/api/v1/user/authz").set_json(&$rep).send_request(&app).await;
             let is_success = resp.status().is_success();
 
             log::debug!("Response: {:?}", resp);
 
-            let result: serde_json::Value = test::read_body_json(resp).await;
+            let result: serde_json::Value = actix_web::test::read_body_json(resp).await;
 
             let outcome = $res;
 

@@ -1,6 +1,6 @@
 mod common;
 
-use actix_web::{test, web, App};
+use actix_web::{web, App};
 use drogue_cloud_authentication_service::{endpoints, service, WebData};
 use drogue_cloud_service_api::auth::device::authn::{AuthenticationRequest, Credential};
 use drogue_cloud_test_common::{client, db};
