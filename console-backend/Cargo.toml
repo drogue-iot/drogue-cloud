@@ -56,7 +56,7 @@ drogue-cloud-access-token-service = { path = "../access-token-service" }
 
 drogue-client = "0.8"
 
-awc = { version = "=3.0.0-beta.7", optional = true, features = ["rustls"] }
+awc = { version = "=3.0.0-beta.18", optional = true, features = ["rustls"] }
 
 [features]
 forward = ["awc"]
