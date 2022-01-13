@@ -224,8 +224,8 @@ impl IntegrationDetails<'_> {
     fn render_kafka(&self, info: &KafkaInfo) -> Html {
         return html! {
             <Grid gutter=true>
-                <GridItem cols={[6]}>{ self.render_kafka_basic(&info) }</GridItem>
-                <GridItem cols={[6]}>{ self.render_kafka_examples(&info) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_kafka_basic(info) }</GridItem>
+                <GridItem cols={[6]}>{ self.render_kafka_examples(info) }</GridItem>
             </Grid>
         };
     }

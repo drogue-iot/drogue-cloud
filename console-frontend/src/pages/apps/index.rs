@@ -168,7 +168,6 @@ impl Index {
             vec![],
             ctx.callback_api::<Json<Vec<Application>>, _>(move |response| match response {
                 ApiResponse::Success(entries, _) => {
-                    let link = link.clone();
                     let entries = entries
                         .into_iter()
                         .map(move |app| {

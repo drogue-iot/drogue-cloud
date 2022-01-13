@@ -116,7 +116,7 @@ impl Component for Main {
                 .ok();
         }
 
-        let token_holder = SharedDataBridge::from(&ctx.link(), Msg::SetAccessToken);
+        let token_holder = SharedDataBridge::from(ctx.link(), Msg::SetAccessToken);
 
         Self {
             access_code: code,

@@ -17,10 +17,10 @@ where
     subscribers: HashSet<HandlerId>,
 }
 
-pub enum Request<T> {
-    GetState,
-    SetState(T),
-    UpdateState(Box<dyn FnOnce(&mut T) + Send + Sync>),
+pub enum RequestState<T> {
+    Get,
+    Set(T),
+    Update(Box<dyn FnOnce(&mut T) + Send + Sync>),
 }
 
 pub enum Response<T> {
@@ -33,7 +33,7 @@ where
 {
     type Reach = Context<Self>;
     type Message = ();
-    type Input = Request<T>;
+    type Input = RequestState<T>;
     type Output = Response<T>;
 
     fn create(link: AgentLink<Self>) -> Self {
@@ -54,18 +54,18 @@ where
 
     fn handle_input(&mut self, msg: Self::Input, id: HandlerId) {
         match msg {
-            Self::Input::GetState => self
+            Self::Input::Get => self
                 .link
                 .respond(id, Self::Output::State(self.data.clone())),
 
-            Self::Input::SetState(data) => {
+            Self::Input::Set(data) => {
                 if self.data != data {
                     self.data = data;
                     self.notify_all();
                 }
             }
 
-            Self::Input::UpdateState(mutator) => {
+            Self::Input::Update(mutator) => {
                 let mut new = self.data.clone();
                 log::debug!("old data: {:?}", new);
                 mutator(&mut new);
@@ -162,7 +162,7 @@ where
     }
 
     pub fn request_state(&mut self) {
-        self.0.send(Request::GetState);
+        self.0.send(RequestState::Get);
     }
 }
 
@@ -201,13 +201,13 @@ where
     T: Default + Debug + Clone + PartialEq,
 {
     fn set(&mut self, data: T) {
-        self.send(Request::SetState(data))
+        self.send(RequestState::Set(data))
     }
 
     fn update<F>(&mut self, f: F)
     where
         F: FnOnce(&mut T) + Send + Sync + 'static,
     {
-        self.send(Request::UpdateState(Box::new(f)))
+        self.send(RequestState::Update(Box::new(f)))
     }
 }

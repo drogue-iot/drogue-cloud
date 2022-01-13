@@ -83,7 +83,7 @@ impl Component for CreateDialog {
                        <FormGroup>
                             <TextInput
                                 validator={Validator::from(v)}
-                                onchange={ctx.link().callback(|app|Msg::NewAppName(app))}
+                                onchange={ctx.link().callback(Msg::NewAppName)}
                                 placeholder="Application ID"/>
                         </FormGroup>
                 </Form>

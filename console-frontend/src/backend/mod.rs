@@ -264,10 +264,14 @@ impl Backend {
         IN: RequestPayload,
         H: RequestHandler<anyhow::Result<Response>>,
     {
-        Self::get()
-            .ok_or_else(|| RequestError::Backend)?
-            .info
-            .request_with(method, path, payload, vec![], options, handler)
+        Self::get().ok_or(RequestError::Backend)?.info.request_with(
+            method,
+            path,
+            payload,
+            vec![],
+            options,
+            handler,
+        )
     }
 
     pub fn reauthenticate() -> Result<(), anyhow::Error> {

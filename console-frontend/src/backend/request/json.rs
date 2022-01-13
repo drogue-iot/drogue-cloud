@@ -81,14 +81,14 @@ where
     })
 }
 
+type ComponentJsonHandler<COMP, T, E, M> =
+    JsonHandler<T, E, ComponentHandler<anyhow::Result<JsonResponse<T, E>>, COMP, M>>;
+
 pub trait JsonHandlerScopeExt<COMP>
 where
     COMP: Component,
 {
-    fn callback_json<T, E, M>(
-        &self,
-        mapper: M,
-    ) -> JsonHandler<T, E, ComponentHandler<anyhow::Result<JsonResponse<T, E>>, COMP, M>>
+    fn callback_json<T, E, M>(&self, mapper: M) -> ComponentJsonHandler<COMP, T, E, M>
     where
         M: FnOnce(anyhow::Result<JsonResponse<T, E>>) -> COMP::Message + 'static,
         T: for<'de> Deserialize<'de>,
@@ -107,10 +107,7 @@ impl<COMP> JsonHandlerScopeExt<COMP> for Context<COMP>
 where
     COMP: Component,
 {
-    fn callback_json<T, E, M>(
-        &self,
-        mapper: M,
-    ) -> JsonHandler<T, E, ComponentHandler<anyhow::Result<JsonResponse<T, E>>, COMP, M>>
+    fn callback_json<T, E, M>(&self, mapper: M) -> ComponentJsonHandler<COMP, T, E, M>
     where
         M: FnOnce(anyhow::Result<JsonResponse<T, E>>) -> COMP::Message + 'static,
         T: for<'de> Deserialize<'de>,

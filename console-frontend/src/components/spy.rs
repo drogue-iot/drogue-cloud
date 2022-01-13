@@ -127,7 +127,7 @@ impl Component for Spy {
                         <ToolbarItem>
                             <TextInput
                                 disabled={self.running}
-                                onchange={ctx.link().callback(|app|Msg::SetApplication(app))}
+                                onchange={ctx.link().callback(Msg::SetApplication)}
                                 validator={Validator::from(v)}
                                 placeholder="Application ID to spy on"/>
                         </ToolbarItem>
@@ -325,7 +325,7 @@ fn render_data(event: &Event) -> Html {
         Some(Data::Binary(blob)) => html! {
             <>
                 <pre> { pretty_hex::pretty_hex(&blob) } </pre>
-                <pre> { base64_block(&blob) } </pre>
+                <pre> { base64_block(blob) } </pre>
             </>
         },
         Some(Data::Json(value)) => {
@@ -372,7 +372,7 @@ fn render_data_short(event: &Event) -> Html {
         },
         Some(Data::Binary(blob)) => html! {
             <pre>
-                <Label label="BLOB" color={Color::Blue}/>{" "}{render_blob(&blob)}
+                <Label label="BLOB" color={Color::Blue}/>{" "}{render_blob(blob)}
             </pre>
         },
         Some(Data::Json(value)) => html! {
