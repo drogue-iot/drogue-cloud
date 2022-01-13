@@ -44,7 +44,7 @@ EOF
     exit 1
 }
 
-while getopts mhkep:c:n:d:s:S:t:Tf: FLAG; do
+while getopts mhkeMp:c:n:d:s:S:t:Tf: FLAG; do
   case $FLAG in
     c)
         CLUSTER="$OPTARG"
@@ -203,6 +203,7 @@ HELM_ARGS="$HELM_ARGS --set global.domain=${domain}"
 HELM_ARGS="$HELM_ARGS --set coreReleaseName=drogue-iot"
 HELM_ARGS="$HELM_ARGS --set drogueCloudTwin.enabled=$DEPLOY_TWIN"
 HELM_ARGS="$HELM_ARGS --set drogueCloudExamples.enabled=$DEPLOY_EXAMPLES"
+HELM_ARGS="$HELM_ARGS --set drogueCloudMetrics.enabled=$DEPLOY_METRICS"
 HELM_ARGS="$HELM_ARGS --set drogueCloudMetrics.grafana.ingress.hosts={metrics${domain}}"
 
 echo "Helm arguments: $HELM_ARGS"
@@ -211,6 +212,7 @@ echo "Helm arguments: $HELM_ARGS"
 
 progress -n "🔨 Deploying Drogue IoT ... "
 helm dependency update "$BASEDIR/../deploy/install"
+helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-metrics"
 # shellcheck disable=SC2086
 helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/install" --install $HELM_ARGS
 progress "done!"
