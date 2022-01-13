@@ -2,12 +2,16 @@ mod cache;
 mod inbox;
 
 use crate::{auth::DeviceAuthenticator, config::EndpointConfig};
+use crate::MQTT_CONNECTIONS_COUNTER;
 use async_trait::async_trait;
 use cache::DeviceCache;
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
-    sender::{self, DownstreamSender, PublishOptions, PublishOutcome, Publisher, DOWNSTREAM_EVENTS_COUNTER},
+    sender::{
+        self, DownstreamSender, PublishOptions, PublishOutcome, Publisher,
+        DOWNSTREAM_EVENTS_COUNTER,
+    },
     sink::Sink,
 };
 use drogue_cloud_mqtt_common::{
@@ -23,7 +27,6 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     sync::Arc,
 };
-use crate::MQTT_CONNECTIONS_COUNTER;
 
 #[derive(Clone)]
 pub struct Session<S>
@@ -171,21 +174,29 @@ where
             .await
         {
             Ok(PublishOutcome::Accepted) => {
-                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "Accepted"]).inc();
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["mqtt", "Accepted"])
+                    .inc();
                 Ok(())
-            },
+            }
             Ok(PublishOutcome::Rejected) => {
-                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "Rejected"]).inc();
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["mqtt", "Rejected"])
+                    .inc();
                 Err(PublishError::UnspecifiedError)
-            },
+            }
             Ok(PublishOutcome::QueueFull) => {
-                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "QueueFull"]).inc();
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["mqtt", "QueueFull"])
+                    .inc();
                 Err(PublishError::QuotaExceeded)
-            },
+            }
             Err(err) => {
-                DOWNSTREAM_EVENTS_COUNTER.with_label_values(&["mqtt", "Error"]).inc();
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["mqtt", "Error"])
+                    .inc();
                 Err(PublishError::InternalError(err.to_string()))
-            },
+            }
         }
     }
 

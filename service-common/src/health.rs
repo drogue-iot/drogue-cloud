@@ -161,8 +161,7 @@ impl HealthServer {
         let checker = ntex::web::types::Data::new(self.checker);
         ntex::web::server(move || {
             use ntex::web::App;
-            health_app!(checker)
-            .route("/metrics", web::get().to(HealthServer::metrics))
+            health_app!(checker).route("/metrics", web::get().to(HealthServer::metrics))
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)
@@ -179,7 +178,8 @@ impl HealthServer {
             .encode(&prometheus::gather(), &mut buffer)
             .expect("Failed to encode metrics");
 
-        let response = String::from_utf8(buffer.clone()).expect("Failed to convert bytes to string");
+        let response =
+            String::from_utf8(buffer.clone()).expect("Failed to convert bytes to string");
         buffer.clear();
 
         ntex::web::HttpResponse::Ok()
