@@ -8,9 +8,7 @@ This guide should help you get started: creating a build and test environment, a
 All contributions are welcome! While this guide will focus on contributing code, we would also encourage you to
 contribute by reporting issues, providing feedback, suggesting new ideas. Or just by saying "hi" in the chat.
 
-If you just want to run Drogue IoT cloud, take a look here: [deploy/README.md](deploy/README.adoc). That guide
-should walk you through the installation of the stack. This guide is more of a "hacking guide", and assumes
-that you plan to make changes, or at least compile your own version of the cloud components.
+If you just want to run Drogue IoT cloud, take a look here: [README.md#for-users](README.md#for-users).
 
 ## Before you start
 
