@@ -57,13 +57,12 @@ pub struct Props {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    SetData(ExampleData),
-
-    SetApplicationId(String),
-    SetDeviceId(String),
-    SetPassword(String),
-    SetPayload(String),
-    SetLocalCerts(bool),
+    Data(ExampleData),
+    ApplicationId(String),
+    DeviceId(String),
+    Password(String),
+    Payload(String),
+    LocalCerts(bool),
 }
 
 pub struct CoreExampleData {
@@ -77,7 +76,7 @@ impl Component for CoreExampleData {
 
     fn create(ctx: &Context<Self>) -> Self {
         let data_callback = ctx.link().batch_callback(|output| match output {
-            data::Response::State(data) => vec![Msg::SetData(data)],
+            data::Response::State(data) => vec![Msg::Data(data)],
         });
         let mut data_agent = SharedDataBridge::new(data_callback);
         data_agent.request_state();
@@ -90,14 +89,14 @@ impl Component for CoreExampleData {
 
     fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::SetApplicationId(app) => self.data_agent.update(|mut data| data.app_id = app),
-            Msg::SetDeviceId(device) => self.data_agent.update(|mut data| data.device_id = device),
-            Msg::SetPassword(pwd) => self.data_agent.update(|mut data| data.password = pwd),
-            Msg::SetPayload(payload) => self.data_agent.update(|mut data| data.payload = payload),
-            Msg::SetLocalCerts(local_certs) => self
+            Msg::ApplicationId(app) => self.data_agent.update(|mut data| data.app_id = app),
+            Msg::DeviceId(device) => self.data_agent.update(|mut data| data.device_id = device),
+            Msg::Password(pwd) => self.data_agent.update(|mut data| data.password = pwd),
+            Msg::Payload(payload) => self.data_agent.update(|mut data| data.payload = payload),
+            Msg::LocalCerts(local_certs) => self
                 .data_agent
                 .update(move |mut data| data.enable_local_cert = local_certs),
-            Msg::SetData(data) => self.data = Some(data),
+            Msg::Data(data) => self.data = Some(data),
         }
         true
     }
@@ -134,7 +133,7 @@ impl CoreExampleData {
                                 <TextInput
                                     value={data.app_id.clone()}
                                     required=true
-                                    onchange={ctx.link().callback(|app|Msg::SetApplicationId(app))}
+                                    onchange={ctx.link().callback(Msg::ApplicationId)}
                                     validator={Validator::from(v)}
                                     />
                             </FormGroup>
@@ -142,7 +141,7 @@ impl CoreExampleData {
                                 <TextInput
                                     value={data.device_id.clone()}
                                     required=true
-                                    onchange={ctx.link().callback(|device|Msg::SetDeviceId(device))}
+                                    onchange={ctx.link().callback(Msg::DeviceId)}
                                     validator={Validator::from(v)}
                                     />
                             </FormGroup>
@@ -156,7 +155,7 @@ impl CoreExampleData {
                                 <TextInput
                                     value={data.password.clone()}
                                     required=true
-                                    onchange={ctx.link().callback(|password|Msg::SetPassword(password))}
+                                    onchange={ctx.link().callback(Msg::Password)}
                                     validator={Validator::from(v)}
                                     />
                             </FormGroup>
@@ -168,7 +167,7 @@ impl CoreExampleData {
                         <Form>
                             <TextArea
                                 value={data.payload.clone()}
-                                onchange={ctx.link().callback(|payload|Msg::SetPayload(payload))}
+                                onchange={ctx.link().callback(Msg::Payload)}
                                 validator={Validator::from(v)}
                                 />
                         </Form>
@@ -182,7 +181,7 @@ impl CoreExampleData {
                             checked={data.enable_local_cert}
                             label="Use local test certificates"
                             label_off="Use system default certificates"
-                            on_change={ctx.link().callback(|data| Msg::SetLocalCerts(data))}
+                            on_change={ctx.link().callback(Msg::LocalCerts)}
                             />
                     </Card>
                 </StackItem>

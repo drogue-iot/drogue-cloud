@@ -78,10 +78,10 @@ impl Component for ExamplePage {
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let mut data_agent = SharedDataBridge::from(&ctx.link(), Msg::ExampleData);
+        let mut data_agent = SharedDataBridge::from(ctx.link(), Msg::ExampleData);
         data_agent.request_state();
 
-        let mut token_agent = SharedDataBridge::from(&ctx.link(), Msg::SetToken);
+        let mut token_agent = SharedDataBridge::from(ctx.link(), Msg::SetToken);
         token_agent.request_state();
 
         ctx.link().send_message(Msg::FetchOverview);
@@ -181,27 +181,27 @@ impl ExamplePage {
                                 Examples::Register => html!{
                                     <RegisterDevices
                                         endpoints={endpoints.clone()}
-                                        data={data.clone()}
+                                        data={data}
                                         />
                                 },
                                 Examples::Consume => html!{
                                     <ConsumeData
                                         endpoints={endpoints.clone()}
-                                        data={data.clone()}
-                                        token={token.clone()}
+                                        data={data}
+                                        token={token}
                                         />
                                 },
                                 Examples::Publish => html!{
                                     <PublishData
                                         endpoints={endpoints.clone()}
-                                        data={data.clone()}
+                                        data={data}
                                         />
                                 },
                                 Examples::Commands => html!{
                                     <CommandAndControl
                                         endpoints={endpoints.clone()}
-                                        data={data.clone()}
-                                        token={token.clone()}
+                                        data={data}
+                                        token={token}
                                         />
                                 },
                             }
@@ -212,7 +212,7 @@ impl ExamplePage {
 
                 <GridItem cols={[2]}>
                     <CoreExampleData
-                        endpoints={endpoints.clone()}
+                        endpoints={endpoints}
                         />
                 </GridItem>
 

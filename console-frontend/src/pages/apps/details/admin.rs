@@ -123,13 +123,13 @@ impl Component for Admin {
                 Err(err) => error("Failed to load", err),
             },
             Msg::SetMembers(members) => {
-                self.members = Some(Users::from(members, ctx.props().name.clone(), &ctx.link()));
+                self.members = Some(Users::from(members, ctx.props().name.clone(), ctx.link()));
                 self.fetch = None;
             }
             Msg::AddMember => {
                 let (id, entry) = (&self.new_member_id, &self.new_member_role);
                 if let Some(m) = self.members.as_mut() {
-                    if let Err(e) = m.add(id.clone(), *entry, &ctx.link()) {
+                    if let Err(e) = m.add(id.clone(), *entry, ctx.link()) {
                         error("Failed to add user", e);
                     } else {
                         match self.submit(ctx) {
@@ -219,7 +219,7 @@ impl Component for Admin {
                                 <ToolbarItem>
                                     <TextInput
                                             disabled={self.fetch.is_some()}
-                                            onchange={ctx.link().callback(|id|Msg::NewMemberId(id))}
+                                            onchange={ctx.link().callback(Msg::NewMemberId)}
                                             placeholder="User id"/>
                                     </ToolbarItem>
                                     <ToolbarItem>
@@ -252,7 +252,7 @@ impl Component for Admin {
                                 <ToolbarGroup>
                                     <ToolbarItem>
                                         <TextInput
-                                            onchange={ctx.link().callback(|user|Msg::NewOwner(user))}
+                                            onchange={ctx.link().callback(Msg::NewOwner)}
                                             placeholder="Username"/>
                                     </ToolbarItem>
                                     <ToolbarItem>
@@ -426,7 +426,7 @@ impl Admin {
                         Msg::TransferPending(transfer)
                     }
                     ApiResponse::Success(..) => Msg::Stop(Some(
-                        format!("Unknown response").notify("Failed to load transfer state"),
+                        "Unknown response".notify("Failed to load transfer state"),
                     )),
                     ApiResponse::Failure(ApiError::Response(_, StatusCode::NOT_FOUND)) => {
                         Msg::Stop(None)

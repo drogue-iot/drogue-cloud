@@ -181,7 +181,6 @@ impl AccessTokens {
             vec![],
             ctx.callback_api::<Json<Vec<AccessToken>>, _>(move |response| match response {
                 ApiResponse::Success(tokens, _) => {
-                    let link = link.clone();
                     let tokens = tokens
                         .into_iter()
                         .map(move |token| AccessTokenEntry {

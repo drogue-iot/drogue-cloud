@@ -57,7 +57,7 @@ impl Component for AppPage {
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let app_ctx_bridge = SharedDataBridge::from(&ctx.link(), Msg::SetAppCtx);
+        let app_ctx_bridge = SharedDataBridge::from(ctx.link(), Msg::SetAppCtx);
 
         Self {
             _app_ctx_bridge: app_ctx_bridge,

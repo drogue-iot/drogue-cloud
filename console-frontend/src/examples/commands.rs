@@ -22,10 +22,10 @@ pub struct CommandAndControl {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    SetDrgToken(bool),
-    SetCommandEmptyMessage(bool),
-    SetCommandName(String),
-    SetCommandPayload(String),
+    DrgToken(bool),
+    CommandEmptyMessage(bool),
+    CommandName(String),
+    CommandPayload(String),
 }
 
 impl Component for CommandAndControl {
@@ -40,16 +40,16 @@ impl Component for CommandAndControl {
 
     fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Self::Message::SetCommandEmptyMessage(cmd_empty_message) => self
+            Self::Message::CommandEmptyMessage(cmd_empty_message) => self
                 .data_agent
                 .update(move |data| data.cmd_empty_message = cmd_empty_message),
-            Self::Message::SetDrgToken(drg_token) => self
+            Self::Message::DrgToken(drg_token) => self
                 .data_agent
                 .update(move |data| data.drg_token = drg_token),
-            Self::Message::SetCommandName(name) => {
+            Self::Message::CommandName(name) => {
                 self.data_agent.update(|mut data| data.cmd_name = name)
             }
-            Self::Message::SetCommandPayload(payload) => self
+            Self::Message::CommandPayload(payload) => self
                 .data_agent
                 .update(|mut data| data.cmd_payload = payload),
         }
@@ -115,7 +115,7 @@ impl Component for CommandAndControl {
                         <Switch
                             checked={ctx.props().data.cmd_empty_message}
                             label="Send empty message" label_off="Send example payload"
-                            on_change={ctx.link().callback(|data| Msg::SetCommandEmptyMessage(data))}
+                            on_change={ctx.link().callback(Msg::CommandEmptyMessage)}
                             />
                     </div>
                     <Alert title="Hurry up!" inline=true>
@@ -164,7 +164,7 @@ impl Component for CommandAndControl {
                         <Switch
                             checked={ctx.props().data.cmd_empty_message}
                             label="Send empty message" label_off="Send example payload"
-                            on_change={ctx.link().callback(|data| Msg::SetCommandEmptyMessage(data))}
+                            on_change={ctx.link().callback(Msg::CommandEmptyMessage)}
                             />
                     </div>
                     <Alert title="Hurry up!" inline=true>
@@ -232,21 +232,21 @@ impl Component for CommandAndControl {
                             <TextInput
                                 value={ctx.props().data.cmd_name.clone()}
                                 required=true
-                                onchange={ctx.link().callback(|name|Msg::SetCommandName(name))}
+                                onchange={ctx.link().callback(Msg::CommandName)}
                                 validator={Validator::from(v)}
                                 />
                         </FormGroup>
                         <FormGroup label="Command payload">
                             <TextArea
                                 value={ctx.props().data.cmd_payload.clone()}
-                                onchange={ctx.link().callback(|payload|Msg::SetCommandPayload(payload))}
+                                onchange={ctx.link().callback(Msg::CommandPayload)}
                                 />
                         </FormGroup>
                         <FormGroup>
                             <Switch
                                 checked={ctx.props().data.drg_token}
                                 label="Use 'drg' to get the access token" label_off="Show current token in example"
-                                on_change={ctx.link().callback(|data| Msg::SetDrgToken(data))}
+                                on_change={ctx.link().callback(Msg::DrgToken)}
                                 />
                         </FormGroup>
                     </Form>

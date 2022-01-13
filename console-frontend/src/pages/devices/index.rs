@@ -174,7 +174,7 @@ impl Component for Index {
                 <PageSection variant={PageSectionVariant::Light}>
                     <ContextSelector
                         selected={self.app.clone()}
-                        onsearch={link.callback(|v|Msg::AppSearch(v))}
+                        onsearch={link.callback(Msg::AppSearch)}
                         >
                         { for self.apps.iter().filter(|app|{
                             if app_filter.is_empty() {
@@ -245,7 +245,6 @@ impl Index {
             vec![],
             ctx.callback_api::<Json<Vec<Device>>, _>(move |response| match response {
                 ApiResponse::Success(entries, _) => {
-                    let link = link.clone();
                     let entries = entries
                         .into_iter()
                         .map(move |device| {
