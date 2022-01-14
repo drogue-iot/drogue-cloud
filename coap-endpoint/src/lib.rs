@@ -116,9 +116,9 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     Ok(option_values)
 }
 
-fn params(
-    request: &CoapRequest<SocketAddr>,
-) -> Result<(Vec<String>, Option<&Vec<u8>>, &Vec<u8>), anyhow::Error> {
+type Params<'a> = Result<(Vec<String>, Option<&'a Vec<u8>>, &'a Vec<u8>), anyhow::Error>;
+
+fn params(request: &CoapRequest<SocketAddr>) -> Params {
     // Get path values and extract channel and subject
     let path_segments = request
         .message

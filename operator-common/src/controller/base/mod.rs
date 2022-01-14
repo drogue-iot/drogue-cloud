@@ -31,7 +31,7 @@ pub const CONDITION_RECONCILED: &str = "Reconciled";
 
 pub trait Key: Clone + Debug + Send + Sync + 'static {
     fn to_string(&self) -> String;
-    fn from_string(s: String) -> Result<Self, ()>;
+    fn from_string(s: String) -> Result<Self, &'static str>;
 }
 
 impl Key for String {
@@ -39,7 +39,7 @@ impl Key for String {
         ToString::to_string(self)
     }
 
-    fn from_string(s: String) -> Result<Self, ()> {
+    fn from_string(s: String) -> Result<Self, &'static str> {
         Ok(s)
     }
 }
@@ -49,10 +49,10 @@ impl Key for (String, String) {
         format!("{}/{}", self.0, self.1)
     }
 
-    fn from_string(s: String) -> Result<Self, ()> {
+    fn from_string(s: String) -> Result<Self, &'static str> {
         match s.split('/').collect::<Vec<_>>().as_slice() {
             [a, b] => Ok((a.to_string(), b.to_string())),
-            _ => Err(()),
+            _ => Err("missing slash?"),
         }
     }
 }

@@ -669,10 +669,7 @@ fn main() {
         // Spawn actix runtime
         {
             let oauth = oauth.clone();
-            let keycloak = keycloak.clone();
             let server = server.clone();
-            let pg = pg.clone();
-            let user_auth = user_auth.clone();
             let auth = auth.clone();
             let registry = registry.clone();
             let matches = matches.clone();
@@ -774,7 +771,7 @@ fn main() {
 
                     handles.push(Box::pin(drogue_cloud_console_backend::run(
                         config,
-                        endpoints(&server.clone()),
+                        endpoints(&server),
                     )));
                 }
 
@@ -838,7 +835,6 @@ fn main() {
             let oauth = oauth.clone();
             let server = server.clone();
             let auth = auth.clone();
-            let registry = registry.clone();
             let matches = matches.clone();
 
             threads.push(std::thread::spawn(move || {
@@ -900,7 +896,6 @@ fn main() {
                     let key_file: Option<String> =
                         matches.value_of("server-key").map(|s| s.to_string());
                     let registry = registry.clone();
-                    let oauth = oauth.clone();
                     let config = drogue_cloud_mqtt_integration::Config {
                         mqtt: MqttServerOptions {
                             workers: Some(1),

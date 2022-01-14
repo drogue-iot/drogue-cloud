@@ -30,6 +30,8 @@ pub struct MockAuthenticatorMiddleware<S> {
     service: S,
 }
 
+type MockAuthenticatorFuture<R, E> = Pin<Box<dyn Future<Output = Result<R, E>>>>;
+
 impl<S, B> Service<ServiceRequest> for MockAuthenticatorMiddleware<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
@@ -38,7 +40,7 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
+    type Future = MockAuthenticatorFuture<Self::Response, Self::Error>;
 
     fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.service.poll_ready(cx)

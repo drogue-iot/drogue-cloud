@@ -51,6 +51,7 @@ impl<S> Session<S>
 where
     S: SenderSink,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: ServiceConfig,
         user_auth: Option<Arc<UserAuthClient>>,

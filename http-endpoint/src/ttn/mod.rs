@@ -147,6 +147,7 @@ where
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn send_uplink<B, S>(
     sender: web::Data<DownstreamSender<S>>,
     application: registry::v1::Application,

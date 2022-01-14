@@ -130,7 +130,7 @@ impl Event {
         if paths.is_empty() {
             vec![c(".".to_string())]
         } else {
-            paths.into_iter().map(|path| c(path)).collect()
+            paths.into_iter().map(c).collect()
         }
     }
 

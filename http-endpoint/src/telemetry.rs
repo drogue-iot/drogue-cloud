@@ -30,6 +30,7 @@ pub struct PublishOptions {
     pub ct: Option<u64>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn publish_plain<S>(
     sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
@@ -57,6 +58,7 @@ where
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn publish_tail<S>(
     sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
@@ -85,6 +87,7 @@ where
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn publish<S>(
     sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
