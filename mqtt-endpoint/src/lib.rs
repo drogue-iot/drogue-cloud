@@ -22,6 +22,10 @@ use std::fmt::Debug;
 pub struct Config {
     #[serde(default)]
     pub disable_tls: bool,
+
+    #[serde(default)]
+    pub disable_client_certificates: bool,
+
     #[serde(default)]
     pub cert_bundle_file: Option<String>,
     #[serde(default)]
@@ -49,6 +53,10 @@ pub struct Config {
 impl TlsConfig for Config {
     fn is_disabled(&self) -> bool {
         self.disable_tls
+    }
+
+    fn disable_client_certs(&self) -> bool {
+        self.disable_client_certificates
     }
 
     #[cfg(feature = "rustls")]
