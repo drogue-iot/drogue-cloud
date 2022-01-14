@@ -234,7 +234,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                     web::scope("/api/console/v1alpha1")
                         .service(
                             web::resource("/info")
-                                .wrap(auth.clone())
+                                .wrap(auth)
                                 .route(web::get().to(info::get_info)),
                         )
                         .service(auth::login)

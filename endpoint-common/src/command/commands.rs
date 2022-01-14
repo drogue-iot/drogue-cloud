@@ -61,11 +61,13 @@ impl CommandFilter {
     }
 }
 
+type CommandMap<T> = Arc<Mutex<HashMap<T, HashMap<usize, Sender<Command>>>>>;
+
 /// Command dispatching implementation.
 #[derive(Clone, Debug)]
 pub struct Commands {
-    devices: Arc<Mutex<HashMap<CommandAddress, HashMap<usize, Sender<Command>>>>>,
-    wildcards: Arc<Mutex<HashMap<Id, HashMap<usize, Sender<Command>>>>>,
+    devices: CommandMap<CommandAddress>,
+    wildcards: CommandMap<Id>,
 }
 
 impl Default for Commands {

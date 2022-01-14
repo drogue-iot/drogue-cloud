@@ -6,13 +6,8 @@ pub use parser::*;
 
 use std::convert::TryFrom;
 
+#[derive(Default)]
 pub struct LabelSelector(pub Vec<Operation>);
-
-impl Default for LabelSelector {
-    fn default() -> Self {
-        LabelSelector(vec![])
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Operation {

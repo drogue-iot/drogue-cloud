@@ -11,7 +11,7 @@ use http::HeaderValue;
 use serde::Deserialize;
 use std::net::SocketAddr;
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 pub struct PublishCommonOptions {
     pub application: Option<String>,
     pub device: Option<String>,
@@ -19,17 +19,7 @@ pub struct PublishCommonOptions {
     pub data_schema: Option<String>,
 }
 
-impl Default for PublishCommonOptions {
-    fn default() -> Self {
-        PublishCommonOptions {
-            application: None,
-            device: None,
-            data_schema: None,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Default)]
 pub struct PublishOptions {
     #[serde(flatten)]
     pub common: PublishCommonOptions,
@@ -38,16 +28,6 @@ pub struct PublishOptions {
 
     #[serde(alias = "commandTimeout")]
     pub ct: Option<u64>,
-}
-
-impl Default for PublishOptions {
-    fn default() -> Self {
-        PublishOptions {
-            common: PublishCommonOptions::default(),
-            r#as: None,
-            ct: None,
-        }
-    }
 }
 
 pub async fn publish_plain<S>(
@@ -103,6 +83,7 @@ where
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn publish<S>(
     sender: DownstreamSender<S>,
     authenticator: DeviceAuthenticator,

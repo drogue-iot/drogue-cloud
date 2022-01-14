@@ -57,6 +57,7 @@ impl fmt::Debug for Credential {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[allow(clippy::large_enum_variant)]
 pub enum Outcome {
     /// The authentication request passed. The outcome also contains application and device
     /// details for further processing.
@@ -88,6 +89,7 @@ impl AuthenticationResponse {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[allow(clippy::large_enum_variant)]
 pub enum GatewayOutcome {
     /// The authentication request passed. The outcome also contains application and device
     /// details for further processing.

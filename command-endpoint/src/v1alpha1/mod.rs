@@ -11,6 +11,7 @@ pub struct CommandQuery {
     pub command: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn command<S, TP>(
     sender: web::Data<UpstreamSender<S>>,
     client: web::Data<reqwest::Client>,

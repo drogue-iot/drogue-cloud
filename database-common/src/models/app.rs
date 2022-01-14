@@ -132,6 +132,7 @@ pub trait ApplicationAccessor {
     }
 
     /// Get a list of applications
+    #[allow(clippy::too_many_arguments)]
     async fn list(
         &self,
         name: Option<&str>,
