@@ -10,7 +10,10 @@ use ntex::{
     server::ServerBuilder,
     service::{fn_factory_with_config, pipeline_factory},
     time::Seconds,
-    util::Ready,
+    util::{
+        variant::{variant, Variant2},
+        Ready,
+    },
     ws, ServiceFactory,
 };
 use ntex_mqtt::{v3, v5, MqttError, MqttServer};
@@ -19,10 +22,17 @@ use std::{fmt::Debug, time::Duration};
 
 const DEFAULT_MAX_SIZE: u32 = 16 * 1024;
 
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Transport {
     Mqtt,
     Websocket,
-    Unknown,
+}
+
+impl Default for Transport {
+    fn default() -> Self {
+        Self::Mqtt
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -33,9 +43,7 @@ pub struct MqttServerOptions {
     pub bind_addr: Option<String>,
 
     #[serde(default)]
-    pub bind_addr_ws: Option<String>,
-    #[serde(default)]
-    pub disable_ws: bool,
+    pub transport: Transport,
 
     #[serde(default)]
     #[serde(with = "humantime_serde")]
@@ -47,6 +55,26 @@ pub struct MqttServerOptions {
 
 /// Create an new MQTT server
 fn create_server<F, Svc, S>(
+    opts: &MqttServerOptions,
+    app: Svc,
+) -> impl ServiceFactory<Io<F>, Response = (), InitError = (), Error = MqttError<ServerError>>
+where
+    Svc: Service<S> + Clone + Send + 'static,
+    S: mqtt::Session + 'static,
+    F: Filter,
+{
+    let transport = opts.transport;
+    pipeline_factory(move |req: Io<_>| async move {
+        Ok(match transport {
+            Transport::Mqtt => Variant2::V1(req),
+            Transport::Websocket => Variant2::V2(req),
+        })
+    })
+    .and_then(variant(create_server_mqtt(opts, app.clone())).v2(create_server_ws(opts, app)))
+}
+
+/// Create an new MQTT server
+fn create_server_mqtt<F, Svc, S>(
     opts: &MqttServerOptions,
     app: Svc,
 ) -> impl ServiceFactory<Io<F>, Response = (), InitError = (), Error = MqttError<ServerError>>
@@ -98,10 +126,6 @@ where
     F: Filter,
 {
     HttpService::build()
-        .on_request(move |(req, _io)| async {
-            log::debug!("Request: {:?}", req);
-            Ok(req)
-        })
         .upgrade(
             pipeline_factory(|(req, io, codec): (Request, Io<F>, h1::Codec)| async move {
                 log::debug!("Processing MQTT/WS handshake: {:?}", req);
@@ -136,7 +160,7 @@ where
                     }
                 }
             })
-            .and_then(create_server(opts, app)),
+            .and_then(create_server_mqtt(opts, app)),
         )
         .finish(|req| {
             log::debug!("Unhandled request: {:?}", req);
@@ -152,6 +176,7 @@ where
 
 pub trait TlsConfig {
     fn is_disabled(&self) -> bool;
+    fn disable_client_certs(&self) -> bool;
 
     #[cfg(feature = "rustls")]
     fn verifier_rustls(&self) -> std::sync::Arc<dyn rust_tls::server::ClientCertVerifier> {
@@ -179,20 +204,17 @@ fn bind_addr(addr: &Option<String>, default: &str, debug: &str) -> String {
     addr
 }
 
-pub fn build_server<Svc, S, F1, R1, F2, R2>(
+pub fn build_server<Svc, S, F, R>(
     opts: MqttServerOptions,
     tls: bool,
     app: Svc,
-    factory: F1,
-    factory_ws: F2,
+    factory: F,
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
     S: mqtt::Session + 'static,
-    F1: Fn(&MqttServerOptions, Svc) -> R1 + Send + Clone + 'static,
-    R1: ServiceFactory<Io>,
-    F2: Fn(&MqttServerOptions, Svc) -> R2 + Send + Clone + 'static,
-    R2: ServiceFactory<Io>,
+    F: Fn(&MqttServerOptions, Svc) -> R + Send + Clone + 'static,
+    R: ServiceFactory<Io>,
 {
     let mut builder = server_builder(&opts);
 
@@ -201,27 +223,14 @@ where
         false => ("127.0.0.1:1883", "127.0.0.1:80", "non-TLS"),
     };
 
-    let addr = bind_addr(&opts.bind_addr, default, &format!("MQTT ({})", debug));
+    let addr = match opts.transport {
+        Transport::Mqtt => bind_addr(&opts.bind_addr, default, &format!("MQTT ({})", debug)),
+        Transport::Websocket => {
+            bind_addr(&opts.bind_addr, default_ws, &format!("MQTT-WS ({})", debug))
+        }
+    };
 
-    let addr_ws = bind_addr(
-        &opts.bind_addr_ws,
-        default_ws,
-        &format!("MQTT-WS ({})", debug),
-    );
-    let opts_ws = opts.clone();
-    let app_ws = app.clone();
-
-    // enable WebSockets server
-
-    if !opts.disable_ws {
-        builder = builder.bind("mqtt-ws", addr_ws, move |_| {
-            factory_ws(&opts, app_ws.clone())
-        })?;
-    }
-
-    // enable plain MQTT server
-
-    builder = builder.bind("mqtt", addr, move |_| factory(&opts_ws, app.clone()))?;
+    builder = builder.bind("mqtt", addr, move |_| factory(&opts, app.clone()))?;
 
     // return
 
@@ -233,20 +242,14 @@ where
     Svc: Service<S> + Clone + Send + 'static,
     S: mqtt::Session + 'static,
 {
-    build_server(
-        opts,
-        false,
-        app,
-        move |opts, app| create_server(opts, app),
-        move |opts, app| create_server_ws(opts, app),
-    )
+    build_server(opts, false, app, move |opts, app| create_server(opts, app))
 }
 
 #[cfg(feature = "rustls")]
 pub fn build_rustls<Svc, S>(
     opts: MqttServerOptions,
     app: Svc,
-    tls_config: std::sync::Arc<rust_tls::server::ServerConfig>,
+    tls_config: rust_tls::server::ServerConfig,
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
@@ -254,29 +257,16 @@ where
 {
     log::info!("TLS based on rustls");
 
-    let tls_config_ws = tls_config.clone();
-
-    build_server(
-        opts,
-        true,
-        app,
-        move |opts, app| {
-            pipeline_factory(ntex::tls::rustls::Acceptor::new(tls_config.clone()))
-                .map_err(|err| {
-                    log::debug!("Connect error: {}", err);
-                    MqttError::Service(ServerError::InternalError(err.to_string()))
-                })
-                .and_then(create_server(opts, app))
-        },
-        move |opts, app| {
-            pipeline_factory(ntex::tls::rustls::Acceptor::new(tls_config_ws.clone()))
-                .map_err(|err| {
-                    log::debug!("Connect error: {}", err);
-                    MqttError::Service(ServerError::InternalError(err.to_string()))
-                })
-                .and_then(create_server_ws(opts, app))
-        },
-    )
+    build_server(opts, true, app, move |opts, app| {
+        pipeline_factory(ntex::tls::rustls::Acceptor::new(std::sync::Arc::new(
+            tls_config.clone(),
+        )))
+        .map_err(|err| {
+            log::debug!("Connect error: {}", err);
+            MqttError::Service(ServerError::InternalError(err.to_string()))
+        })
+        .and_then(create_server(opts, app))
+    })
 }
 
 #[cfg(feature = "openssl")]
@@ -290,30 +280,14 @@ where
     S: mqtt::Session + 'static,
 {
     log::info!("TLS based on openssl");
-
-    let tls_config_ws = tls_config.clone();
-
-    build_server(
-        opts,
-        true,
-        app,
-        move |opts, app| {
-            pipeline_factory(ntex::tls::openssl::Acceptor::new(tls_config.clone()))
-                .map_err(|err| {
-                    log::debug!("Connect error: {}", err);
-                    MqttError::Service(ServerError::InternalError(err.to_string()))
-                })
-                .and_then(create_server(opts, app))
-        },
-        move |opts, app| {
-            pipeline_factory(ntex::tls::openssl::Acceptor::new(tls_config_ws.clone()))
-                .map_err(|err| {
-                    log::debug!("Connect error: {}", err);
-                    MqttError::Service(ServerError::InternalError(err.to_string()))
-                })
-                .and_then(create_server_ws(opts, app))
-        },
-    )
+    build_server(opts, true, app, move |opts, app| {
+        pipeline_factory(ntex::tls::openssl::Acceptor::new(tls_config.clone()))
+            .map_err(|err| {
+                log::debug!("Connect error: {}", err);
+                MqttError::Service(ServerError::InternalError(err.to_string()))
+            })
+            .and_then(create_server(opts, app))
+    })
 }
 
 pub fn build<Svc, S>(
@@ -325,18 +299,21 @@ where
     Svc: Service<S> + Clone + Send + 'static,
     S: mqtt::Session + 'static,
 {
+    log::info!("MQTT transport: {:?}", opts.transport);
+
     if config.is_disabled() {
         return build_nontls(opts, app);
     }
 
+    log::info!(
+        "Client certificates disabled: {}",
+        config.disable_client_certs()
+    );
+
     if cfg!(feature = "rustls") {
         // with rustls
         #[cfg(feature = "rustls")]
-        return build_rustls(
-            opts,
-            app,
-            std::sync::Arc::new(crate::tls::rustls_config(config)?),
-        );
+        return build_rustls(opts, app, crate::tls::rustls_config(config)?);
     } else if cfg!(feature = "openssl") {
         // with openssl
         #[cfg(feature = "openssl")]

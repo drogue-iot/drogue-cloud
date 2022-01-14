@@ -12,9 +12,13 @@ mod rustls {
 
     /// Build a server config for rustls.
     pub fn tls_config(config: &dyn TlsConfig) -> anyhow::Result<ServerConfig> {
-        let tls_config = ServerConfig::builder()
-            .with_safe_defaults()
-            .with_client_cert_verifier(config.verifier_rustls());
+        let tls_config = ServerConfig::builder().with_safe_defaults();
+
+        let tls_config = if !config.disable_client_certs() {
+            tls_config.with_client_cert_verifier(config.verifier_rustls())
+        } else {
+            tls_config.with_no_client_auth()
+        };
 
         let key = config
             .key_file()
@@ -79,16 +83,19 @@ mod openssl {
         let mut builder = ssl::SslAcceptor::mozilla_intermediate_v5(method)?;
         builder.set_private_key_file(key, ssl::SslFiletype::PEM)?;
         builder.set_certificate_chain_file(cert)?;
-        // we ask for client certificates, but don't enforce them
-        builder.set_verify_callback(ssl::SslVerifyMode::PEER, |_, ctx| {
-            log::debug!(
-                "Accepting client certificates: {:?}",
-                ctx.current_cert()
-                    .map(|cert| format!("{:?}", cert.subject_name()))
-                    .unwrap_or_else(|| "<unknown>".into())
-            );
-            true
-        });
+
+        if !config.disable_client_certs() {
+            // we ask for client certificates, but don't enforce them
+            builder.set_verify_callback(ssl::SslVerifyMode::PEER, |_, ctx| {
+                log::debug!(
+                    "Accepting client certificates: {:?}",
+                    ctx.current_cert()
+                        .map(|cert| format!("{:?}", cert.subject_name()))
+                        .unwrap_or_else(|| "<unknown>".into())
+                );
+                true
+            });
+        }
 
         Ok(builder.build())
     }

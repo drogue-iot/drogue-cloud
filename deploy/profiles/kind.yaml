@@ -12,6 +12,9 @@ drogueCloudCore:
     mqttWs:
       ingress:
         port: 30005
+    mqttWsBrowser:
+      ingress:
+        port: 30007
     http:
       ingress:
         port: 30443
@@ -23,6 +26,9 @@ drogueCloudCore:
     mqttWs:
       ingress:
         port: 30006
+    mqttWsBrowser:
+      ingress:
+        port: 30008
     websocket:
       insecure: true
       ingress:

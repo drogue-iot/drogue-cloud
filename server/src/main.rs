@@ -864,12 +864,12 @@ fn main() {
                         mqtt: MqttServerOptions {
                             workers: Some(1),
                             bind_addr: Some(bind_addr_mqtt),
-                            bind_addr_ws: Some(bind_addr_mqtt_ws),
                             ..Default::default()
                         },
                         auth: auth.clone(),
                         health: None,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                        disable_client_certificates: false,
                         cert_bundle_file,
                         key_file,
                         instance: "drogue".to_string(),
@@ -879,7 +879,14 @@ fn main() {
                         check_kafka_topic_ready: false,
                     };
 
-                    handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config)));
+                    handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config.clone())));
+
+                    let mut config_ws = config;
+                    // browsers need disabled client certs
+                    config_ws.disable_client_certificates = true;
+                    config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
+
+                    handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config_ws)));
                 }
 
                 if matches.is_present("enable-mqtt-integration") || matches.is_present("enable-all")
@@ -898,12 +905,12 @@ fn main() {
                         mqtt: MqttServerOptions {
                             workers: Some(1),
                             bind_addr: Some(bind_addr_mqtt),
-                            bind_addr_ws: Some(bind_addr_mqtt_ws),
                             ..Default::default()
                         },
                         health: None,
                         oauth,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                        disable_client_certificates: false,
                         cert_bundle_file,
                         key_file,
                         registry,
@@ -918,7 +925,14 @@ fn main() {
                         command_kafka_sink: kafka,
                     };
 
-                    handles.push(Box::pin(drogue_cloud_mqtt_integration::run(config)));
+                    handles.push(Box::pin(drogue_cloud_mqtt_integration::run(config.clone())));
+
+                    let mut config_ws = config;
+                    // browsers need disabled client certs
+                    config_ws.disable_client_certificates = true;
+                    config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
+
+                    handles.push(Box::pin(drogue_cloud_mqtt_integration::run(config_ws)));
                 }
 
                 runner.block_on(async move {
