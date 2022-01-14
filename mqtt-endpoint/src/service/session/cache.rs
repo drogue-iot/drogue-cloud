@@ -1,9 +1,9 @@
 use clru::CLruCache;
 use drogue_cloud_mqtt_common::error::PublishError;
 use futures::lock::Mutex;
-use std::cell::Cell;
-use std::fmt::Display;
 use std::{
+    cell::Cell,
+    fmt::Display,
     future::Future,
     num::NonZeroUsize,
     sync::Arc,

@@ -19,10 +19,10 @@ use drogue_cloud_service_common::Id;
 use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
 use ntex_mqtt::{types::QoS, v5};
-use std::time::Duration;
 use std::{
     collections::{hash_map::Entry, HashMap},
     sync::Arc,
+    time::Duration,
 };
 
 #[derive(Clone)]
