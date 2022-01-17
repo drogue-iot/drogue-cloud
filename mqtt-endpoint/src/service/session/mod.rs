@@ -1,7 +1,7 @@
 mod cache;
 mod inbox;
 
-use crate::auth::DeviceAuthenticator;
+use crate::{auth::DeviceAuthenticator, config::EndpointConfig};
 use async_trait::async_trait;
 use cache::DeviceCache;
 use drogue_client::registry;
@@ -22,7 +22,6 @@ use ntex_mqtt::{types::QoS, v5};
 use std::{
     collections::{hash_map::Entry, HashMap},
     sync::Arc,
-    time::Duration,
 };
 
 #[derive(Clone)]
@@ -46,6 +45,7 @@ where
     S: Sink,
 {
     pub fn new(
+        config: &EndpointConfig,
         auth: DeviceAuthenticator,
         sender: DownstreamSender<S>,
         sink: mqtt::Sink,
@@ -57,7 +57,7 @@ where
             application.metadata.name.clone(),
             device.metadata.name.clone(),
         );
-        let device_cache = cache::DeviceCache::new(128, Duration::from_secs(30));
+        let device_cache = cache::DeviceCache::new(config.cache_size, config.cache_duration);
         Self {
             auth,
             sender,

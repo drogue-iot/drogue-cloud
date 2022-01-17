@@ -42,8 +42,6 @@ pub trait Sink: Clone + Send + Sync + 'static {
 
 #[derive(Error, Debug)]
 pub enum SinkError<E: std::error::Error + 'static> {
-    #[error("Build event error")]
-    Build(#[from] cloudevents::event::EventBuilderError),
     #[error("Event error")]
     Event(#[from] cloudevents::message::Error),
     #[error("Transport error")]
