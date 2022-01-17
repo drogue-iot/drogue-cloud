@@ -1,4 +1,7 @@
+mod process;
+
 use crate::{
+    sender::process::Outcome,
     sink::{Sink, SinkError, SinkTarget},
     EXT_PARTITIONKEY,
 };
@@ -10,9 +13,11 @@ use drogue_client::registry;
 use drogue_cloud_service_api::{EXT_INSTANCE, EXT_SENDER};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use process::Processor;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use thiserror::Error;
 
 const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
 
@@ -90,6 +95,18 @@ where
     }
 }
 
+#[derive(Error, Debug)]
+pub enum PublishError<E: std::error::Error + 'static> {
+    #[error("Sink error")]
+    Sink(#[from] SinkError<E>),
+    #[error("Publish spec error")]
+    Spec(#[source] serde_json::Error),
+    #[error("Build event error")]
+    Event(#[source] cloudevents::event::EventBuilderError),
+    #[error("Process error")]
+    Processor(#[from] process::Error),
+}
+
 #[async_trait]
 impl<S> Publisher<S> for DownstreamSender<S>
 where
@@ -144,7 +161,7 @@ where
         &self,
         publish: Publish<'a>,
         body: B,
-    ) -> Result<PublishOutcome, SinkError<S::Error>>
+    ) -> Result<PublishOutcome, PublishError<S::Error>>
     where
         B: AsRef<[u8]> + Send + Sync,
     {
@@ -205,9 +222,27 @@ where
             }
         };
 
-        // build event
+        let event = event.build().map_err(PublishError::Event)?;
 
-        self.send(publish.application, event.build()?).await
+        // handle publish steps
+
+        let processor = Processor::try_from(publish.application).map_err(PublishError::Spec)?;
+        match processor.process(event).await? {
+            Outcome::Rejected(reason) => {
+                // event was rejected
+                log::debug!("Event rejected: {}", reason);
+                Ok(PublishOutcome::Rejected)
+            }
+            Outcome::Accepted(event) => {
+                // event was accepted, send it
+                Ok(self.send(publish.application, event).await?)
+            }
+            Outcome::Dropped => {
+                // event was dropped, skip it
+                log::debug!("Outcome is to drop event");
+                Ok(PublishOutcome::Accepted)
+            }
+        }
     }
 
     #[allow(clippy::needless_lifetimes)]

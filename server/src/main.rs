@@ -866,6 +866,7 @@ fn main() {
                             bind_addr: Some(bind_addr_mqtt),
                             ..Default::default()
                         },
+                        endpoint: Default::default(),
                         auth: auth.clone(),
                         health: None,
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),

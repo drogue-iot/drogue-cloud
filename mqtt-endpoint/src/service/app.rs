@@ -1,4 +1,4 @@
-use crate::{auth::DeviceAuthenticator, service::session::Session};
+use crate::{auth::DeviceAuthenticator, config::EndpointConfig, service::session::Session};
 use async_trait::async_trait;
 use drogue_cloud_endpoint_common::{
     command::Commands,
@@ -19,6 +19,7 @@ pub struct App<S>
 where
     S: Sink,
 {
+    pub config: EndpointConfig,
     pub downstream: DownstreamSender<S>,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
@@ -91,6 +92,7 @@ where
                 r#as: _,
             }) => {
                 let session = Session::<S>::new(
+                    &self.config,
                     self.authenticator.clone(),
                     self.downstream.clone(),
                     connect.sink(),
