@@ -72,6 +72,7 @@ The `deploy` command of `drgadm` supports the following argument
 `-n <namespace>` or `DROGUE_NS`:: Changes the target Drogue IoT namespace.
 `-T`:: Install digital twin feature.
 `-e`:: Don't install examples.
+`-M`:: Deploy metrics
 
 Example: Install Drogue Cloud on `kind` cluster without dependencies.
 
