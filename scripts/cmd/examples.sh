@@ -26,6 +26,17 @@ echo "  Password: admin123456"
 echo
 echo "$(bold -n Console:) $CONSOLE_URL"
 echo
+
+if [[ "$METRICS" == "true" ]]; then
+echo
+bold "View the metrics dashboard:"
+bold "----------------------------"
+echo
+echo "* Login to Grafana: https://$METRICS_DASHBOARD_URL"
+echo "* Default credentials are 'admin/admin123456' if not configured differently"
+echo
+fi
+
 bold "------------------------------------------------------------------------------------------"
 bold "Examples"
 bold "------------------------------------------------------------------------------------------"
@@ -35,7 +46,7 @@ echo
 bold "View the example dashboard (if it's installed):"
 bold "----------------------------"
 echo
-echo "* Login to Grafana (using SSO): $DASHBOARD_URL"
+echo "* Login to Grafana (using SSO): https://$EXAMPLES_DASHBOARD_URL"
 echo "* You will be presented with the 'Temperatures dashboard'"
 fi
 

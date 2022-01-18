@@ -6,7 +6,7 @@ set +e
 
 : "${DEPLOY_TWIN:=false}"
 : "${DEPLOY_EXAMPLES:=true}"
-: "${DEPLOY_METRICS:=FALSE}"
+: "${DEPLOY_METRICS:=false}"
 
 # process arguments
 
@@ -291,7 +291,11 @@ if [[ "$DEPLOY_TWIN" == true ]]; then
 fi
 
 if [[ "$DEPLOY_EXAMPLES" == false ]]; then
-    ENVS+="EXAMPLES=false"
+    ENVS+="EXAMPLES=false "
+fi
+
+if [[ "$DEPLOY_METRICS" == true ]]; then
+    ENVS+="METRICS=true "
 fi
 
 if ! is_default_cluster; then
