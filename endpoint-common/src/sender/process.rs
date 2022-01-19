@@ -159,6 +159,20 @@ impl Processor {
                 event.set_dataschema(url);
                 Ok(event)
             }
+            "subject" => {
+                event.set_subject(value);
+                Ok(event)
+            }
+            "type" => {
+                if let Some(value) = value {
+                    event.set_type(value);
+                    Ok(event)
+                } else {
+                    Err(Error::Config(
+                        "Removing the 'type' attribute is not valid".to_string(),
+                    ))
+                }
+            }
             name => Err(Error::Config(format!(
                 "Unknown or immutable attribute: {}",
                 name
