@@ -15,7 +15,7 @@ async-trait = "0.1"
 actix-rt = "2"
 actix-tls = "^3.0.0"
 actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
-actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.3 and upgrade actix-web
+actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.4 when available
 prometheus = { version = "^0.13", default-features = false }
 
 futures = "0.3"
