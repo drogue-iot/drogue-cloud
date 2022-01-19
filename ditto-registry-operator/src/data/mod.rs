@@ -1,5 +1,5 @@
 use drogue_client::core::v1::Conditions;
-use drogue_client::{core, dialect, Dialect, Section};
+use drogue_client::{core, dialect, Section};
 use drogue_cloud_operator_common::controller::base::StatusSection;
 use serde::{Deserialize, Serialize};
 
