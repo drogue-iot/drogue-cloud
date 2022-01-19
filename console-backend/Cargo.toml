@@ -13,6 +13,7 @@ actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
 actix-cors = "=0.6.0-beta.8"
 actix-web-httpauth = "=0.6.0-beta.7"
 tokio-stream = { version = "0.1", features = ["time"] }
+prometheus = { version = "^0.13", default-features = false }
 
 openid = "0.9"
 biscuit = "0.5"

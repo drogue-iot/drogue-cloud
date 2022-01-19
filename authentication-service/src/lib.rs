@@ -97,7 +97,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     if let Some(health) = config.health {
-        let health = HealthServer::new(health, vec![Box::new(data_service)], None);
+        let health = HealthServer::new(
+            health,
+            vec![Box::new(data_service)],
+            Some(prometheus::default_registry().clone()),
+        );
         futures::try_join!(health.run(), main.err_into())?;
     } else {
         futures::try_join!(main)?;

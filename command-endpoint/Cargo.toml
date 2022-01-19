@@ -14,6 +14,8 @@ actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
 actix-web-httpauth = "=0.6.0-beta.7"
 actix-cors = "=0.6.0-beta.8"
 
+prometheus = { version = "^0.13", default-features = false }
+
 async-trait = "0.1"
 futures = "0.3"
 futures-core = "0.3"

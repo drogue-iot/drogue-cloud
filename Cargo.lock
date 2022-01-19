@@ -442,13 +442,13 @@ dependencies = [
 
 [[package]]
 name = "actix-web-prom"
-version = "0.6.0-beta.1"
-source = "git+https://github.com/nlopes/actix-web-prom?rev=41a3ff87a3f2bcf30a89474c149c119b30a02880#41a3ff87a3f2bcf30a89474c149c119b30a02880"
+version = "0.6.0-beta.4"
+source = "git+https://github.com/nlopes/actix-web-prom?branch=nlopes/bump-to-actix-web-14#d9fdf591ebf67458855fcc2d1b57a5b408e2ae64"
 dependencies = [
  "actix-web",
  "futures",
  "pin-project 1.0.8",
- "prometheus",
+ "prometheus 0.13.0",
 ]
 
 [[package]]
@@ -1812,6 +1812,7 @@ dependencies = [
  "log",
  "native-tls",
  "pem 1.0.0",
+ "prometheus 0.13.0",
  "rstest",
  "rustls 0.20.2",
  "rustls-pemfile",
@@ -1849,6 +1850,7 @@ dependencies = [
  "futures",
  "http",
  "log",
+ "prometheus 0.13.0",
  "regex",
  "serde 1.0.130",
  "serde_json",
@@ -1881,6 +1883,7 @@ dependencies = [
  "futures-util",
  "jsonwebtokens",
  "log",
+ "prometheus 0.13.0",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -1921,6 +1924,7 @@ dependencies = [
  "log",
  "mime",
  "openid",
+ "prometheus 0.13.0",
  "reqwest",
  "ring",
  "serde 1.0.130",
@@ -2052,7 +2056,7 @@ dependencies = [
  "openid",
  "openssl",
  "percent-encoding",
- "prometheus",
+ "prometheus 0.12.0",
  "rand 0.8.4",
  "rdkafka",
  "reqwest",
@@ -2114,7 +2118,7 @@ dependencies = [
  "openid",
  "openssl",
  "percent-encoding",
- "prometheus",
+ "prometheus 0.13.0",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2198,7 +2202,7 @@ dependencies = [
  "ntex-rt",
  "ntex-service",
  "openssl",
- "prometheus",
+ "prometheus 0.13.0",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2240,6 +2244,7 @@ dependencies = [
  "ntex-service",
  "openid",
  "openssl",
+ "prometheus 0.13.0",
  "reqwest",
  "rustls 0.19.1",
  "serde 1.0.130",
@@ -2304,6 +2309,7 @@ dependencies = [
  "humantime-serde",
  "indexmap",
  "log",
+ "prometheus 0.13.0",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -2438,7 +2444,7 @@ dependencies = [
  "ntex",
  "openid",
  "pem 1.0.0",
- "prometheus",
+ "prometheus 0.13.0",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2484,6 +2490,7 @@ dependencies = [
  "humantime 2.1.0",
  "humantime-serde",
  "log",
+ "prometheus 0.13.0",
  "rdkafka",
  "reqwest",
  "serde 1.0.130",
@@ -2519,6 +2526,7 @@ dependencies = [
  "kube-runtime",
  "log",
  "operator-framework",
+ "prometheus 0.13.0",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -2555,6 +2563,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "log",
  "maplit",
+ "prometheus 0.13.0",
  "rand 0.7.3",
  "reqwest",
  "rust-crypto",
@@ -2594,6 +2603,7 @@ dependencies = [
  "futures-util",
  "log",
  "native-tls",
+ "prometheus 0.13.0",
  "rustls 0.20.2",
  "serde 1.0.130",
  "serde_json",
@@ -2625,6 +2635,7 @@ dependencies = [
  "env_logger 0.8.4",
  "futures",
  "log",
+ "prometheus 0.13.0",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -4705,6 +4716,20 @@ name = "prometheus"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5986aa8d62380092d2f50f8b1cdba9cb9b6731ffd4b25b51fd126b6c3e05b99c"
+dependencies = [
+ "cfg-if 1.0.0",
+ "fnv",
+ "lazy_static 1.4.0",
+ "memchr",
+ "parking_lot",
+ "thiserror",
+]
+
+[[package]]
+name = "prometheus"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7f64969ffd5dd8f39bd57a68ac53c163a095ed9d0fb707146da1b27025a3504"
 dependencies = [
  "cfg-if 1.0.0",
  "fnv",
