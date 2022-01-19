@@ -16,7 +16,7 @@ ntex = "0.5"
 ntex-rt = "0.4"
 ntex-service = "0.3"
 ntex-mqtt = "0.8"
-prometheus = { version = "^0.12", default-features = false }
+prometheus = { version = "^0.13", default-features = false }
 
 bytes = "1"
 bytestring = "1"
