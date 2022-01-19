@@ -13,10 +13,12 @@ use drogue_client::registry;
 use drogue_cloud_service_api::{EXT_INSTANCE, EXT_SENDER};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use process::Processor;
 use prometheus::{CounterVec, Opts};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use thiserror::Error;
 
 use lazy_static::lazy_static;
 

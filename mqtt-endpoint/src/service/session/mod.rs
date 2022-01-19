@@ -1,8 +1,8 @@
 mod cache;
 mod inbox;
 
-use crate::{auth::DeviceAuthenticator, config::EndpointConfig};
 use crate::MQTT_CONNECTIONS_COUNTER;
+use crate::{auth::DeviceAuthenticator, config::EndpointConfig};
 use async_trait::async_trait;
 use cache::DeviceCache;
 use drogue_client::registry;
