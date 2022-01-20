@@ -1,0 +1,52 @@
+= Monitoring the deployment
+
+== Deploying
+
+Specifying `-M` during installation process will install Prometheus and Grafana allowing you to monitor your deployment.
+
+You can do that both using installer:
+
+[source,shell]
+----
+./script/drgadm deploy -M
+----
+
+Or during development:
+
+[source,bash]
+----
+env DEPLOY_ARGS="-M" make deploy
+----
+
+== Using
+
+You can find out the URL of the dashboard by running the `drgadm` script:
+
+[source,bash]
+----
+env METRICS=true scripts/drgadm examples
+----
+
+It should print something like:
+
+[source,bash]
+----
+View the metrics dashboard:
+----------------------------
+
+* Login to Grafana: https://metrics.192.168.64.131.nip.io
+* Default credentials are 'admin/admin123456' if not configured differently
+----
+
+== Configuring
+
+You can set values of the `drogue-cloud-metrics` Helm chart in order to configure various aspects of its deployment.
+
+For example, the following will
+
+[source,shell]
+----
+./script/drgadm deploy -M -s drogueCloudMetrics.grafana.adminPassword=654321nimda
+----
+
+will change the password for accessing Grafana dashboard.

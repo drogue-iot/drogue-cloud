@@ -1,11 +1,15 @@
 use crate::defaults;
 use actix_web::HttpServer;
+use actix_web_prom::PrometheusMetricsBuilder;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use futures::StreamExt;
+use prometheus::Registry;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::future::Future;
 use std::sync::Arc;
+
+use prometheus::{Encoder, TextEncoder};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct HealthServerConfig {
@@ -28,6 +32,7 @@ impl Default for HealthServerConfig {
 pub struct HealthServer {
     config: HealthServerConfig,
     checker: HealthChecker,
+    registry: Option<Registry>,
 }
 
 /// Internal handling of health checking.
@@ -102,10 +107,15 @@ macro_rules! health_app {
 }
 
 impl HealthServer {
-    pub fn new(config: HealthServerConfig, checks: Vec<Box<dyn HealthChecked>>) -> Self {
+    pub fn new(
+        config: HealthServerConfig,
+        checks: Vec<Box<dyn HealthChecked>>,
+        registry: Option<Registry>,
+    ) -> Self {
         Self {
             config,
             checker: HealthChecker { checks },
+            registry,
         }
     }
 
@@ -118,9 +128,20 @@ impl HealthServer {
         health_endpoint!(actix_web);
 
         let checker = web::Data::new(self.checker);
+
+        let prometheus = match self.registry {
+            Some(metrics) => PrometheusMetricsBuilder::new("health")
+                .registry(metrics)
+                .endpoint("/metrics")
+                .build()
+                .unwrap(),
+            _ => PrometheusMetricsBuilder::new("noop").build().unwrap(),
+        };
+
         HttpServer::new(move || {
             use actix_web::App;
-            health_app!(checker)
+
+            health_app!(checker).wrap(prometheus.clone())
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)
@@ -140,7 +161,7 @@ impl HealthServer {
         let checker = ntex::web::types::Data::new(self.checker);
         ntex::web::server(move || {
             use ntex::web::App;
-            health_app!(checker)
+            health_app!(checker).route("/metrics", web::get().to(HealthServer::metrics))
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)
@@ -148,5 +169,21 @@ impl HealthServer {
         .await?;
 
         Ok(())
+    }
+
+    async fn metrics() -> ntex::web::HttpResponse {
+        let encoder = TextEncoder::new();
+        let mut buffer = vec![];
+        encoder
+            .encode(&prometheus::gather(), &mut buffer)
+            .expect("Failed to encode metrics");
+
+        let response =
+            String::from_utf8(buffer.clone()).expect("Failed to convert bytes to string");
+        buffer.clear();
+
+        ntex::web::HttpResponse::Ok()
+            .set_header(ntex::http::header::CONTENT_TYPE, "text/plain")
+            .body(response)
     }
 }

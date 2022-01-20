@@ -9,6 +9,7 @@ use actix_web::{
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
+use actix_web_prom::PrometheusMetricsBuilder;
 use drogue_cloud_endpoint_common::auth::AuthConfig;
 use drogue_cloud_endpoint_common::command::{
     Commands, KafkaCommandSource, KafkaCommandSourceConfig,
@@ -82,8 +83,14 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
 
+    let prometheus = PrometheusMetricsBuilder::new("http_endpoint")
+        .registry(prometheus::default_registry().clone())
+        .build()
+        .unwrap();
+
     let http_server = HttpServer::new(move || {
         let app = App::new()
+            .wrap(prometheus.clone())
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))
             .app_data(web::JsonConfig::default().limit(max_json_payload_size))
@@ -169,7 +176,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     if let Some(health) = config.health {
-        let health = HealthServer::new(health, vec![Box::new(command_source)]);
+        let health = HealthServer::new(
+            health,
+            vec![Box::new(command_source)],
+            Some(prometheus::default_registry().clone()),
+        );
         futures::try_join!(health.run(), http_server.err_into())?;
     } else {
         futures::try_join!(http_server)?;

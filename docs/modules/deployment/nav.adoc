@@ -5,3 +5,4 @@
 ** xref:installer.adoc[Run the installer]
 ** xref:development.adoc[Deploy from the repository]
 ** xref:bare-metal.adoc[Deploying on bare metal]
+** xref:monitoring.adoc[Monitoring a deployment]

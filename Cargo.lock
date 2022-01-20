@@ -441,6 +441,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-web-prom"
+version = "0.6.0-beta.4"
+source = "git+https://github.com/nlopes/actix-web-prom?branch=nlopes/bump-to-actix-web-14#d9fdf591ebf67458855fcc2d1b57a5b408e2ae64"
+dependencies = [
+ "actix-web",
+ "futures",
+ "pin-project 1.0.8",
+ "prometheus",
+]
+
+[[package]]
 name = "actix_derive"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1801,6 +1812,7 @@ dependencies = [
  "log",
  "native-tls",
  "pem 1.0.0",
+ "prometheus",
  "rstest",
  "rustls 0.20.2",
  "rustls-pemfile",
@@ -1838,6 +1850,7 @@ dependencies = [
  "futures",
  "http",
  "log",
+ "prometheus",
  "regex",
  "serde 1.0.130",
  "serde_json",
@@ -1870,6 +1883,7 @@ dependencies = [
  "futures-util",
  "jsonwebtokens",
  "log",
+ "prometheus",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -1910,6 +1924,7 @@ dependencies = [
  "log",
  "mime",
  "openid",
+ "prometheus",
  "reqwest",
  "ring",
  "serde 1.0.130",
@@ -1995,6 +2010,7 @@ dependencies = [
  "openid",
  "pem 1.0.0",
  "pin-project 1.0.8",
+ "prometheus",
  "rand 0.7.3",
  "reqwest",
  "rust-crypto",
@@ -2034,12 +2050,14 @@ dependencies = [
  "futures-util",
  "headers",
  "http",
+ "lazy_static 1.4.0",
  "log",
  "mime",
  "ntex",
  "openid",
  "openssl",
  "percent-encoding",
+ "prometheus",
  "rand 0.8.4",
  "rdkafka",
  "reqwest",
@@ -2079,6 +2097,7 @@ dependencies = [
  "actix-rt 2.6.0",
  "actix-tls",
  "actix-web",
+ "actix-web-prom",
  "anyhow",
  "async-trait",
  "chrono",
@@ -2100,6 +2119,7 @@ dependencies = [
  "openid",
  "openssl",
  "percent-encoding",
+ "prometheus",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2183,6 +2203,7 @@ dependencies = [
  "ntex-rt",
  "ntex-service",
  "openssl",
+ "prometheus",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2224,6 +2245,7 @@ dependencies = [
  "ntex-service",
  "openid",
  "openssl",
+ "prometheus",
  "reqwest",
  "rustls 0.19.1",
  "serde 1.0.130",
@@ -2288,6 +2310,7 @@ dependencies = [
  "humantime-serde",
  "indexmap",
  "log",
+ "prometheus",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -2398,6 +2421,7 @@ dependencies = [
  "actix-service 2.0.0",
  "actix-web",
  "actix-web-httpauth",
+ "actix-web-prom",
  "anyhow",
  "async-std",
  "async-trait",
@@ -2421,6 +2445,7 @@ dependencies = [
  "ntex",
  "openid",
  "pem 1.0.0",
+ "prometheus",
  "reqwest",
  "rustls 0.20.2",
  "serde 1.0.130",
@@ -2466,6 +2491,7 @@ dependencies = [
  "humantime 2.1.0",
  "humantime-serde",
  "log",
+ "prometheus",
  "rdkafka",
  "reqwest",
  "serde 1.0.130",
@@ -2501,6 +2527,7 @@ dependencies = [
  "kube-runtime",
  "log",
  "operator-framework",
+ "prometheus",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -2537,6 +2564,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "log",
  "maplit",
+ "prometheus",
  "rand 0.7.3",
  "reqwest",
  "rust-crypto",
@@ -2576,6 +2604,7 @@ dependencies = [
  "futures-util",
  "log",
  "native-tls",
+ "prometheus",
  "rustls 0.20.2",
  "serde 1.0.130",
  "serde_json",
@@ -2607,6 +2636,7 @@ dependencies = [
  "env_logger 0.8.4",
  "futures",
  "log",
+ "prometheus",
  "reqwest",
  "serde 1.0.130",
  "serde_json",
@@ -4304,9 +4334,9 @@ checksum = "28988d872ab76095a6e6ac88d99b54fd267702734fd7ffe610ca27f533ddb95a"
 
 [[package]]
 name = "openssl-src"
-version = "111.16.0+1.1.1l"
+version = "111.17.0+1.1.1m"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ab2173f69416cf3ec12debb5823d244127d23a9b127d5a5189aa97c5fa2859f"
+checksum = "05d6a336abd10814198f66e2a91ccd7336611f30334119ca8ce300536666fcf4"
 dependencies = [
  "cc",
 ]
@@ -4680,6 +4710,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9f5105d4fdaab20335ca9565e106a5d9b82b6219b5ba735731124ac6711d23d"
 dependencies = [
  "unicode-xid",
+]
+
+[[package]]
+name = "prometheus"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7f64969ffd5dd8f39bd57a68ac53c163a095ed9d0fb707146da1b27025a3504"
+dependencies = [
+ "cfg-if 1.0.0",
+ "fnv",
+ "lazy_static 1.4.0",
+ "memchr",
+ "parking_lot",
+ "thiserror",
 ]
 
 [[package]]

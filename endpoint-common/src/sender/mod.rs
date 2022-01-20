@@ -14,10 +14,21 @@ use drogue_cloud_service_api::{EXT_INSTANCE, EXT_SENDER};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use process::Processor;
+use prometheus::{CounterVec, Opts};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use thiserror::Error;
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref DOWNSTREAM_EVENTS_COUNTER: CounterVec = CounterVec::new(
+        Opts::new("drogue_downstream_events", "Downstream events"),
+        &["endpoint", "outcome"]
+    )
+    .unwrap();
+}
 
 const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
 
@@ -91,6 +102,9 @@ where
     S: Sink,
 {
     pub fn new(sink: S, instance: String) -> anyhow::Result<Self> {
+        prometheus::default_registry()
+            .register(Box::new(DOWNSTREAM_EVENTS_COUNTER.clone()))
+            .unwrap();
         Ok(Self { sink, instance })
     }
 }
@@ -252,12 +266,32 @@ where
         B: AsRef<[u8]> + Send + Sync,
     {
         match self.publish(publish, body).await {
-            Ok(PublishOutcome::Accepted) => HttpResponse::Accepted().finish(),
-            Ok(PublishOutcome::Rejected) => HttpResponse::NotAcceptable().finish(),
-            Ok(PublishOutcome::QueueFull) => HttpResponse::ServiceUnavailable().finish(),
-            Err(err) => HttpResponse::InternalServerError()
-                .content_type("text/plain")
-                .body(err.to_string()),
+            Ok(PublishOutcome::Accepted) => {
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["http", "Accepted"])
+                    .inc();
+                HttpResponse::Accepted().finish()
+            }
+            Ok(PublishOutcome::Rejected) => {
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["http", "Rejected"])
+                    .inc();
+                HttpResponse::NotAcceptable().finish()
+            }
+            Ok(PublishOutcome::QueueFull) => {
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["http", "QueueFull"])
+                    .inc();
+                HttpResponse::ServiceUnavailable().finish()
+            }
+            Err(err) => {
+                DOWNSTREAM_EVENTS_COUNTER
+                    .with_label_values(&["http", "Error"])
+                    .inc();
+                HttpResponse::InternalServerError()
+                    .content_type("text/plain")
+                    .body(err.to_string())
+            }
         }
     }
 }

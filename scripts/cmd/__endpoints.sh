@@ -24,7 +24,8 @@ WEBSOCKET_INTEGRATION_HOST="$(echo "$WEBSOCKET_INTEGRATION_URL" | sed -E -e 's/:
 HTTP_ENDPOINT_URL="$(get_env deploy/console-backend endpoint ENDPOINTS__HTTP_ENDPOINT_URL)"
 HTTP_ENDPOINT_HOST="$(echo "$HTTP_ENDPOINT_URL" | sed -E -e 's/:[0-9]+$//' -e 's|^https?://||' )"
 
-DASHBOARD_URL="grafana$(detect_domain)"
+EXAMPLES_DASHBOARD_URL="grafana$(detect_domain)"
+METRICS_DASHBOARD_URL="metrics$(detect_domain)"
 
 if [[ -z "$SILENT" ]]; then
 

@@ -18,6 +18,8 @@ actix-service = "2"
 actix-rt = "2"
 ntex = { version = "0.5", features = ["tokio"] }
 http = "0.2"
+actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.4 when available
+prometheus = { version = "^0.13", default-features = false }
 
 keycloak = "14"
 
