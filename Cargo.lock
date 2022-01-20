@@ -2039,6 +2039,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "log",
  "maplit",
+ "prometheus",
  "rand 0.7.3",
  "reqwest",
  "rust-crypto",
