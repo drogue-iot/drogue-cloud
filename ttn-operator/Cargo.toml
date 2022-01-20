@@ -30,7 +30,7 @@ headers = "0.3"
 http = "0.2"
 indexmap = { version = "1", features = ["serde"] }
 maplit = "1"
-rand = "0.7"
+rand = "0.8"
 reqwest = "0.11"
 rust-crypto = "0.2"
 serde = "1"
