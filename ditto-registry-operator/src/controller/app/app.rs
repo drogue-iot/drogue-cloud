@@ -1,12 +1,11 @@
 use super::{ConstructContext, DeconstructContext};
-use crate::ditto::devops::{ConnectivityResponse, Headers, NamespaceResponse};
 use crate::{
-    controller::{policy_id, ControllerConfig},
+    controller::ControllerConfig,
     ditto::{
         self,
         devops::{
-            Connection, ConnectionStatus, DevopsCommand, Enforcement, MappingDefinition,
-            PiggybackCommand, QoS, Source,
+            Connection, ConnectionStatus, ConnectivityResponse, DevopsCommand, Enforcement,
+            Headers, MappingDefinition, NamespaceResponse, PiggybackCommand, QoS, Source,
         },
         Error,
     },
@@ -21,7 +20,6 @@ use drogue_cloud_service_api::kafka::{
     KafkaClientConfig, KafkaConfigExt, KafkaEventType, KafkaTarget,
 };
 use indexmap::IndexMap;
-use serde_json::json;
 use std::time::Duration;
 use url::Url;
 
@@ -63,13 +61,10 @@ impl<'o> ProgressOperation<ConstructContext> for CreateApplication<'o> {
                         authorization_context: vec!["pre-authenticated:drogue-cloud".to_string()],
                         enforcement: default_enforcement(&ctx.app),
                         header_mapping: default_header_mapping(),
-                        payload_mapping: vec![
-                            "drogue-cloud-events-mapping".to_string(),
-                            "drogue-cloud-create-device".to_string(),
-                        ],
+                        payload_mapping: vec!["drogue-cloud-events-mapping".to_string()],
                     }],
                     targets: vec![],
-                    mapping_definitions: mapping_definitions(&ctx.app),
+                    mapping_definitions: mapping_definitions(),
                 },
             },
         };
@@ -318,9 +313,7 @@ fn connection_info(
     Ok((url, map))
 }
 
-fn mapping_definitions(app: &Application) -> IndexMap<String, MappingDefinition> {
-    let policy_id = policy_id(app);
-
+fn mapping_definitions() -> IndexMap<String, MappingDefinition> {
     let mut map = IndexMap::with_capacity(2);
     map.insert(
         "drogue-cloud-events-mapping".to_string(),
@@ -340,23 +333,6 @@ fn mapping_definitions(app: &Application) -> IndexMap<String, MappingDefinition>
                 options.insert("loadBytebufferJS".to_string(), "false".into());
                 options.insert("loadLongJS".to_string(), "false".into());
 
-                options
-            },
-        },
-    );
-    map.insert(
-        "drogue-cloud-create-device".to_string(),
-        MappingDefinition {
-            mapping_engine: "ImplicitThingCreation".to_string(),
-            options: {
-                let mut options = IndexMap::new();
-                options.insert(
-                    "thing".to_string(),
-                    json!({
-                        "thingId": format!("{}:{{{{ header:ce_device }}}}", policy_id.0),
-                        "policyId": policy_id.to_string(),
-                    }),
-                );
                 options
             },
         },
