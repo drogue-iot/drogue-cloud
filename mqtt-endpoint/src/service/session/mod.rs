@@ -1,8 +1,7 @@
 mod cache;
 mod inbox;
 
-use crate::MQTT_CONNECTIONS_COUNTER;
-use crate::{auth::DeviceAuthenticator, config::EndpointConfig};
+use crate::{auth::DeviceAuthenticator, config::EndpointConfig, CONNECTIONS_COUNTER};
 use async_trait::async_trait;
 use cache::DeviceCache;
 use drogue_client::registry;
@@ -62,7 +61,7 @@ where
             device.metadata.name.clone(),
         );
         let device_cache = cache::DeviceCache::new(config.cache_size, config.cache_duration);
-        MQTT_CONNECTIONS_COUNTER.inc();
+        CONNECTIONS_COUNTER.inc();
         Self {
             auth,
             sender,
@@ -285,7 +284,7 @@ where
         for (_, v) in self.inbox_reader.lock().await.drain() {
             v.close().await;
         }
-        MQTT_CONNECTIONS_COUNTER.dec();
+        CONNECTIONS_COUNTER.dec();
         Ok(())
     }
 }

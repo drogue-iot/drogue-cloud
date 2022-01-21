@@ -1,6 +1,9 @@
-use crate::service::{
-    stream::{ContentMode, Stream},
-    ServiceConfig,
+use crate::{
+    service::{
+        stream::{ContentMode, Stream},
+        ServiceConfig,
+    },
+    CONNECTIONS_COUNTER,
 };
 use async_trait::async_trait;
 use cloudevents::Data;
@@ -63,6 +66,7 @@ where
         registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
         token: Option<String>,
     ) -> Self {
+        CONNECTIONS_COUNTER.inc();
         Session {
             config,
             user_auth,
@@ -454,6 +458,7 @@ where
     }
 
     async fn closed(&self) -> Result<(), ServerError> {
+        CONNECTIONS_COUNTER.dec();
         Ok(())
     }
 }

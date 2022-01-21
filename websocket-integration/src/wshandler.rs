@@ -1,6 +1,7 @@
 use crate::{
     messages::{Disconnect, StreamError, Subscribe, WsEvent},
     service::Service,
+    CONNECTIONS_COUNTER,
 };
 use actix::{
     fut, prelude::*, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner,
@@ -32,6 +33,7 @@ impl WsHandler {
         group_id: Option<String>,
         service_addr: Addr<Service<Option<OpenIdTokenProvider>>>,
     ) -> WsHandler {
+        CONNECTIONS_COUNTER.inc();
         WsHandler {
             application: app,
             group_id,
@@ -50,6 +52,12 @@ impl WsHandler {
 
             ctx.ping(b"PING");
         });
+    }
+}
+
+impl Drop for WsHandler {
+    fn drop(&mut self) {
+        CONNECTIONS_COUNTER.dec();
     }
 }
 

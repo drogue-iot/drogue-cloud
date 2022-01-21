@@ -14,11 +14,15 @@ use drogue_cloud_mqtt_common::server::build;
 use drogue_cloud_service_common::health::HealthServer;
 use futures::TryFutureExt;
 use lazy_static::lazy_static;
-use prometheus::IntGauge;
+use prometheus::{IntGauge, Opts};
 
 lazy_static! {
-    pub static ref MQTT_CONNECTIONS_COUNTER: IntGauge =
-        IntGauge::new("drogue_mqtt_connections", "Mqtt Connections").unwrap();
+    pub static ref CONNECTIONS_COUNTER: IntGauge = IntGauge::with_opts(
+        Opts::new("drogue_connections", "Connections")
+            .const_label("protocol", "mqtt")
+            .const_label("type", "endpoint")
+    )
+    .unwrap();
 }
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
@@ -56,7 +60,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
     if let Some(health) = config.health {
         prometheus::default_registry()
-            .register(Box::new(MQTT_CONNECTIONS_COUNTER.clone()))
+            .register(Box::new(CONNECTIONS_COUNTER.clone()))
             .unwrap();
         // health server
         let health = HealthServer::new(

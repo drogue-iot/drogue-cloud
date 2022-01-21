@@ -2635,6 +2635,7 @@ dependencies = [
  "drogue-cloud-service-common",
  "env_logger 0.8.4",
  "futures",
+ "lazy_static 1.4.0",
  "log",
  "prometheus",
  "reqwest",

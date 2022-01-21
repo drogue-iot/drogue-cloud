@@ -16,9 +16,19 @@ use drogue_cloud_service_common::{
     openid::AuthenticatorConfig,
 };
 use futures::TryFutureExt;
-
+use lazy_static::lazy_static;
+use prometheus::{IntGauge, Opts};
 use serde::Deserialize;
 use std::collections::HashMap;
+
+lazy_static! {
+    pub static ref CONNECTIONS_COUNTER: IntGauge = IntGauge::with_opts(
+        Opts::new("drogue_connections", "Connections")
+            .const_label("protocol", "ws")
+            .const_label("type", "integration")
+    )
+    .unwrap();
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -105,6 +115,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
     if let Some(health) = config.health {
+        prometheus::default_registry()
+            .register(Box::new(CONNECTIONS_COUNTER.clone()))
+            .unwrap();
         let health =
             HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
         futures::try_join!(health.run(), main.err_into())?;
