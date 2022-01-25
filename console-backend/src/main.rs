@@ -1,7 +1,7 @@
 use drogue_cloud_console_backend::{run, Config};
 use drogue_cloud_service_common::{endpoints::create_endpoint_source, main};
 
-#[actix_web::main]
+#[drogue_cloud_service_api::webapp::main]
 async fn main() -> anyhow::Result<()> {
     main!({
         // the endpoint source we choose

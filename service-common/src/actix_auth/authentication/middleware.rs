@@ -1,5 +1,5 @@
 use actix_service::{Service, Transform};
-use actix_web::{
+use drogue_cloud_service_api::webapp::{
     dev::{ServiceRequest, ServiceResponse},
     web::Query,
     Error, HttpMessage,
@@ -8,9 +8,9 @@ use actix_web::{
 use crate::actix_auth::authentication::{AuthN, Credentials, UsernameAndToken};
 use crate::error::ServiceError;
 
-use actix_web_httpauth::extractors::basic::BasicAuth;
-use actix_web_httpauth::extractors::bearer::BearerAuth;
-use actix_web_httpauth::extractors::AuthExtractor;
+use drogue_cloud_service_api::webapp::extractors::basic::BasicAuth;
+use drogue_cloud_service_api::webapp::extractors::bearer::BearerAuth;
+use drogue_cloud_service_api::webapp::extractors::AuthExtractor;
 use futures_util::future;
 use futures_util::future::LocalBoxFuture;
 use serde::Deserialize;

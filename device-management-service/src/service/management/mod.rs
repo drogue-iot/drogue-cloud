@@ -3,7 +3,6 @@ use crate::{
     endpoints::params::DeleteParams,
     service::{error::PostgresManagementServiceError, PostgresManagementService},
 };
-use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::Utc;
 use core::pin::Pin;
@@ -22,6 +21,7 @@ use drogue_cloud_registry_events::{Event, EventSender, SendEvent};
 use drogue_cloud_service_api::{
     auth::user::{authz::Permission, UserInformation},
     labels::LabelSelector,
+    webapp::ResponseError,
 };
 use drogue_cloud_service_common::keycloak::KeycloakClient;
 use futures::{future, Stream, TryStreamExt};

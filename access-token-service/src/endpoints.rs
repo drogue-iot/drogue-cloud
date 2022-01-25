@@ -1,5 +1,6 @@
 use crate::service::AccessTokenService;
 use actix_web::{web, HttpResponse};
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{
     auth::user::{
         authn::{AuthenticationRequest, AuthenticationResponse, Outcome},

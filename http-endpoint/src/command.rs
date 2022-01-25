@@ -3,11 +3,11 @@
 //! Contains actors that handles commands for HTTP endpoint
 
 use actix_rt::time::timeout;
-use actix_web::{http, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands, Subscription},
     error::HttpEndpointError,
 };
+use drogue_cloud_service_api::webapp::{http, web, HttpResponse};
 use std::time::Duration;
 
 const HEADER_COMMAND: &str = "command";

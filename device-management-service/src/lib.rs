@@ -9,6 +9,7 @@ use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::KafkaEventSender;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig;
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::actix_auth::authentication::AuthN;
 use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
 use drogue_cloud_service_common::openid::AuthenticatorConfig;

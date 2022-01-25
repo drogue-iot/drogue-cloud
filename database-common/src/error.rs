@@ -1,6 +1,6 @@
 use crate::models::GenerationError;
-use actix_web::{HttpResponse, ResponseError};
 use deadpool_postgres::PoolError;
+use drogue_cloud_service_api::webapp::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio_postgres::error::SqlState;

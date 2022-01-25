@@ -7,6 +7,7 @@ use crate::{
 use actix_web::{http::header, web, web::Json, HttpRequest, HttpResponse};
 use drogue_client::registry;
 use drogue_cloud_registry_events::EventSender;
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{auth::user::UserInformation, labels::ParserError};
 use drogue_cloud_service_common::error::ServiceError;
 use drogue_cloud_service_common::keycloak::KeycloakClient;

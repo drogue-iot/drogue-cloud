@@ -12,6 +12,7 @@ use drogue_cloud_database_common::{
     models::{app::*, device::*},
     Client, DatabaseService,
 };
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{
     auth::device::authn::{
         self, AuthenticationRequest, AuthorizeGatewayRequest, GatewayOutcome, Outcome,

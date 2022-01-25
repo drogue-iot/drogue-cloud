@@ -2,7 +2,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use actix_service::{Service, Transform};
-use actix_web::{dev::ServiceRequest, dev::ServiceResponse, Error};
+use drogue_cloud_service_api::webapp::{dev::ServiceRequest, dev::ServiceResponse, Error};
 use futures::future::{ok, Ready};
 use futures::Future;
 

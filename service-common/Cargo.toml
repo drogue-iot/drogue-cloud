@@ -11,11 +11,7 @@ config = "0.11"
 anyhow = "1"
 
 actix = { version = "0.12.0", default-features = false }
-actix-http = "=3.0.0-beta.18" # FIXME: temporary intermediate
-actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
-actix-web-httpauth = "=0.6.0-beta.7"
 actix-service = "2"
-actix-rt = "2"
 ntex = { version = "0.5", features = ["tokio"] }
 http = "0.2"
 actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.4 when available
@@ -62,4 +58,4 @@ tokio = { version = "1", features = ["full"] }
 
 [features]
 default = ["rustls"]
-rustls = ["rust_tls", "webpki", "reqwest/rustls-tls"]
+rustls = ["rust_tls", "webpki", "reqwest/rustls-tls" ]

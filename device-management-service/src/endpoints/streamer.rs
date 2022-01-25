@@ -106,6 +106,7 @@ where
 mod test {
 
     use super::*;
+    use drogue_cloud_service_api::webapp as actix_web;
     use futures::{stream, TryStreamExt};
 
     #[tokio::test]

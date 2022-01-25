@@ -9,6 +9,7 @@ use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
     AuthorizeGatewayResponse, Credential,
 };
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
     client::ReqwestAuthenticatorClient, defaults, openid::TokenConfig,
 };

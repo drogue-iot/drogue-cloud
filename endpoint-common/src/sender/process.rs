@@ -29,6 +29,7 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum Outcome {
     // Accept event
     Accepted(cloudevents::Event),

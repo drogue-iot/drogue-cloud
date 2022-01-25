@@ -11,9 +11,7 @@ anyhow = "1"
 
 async-trait = "0.1"
 
-actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
 actix-cors = "=0.6.0-beta.8"
-actix-web-httpauth = "=0.6.0-beta.7"
 prometheus = { version = "^0.13", default-features = false }
 
 http = "0.2"
@@ -43,7 +41,7 @@ reqwest = "0.11"
 
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-cloud-service-api = { path = "../service-api", features = ["with_actix"] }
+drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-admin-service = { path = "../admin-service"  }
 drogue-cloud-access-token-service = { path = "../access-token-service" }

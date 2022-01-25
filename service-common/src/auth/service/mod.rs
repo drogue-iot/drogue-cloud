@@ -7,8 +7,9 @@ use crate::{
     openid::{Authenticator, AuthenticatorError},
 };
 use actix_web::{dev::ServiceRequest, HttpMessage};
-use actix_web_httpauth::extractors::bearer::BearerAuth;
 use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_api::webapp as actix_web;
+use drogue_cloud_service_api::webapp::extractors::bearer::BearerAuth;
 
 pub async fn openid_validator<F>(
     req: ServiceRequest,
@@ -41,7 +42,7 @@ where
 #[macro_export]
 macro_rules! openid_auth {
     ($req:ident -> $($extract:tt)* ) => {
-	actix_web::middleware::Compat::new(actix_web_httpauth::middleware::HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*)))
+	actix_web::middleware::Compat::new(drogue_cloud_service_api::webapp::HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*)))
     };
 }
 

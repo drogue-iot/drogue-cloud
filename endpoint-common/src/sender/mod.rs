@@ -5,11 +5,11 @@ use crate::{
     sink::{Sink, SinkError, SinkTarget},
     EXT_PARTITIONKEY,
 };
-use actix_web::HttpResponse;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
 use drogue_client::registry;
+use drogue_cloud_service_api::webapp::HttpResponse;
 use drogue_cloud_service_api::{EXT_INSTANCE, EXT_SENDER};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};

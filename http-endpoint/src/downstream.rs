@@ -1,5 +1,4 @@
 use crate::command::wait_for_command;
-use actix_web::{web, HttpResponse};
 use async_trait::async_trait;
 use drogue_client::error::ErrorInformation;
 use drogue_cloud_endpoint_common::{
@@ -8,6 +7,7 @@ use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, Publish, PublishOutcome, Publisher, DOWNSTREAM_EVENTS_COUNTER},
     sink::Sink,
 };
+use drogue_cloud_service_api::webapp::{web, HttpResponse};
 
 #[async_trait]
 pub trait HttpCommandSender {

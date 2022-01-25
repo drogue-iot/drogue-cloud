@@ -2,6 +2,7 @@ use crate::auth::OpenIdClient;
 use actix_web::{web, HttpRequest};
 use anyhow::Context;
 use drogue_cloud_service_api::endpoints::Endpoints;
+use drogue_cloud_service_api::webapp as actix_web;
 use serde_json::{json, Value};
 use std::borrow::Cow;
 

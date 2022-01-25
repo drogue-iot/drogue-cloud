@@ -5,7 +5,6 @@ pub use v2::*;
 pub use v3::*;
 
 use crate::telemetry::PublishCommonOptions;
-use actix_web::{web, HttpResponse};
 use chrono::{DateTime, Utc};
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
@@ -16,6 +15,7 @@ use drogue_cloud_endpoint_common::{
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn;
+use drogue_cloud_service_api::webapp::{web, HttpResponse};
 use serde_json::Value;
 use std::collections::HashMap;
 

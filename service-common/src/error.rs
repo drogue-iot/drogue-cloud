@@ -1,6 +1,6 @@
-use actix_web::{HttpResponse, ResponseError};
 use drogue_client::error::ClientError;
 use drogue_cloud_service_api::error::ErrorResponse;
+use drogue_cloud_service_api::webapp::{HttpResponse, ResponseError};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

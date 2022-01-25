@@ -4,6 +4,7 @@ mod parser;
 #[cfg(feature = "nom")]
 pub use parser::*;
 
+#[cfg(feature = "nom")]
 use std::convert::TryFrom;
 
 #[derive(Default)]

@@ -11,3 +11,6 @@ pub mod token;
 pub mod version;
 
 pub use id::*;
+
+#[cfg(feature = "actix")]
+pub mod webapp;
