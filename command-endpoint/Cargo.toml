@@ -10,8 +10,6 @@ license = "Apache-2.0"
 anyhow = "1"
 thiserror = "1"
 
-actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
-actix-web-httpauth = "=0.6.0-beta.7"
 actix-cors = "=0.6.0-beta.8"
 
 prometheus = { version = "^0.13", default-features = false }
@@ -38,7 +36,7 @@ log = "0.4"
 cloudevents-sdk = { version = "0.4", features = ["actix", "reqwest"] }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
-drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }
+drogue-cloud-integration-common = { path = "../integration-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 

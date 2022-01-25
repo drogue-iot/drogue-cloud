@@ -11,12 +11,9 @@ license = "Apache-2.0"
 
 anyhow = "1"
 
-actix-http = { version = "=3.0.0-beta.18", optional = true } # FIXME: temporary intermediate
-actix-web = { version = "=4.0.0-beta.19", optional = true } # we need v4 as we need tokio 1
-
 tokio = { version = "1", features = ["full"] }
 
-async-trait = { version = "0.1", optional = true }
+async-trait = "0.1"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
@@ -40,8 +37,3 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common", features = ["rustls"] }
 drogue-cloud-registry-events = { path = "../registry-events" }
-
-[features]
-default = ["service", "endpoints"]
-service = ["async-trait"]
-endpoints = ["actix-http", "actix-web"]

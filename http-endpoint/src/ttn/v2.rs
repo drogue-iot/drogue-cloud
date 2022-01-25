@@ -2,7 +2,6 @@ use crate::{
     telemetry::PublishCommonOptions,
     ttn::{publish_uplink, Uplink},
 };
-use actix_web::{web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     error::{EndpointError, HttpEndpointError},
@@ -10,6 +9,7 @@ use drogue_cloud_endpoint_common::{
     sink::Sink,
     x509::ClientCertificateChain,
 };
+use drogue_cloud_service_api::webapp::{web, HttpResponse};
 use drogue_ttn::v2;
 
 pub async fn publish_v2<S>(

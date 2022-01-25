@@ -7,6 +7,7 @@ use actix_web::{
 };
 use actix_web_actors::ws;
 use drogue_client::openid::OpenIdTokenProvider;
+use drogue_cloud_service_api::webapp as actix_web;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]

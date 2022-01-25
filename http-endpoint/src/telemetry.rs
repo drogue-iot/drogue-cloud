@@ -1,5 +1,4 @@
 use crate::downstream::HttpCommandSender;
-use actix_web::{http::header, web, HttpResponse};
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command::Commands,
@@ -9,6 +8,7 @@ use drogue_cloud_endpoint_common::{
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn;
+use drogue_cloud_service_api::webapp::{http::header, web, HttpResponse};
 use serde::Deserialize;
 
 #[derive(Deserialize)]

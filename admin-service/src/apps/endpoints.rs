@@ -1,5 +1,6 @@
 use crate::apps::service::AdminService;
 use actix_web::{web, HttpResponse};
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{
     admin::{Members, TransferOwnership},
     auth::user::UserInformation,

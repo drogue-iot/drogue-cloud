@@ -2,6 +2,7 @@ use crate::defaults;
 use actix_web::HttpServer;
 use actix_web_prom::PrometheusMetricsBuilder;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
+use drogue_cloud_service_api::webapp as actix_web;
 use futures::StreamExt;
 use prometheus::Registry;
 use serde::Deserialize;

@@ -1,9 +1,10 @@
-use actix_web::{http::header, web, HttpResponse};
-use actix_web_httpauth::extractors::bearer::BearerAuth;
 use drogue_client::openid::TokenProvider;
 use drogue_client::{registry, Context};
 use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender, sink::Sink};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
+use drogue_cloud_service_api::webapp::{
+    extractors::bearer::BearerAuth, http::header, web, HttpResponse,
+};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]

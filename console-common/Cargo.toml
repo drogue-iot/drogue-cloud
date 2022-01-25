@@ -10,4 +10,4 @@ license = "Apache-2.0"
 anyhow = "1"
 
 serde = { version = "1", features = ["derive"] }
-drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-api = { path = "../service-api", default-features = false }

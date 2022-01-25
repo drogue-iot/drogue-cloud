@@ -1,6 +1,6 @@
 use crate::service::AccessTokenService;
-use actix_web::ResponseError;
 use async_trait::async_trait;
+use drogue_cloud_service_api::webapp::ResponseError;
 use drogue_cloud_service_api::{
     auth::user::{UserDetails, UserInformation},
     token::{AccessToken, AccessTokenCreated, AccessTokenCreationOptions},

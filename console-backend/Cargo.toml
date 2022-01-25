@@ -8,10 +8,7 @@ license = "Apache-2.0"
 
 [dependencies]
 
-actix = "0.12.0"
-actix-web = "=4.0.0-beta.19" # we need v4 as we need tokio 1
 actix-cors = "=0.6.0-beta.8"
-actix-web-httpauth = "=0.6.0-beta.7"
 tokio-stream = { version = "0.1", features = ["time"] }
 prometheus = { version = "^0.13", default-features = false }
 
@@ -49,10 +46,10 @@ cloudevents-sdk = { version = "0.4", features = ["rdkafka"] }
 uuid = { version = "0.8", features = ["v4"] }
 
 drogue-cloud-console-common = { path = "../console-common" }
-drogue-cloud-service-api = { path = "../service-api", features = ["with_actix"] }
+drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-event-common = { path = "../event-common" }
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-cloud-integration-common = { path = "../integration-common", features = ["with_actix"] }
+drogue-cloud-integration-common = { path = "../integration-common" }
 drogue-cloud-access-token-service = { path = "../access-token-service" }
 
 drogue-client = "0.9.0-alpha.1"

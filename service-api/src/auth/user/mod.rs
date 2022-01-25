@@ -3,9 +3,6 @@ pub mod authz;
 
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "with_actix")]
-use actix_web::HttpMessage;
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserDetails {
     pub user_id: String,
@@ -47,12 +44,13 @@ impl UserInformation {
     }
 }
 
-#[cfg(feature = "with_actix")]
+#[cfg(feature = "actix")]
 impl actix_web::FromRequest for UserInformation {
     type Error = actix_web::Error;
     type Future = core::future::Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
+        use actix_web::HttpMessage;
         match req.extensions().get::<UserInformation>() {
             Some(user) => core::future::ready(Ok(user.clone())),
             None => core::future::ready(Ok(UserInformation::Anonymous)),

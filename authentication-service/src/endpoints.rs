@@ -7,6 +7,7 @@ use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
     AuthorizeGatewayResponse,
 };
+use drogue_cloud_service_api::webapp as actix_web;
 
 #[post("/auth")]
 pub async fn authenticate(

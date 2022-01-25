@@ -1,5 +1,6 @@
 use actix_web::HttpResponse;
 use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_api::webapp as actix_web;
 use serde_json::json;
 
 pub async fn whoami(user: UserInformation) -> Result<HttpResponse, actix_web::Error> {

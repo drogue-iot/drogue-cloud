@@ -3,9 +3,9 @@ mod ttnv2;
 mod ttnv3;
 
 use crate::commands::CommandOptions;
-use actix_web::web;
 use async_trait::async_trait;
 use drogue_client::registry;
+use drogue_cloud_service_api::webapp::web;
 use reqwest::{
     header::{HeaderName, HeaderValue},
     Response, StatusCode,

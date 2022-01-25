@@ -12,6 +12,7 @@ use drogue_cloud_database_common::{
 };
 use drogue_cloud_registry_events::Event;
 use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::openid::ExtendedClaims;
 use futures::TryStreamExt;
 use log::LevelFilter;
@@ -58,7 +59,7 @@ macro_rules! test {
         let mut $sender = sender;
         let $outbox = outbox;
 
-        let $app = actix_web::test::init_service(
+        let $app = drogue_cloud_service_api::webapp::test::init_service(
             app!(MockEventSender, KeycloakAdminMock, 16 * 1024, auth)
                 // for the management service
                 .app_data(data.clone())
@@ -68,8 +69,8 @@ macro_rules! test {
                 }))
                 .wrap_fn(|req, srv|{
                     log::warn!("Running test-user middleware");
-                    use actix_web::dev::Service;
-                    use actix_web::HttpMessage;
+                    use drogue_cloud_service_api::webapp::dev::Service;
+                    use drogue_cloud_service_api::webapp::HttpMessage;
                     {
                         let user: Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
                         if let Some(user) = user {

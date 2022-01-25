@@ -4,6 +4,7 @@ pub mod service;
 use crate::service::PostgresAuthenticationService;
 use actix_web::{web, App, HttpServer};
 use drogue_cloud_service_api::health::HealthChecked;
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},

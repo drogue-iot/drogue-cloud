@@ -1,12 +1,12 @@
 mod sender;
 
-use actix_web::HttpResponse;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
     error::HttpEndpointError,
     sender::{Publish, PublishOptions, PublishOutcome, Publisher, UpstreamSender},
     sink::Sink,
 };
+use drogue_cloud_service_api::webapp::HttpResponse;
 use serde::Deserialize;
 
 #[derive(Deserialize)]

@@ -1,0 +1,11 @@
+[package]
+name = "drogue-cloud-macros"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jim Crossley <jcrossley@redhat.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1"

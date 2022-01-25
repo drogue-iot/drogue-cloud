@@ -4,6 +4,7 @@ use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use drogue_client::openid::OpenIdTokenProvider;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,

@@ -8,6 +8,7 @@ use drogue_cloud_database_common::{
     DatabaseService,
 };
 use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{
     auth::user::authz::{AuthorizationRequest, Outcome},
     health::{HealthCheckError, HealthChecked},

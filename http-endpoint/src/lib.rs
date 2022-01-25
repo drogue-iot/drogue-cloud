@@ -18,6 +18,7 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator, sender::DownstreamSender, sink::KafkaSink,
 };
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},

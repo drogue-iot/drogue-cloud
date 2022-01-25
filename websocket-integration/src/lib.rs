@@ -6,6 +6,7 @@ mod wshandler;
 use crate::service::Service;
 use actix::Actor;
 use actix_web::{web, App, HttpServer};
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,

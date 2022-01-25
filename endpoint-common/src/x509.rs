@@ -1,4 +1,5 @@
 use actix_web::{dev::Payload, error, FromRequest, HttpMessage, HttpRequest};
+use drogue_cloud_service_api::webapp as actix_web;
 use futures_util::future::{ready, Ready};
 use tokio_rustls::rustls::Session;
 

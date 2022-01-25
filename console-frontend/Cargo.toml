@@ -11,7 +11,7 @@ anyhow = "1"
 thiserror = "1"
 
 drogue-cloud-console-common = { path = "../console-common" }
-drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-api = { path = "../service-api", default-features = false }
 drogue-client = { version = "0.9.0-alpha.1", default-features = false }
 
 yew = "0.19"

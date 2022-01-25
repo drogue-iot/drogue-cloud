@@ -1,5 +1,5 @@
 use actix_service::{Service, Transform};
-use actix_web::{
+use drogue_cloud_service_api::webapp::{
     dev::{ServiceRequest, ServiceResponse},
     Error, HttpMessage,
 };

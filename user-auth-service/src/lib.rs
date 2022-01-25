@@ -5,6 +5,7 @@ use actix_web::{web, App, HttpServer};
 use drogue_cloud_access_token_service::{
     endpoints::WebData as KeycloakWebData, service::KeycloakAccessTokenService,
 };
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
