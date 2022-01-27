@@ -1,10 +1,7 @@
-use drogue_client::openid::TokenProvider;
-use drogue_client::{registry, Context};
+use drogue_client::{openid::TokenProvider, registry};
 use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender, sink::Sink};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
-use drogue_cloud_service_api::webapp::{
-    extractors::bearer::BearerAuth, http::header, web, HttpResponse,
-};
+use drogue_cloud_service_api::webapp::{http::header, web, HttpResponse};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -21,7 +18,6 @@ pub async fn command<S, TP>(
     req: web::HttpRequest,
     body: web::Bytes,
     registry: web::Data<registry::v1::Client<TP>>,
-    token: BearerAuth,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
     S: Sink,
@@ -37,19 +33,8 @@ where
     );
 
     let response = futures::try_join!(
-        registry.get_app(
-            &app_name,
-            Context {
-                provided_token: Some(token.token().into()),
-            }
-        ),
-        registry.get_device_and_gateways(
-            &app_name,
-            &device_name,
-            Context {
-                provided_token: Some(token.token().into()),
-            },
-        )
+        registry.get_app(&app_name, Default::default()),
+        registry.get_device_and_gateways(&app_name, &device_name, Default::default(),)
     );
 
     match response {
