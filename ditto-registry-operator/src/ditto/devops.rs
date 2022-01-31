@@ -103,13 +103,21 @@ pub struct Connection {
     pub connection_status: ConnectionStatus,
     pub failover_enabled: bool,
     pub uri: String,
+    #[serde(default = "default_validate_certificates")]
+    pub validate_certificates: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ca: Option<String>,
     pub specific_config: IndexMap<String, String>,
     pub sources: Vec<Source>,
     pub targets: Vec<Target>,
     pub mapping_definitions: IndexMap<String, MappingDefinition>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+const fn default_validate_certificates() -> bool {
+    true
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ConnectionStatus {
     Open,
@@ -128,7 +136,7 @@ pub enum QoS {
     AtLeastOnce = 1,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Source {
     pub addresses: Vec<String>,
@@ -138,21 +146,30 @@ pub struct Source {
     pub authorization_context: Vec<String>,
     pub enforcement: Enforcement,
     pub header_mapping: IndexMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub payload_mapping: Vec<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Target {}
+pub struct Target {
+    pub address: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub topics: Vec<String>,
+    pub authorization_context: Vec<String>,
+    pub header_mapping: IndexMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub payload_mapping: Vec<String>,
+}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MappingDefinition {
     pub mapping_engine: String,
     pub options: IndexMap<String, Value>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Enforcement {
     pub input: String,

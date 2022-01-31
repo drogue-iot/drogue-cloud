@@ -1,7 +1,73 @@
-use drogue_client::core::v1::Conditions;
-use drogue_client::{core, dialect, Section};
+use drogue_client::{
+    core::{self, v1::Conditions},
+    dialect, Section,
+};
 use drogue_cloud_operator_common::controller::base::StatusSection;
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DittoAppSpec {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exporter: Option<Exporter>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Exporter {
+    pub kafka: KafkaClientConfig,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub targets: Vec<ExporterTarget>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExporterTarget {
+    pub topic: String,
+
+    pub mode: ExporterMode,
+
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub subscriptions: Vec<DittoTopic>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DittoTopic {
+    #[serde(rename_all = "camelCase")]
+    TwinEvents {
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        extra_fields: Vec<String>,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        filter: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ExporterMode {
+    Ditto {
+        normalized: bool,
+    },
+    #[serde(rename_all = "camelCase")]
+    CloudEvents {
+        normalized: bool,
+    },
+}
+
+impl Default for ExporterMode {
+    fn default() -> Self {
+        Self::CloudEvents { normalized: true }
+    }
+}
+
+dialect!(DittoAppSpec[Section::Spec => "ditto"]);
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

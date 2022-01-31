@@ -18,7 +18,10 @@ function mapToDittoProtocolMsg(
         return null;
     }
 
-    if (dataschema !== "urn:eclipse:ditto" && datacontenttype !== "application/vnd.eclipse.ditto+json" ) {
+    if (dataschema !== "urn:eclipse:ditto"
+            && datacontenttype !== "application/vnd.eclipse.ditto+json"
+            && datacontenttype !== "application/merge-patch+json"
+    ) {
         return null;
     }
 
@@ -32,6 +35,10 @@ function mapToDittoProtocolMsg(
         "response-required": false,
         "content-type": datacontenttype
     };
+
+    if (typeof payload["headers"] === "object") {
+        dittoHeaders = Object.assign(dittoHeaders, payload["headers"]);
+    }
 
     let path = payload["path"] || "/";
     let value = payload["value"] || {};
