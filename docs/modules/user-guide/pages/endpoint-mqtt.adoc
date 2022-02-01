@@ -10,23 +10,84 @@ It is important to understand, that the MQTT endpoint is not a general purpose M
 providing access to Drogue Cloud specific functionality, using the MQTT protocol and existing MQTT tools.
 ====
 
+== Simple device vs gateway device
+
+As MQTT is a long-lived connection, it makes sense to use it in gateway device use-cases. In this case, a device
+connects to the MQTT endpoint, and then also performs operations for other devices (connected via the gateway)
+device.
+
+Drogue Cloud supports this model. Basically every device connecting via MQTT can act as a gateway device. The devices
+which allow other devices to act on their behalf, must indicate this by explicitly selecting a device as their gateway.
+
+This is done using the device configuration on the device:
+
+[source,yaml]
+----
+metadata:
+  name: sensor01 <1>
+  application: my-app
+spec:
+  credentials: {} <2>
+  gatewaySelector:
+    matchNames: <3>
+      - gateway01
+----
+<1> Name of the actual device.
+<2> Empty credentials, as this device doesn't need to allow a direct connection.
+<3> Names of the devices (gateways) which are allowed to act on behalf of this device.
+
+A device can act both as direct device and as gateway a the same time.
+
 == Connecting
 
 * Clean session must be `true`
 
 == Authenticating
 
-* X.509 Client certificates
-* Username/password
+=== X.509 Client certificates
 
-== Simple device
+You may use X.509 client certificates when establishing the TLS connection. The certificate must be signed with a
+trust anchor stored in the device registry on the application level.
 
-=== Publish data
+=== Username/password
 
-=== Subscribe to commands
+Use `<device>@<application>` and a configured password for the device.
 
-== Gateway device
+== Publish data
 
-=== Publish data
+To publish data as the connected device, publish to `<channel>`. The channel information will be encoded in
+the `subject` header of the generated event.
 
-=== Subscribe to commands
+To publish data on behalf of another device, publish to `<channel>/<device>`.
+
+NOTE: If the connected device is not listed as the specified device. The message will be dropped (QoS 0) or
+rejected (QoS 1).
+
+For MQTT v5, it is possible to set the "content type" property, which will be used as the content type for
+the generated event.
+
+== Subscribe to commands
+
+In general, the command topic structure is `command/inbox/<device>/<command>`. It is however not possible to subscribe
+to specific commands only.
+
+|===
+|Topic pattern |Example topic |Description
+
+a| * `command/inbox//#`
+a| * `command/inbox//set-temp`
+| Subscribe to commands for the actual device
+
+a| * `command/inbox/my-device/#`
+a| * `command/inbox/my-device/set-temp`
+| Subscribe to commands for the device `my-device`.
+
+a|
+* `command/inbox/#`
+* `command/inbox/+/#`
+a|
+* `command/inbox/my-device/set-temp`
+* `command/inbox//set-temp`
+| Subscribe to commands for actual device and all devices it acts as a gateway for.
+
+|===
