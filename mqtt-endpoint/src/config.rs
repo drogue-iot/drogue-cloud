@@ -7,9 +7,9 @@ use std::time::Duration;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct EndpointConfig {
-    #[serde(default)]
+    #[serde(default = "default_cache_size")]
     pub cache_size: usize,
-    #[serde(default)]
+    #[serde(default = "default_cache_duration")]
     #[serde(with = "humantime_serde")]
     pub cache_duration: Duration,
 }
