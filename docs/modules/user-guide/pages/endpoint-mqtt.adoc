@@ -63,8 +63,16 @@ To publish data on behalf of another device, publish to `<channel>/<device>`.
 NOTE: If the connected device is not listed as the specified device. The message will be dropped (QoS 0) or
 rejected (QoS 1).
 
+=== Payload & Content type
+
+The payload of the publish message will be the "data" of the generated event.
+
 For MQTT v5, it is possible to set the "content type" property, which will be used as the content type for
 the generated event.
+
+By default (for MQTT 3.1.1, or when the content type is not provided), the content-type will be evaluated. If
+the payload can be successfully parsed as JSON, the content type will be `application/json`. Otherwise it will
+be `application/octet-stream`.
 
 == Subscribe to commands
 
@@ -91,3 +99,5 @@ a|
 | Subscribe to commands for actual device and all devices it acts as a gateway for.
 
 |===
+
+The payload of the command, will be the payload of the received message.
