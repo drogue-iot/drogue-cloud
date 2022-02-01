@@ -25,7 +25,8 @@ macro_rules! test {
             data,
             16 * 1024,
             false,
-            auth
+            auth,
+            None
         ))
         .await;
 

@@ -3,8 +3,10 @@ pub mod service;
 
 use crate::service::PostgresAuthenticationService;
 use actix_web::{web, App, HttpServer};
-use drogue_cloud_service_api::health::HealthChecked;
-use drogue_cloud_service_api::webapp as actix_web;
+use drogue_cloud_service_api::{
+    health::HealthChecked,
+    webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
+};
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
@@ -44,8 +46,13 @@ pub struct Config {
 
 #[macro_export]
 macro_rules! app {
-    ($data:expr, $max_json_payload_size:expr, $enable_auth: expr, $auth: expr) => {
+    ($data:expr, $max_json_payload_size:expr, $enable_auth: expr, $auth: expr, $prometheus: expr) => {{
+        use drogue_cloud_service_common::middleware::Optional;
+
+        let prom: Optional<drogue_cloud_service_api::webapp::prom::PrometheusMetrics> =
+            Optional::new($prometheus);
         App::new()
+            .wrap(prom)
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::JsonConfig::default().limit($max_json_payload_size))
             .app_data($data.clone())
@@ -55,7 +62,7 @@ macro_rules! app {
                     .service(endpoints::authenticate)
                     .service(endpoints::authorize_as),
             )
-    };
+    }};
 }
 
 /// Build the health checks used for this service.
@@ -76,6 +83,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let data_service = data.service.clone();
 
+    let prometheus = PrometheusMetricsBuilder::new("authentication_service")
+        .registry(prometheus::default_registry().clone())
+        .build()
+        .unwrap();
+
     // main server
 
     let main = HttpServer::new(move || {
@@ -85,7 +97,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .as_ref()
             .and_then(|data|data.authenticator.as_ref())
         });
-        app!(data, max_json_payload_size, enable_auth, auth)
+        app!(
+            data,
+            max_json_payload_size,
+            enable_auth,
+            auth,
+            Some(prometheus.clone())
+        )
     })
     .bind(config.bind_addr)?;
 

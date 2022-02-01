@@ -9,16 +9,17 @@ use actix_web::{
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
-use actix_web_prom::PrometheusMetricsBuilder;
-use drogue_cloud_endpoint_common::auth::AuthConfig;
-use drogue_cloud_endpoint_common::command::{
-    Commands, KafkaCommandSource, KafkaCommandSourceConfig,
+use drogue_cloud_endpoint_common::{
+    auth::AuthConfig,
+    command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
 };
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator, sender::DownstreamSender, sink::KafkaSink,
 };
-use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_api::webapp as actix_web;
+use drogue_cloud_service_api::{
+    kafka::KafkaClientConfig,
+    webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
+};
 use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},

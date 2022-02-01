@@ -46,7 +46,7 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "bf
 
 #operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "b2b0fc88beca2deb07bad6a963d0d5322c9ddff8" }
 
-# required due to missing "beta" versions of more recent "beta" actix versions
+actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.4 when available
 
 # required du to missing "beta" versions for more recent "beta" actix versions
 cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", branch = "actix-web-4.0.0-beta.19" } # FIXME: pre-release branch
