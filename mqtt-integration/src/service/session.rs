@@ -457,7 +457,8 @@ where
         Ok(())
     }
 
-    async fn closed(&self) -> Result<(), ServerError> {
+    async fn closed(&self, reason: CloseReason) -> Result<(), ServerError> {
+        log::info!("Connection closed: {:?}", reason);
         CONNECTIONS_COUNTER.dec();
         Ok(())
     }

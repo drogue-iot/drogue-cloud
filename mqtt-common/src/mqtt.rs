@@ -13,7 +13,7 @@ use ntex_mqtt::{
         codec::{Auth, ConnectAckReason, DisconnectReasonCode},
     },
 };
-use std::{fmt::Debug, num::NonZeroU32};
+use std::{fmt::Debug, io, num::NonZeroU32};
 
 #[async_trait(?Send)]
 pub trait Service<S>
@@ -38,7 +38,13 @@ pub trait Session {
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError>;
     async fn subscribe(&self, subscribe: Subscribe<'_>) -> Result<(), ServerError>;
     async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError>;
-    async fn closed(&self) -> Result<(), ServerError>;
+    async fn closed(&self, reason: CloseReason) -> Result<(), ServerError>;
+}
+
+#[derive(Debug)]
+pub enum CloseReason {
+    Closed { was_error: bool },
+    PeerGone(Option<io::Error>),
 }
 
 pub async fn connect_v3<A, S>(
@@ -105,7 +111,10 @@ where
         v3::ControlMessage::ProtocolError(err) => Ok(err.ack()),
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
         v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
-        v3::ControlMessage::PeerGone(g) => Ok(g.ack()),
+        v3::ControlMessage::PeerGone(mut g) => {
+            session.closed(CloseReason::PeerGone(g.take())).await?;
+            Ok(g.ack())
+        }
         v3::ControlMessage::Subscribe(mut s) => {
             session.subscribe(Subscribe::V3(&mut s)).await?;
             Ok(s.ack())
@@ -117,7 +126,11 @@ where
             }
         }
         v3::ControlMessage::Closed(c) => {
-            session.closed().await?;
+            session
+                .closed(CloseReason::Closed {
+                    was_error: c.is_error(),
+                })
+                .await?;
             Ok(c.ack())
         }
     }
@@ -139,7 +152,10 @@ where
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
         v5::ControlMessage::Disconnect(d) => Ok(d.ack()),
-        v5::ControlMessage::PeerGone(g) => Ok(g.ack()),
+        v5::ControlMessage::PeerGone(mut g) => {
+            session.closed(CloseReason::PeerGone(g.take())).await?;
+            Ok(g.ack())
+        }
         v5::ControlMessage::Subscribe(mut s) => {
             session.subscribe(Subscribe::V5(&mut s)).await?;
             Ok(s.ack())
@@ -149,7 +165,11 @@ where
             Ok(u.ack())
         }
         v5::ControlMessage::Closed(c) => {
-            session.closed().await?;
+            session
+                .closed(CloseReason::Closed {
+                    was_error: c.is_error(),
+                })
+                .await?;
             Ok(c.ack())
         }
     }

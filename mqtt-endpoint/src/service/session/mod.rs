@@ -279,8 +279,11 @@ where
         Ok(())
     }
 
-    async fn closed(&self) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
-        log::debug!("Connection closed ({:?})", self.id);
+    async fn closed(
+        &self,
+        reason: CloseReason,
+    ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+        log::info!("Connection closed ({:?}): {:?}", self.id, reason);
         for (_, v) in self.inbox_reader.lock().await.drain() {
             v.close().await;
         }
