@@ -1,14 +1,22 @@
 use ntex::util::ByteString;
 use ntex_mqtt::{v3, v5};
+use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum PublishError {
+    #[error("internal error: {0}")]
     InternalError(String),
+    #[error("quota exceeded")]
     QuotaExceeded,
+    #[error("not authorized")]
     NotAuthorized,
+    #[error("unsupported operation")]
     UnsupportedOperation,
+    #[error("payload format invalid")]
     PayloadFormatInvalid,
+    #[error("unspecified error")]
     UnspecifiedError,
+    #[error("topic name invalid")]
     TopicNameInvalid,
 }
 

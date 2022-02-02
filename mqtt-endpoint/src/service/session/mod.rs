@@ -26,6 +26,7 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     sync::Arc,
 };
+use tracing::instrument;
 
 #[derive(Clone)]
 pub struct Session<S>
@@ -104,6 +105,7 @@ where
         }
     }
 
+    #[instrument(skip(self), fields(self.id = ?self.id))]
     async fn eval_device(
         &self,
         publish: &Publish<'_>,
@@ -139,6 +141,7 @@ impl<S> mqtt::Session for Session<S>
 where
     S: Sink,
 {
+    #[instrument(skip(self),fields(self.id = ?self.id),err)]
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
         let content_type = publish
             .properties()
@@ -199,6 +202,7 @@ where
         }
     }
 
+    #[instrument(skip(self),fields(self.id = ?self.id))]
     async fn subscribe(
         &self,
         sub: Subscribe<'_>,
@@ -254,6 +258,7 @@ where
         Ok(())
     }
 
+    #[instrument(skip(self),fields(self.id = ?self.id))]
     async fn unsubscribe(
         &self,
         unsubscribe: Unsubscribe<'_>,
@@ -279,6 +284,7 @@ where
         Ok(())
     }
 
+    #[instrument(skip(self),fields(self.id = ?self.id))]
     async fn closed(
         &self,
         reason: CloseReason,

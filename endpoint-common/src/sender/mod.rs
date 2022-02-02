@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 use lazy_static::lazy_static;
+use tracing::instrument;
 
 lazy_static! {
     pub static ref DOWNSTREAM_EVENTS_COUNTER: CounterVec = CounterVec::new(
@@ -171,6 +172,7 @@ where
     ) -> Result<PublishOutcome, SinkError<S::Error>>;
 
     #[allow(clippy::needless_lifetimes)]
+    #[instrument(skip(self,body),field(body_length=body.len()))]
     async fn publish<'a, B>(
         &self,
         publish: Publish<'a>,

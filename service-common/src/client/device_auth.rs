@@ -1,7 +1,7 @@
 use drogue_client::{
+    core::WithTracing,
     error::{ClientError, ErrorInformation},
     openid::{OpenIdTokenProvider, TokenInjector},
-    Context,
 };
 use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
@@ -10,6 +10,7 @@ use drogue_cloud_service_api::auth::device::authn::{
 use reqwest::{Client, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use tracing::instrument;
 use url::Url;
 
 /// An authentication client backed by reqwest.
@@ -36,30 +37,23 @@ impl ReqwestAuthenticatorClient {
         })
     }
 
+    #[instrument]
     pub async fn authenticate(
         &self,
         request: AuthenticationRequest,
-        context: Context,
     ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
-        self.request(self.auth_service_url.clone(), request, context)
-            .await
+        self.request(self.auth_service_url.clone(), request).await
     }
 
+    #[instrument]
     pub async fn authorize_as(
         &self,
         request: AuthorizeGatewayRequest,
-        context: Context,
     ) -> Result<AuthorizeGatewayResponse, ClientError<reqwest::Error>> {
-        self.request(self.auth_as_url.clone(), request, context)
-            .await
+        self.request(self.auth_as_url.clone(), request).await
     }
 
-    async fn request<T, U>(
-        &self,
-        url: Url,
-        request: T,
-        context: Context,
-    ) -> Result<U, ClientError<reqwest::Error>>
+    async fn request<T, U>(&self, url: Url, request: T) -> Result<U, ClientError<reqwest::Error>>
     where
         T: Debug + Serialize,
         for<'de> U: Debug + Deserialize<'de>,
@@ -67,7 +61,8 @@ impl ReqwestAuthenticatorClient {
         let req = self
             .client
             .post(url)
-            .inject_token(&self.token_provider, context)
+            .propagate_current_context()
+            .inject_token(&self.token_provider)
             .await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {

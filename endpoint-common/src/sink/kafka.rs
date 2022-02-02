@@ -17,7 +17,9 @@ use rdkafka::{
     producer::{FutureProducer, FutureRecord},
     ClientConfig,
 };
+use std::fmt::Formatter;
 use thiserror::Error;
+use tracing::instrument;
 
 #[derive(Debug, Error)]
 pub enum KafkaSinkError {
@@ -33,6 +35,14 @@ pub enum KafkaSinkError {
 pub struct KafkaSink {
     internal_producer: FutureProducer,
     check_ready: bool,
+}
+
+impl Debug for KafkaSink {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KafkaSink")
+            .field("check_ready", &self.check_ready)
+            .finish()
+    }
 }
 
 impl KafkaSink {
@@ -52,11 +62,13 @@ impl KafkaSink {
         })
     }
 
+    #[instrument]
     fn create_producer(config: KafkaClientConfig) -> Result<FutureProducer, KafkaError> {
         let config: ClientConfig = config.into();
         config.create()
     }
 
+    #[instrument(skip(producer, message_record))]
     async fn send_with(
         producer: &FutureProducer,
         topic: String,
@@ -67,11 +79,16 @@ impl KafkaSink {
             .key(&key)
             .message_record(&message_record);
 
+        log::debug!("Sending record");
+
         match producer.send_result(record) {
-            // accepted deliver
+            // accepted delivery
             Ok(fut) => match fut.await {
                 // received outcome & outcome ok
-                Ok(Ok(_)) => Ok(PublishOutcome::Accepted),
+                Ok(Ok((part, offset))) => {
+                    tracing::info!(part, offset, "Publish accepted");
+                    Ok(PublishOutcome::Accepted)
+                }
                 // received outcome & outcome failed
                 Ok(Err((err, _))) => {
                     log::debug!("Kafka transport error: {}", err);
@@ -118,6 +135,7 @@ impl Sink for KafkaSink {
     type Error = KafkaSinkError;
 
     #[allow(clippy::needless_lifetimes)]
+    #[instrument]
     async fn publish<'a>(
         &self,
         target: SinkTarget<'a>,

@@ -1,8 +1,8 @@
 use crate::{defaults, openid::TokenConfig};
 use drogue_client::{
+    core::WithTracing,
     error::ClientError,
     openid::{OpenIdTokenProvider, TokenInjector},
-    Context,
 };
 use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, AuthenticationResponse},
@@ -10,6 +10,7 @@ use drogue_cloud_service_api::auth::user::{
 };
 use reqwest::{Response, StatusCode};
 use serde::Deserialize;
+use tracing::instrument;
 use url::Url;
 
 /// A client for authorizing user requests.
@@ -57,15 +58,16 @@ impl UserAuthClient {
         Self::new(client, config.url, token_provider)
     }
 
+    #[instrument]
     pub async fn authenticate_access_token(
         &self,
         request: AuthenticationRequest,
-        context: Context,
     ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
         let req = self
             .client
             .post(self.authn_url.clone())
-            .inject_token(&self.token_provider, context)
+            .propagate_current_context()
+            .inject_token(&self.token_provider)
             .await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
@@ -92,15 +94,16 @@ impl UserAuthClient {
         }
     }
 
+    #[instrument]
     pub async fn authorize(
         &self,
         request: AuthorizationRequest,
-        context: Context,
     ) -> Result<AuthorizationResponse, ClientError<reqwest::Error>> {
         let req = self
             .client
             .post(self.authz_url.clone())
-            .inject_token(&self.token_provider, context)
+            .propagate_current_context()
+            .inject_token(&self.token_provider)
             .await?;
 
         let response: Response = req.json(&request).send().await.map_err(|err| {

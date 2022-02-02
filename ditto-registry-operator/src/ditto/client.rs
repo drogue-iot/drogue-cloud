@@ -76,7 +76,7 @@ impl Client {
     {
         let req = request
             .into_builder(self)?
-            .inject_token(token_provider, Default::default())
+            .inject_token(token_provider)
             .await
             .map_err(Error::Token)?;
 
@@ -117,7 +117,7 @@ impl Client {
         let req = self
             .client
             .post(url)
-            .inject_token(token_provider, Default::default())
+            .inject_token(token_provider)
             .await
             .map_err(Error::Token)?;
 

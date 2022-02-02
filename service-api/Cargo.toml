@@ -31,6 +31,7 @@ actix-web-httpauth = { version = "=0.6.0-beta.7", optional = true }
 actix-web-prom = { version = "0.6.0-beta.4", optional = true }
 actix-rt = { version = "2", optional = true }
 actix-utils = { version = "3", optional = true }
+actix-web-opentelemetry = { version = "0.11.0-beta.8", optional = true }
 
 nom = { version = "6", optional = true }
 
@@ -41,6 +42,6 @@ config = "0.11"
 
 [features]
 default = ["nom", "actix"]
-actix = ["actix-web", "actix-web-httpauth", "actix-rt", "actix-utils", "actix-web-prom"]
+actix = ["actix-web", "actix-web-httpauth", "actix-rt", "actix-utils", "actix-web-prom", "actix-web-opentelemetry"]
 rustls = ["actix-web/rustls"]
 openssl = ["actix-web/openssl"]

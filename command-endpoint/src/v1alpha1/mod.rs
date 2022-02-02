@@ -33,8 +33,8 @@ where
     );
 
     let response = futures::try_join!(
-        registry.get_app(&app_name, Default::default()),
-        registry.get_device_and_gateways(&app_name, &device_name, Default::default(),)
+        registry.get_app(&app_name),
+        registry.get_device_and_gateways(&app_name, &device_name)
     );
 
     match response {

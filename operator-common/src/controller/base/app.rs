@@ -13,7 +13,7 @@ where
         &self,
         key: &String,
     ) -> Result<Option<registry::v1::Application>, ClientError<reqwest::Error>> {
-        self.get_app(&key, Default::default()).await
+        self.get_app(&key).await
     }
 
     async fn update_if(
@@ -24,7 +24,7 @@ where
         current.update_section(core::v1::Conditions::aggregate_ready)?;
 
         if original != &current {
-            match self.update_app(&current, Default::default()).await {
+            match self.update_app(&current).await {
                 Ok(_) => Ok(()),
                 Err(err) => match err {
                     ClientError::Syntax(msg) => Err(ReconcileError::permanent(format!(

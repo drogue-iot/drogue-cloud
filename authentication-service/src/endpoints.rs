@@ -8,7 +8,9 @@ use drogue_cloud_service_api::auth::device::authn::{
     AuthorizeGatewayResponse,
 };
 use drogue_cloud_service_api::webapp as actix_web;
+use tracing::instrument;
 
+#[instrument(skip(data))]
 #[post("/auth")]
 pub async fn authenticate(
     req: web::Json<AuthenticationRequest>,
@@ -22,6 +24,7 @@ pub async fn authenticate(
     result
 }
 
+#[instrument(skip(data))]
 #[post("/authorize_as")]
 pub async fn authorize_as(
     req: web::Json<AuthorizeGatewayRequest>,

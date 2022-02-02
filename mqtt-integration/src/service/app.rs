@@ -1,6 +1,6 @@
 use crate::service::{session::Session, ServiceConfig};
 use async_trait::async_trait;
-use drogue_client::{openid::OpenIdTokenProvider, registry, Context};
+use drogue_client::{openid::OpenIdTokenProvider, registry};
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
 use drogue_cloud_mqtt_common::{
     error::ServerError,
@@ -44,13 +44,10 @@ where
                 let password = String::from_utf8(password.to_vec())?;
 
                 match user_auth
-                    .authenticate_access_token(
-                        AuthenticationRequest {
-                            user_id: username,
-                            access_token: password,
-                        },
-                        Context::default(),
-                    )
+                    .authenticate_access_token(AuthenticationRequest {
+                        user_id: username,
+                        access_token: password,
+                    })
                     .await?
                     .outcome
                 {

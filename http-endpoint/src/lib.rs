@@ -18,7 +18,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
-    webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
+    webapp::{self as actix_web, opentelemetry::RequestTracing, prom::PrometheusMetricsBuilder},
 };
 use drogue_cloud_service_common::{
     defaults,
@@ -92,6 +92,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let http_server = HttpServer::new(move || {
         let app = App::new()
+            .wrap(RequestTracing::new())
             .wrap(prometheus.clone())
             .wrap(middleware::Logger::default())
             .app_data(web::PayloadConfig::new(max_payload_size))

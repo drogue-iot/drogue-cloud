@@ -133,7 +133,7 @@ impl<TP: TokenProvider> Service<TP> {
         );
 
         let app_res = registry
-            .get_app(application.clone(), Default::default())
+            .get_app(application.clone())
             .await
             .map_err(|_| ServiceError::InternalError(String::from("Request to registry error")))?
             .ok_or_else(|| ServiceError::InternalError(String::from("Cannot find application")))?;

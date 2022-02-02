@@ -52,10 +52,20 @@ drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-event-common = { path = "../event-common" }
 drogue-client = "0.9.0-alpha.1"
 
+opentelemetry = { version = "0.17", features = ["rt-tokio"] }
+opentelemetry-http = { version = "0.6" }
+tracing = "0.1"
+#tracing-subscriber = { version = "0.3", default-features = false, features = ["smallvec", "fmt", "ansi", "std"] }
+tracing-subscriber = { version = "0.3" }
+tracing-opentelemetry = "0.17"
+
+opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 actix-rt = "2.6.0"
 
 [features]
 default = ["rustls"]
-rustls = ["rust_tls", "webpki", "reqwest/rustls-tls" ]
+rustls = ["rust_tls", "webpki", "reqwest/rustls-tls"]
+jaeger = ["opentelemetry-jaeger"]

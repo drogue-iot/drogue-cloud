@@ -3,6 +3,7 @@ mod kafka;
 
 pub use self::http::HttpSink;
 pub use kafka::*;
+use std::fmt::Debug;
 
 use crate::sender::PublishOutcome;
 use async_trait::async_trait;
@@ -11,6 +12,7 @@ use drogue_client::registry;
 use std::ops::Deref;
 use thiserror::Error;
 
+#[derive(Debug)]
 pub enum SinkTarget<'a> {
     Events(&'a registry::v1::Application),
     Commands(&'a registry::v1::Application),
@@ -28,7 +30,7 @@ impl<'a> Deref for SinkTarget<'a> {
 }
 
 #[async_trait]
-pub trait Sink: Clone + Send + Sync + 'static {
+pub trait Sink: Clone + Send + Sync + Debug + 'static {
     type Error: std::error::Error + Send + 'static;
 
     #[allow(clippy::needless_lifetimes)]
