@@ -46,6 +46,26 @@ pub enum KafkaTarget {
     External { config: KafkaConfig },
 }
 
+impl KafkaTarget {
+    pub fn topic_name(&self) -> &str {
+        match self {
+            Self::Internal { topic } => topic,
+            Self::External { config } => &config.topic,
+        }
+    }
+
+    /// Turn a target into a config, by filling in gaps from the default config
+    pub fn into_config(self, default_kafka: &KafkaClientConfig) -> KafkaConfig {
+        match self {
+            KafkaTarget::External { config } => config,
+            KafkaTarget::Internal { topic } => KafkaConfig {
+                client: default_kafka.clone(),
+                topic,
+            },
+        }
+    }
+}
+
 pub trait KafkaConfigExt {
     type Error;
 
@@ -64,13 +84,7 @@ pub trait KafkaConfigExt {
         event_type: KafkaEventType,
         default_kafka: &KafkaClientConfig,
     ) -> Result<KafkaConfig, Self::Error> {
-        match self.kafka_target(event_type)? {
-            KafkaTarget::External { config } => Ok(config),
-            KafkaTarget::Internal { topic } => Ok(KafkaConfig {
-                client: default_kafka.clone(),
-                topic,
-            }),
-        }
+        Ok(self.kafka_target(event_type)?.into_config(default_kafka))
     }
 }
 

@@ -1,0 +1,49 @@
+[package]
+name = "drogue-cloud-ditto-registry-operator"
+description = "Eclipse Ditto registry operator"
+version = "0.9.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+
+actix = "0.12"
+anyhow = "1"
+async-std = "1"
+async-trait = "0.1"
+bcrypt = "0.9"
+chrono = { version = "0.4", features = ["serde"] }
+config = "0.11"
+dotenv = "0.15"
+env_logger = "0.7"
+futures = "0.3"
+headers = "0.3"
+http = "0.2"
+humantime = "2"
+humantime-serde = "1"
+indexmap = { version = "1", features = ["serde"] }
+lazy_static = "1"
+log = "0.4"
+maplit = "1"
+prometheus = { version = "^0.13", default-features = false }
+rand = "0.7"
+reqwest = "0.11"
+rust-crypto = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_repr = "0.1"
+serde_urlencoded = "0.7"
+serde_with = "1"
+thiserror = "1"
+tokio = "1"
+url = "2"
+x509-parser = "0.9"
+
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-operator-common = { path = "../operator-common", features = ["with_kube"] }
+
+drogue-client = "0.9.0-alpha.1"

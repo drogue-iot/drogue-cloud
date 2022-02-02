@@ -2012,6 +2012,49 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-ditto-registry-operator"
+version = "0.9.0"
+dependencies = [
+ "actix",
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "bcrypt",
+ "chrono",
+ "config 0.11.0",
+ "dotenv",
+ "drogue-client",
+ "drogue-cloud-database-common",
+ "drogue-cloud-operator-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "env_logger 0.7.1",
+ "futures",
+ "headers",
+ "http",
+ "humantime 2.1.0",
+ "humantime-serde",
+ "indexmap",
+ "lazy_static 1.4.0",
+ "log",
+ "maplit",
+ "prometheus",
+ "rand 0.7.3",
+ "reqwest",
+ "rust-crypto",
+ "serde 1.0.130",
+ "serde_json",
+ "serde_repr",
+ "serde_urlencoded",
+ "serde_with",
+ "thiserror",
+ "tokio 1.15.0",
+ "url",
+ "x509-parser",
+]
+
+[[package]]
 name = "drogue-cloud-endpoint-common"
 version = "0.9.0"
 dependencies = [
@@ -5355,6 +5398,17 @@ dependencies = [
  "itoa 0.4.8",
  "ryu",
  "serde 1.0.130",
+]
+
+[[package]]
+name = "serde_repr"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98d0516900518c29efa217c298fa1f4e6c6ffc85ae29fd7f4ee48f176e1a9ed5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

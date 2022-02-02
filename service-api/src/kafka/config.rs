@@ -1,12 +1,25 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, ops::Deref};
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct KafkaClientConfig {
     #[serde(default = "kafka_bootstrap_servers")]
+    // although we have an alias specified, it currently doesn't work due to: https://github.com/serde-rs/serde/issues/1504
+    #[serde(alias = "bootstrapServers")]
     pub bootstrap_servers: String,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub properties: HashMap<String, String>,
+}
+
+impl KafkaClientConfig {
+    pub fn translate(mut self) -> Self {
+        let mut result = HashMap::with_capacity(self.properties.len());
+        for (k, v) in self.properties {
+            result.insert(k.replace('_', "."), v);
+        }
+        self.properties = result;
+        self
+    }
 }
 
 impl Default for KafkaClientConfig {
@@ -18,7 +31,7 @@ impl Default for KafkaClientConfig {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct KafkaConfig {
     #[serde(flatten)]
     pub client: KafkaClientConfig,
@@ -55,6 +68,7 @@ pub fn kafka_bootstrap_servers() -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn test_custom() {
@@ -69,5 +83,16 @@ mod test {
         assert_eq!(kafka.properties.get("a_b_c").cloned(), Some("d.e.f".into()));
 
         std::env::remove_var("KAFKA__PROPERTIES__A_B_C");
+    }
+
+    /// Test what we can also deserialize from JSON, in addition to the config crate.
+    #[test]
+    fn test_deserialize_json() {
+        let kafka: KafkaClientConfig = serde_json::from_value(json!({
+            "bootstrapServers": "localhost:9091"
+        }))
+        .unwrap();
+
+        assert_eq!(kafka.bootstrap_servers, "localhost:9091")
     }
 }

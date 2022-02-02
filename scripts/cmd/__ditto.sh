@@ -6,7 +6,7 @@
 
 set -e
 
-: "${DITTO_OPERATOR_HELM_VERSION:=0.2.1}"
+: "${DITTO_OPERATOR_HELM_VERSION:=0.4.0}"
 : "${DITTO_CRDS:=true}"
 : "${DITTO_OPERATOR_HELM_REPO:=https://ctron.github.io/helm-charts}"
 

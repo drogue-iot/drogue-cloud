@@ -1,8 +1,21 @@
-use crate::controller::base::{ProcessOutcome, StatusSection};
-use crate::controller::reconciler::ReconcileError;
+use crate::controller::{
+    base::{ConditionExt, ProcessOutcome, ReadyState, StatusSection, CONDITION_RECONCILED},
+    reconciler::ReconcileError,
+};
 use async_trait::async_trait;
-use drogue_client::core::v1::{ConditionStatus, Conditions};
-use std::{future::Future, time::Duration};
+use drogue_client::{
+    core::{
+        self,
+        v1::{ConditionStatus, Conditions},
+    },
+    meta::v1::{CommonMetadata, CommonMetadataMut},
+    Translator,
+};
+use std::{
+    fmt::{Debug, Formatter},
+    future::Future,
+    time::Duration,
+};
 
 pub struct Progressor<'c, C>(Vec<Box<dyn ProgressOperation<C> + 'c>>);
 
@@ -12,6 +25,18 @@ where
 {
     Continue(C),
     Retry(C, Option<Duration>),
+}
+
+impl<C> Debug for OperationOutcome<C>
+where
+    C: Send + Sync,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self {
+            Self::Continue(_) => f.debug_tuple("Continue").field(&"...").finish(),
+            Self::Retry(_, dur) => f.debug_tuple("Retry").field(&"...").field(dur).finish(),
+        }
+    }
 }
 
 pub type Result<T> = std::result::Result<OperationOutcome<T>, ReconcileError>;
@@ -36,7 +61,11 @@ where
 
         while let Some(s) = i.next() {
             let condition_type = s.type_name();
-            context = match s.run(context).await {
+            let result = s.run(context).await;
+
+            log::debug!("Progressing ({}): {:?}", condition_type, result);
+
+            context = match result {
                 Ok(OperationOutcome::Continue(context)) => {
                     conditions.update(
                         condition_type,
@@ -132,68 +161,64 @@ pub trait RunConstructor {
     ) -> std::result::Result<ProcessOutcome<Self::Output>, ReconcileError>;
 }
 
-pub mod application {
-    use super::RunConstructor;
-    use crate::controller::{
-        base::{ConditionExt, ProcessOutcome, ReadyState, StatusSection, CONDITION_RECONCILED},
-        reconciler::{
-            progress::{Progress, Progressor},
-            ReconcileError,
-        },
-    };
-    use async_trait::async_trait;
-    use drogue_client::{core, registry};
+pub trait ResourceAccessor {
+    type Resource: Clone
+        + Translator
+        + AsRef<dyn CommonMetadata>
+        + AsMut<dyn CommonMetadataMut>
+        + Send
+        + Sync;
+    fn resource(&self) -> &Self::Resource;
+    fn resource_mut(&mut self) -> &mut Self::Resource;
+    fn into(self) -> Self::Resource;
+    fn conditions(&self) -> core::v1::Conditions;
+}
 
-    pub trait ApplicationAccessor {
-        fn app(&self) -> &registry::v1::Application;
-        fn app_mut(&mut self) -> &mut registry::v1::Application;
-        fn into(self) -> registry::v1::Application;
-        fn conditions(&self) -> core::v1::Conditions;
-    }
+#[async_trait]
+impl<'c, C> RunConstructor for Progressor<'c, C>
+where
+    C: ResourceAccessor + Send + Sync,
+{
+    type Context = C;
+    type Output = C::Resource;
 
-    #[async_trait]
-    impl<'c, C> RunConstructor for Progressor<'c, C>
+    async fn run_with<S>(
+        &self,
+        ctx: C,
+    ) -> std::result::Result<ProcessOutcome<Self::Output>, ReconcileError>
     where
-        C: ApplicationAccessor + Send + Sync,
+        S: StatusSection,
     {
-        type Context = C;
-        type Output = registry::v1::Application;
+        let observed_generation = ctx.resource().as_ref().generation();
+        let mut original_app = ctx.resource().clone();
+        let conditions = ctx.conditions();
 
-        async fn run_with<S>(&self, ctx: C) -> Result<ProcessOutcome<Self::Output>, ReconcileError>
-        where
-            S: StatusSection,
-        {
-            let observed_generation = ctx.app().metadata.generation;
-            let mut original_app = ctx.app().clone();
-            let conditions = ctx.conditions();
+        let result = match self.run(conditions, ctx).await {
+            Progress::Complete(mut context, mut conditions) => {
+                conditions.update(CONDITION_RECONCILED, ReadyState::Complete);
+                context
+                    .resource_mut()
+                    .finish_ready::<S>(conditions, observed_generation)?;
+                ProcessOutcome::Complete(context.into())
+            }
+            Progress::Retry(mut context, when, mut conditions) => {
+                conditions.update(CONDITION_RECONCILED, ReadyState::Progressing);
+                context
+                    .resource_mut()
+                    .finish_ready::<S>(conditions, observed_generation)?;
+                ProcessOutcome::Retry(context.into(), when)
+            }
+            Progress::Failed(err, mut conditions) => {
+                conditions.update(CONDITION_RECONCILED, ReadyState::Failed(err.to_string()));
+                original_app.finish_ready::<S>(conditions, observed_generation)?;
+                match err {
+                    ReconcileError::Permanent(_) => ProcessOutcome::Complete(original_app),
+                    ReconcileError::Temporary(_) => ProcessOutcome::Retry(original_app, None),
+                }
+            }
+        };
 
-            let result = match self.run(conditions, ctx).await {
-                Progress::Complete(mut context, mut conditions) => {
-                    conditions.update(CONDITION_RECONCILED, ReadyState::Complete);
-                    context
-                        .app_mut()
-                        .finish_ready::<S>(conditions, observed_generation)?;
-                    ProcessOutcome::Complete(context.into())
-                }
-                Progress::Retry(mut context, when, mut conditions) => {
-                    conditions.update(CONDITION_RECONCILED, ReadyState::Progressing);
-                    context
-                        .app_mut()
-                        .finish_ready::<S>(conditions, observed_generation)?;
-                    ProcessOutcome::Retry(context.into(), when)
-                }
-                Progress::Failed(err, mut conditions) => {
-                    conditions.update(CONDITION_RECONCILED, ReadyState::Failed(err.to_string()));
-                    original_app.finish_ready::<S>(conditions, observed_generation)?;
-                    match err {
-                        ReconcileError::Permanent(_) => ProcessOutcome::Complete(original_app),
-                        ReconcileError::Temporary(_) => ProcessOutcome::Retry(original_app, None),
-                    }
-                }
-            };
-
-            Ok(result)
-        }
+        Ok(result)
     }
 }
 

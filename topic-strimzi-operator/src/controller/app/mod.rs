@@ -16,9 +16,8 @@ use drogue_client::{
 use drogue_cloud_operator_common::controller::{
     base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
     reconciler::{
-        progress::{
-            self, application::ApplicationAccessor, OperationOutcome, Progressor, RunConstructor,
-        },
+        operation::HasFinalizer,
+        progress::{self, OperationOutcome, Progressor, ResourceAccessor, RunConstructor},
         ReconcileError, ReconcileProcessor, ReconcileState, Reconciler,
     },
 };
@@ -152,22 +151,23 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
         app: Self::Input,
     ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>
     {
-        let status = app.section::<KafkaAppStatus>().and_then(|s| s.ok());
-
-        let configured = app.metadata.finalizers.iter().any(|f| f == FINALIZER);
-        let deleted = app.metadata.deletion_timestamp.is_some();
-
-        Ok(match (configured, deleted) {
-            (_, false) => ReconcileState::Construct(ConstructContext {
+        Self::eval_by_finalizer(
+            true,
+            app,
+            FINALIZER,
+            |app| ConstructContext {
                 app,
                 events_topic: None,
                 events_topic_name: None,
                 app_user: None,
                 app_user_name: None,
-            }),
-            (true, true) => ReconcileState::Deconstruct(DeconstructContext { app, status }),
-            (false, true) => ReconcileState::Ignore(app),
-        })
+            },
+            |app| {
+                let status = app.section::<KafkaAppStatus>().and_then(|s| s.ok());
+                DeconstructContext { app, status }
+            },
+            |app| app,
+        )
     }
 
     async fn construct(
@@ -175,15 +175,7 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
         ctx: Self::Construct,
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         Progressor::<Self::Construct>::new(vec![
-            Box::new(("HasFinalizer", |mut ctx: Self::Construct| async {
-                // ensure we have a finalizer
-                if ctx.app.metadata.ensure_finalizer(FINALIZER) {
-                    // early return
-                    Ok(OperationOutcome::Retry(ctx, None))
-                } else {
-                    Ok(OperationOutcome::Continue(ctx))
-                }
-            })),
+            Box::new(HasFinalizer(FINALIZER)),
             Box::new(CreateTopic {
                 api: self.kafka_topics,
                 resource: self.kafka_topic_resource,
@@ -238,7 +230,7 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
 
         // remove finalizer
 
-        ctx.app.metadata.finalizers.retain(|f| f != FINALIZER);
+        ctx.app.metadata.remove_finalizer(FINALIZER);
 
         // done
 
@@ -246,12 +238,14 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
     }
 }
 
-impl ApplicationAccessor for ConstructContext {
-    fn app(&self) -> &registry::v1::Application {
+impl ResourceAccessor for ConstructContext {
+    type Resource = registry::v1::Application;
+
+    fn resource(&self) -> &registry::v1::Application {
         &self.app
     }
 
-    fn app_mut(&mut self) -> &mut registry::v1::Application {
+    fn resource_mut(&mut self) -> &mut registry::v1::Application {
         &mut self.app
     }
 
