@@ -637,7 +637,7 @@ mod test {
     use serde_json::json;
 
     #[test]
-    fn test() {
+    fn test_spec() {
         let json = json!({
             "metadata":{
                 "name": "app1",
@@ -646,27 +646,37 @@ mod test {
                 "ditto":{
                     "exporter":{
                         "kafka":{
-                            "topic": "kafka-topic",
                         },
-                        "topics":[{
-                                "twinEvents": {},
-                            }, {
-                                "twinEvents": {
-                                    "extraFields": [
-                                        "attributes/fooBar",
-                                        "features/light",
-                                    ]
+                        "targets": [
+                            {
+                                "topic": "kafka-topic",
+                                "mode": {
+                                    "ditto": {},
                                 },
-                            }, {
-                                "twinEvents": {
-                                    "extraFields": [
-                                        "attributes/placement",
-                                        "foo,bar,baz",
-                                    ],
-                                    "filter": r#"gt(attributes/placement,"Kitchen")"#,
-                                },
+                                "subscriptions": [
+                                    {
+                                        "twinEvents": {},
+                                    },
+                                    {
+                                        "twinEvents": {
+                                            "extraFields": [
+                                                "attributes/fooBar",
+                                                "features/light",
+                                            ]
+                                        },
+                                    },
+                                    {
+                                        "twinEvents": {
+                                            "extraFields": [
+                                                "attributes/placement",
+                                                "foo,bar,baz",
+                                            ],
+                                            "filter": r#"gt(attributes/placement,"Kitchen")"#,
+                                        },
+                                    }
+                                ]
                             }
-                        ]
+                        ],
                     },
                 },
             }
@@ -696,7 +706,7 @@ mod test {
                     let m = IndexMap::new();
                     m
                 },
-                payload_mapping: vec!["drogue-cloud-events-mapping".to_string()],
+                payload_mapping: vec![],
             }]
         )
     }

@@ -53,10 +53,12 @@ pub enum DittoTopic {
 #[serde(rename_all = "camelCase")]
 pub enum ExporterMode {
     Ditto {
+        #[serde(default)]
         normalized: bool,
     },
     #[serde(rename_all = "camelCase")]
     CloudEvents {
+        #[serde(default)]
         normalized: bool,
     },
 }
