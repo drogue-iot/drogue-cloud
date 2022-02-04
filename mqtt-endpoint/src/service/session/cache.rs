@@ -48,7 +48,7 @@ impl<T> DeviceCache<T> {
         }
     }
 
-    #[instrument(skip(self, retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict))]
+    #[instrument(skip(self, retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
     pub async fn fetch<'f, F, Fut, E>(
         &self,
         as_device: &'f str,
@@ -63,18 +63,25 @@ impl<T> DeviceCache<T> {
         // let as_device = as_device.as_ref();
         match cache.get_mut(as_device) {
             // entry found, and not expired
-            Some(outcome) if !outcome.expired() => match &outcome.device {
-                Some(r#as) => Ok(r#as.clone()),
-                _ => Err(PublishError::NotAuthorized),
-            },
+            Some(outcome) if !outcome.expired() => {
+                log::trace!("Cache hit");
+                match &outcome.device {
+                    Some(r#as) => Ok(r#as.clone()),
+                    _ => Err(PublishError::NotAuthorized),
+                }
+            }
             // entry found, but expired
             Some(_) => {
+                log::trace!("Cache expired");
                 // remove the existing entry
                 cache.pop(as_device);
                 self.load_and_cache(as_device, &mut cache, retriever).await
             }
             // No cache entry found
-            None => self.load_and_cache(as_device, &mut cache, retriever).await,
+            None => {
+                log::trace!("Cache miss");
+                self.load_and_cache(as_device, &mut cache, retriever).await
+            }
         }
     }
 

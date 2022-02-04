@@ -81,12 +81,16 @@ impl KafkaSink {
 
         log::debug!("Sending record");
 
-        match producer.send_result(record) {
+        let scheduled = producer.send_result(record);
+
+        tracing::debug!("Send returned");
+
+        match scheduled {
             // accepted delivery
             Ok(fut) => match fut.await {
                 // received outcome & outcome ok
-                Ok(Ok((part, offset))) => {
-                    tracing::info!(part, offset, "Publish accepted");
+                Ok(Ok((partition, offset))) => {
+                    tracing::info!(partition, offset, "Publish accepted");
                     Ok(PublishOutcome::Accepted)
                 }
                 // received outcome & outcome failed

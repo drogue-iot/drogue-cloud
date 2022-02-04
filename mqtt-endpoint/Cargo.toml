@@ -49,7 +49,7 @@ cloudevents-sdk = "0.4"
 drogue-cloud-mqtt-common = { path = "../mqtt-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common", features = ["ntex"] }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-common = { path = "../service-common", features = ["jaeger"] }
 drogue-client = "0.9.0-alpha.1"
 
 [dependencies.open-ssl]
