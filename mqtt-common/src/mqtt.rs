@@ -280,6 +280,13 @@ impl<'a> Publish<'a> {
             Self::V5(publish) => Some(&publish.packet().properties),
         }
     }
+
+    pub fn qos(&self) -> QoS {
+        match self {
+            Self::V3(publish) => publish.qos(),
+            Self::V5(publish) => publish.qos(),
+        }
+    }
 }
 
 #[derive(Debug)]
