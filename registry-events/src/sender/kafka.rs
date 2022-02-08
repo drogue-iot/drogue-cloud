@@ -15,6 +15,7 @@ use rdkafka::{
 use serde::Deserialize;
 use std::{convert::TryInto, time::Duration};
 use thiserror::Error;
+use tracing::instrument;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct KafkaSenderConfig {
@@ -61,6 +62,13 @@ impl KafkaEventSender {
 impl EventSender for KafkaEventSender {
     type Error = KafkaSenderError;
 
+    #[instrument(
+        skip(self,events),
+        fields(
+            self.topic=%self.topic,
+            self.queue_timeout=?self.queue_timeout,
+        )
+    )]
     async fn notify<I>(&self, events: I) -> SenderResult<(), Self::Error>
     where
         I: IntoIterator<Item = Event> + Sync + Send,

@@ -14,7 +14,9 @@ use drogue_cloud_service_api::{auth::user::UserInformation, labels::ParserError}
 use drogue_cloud_service_common::error::ServiceError;
 use drogue_cloud_service_common::keycloak::KeycloakClient;
 use std::convert::TryInto;
+use tracing::instrument;
 
+#[instrument(skip(data))]
 pub async fn create<S, K>(
     data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<String>,
@@ -48,6 +50,7 @@ where
     Ok(response)
 }
 
+#[instrument(skip(data))]
 pub async fn update<S, K>(
     data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<(String, String)>,
@@ -79,6 +82,7 @@ where
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[instrument(skip(data))]
 pub async fn delete<S, K>(
     data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<(String, String)>,
@@ -109,6 +113,7 @@ where
     Ok(HttpResponse::NoContent().finish())
 }
 
+#[instrument(skip(data))]
 pub async fn read<S, K>(
     data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<(String, String)>,
@@ -136,6 +141,7 @@ where
     Ok(result)
 }
 
+#[instrument(skip(data))]
 pub async fn list<S, K>(
     data: web::Data<WebData<PostgresManagementService<S, K>>>,
     path: web::Path<String>,

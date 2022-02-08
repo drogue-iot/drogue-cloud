@@ -2001,6 +2001,7 @@ dependencies = [
  "thiserror",
  "tokio 1.16.1",
  "tokio-postgres",
+ "tracing",
  "url",
  "uuid",
  "x509-parser",
@@ -2370,6 +2371,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio 1.16.1",
+ "tracing",
  "uuid",
 ]
 
