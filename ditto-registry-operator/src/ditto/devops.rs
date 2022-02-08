@@ -101,6 +101,8 @@ pub struct Connection {
     pub id: String,
     pub connection_type: String,
     pub connection_status: ConnectionStatus,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_count: Option<u32>,
     pub failover_enabled: bool,
     pub uri: String,
     #[serde(default = "default_validate_certificates")]

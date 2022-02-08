@@ -12,6 +12,20 @@ pub struct DittoAppSpec {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exporter: Option<Exporter>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ingress: Option<Ingress>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Ingress {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clients: Option<u32>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub consumers: Option<u32>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -1,5 +1,5 @@
 use super::{ConstructContext, DeconstructContext};
-use crate::data::ExporterTarget;
+use crate::data::{ExporterTarget, Ingress};
 use crate::{
     controller::ControllerConfig,
     data::{DittoAppSpec, DittoTopic, Exporter, ExporterMode},
@@ -45,21 +45,21 @@ impl<'o> ProgressOperation<ConstructContext> for CreateApplication<'o> {
     }
 
     async fn run(&self, ctx: ConstructContext) -> progress::Result<ConstructContext> {
-        // create inbound connection
-
-        let ctx = self.create_inbound(ctx).await?;
-
-        // create (optional) outbound connection
-
-        let ctx = if let Some(exporter) = ctx
+        let spec = ctx
             .app
             .section::<DittoAppSpec>()
             .transpose()
             .map_err(|err| {
                 ReconcileError::permanent(format!("Failed to parse Ditto spec: {}", err))
-            })?
-            .and_then(|spec| spec.exporter)
-        {
+            })?;
+
+        // create inbound connection
+
+        let ctx = self.create_inbound(ctx, spec.as_ref()).await?;
+
+        // create (optional) outbound connection
+
+        let ctx = if let Some(exporter) = spec.and_then(|spec| spec.exporter) {
             self.create_outbound(ctx, exporter).await?
         } else {
             delete_connection(
@@ -81,9 +81,14 @@ impl<'a> CreateApplication<'a> {
     async fn create_inbound(
         &self,
         ctx: ConstructContext,
+        spec: Option<&DittoAppSpec>,
     ) -> Result<ConstructContext, ReconcileError> {
-        self.create_connection(inbound_connection_definition(&ctx, &self.config.kafka)?)
-            .await?;
+        self.create_connection(inbound_connection_definition(
+            &ctx,
+            spec.and_then(|spec| spec.ingress.as_ref()),
+            &self.config.kafka,
+        )?)
+        .await?;
 
         Ok(ctx)
     }
@@ -244,6 +249,7 @@ impl<'o> DeleteApplication<'o> {
 
 fn inbound_connection_definition(
     ctx: &ConstructContext,
+    ingress: Option<&Ingress>,
     default_config: &KafkaClientConfig,
 ) -> Result<Connection, ReconcileError> {
     let target = ctx.app.kafka_target(KafkaEventType::Events)?;
@@ -259,6 +265,7 @@ fn inbound_connection_definition(
         id: ConnectionType::Inbound.connection_id(&ctx.app),
         connection_type: "kafka".to_string(),
         connection_status: ConnectionStatus::Open,
+        client_count: ingress.as_ref().and_then(|i| i.clients),
         failover_enabled: true,
         uri,
         specific_config,
@@ -267,7 +274,7 @@ fn inbound_connection_definition(
         sources: vec![Source {
             addresses: vec![topic_name],
             qos: Some(QoS::AtLeastOnce),
-            consumer_count: 1,
+            consumer_count: ingress.as_ref().and_then(|i| i.consumers).unwrap_or(1),
             authorization_context: vec!["pre-authenticated:drogue-cloud".to_string()],
             enforcement: default_enforcement(&ctx.app),
             header_mapping: default_header_mapping(),
@@ -359,6 +366,7 @@ fn outbound_connection_definition(
         connection_type: "kafka".to_string(),
         connection_status: ConnectionStatus::Open,
         failover_enabled: true,
+        client_count: None,
         uri,
         specific_config,
         validate_certificates,
