@@ -254,7 +254,8 @@ fn inbound_connection_definition(
 ) -> Result<Connection, ReconcileError> {
     let target = ctx.app.kafka_target(KafkaEventType::Events)?;
     let topic_name = target.topic_name().to_string();
-    let group_id = ConnectionType::Inbound.connection_id(&ctx.app);
+    let id = ConnectionType::Inbound.connection_id(&ctx.app);
+    let group_id = format!("ditto-{}", id);
     let DittoKafkaOptions {
         uri,
         specific_config,
@@ -262,7 +263,7 @@ fn inbound_connection_definition(
         ca,
     } = connection_info_from_target(target, group_id, default_config)?;
     Ok(Connection {
-        id: ConnectionType::Inbound.connection_id(&ctx.app),
+        id,
         connection_type: "kafka".to_string(),
         connection_status: ConnectionStatus::Open,
         client_count: ingress.as_ref().and_then(|i| i.clients),
