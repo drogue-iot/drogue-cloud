@@ -13,6 +13,7 @@ function mapToDittoProtocolMsg(
     let datacontenttype = headers["content-type"];
     let dataschema = headers["ce_dataschema"];
     let type = headers["ce_type"];
+    let time = headers["ce_time"]
 
     if (datacontenttype !== "application/json" && !datacontenttype.endsWith("+json")) {
         return null;
@@ -35,6 +36,10 @@ function mapToDittoProtocolMsg(
         "response-required": false,
         "content-type": datacontenttype
     };
+
+    if (typeof time === "string") {
+        dittoHeaders["creation-time"] = Date.parse(time);
+    }
 
     if (typeof payload["headers"] === "object") {
         dittoHeaders = Object.assign(dittoHeaders, payload["headers"]);
