@@ -12,6 +12,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use prometheus::{Encoder, TextEncoder};
+use tracing::instrument;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct HealthServerConfig {
@@ -43,6 +44,7 @@ pub struct HealthChecker {
 }
 
 impl HealthChecker {
+    #[instrument(skip(self))]
     pub async fn is_ready(&self) -> Vec<Result<(), HealthCheckError>> {
         futures::stream::iter(self.checks.iter())
             .then(|check| check.is_ready())
@@ -50,6 +52,7 @@ impl HealthChecker {
             .await
     }
 
+    #[instrument(skip(self))]
     pub async fn is_alive(&self) -> Vec<Result<(), HealthCheckError>> {
         futures::stream::iter(self.checks.iter())
             .then(|check| check.is_alive())
