@@ -172,7 +172,18 @@ where
     ) -> Result<PublishOutcome, SinkError<S::Error>>;
 
     #[allow(clippy::needless_lifetimes)]
-    #[instrument(skip(self,body),field(body_length=body.len()))]
+    #[instrument(
+        skip(self,publish,body),
+        field(
+            application=publish.application.metadata.name,
+            sender=publish.sender_id,
+            device=publish.device_id,
+            channel=publish.channel,
+            body_length=body.len()
+        ),
+        ret,
+        err
+    )]
     async fn publish<'a, B>(
         &self,
         publish: Publish<'a>,
