@@ -22,6 +22,7 @@ use drogue_cloud_operator_common::controller::{
     },
 };
 use std::ops::Deref;
+use tracing::instrument;
 
 const FINALIZER: &str = "ditto";
 
@@ -79,6 +80,7 @@ impl<TP>
 where
     TP: TokenProvider,
 {
+    #[instrument(skip(self), fields(application=%input.0.metadata.name, device=%input.1.metadata.name))]
     async fn process_resource(
         &self,
         input: (registry::v1::Application, registry::v1::Device),
@@ -94,11 +96,14 @@ where
         .await
     }
 
+    #[instrument(skip(self), fields(application=%input.0.metadata.name, device=%input.1.metadata.name, message=message))]
     async fn recover(
         &self,
         message: &str,
-        (app, mut device): (registry::v1::Application, registry::v1::Device),
+        input: (registry::v1::Application, registry::v1::Device),
     ) -> Result<registry::v1::Device, ()> {
+        let (app, mut device) = input;
+
         let mut conditions = device
             .section::<DittoDeviceStatus>()
             .and_then(|s| s.ok().map(|s| s.conditions))
@@ -157,11 +162,13 @@ where
     type Construct = ConstructContext;
     type Deconstruct = DeconstructContext;
 
+    #[instrument(skip(self), fields(application=%input.0.metadata.name, device=%input.1.metadata.name),ret)]
     async fn eval_state(
         &self,
-        (app, device): Self::Input,
+        input: Self::Input,
     ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>
     {
+        let (app, device) = input;
         Self::eval_by_finalizer(
             device.metadata.has_label_flag("ditto"),
             ByDevice(app, device),
@@ -179,6 +186,7 @@ where
         )
     }
 
+    #[instrument(skip(self, ctx), ret)]
     async fn construct(
         &self,
         ctx: Self::Construct,
@@ -195,6 +203,7 @@ where
         .await
     }
 
+    #[instrument(skip(self, ctx), ret)]
     async fn deconstruct(
         &self,
         mut ctx: Self::Deconstruct,

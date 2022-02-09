@@ -2046,6 +2046,7 @@ dependencies = [
  "serde_with",
  "thiserror",
  "tokio 1.16.1",
+ "tracing",
  "url",
  "x509-parser",
 ]

@@ -19,6 +19,7 @@ use anyhow::Context;
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use drogue_client::error::ClientError;
+use std::fmt::Formatter;
 use std::{
     fmt::Debug,
     marker::PhantomData,
@@ -281,10 +282,19 @@ where
     async fn recover(&self, message: &str, resource: RI) -> Result<RO, ()>;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum ProcessOutcome<T> {
     Complete(T),
     Retry(T, Option<Duration>),
+}
+
+impl<T> Debug for ProcessOutcome<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Retry(_, delay) => f.debug_tuple("Retry").field(&"...").field(delay).finish(),
+            Self::Complete(_) => f.debug_tuple("Complete").field(&"...").finish(),
+        }
+    }
 }
 
 impl<T> Deref for ProcessOutcome<T> {
