@@ -1,3 +1,4 @@
+use crate::service::session::Dialect::DrogueV1;
 use crate::{auth::DeviceAuthenticator, config::EndpointConfig, service::session::Session};
 use async_trait::async_trait;
 use drogue_cloud_endpoint_common::{
@@ -100,6 +101,7 @@ where
                     self.downstream.clone(),
                     connect.sink(),
                     application,
+                    DrogueV1,
                     device,
                     self.commands.clone(),
                 );
