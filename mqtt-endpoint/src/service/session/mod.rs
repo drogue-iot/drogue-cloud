@@ -29,10 +29,42 @@ use std::{
 };
 use tracing::instrument;
 
+
+// TODO this is the section for the example Implementation of the Dialects
+struct HonoDialect;
+struct LongTopicDialect;
+
+struct ParseError;
+
+struct ParsedTopic<'a> {
+    channel: &'a str,
+    device: Option<&'a str>,
+}
+
+struct TopicHandler<D> {
+    dialect: D
+}
+
+trait Dialect {
+    fn handle(&self, path: &str) -> Result<ParsedTopic, ParseError>;
+}
+
+impl Dialect for TopicHandler<HonoDialect> {
+    fn handle(&self, path: &str) -> Result<ParsedTopic, ParseError> {
+        Ok(ParsedTopic { channel: path, device: Some(path) })
+    }
+}
+
+impl Dialect for TopicHandler<LongTopicDialect> {
+    fn handle(&self, path: &str) -> Result<ParsedTopic, ParseError> {
+        Ok(ParsedTopic { channel: path, device: None })
+    }
+}
+
 #[derive(Clone)]
 pub struct Session<S>
-where
-    S: Sink,
+    where
+        S: Sink,
 {
     sender: DownstreamSender<S>,
     application: registry::v1::Application,
@@ -46,8 +78,8 @@ where
 }
 
 impl<S> Session<S>
-where
-    S: Sink,
+    where
+        S: Sink,
 {
     pub fn new(
         config: &EndpointConfig,
@@ -100,7 +132,7 @@ where
                     self.sink.clone(),
                     force_device,
                 )
-                .await;
+                    .await;
                 entry.insert(subscription);
             }
         }
@@ -114,33 +146,64 @@ where
         let topic = publish.topic().path().split('/').collect::<Vec<_>>();
         log::debug!("Topic: {:?}", topic);
 
-        match topic.as_slice() {
-            [channel] => Ok((channel.to_string(), self.device.clone())),
-            [channel, as_device] => self
-                .device_cache
-                .fetch(as_device, |as_device| {
-                    self.auth
-                        .authorize_as(
-                            &self.application.metadata.name,
-                            &self.device.metadata.name,
-                            as_device,
-                        )
-                        .map_ok(|result| match result.outcome {
-                            GatewayOutcome::Pass { r#as } => Some(r#as),
-                            _ => None,
-                        })
-                })
-                .await
-                .map(|r| (channel.to_string(), r)),
-            _ => Err(PublishError::TopicNameInvalid),
+        // TODO this should be removed and is just there as an example
+        let handler = TopicHandler {dialect: HonoDialect};
+
+        match handler.handle(publish.topic().path()) {
+            Ok(topic) => {
+                match topic.device {
+                    Some(device) => {
+                        self
+                            .device_cache
+                            .fetch(device, |device| {
+                                self.auth
+                                    .authorize_as(
+                                        &self.application.metadata.name,
+                                        &self.device.metadata.name,
+                                        device,
+                                    )
+                                    .map_ok(|result| match result.outcome {
+                                        GatewayOutcome::Pass { r#as } => Some(r#as),
+                                        _ => None,
+                                    })
+                            })
+                            .await
+                            .map(|r| (topic.channel.to_string(), r))
+                    }
+                    None => {
+                        Ok((topic.channel.to_string(), self.device.clone()))
+                    }
+                }
+            }
+            Err(_) => Err(PublishError::TopicNameInvalid),
         }
+        // match topic.as_slice() {
+        //     [channel] => Ok((channel.to_string(), self.device.clone())),
+        //     [channel, as_device] => self
+        //         .device_cache
+        //         .fetch(as_device, |as_device| {
+        //             self.auth
+        //                 .authorize_as(
+        //                     &self.application.metadata.name,
+        //                     &self.device.metadata.name,
+        //                     as_device,
+        //                 )
+        //                 .map_ok(|result| match result.outcome {
+        //                     GatewayOutcome::Pass { r#as } => Some(r#as),
+        //                     _ => None,
+        //                 })
+        //         })
+        //         .await
+        //         .map(|r| (channel.to_string(), r)),
+        //     _ => Err(PublishError::TopicNameInvalid),
+        // }
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait(? Send)]
 impl<S> mqtt::Session for Session<S>
-where
-    S: Sink,
+    where
+        S: Sink,
 {
     #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
@@ -224,7 +287,7 @@ where
                         CommandFilter::wildcard(self.id.app_id.clone(), self.id.device_id.clone()),
                         false,
                     )
-                    .await;
+                        .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
                 ["command", "inbox", "", "#"] => {
@@ -233,7 +296,7 @@ where
                         CommandFilter::device(self.id.app_id.clone(), self.id.device_id.clone()),
                         false,
                     )
-                    .await;
+                        .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
                 ["command", "inbox", device, "#"] => {
@@ -246,7 +309,7 @@ where
                         ),
                         true,
                     )
-                    .await;
+                        .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
                 _ => {
