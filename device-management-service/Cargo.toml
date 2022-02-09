@@ -41,7 +41,7 @@ x509-parser = "0.9"
 reqwest = "0.11"
 
 drogue-cloud-database-common = { path = "../database-common" }
-drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-common = { path = "../service-common", features = ["jaeger"] }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-admin-service = { path = "../admin-service"  }

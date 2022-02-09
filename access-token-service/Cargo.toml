@@ -44,7 +44,7 @@ thiserror = "1"
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common", features = ["rustls"] }
+drogue-cloud-service-common = { path = "../service-common", features = ["rustls", "jaeger"] }
 drogue-cloud-registry-events = { path = "../registry-events" }
 
 [dev-dependencies]

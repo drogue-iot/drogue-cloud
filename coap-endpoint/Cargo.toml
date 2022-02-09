@@ -19,7 +19,7 @@ chrono = "0.4"
 dotenv = "0.15"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-common = { path = "../service-common", features = ["jaeger"] }
 drogue-client = "0.9.0-alpha.1"
 env_logger = "0.9"
 futures = "0.3"

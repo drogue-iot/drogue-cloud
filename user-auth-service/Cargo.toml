@@ -44,7 +44,7 @@ tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] 
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-common = { path = "../service-common", features = ["jaeger"] }
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-access-token-service = { path = "../access-token-service" }
 
