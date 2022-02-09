@@ -29,9 +29,11 @@ use std::{
 use tracing::instrument;
 
 
-// TODO this is the section for the example Implementation of the Dialects
-struct HonoDialect;
-struct LongTopicDialect;
+#[derive(Clone)]
+pub enum Dialect {
+    DrogueV1,
+    LongTopicDialect
+}
 
 struct ParseError;
 
@@ -40,23 +42,28 @@ struct ParsedTopic<'a> {
     device: Option<&'a str>,
 }
 
-struct TopicHandler<D> {
-    dialect: D
-}
 
-trait Dialect {
-    fn handle(&self, path: &str) -> Result<ParsedTopic, ParseError>;
-}
+impl Dialect {
 
-impl Dialect for TopicHandler<HonoDialect> {
-    fn handle(&self, path: &str) -> Result<ParsedTopic, ParseError> {
-        Ok(ParsedTopic { channel: path, device: Some(path) })
-    }
-}
+    fn handle<'a>(&self, path: &'a str) -> Result<ParsedTopic<'a>, ParseError> {
+        match &self {
+            Self::DrogueV1 => {
+                // This should mimic the behavior of the current parser
+                let topic = path.split('/').collect::<Vec<_>>();
+                log::debug!("Topic: {:?}", topic);
 
-impl Dialect for TopicHandler<LongTopicDialect> {
-    fn handle(&self, path: &str) -> Result<ParsedTopic, ParseError> {
-        Ok(ParsedTopic { channel: path, device: None })
+                match topic.as_slice() {
+                    [channel] => Ok(ParsedTopic {channel: channel, device: None}),
+                    [channel, as_device] => Ok(ParsedTopic {channel: channel, device: Some(as_device)}),
+                    _ => Err(ParseError),
+                }
+
+            },
+            Self::LongTopicDialect => {
+                // New Parsing strategy, just take the complete path
+                Ok(ParsedTopic { channel: path, device: None })
+            }
+        }
     }
 }
 
@@ -68,6 +75,7 @@ pub struct Session<S>
     sender: DownstreamSender<S>,
     application: registry::v1::Application,
     device: Arc<registry::v1::Device>,
+    dialect: Dialect,
     commands: Commands,
     auth: DeviceAuthenticator,
     sink: mqtt::Sink,
@@ -86,6 +94,7 @@ impl<S> Session<S>
         sender: DownstreamSender<S>,
         sink: mqtt::Sink,
         application: registry::v1::Application,
+        dialect: Dialect,
         device: registry::v1::Device,
         commands: Commands,
     ) -> Self {
@@ -101,6 +110,7 @@ impl<S> Session<S>
             sink,
             application,
             device: Arc::new(device),
+            dialect,
             commands,
             inbox_reader: Default::default(),
             device_cache,
@@ -142,13 +152,11 @@ impl<S> Session<S>
         &self,
         publish: &Publish<'_>,
     ) -> Result<(String, Arc<registry::v1::Device>), PublishError> {
-        let topic = publish.topic().path().split('/').collect::<Vec<_>>();
-        log::debug!("Topic: {:?}", topic);
+
 
         // TODO this should be removed and is just there as an example
-        let handler = TopicHandler {dialect: HonoDialect};
 
-        match handler.handle(publish.topic().path()) {
+        match &self.dialect.handle(publish.topic().path()) {
             Ok(topic) => {
                 match topic.device {
                     Some(device) => {
@@ -176,26 +184,7 @@ impl<S> Session<S>
             }
             Err(_) => Err(PublishError::TopicNameInvalid),
         }
-        // match topic.as_slice() {
-        //     [channel] => Ok((channel.to_string(), self.device.clone())),
-        //     [channel, as_device] => self
-        //         .device_cache
-        //         .fetch(as_device, |as_device| {
-        //             self.auth
-        //                 .authorize_as(
-        //                     &self.application.metadata.name,
-        //                     &self.device.metadata.name,
-        //                     as_device,
-        //                 )
-        //                 .map_ok(|result| match result.outcome {
-        //                     GatewayOutcome::Pass { r#as } => Some(r#as),
-        //                     _ => None,
-        //                 })
-        //         })
-        //         .await
-        //         .map(|r| (channel.to_string(), r)),
-        //     _ => Err(PublishError::TopicNameInvalid),
-        // }
+
     }
 }
 
