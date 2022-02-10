@@ -8,12 +8,15 @@ use crate::{controller::ControllerConfig, data::DittoAppStatus, ditto::Client as
 use async_trait::async_trait;
 use drogue_client::{
     core::v1::Conditions,
-    meta::v1::CommonMetadataMut,
+    meta::v1::{CommonMetadataExt, CommonMetadataMut},
     openid::{AccessTokenProvider, OpenIdTokenProvider, TokenProvider},
     registry, Translator,
 };
 use drogue_cloud_operator_common::controller::{
-    base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
+    base::{
+        ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, StatusSection,
+        CONDITION_RECONCILED,
+    },
     reconciler::{
         operation::HasFinalizer,
         progress::{Progressor, ResourceAccessor, RunConstructor},
@@ -155,7 +158,7 @@ where
     ) -> Result<ReconcileState<Self::Output, Self::Construct, Self::Deconstruct>, ReconcileError>
     {
         Self::eval_by_finalizer(
-            true,
+            app.metadata.has_label_flag("ditto"),
             app,
             FINALIZER,
             |app| ConstructContext { app },
@@ -211,6 +214,12 @@ where
         // remove finalizer
 
         ctx.app.metadata.remove_finalizer(FINALIZER);
+        ctx.app
+            .update_section(|c: Conditions| c.clear_ready(DittoAppStatus::ready_name()))?;
+
+        // remove status
+
+        ctx.app.clear_section::<DittoAppStatus>();
 
         // done
 
