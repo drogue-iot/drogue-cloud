@@ -37,7 +37,7 @@ with_kube = ["kube", "kube-runtime"]
 tokio = { version = "1", features = ["full"] }
 chrono = "0.4"
 drogue-cloud-test-common = { path = "../test-common" }
-env_logger = "0.7"
+env_logger = "0.9"
 actix-rt = "2.0.0-beta.2"
 actix-service = "2.0.0-beta.4"
 testcontainers = "0.12"

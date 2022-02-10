@@ -17,7 +17,7 @@ dotenv = "0.15"
 
 awc = "2"
 log = "0.4"
-env_logger = "0.8.4"
+env_logger = "0.9"
 futures = "0.3.1"
 bytes = "0.5.3"
 lazy_static = "1.4.0"

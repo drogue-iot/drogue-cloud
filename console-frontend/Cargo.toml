@@ -83,7 +83,7 @@ indexmap = "1.7.0"
 uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
 
 [dev-dependencies]
-env_logger = "0.7"
+env_logger = "0.9"
 
 [features]
 default = []

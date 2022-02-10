@@ -18,7 +18,7 @@ humantime = "2"
 humantime-serde = "1"
 config = "0.11"
 thiserror = "1"
-env_logger = "0.7"
+env_logger = "0.9"
 log = "0.4"
 
 serde = "1"
