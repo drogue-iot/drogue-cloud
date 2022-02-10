@@ -68,7 +68,7 @@ impl KafkaSink {
         config.create()
     }
 
-    #[instrument(skip(producer, message_record))]
+    #[instrument(level = "debug", skip(producer, message_record))]
     async fn send_with(
         producer: &FutureProducer,
         topic: String,
@@ -139,7 +139,7 @@ impl Sink for KafkaSink {
     type Error = KafkaSinkError;
 
     #[allow(clippy::needless_lifetimes)]
-    #[instrument]
+    #[instrument(level = "debug")]
     async fn publish<'a>(
         &self,
         target: SinkTarget<'a>,

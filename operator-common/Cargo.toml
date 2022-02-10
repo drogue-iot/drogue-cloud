@@ -10,6 +10,7 @@ async-trait = "0.1"
 log = "0.4"
 thiserror = "1"
 anyhow = "1"
+tracing = "0.1"
 
 serde = { version = "1" }
 serde_json = { version = "1" }

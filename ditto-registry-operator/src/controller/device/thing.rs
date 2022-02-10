@@ -17,6 +17,7 @@ use drogue_cloud_operator_common::controller::reconciler::{
     ReconcileError,
 };
 use http::StatusCode;
+use tracing::instrument;
 
 pub struct CreateThing<'o> {
     pub config: &'o ControllerConfig,
@@ -30,6 +31,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateThing<'o> {
         "CreateThing".into()
     }
 
+    #[instrument(skip_all, ret)]
     async fn run(
         &self,
         ctx: ConstructContext,
@@ -66,6 +68,7 @@ pub struct DeleteThing<'o> {
 }
 
 impl<'o> DeleteThing<'o> {
+    #[instrument(skip_all, ret)]
     pub async fn run(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let resp = self
             .ditto

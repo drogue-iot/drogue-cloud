@@ -48,7 +48,7 @@ impl<T> DeviceCache<T> {
         }
     }
 
-    #[instrument(skip(self, retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
+    #[instrument(level = "debug", skip(self, retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
     pub async fn fetch<'f, F, Fut, E>(
         &self,
         as_device: &'f str,
@@ -86,7 +86,7 @@ impl<T> DeviceCache<T> {
     }
 
     /// Load device information and cache the outcome.
-    #[instrument(skip(self,cache,retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
+    #[instrument(level = "debug", skip(self,cache,retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
     async fn load_and_cache<'f, F, Fut, E>(
         &self,
         as_device: &'f str,

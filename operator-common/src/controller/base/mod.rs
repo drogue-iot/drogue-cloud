@@ -27,6 +27,7 @@ use std::{
     time::Duration,
 };
 use tokio_postgres::NoTls;
+use tracing::instrument;
 
 pub const CONDITION_RECONCILED: &str = "Reconciled";
 
@@ -222,13 +223,14 @@ where
 #[async_trait]
 pub trait ControllerOperation<K, RI, RO>: ResourceOperations<K, RI, RO>
 where
-    K: Send + Sync,
+    K: Debug + Send + Sync,
     RI: Clone + Send + Sync,
     RO: Clone + Send + Sync,
 {
     async fn process_resource(&self, application: RI)
         -> Result<ProcessOutcome<RO>, ReconcileError>;
 
+    #[instrument(skip(self), ret)]
     /// Process the key, any permanent error returned is a fatal error,
     async fn process(&self, key: &K) -> Result<OperationOutcome, ReconcileError> {
         // read the resource ...

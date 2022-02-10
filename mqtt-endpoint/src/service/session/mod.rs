@@ -105,7 +105,7 @@ where
         }
     }
 
-    #[instrument(skip(self), fields(self.id = ?self.id))]
+    #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
     async fn eval_device(
         &self,
         publish: &Publish<'_>,
@@ -141,7 +141,7 @@ impl<S> mqtt::Session for Session<S>
 where
     S: Sink,
 {
-    #[instrument(skip(self),fields(self.id = ?self.id),err)]
+    #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
         let content_type = publish
             .properties()

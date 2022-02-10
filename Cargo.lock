@@ -1685,7 +1685,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-client"
 version = "0.9.0-alpha.1"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=568602f6b11edcee5680f9ac3e15b73f966bfba3#568602f6b11edcee5680f9ac3e15b73f966bfba3"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=e6ad0eca498e71dfe515e275c1b17a627d1164a1#e6ad0eca498e71dfe515e275c1b17a627d1164a1"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2318,6 +2318,7 @@ dependencies = [
  "thiserror",
  "tokio 1.16.1",
  "tokio-postgres",
+ "tracing",
 ]
 
 [[package]]

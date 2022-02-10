@@ -5,11 +5,13 @@ use deadpool_postgres::tokio_postgres::types::Type;
 use deadpool_postgres::{Pool, PoolError};
 use drogue_cloud_database_common::Client;
 use serde::Deserialize;
+use std::fmt::{Debug, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::instrument;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct WorkQueueConfig {
@@ -21,6 +23,16 @@ pub struct WorkQueueWriter {
     instance: String,
     r#type: String,
     pool: Pool,
+}
+
+impl Debug for WorkQueueWriter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WorkQueueWriter")
+            .field("instance", &self.instance)
+            .field("type", &self.r#type)
+            .field("pool", &"...")
+            .finish()
+    }
 }
 
 pub struct WorkQueueReader<K>
@@ -138,6 +150,7 @@ impl WorkQueueWriter {
         }
     }
 
+    #[instrument]
     pub async fn add<K>(&self, key: K, after: Duration) -> Result<(), ()>
     where
         K: Key,
@@ -145,6 +158,7 @@ impl WorkQueueWriter {
         Ok(self.insert(key, after).await.map_err(|_| ())?)
     }
 
+    #[instrument(ret)]
     async fn insert<K>(&self, key: K, after: Duration) -> Result<(), PoolError>
     where
         K: Key,
@@ -237,6 +251,7 @@ impl<K> InnerReader<K>
 where
     K: Key,
 {
+    #[instrument(skip(self), ret)]
     async fn next(&self) -> Option<Entry<K>> {
         while self.running.load(Ordering::Relaxed) {
             match self.fetch().await {
@@ -258,6 +273,7 @@ where
         None
     }
 
+    #[instrument(skip(self), ret)]
     async fn fetch(&self) -> Result<Option<Entry<K>>, anyhow::Error> {
         let c = self.pool.get().await?;
 
@@ -309,6 +325,7 @@ LIMIT 1
         }
     }
 
+    #[instrument(skip(self), ret)]
     async fn ack(&self, entry: Entry<K>) {
         if let Err(err) = self
             .do_ack(entry.key.to_string(), entry.timestamp, entry.gen)
@@ -319,6 +336,7 @@ LIMIT 1
         }
     }
 
+    #[instrument(skip(self), ret)]
     async fn do_ack(&self, key: String, ts: DateTime<Utc>, gen: u64) -> Result<(), anyhow::Error> {
         let c = self.pool.get().await?;
 

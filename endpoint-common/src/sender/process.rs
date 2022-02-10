@@ -48,7 +48,7 @@ impl Processor {
         Self(spec)
     }
 
-    #[instrument(skip_all, err, fields(num_rules=self.0.rules.len()))]
+    #[instrument(level = "debug", skip_all, err, fields(num_rules=self.0.rules.len()))]
     pub async fn process(&self, mut event: cloudevents::Event) -> Result<Outcome, Error> {
         for rule in &self.0.rules {
             if Self::is_when(&rule.when, &event) {

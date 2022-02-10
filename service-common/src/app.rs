@@ -1,3 +1,4 @@
+use std::env;
 #[macro_export]
 macro_rules! app {
     () => {
@@ -31,8 +32,20 @@ Drogue IoT {} - {} {} ({})
     }};
 }
 
+fn enable_tracing() -> bool {
+    env::var("ENABLE_TRACING")
+        .ok()
+        .map(|s| s.eq_ignore_ascii_case("true"))
+        .unwrap_or_default()
+}
+
 #[cfg(feature = "jaeger")]
 pub fn init_tracing(name: &str) {
+    if !enable_tracing() {
+        init_no_tracing();
+        return;
+    }
+
     use crate::tracing::{self, tracing_subscriber::prelude::*};
 
     tracing::opentelemetry::global::set_text_map_propagator(
@@ -52,6 +65,10 @@ pub fn init_tracing(name: &str) {
 
 #[cfg(not(feature = "jaeger"))]
 fn init_tracing(_: &str) {
+    init_no_tracing()
+}
+
+fn init_no_tracing() {
     env_logger::init();
     log::info!("No tracing implementation enabled");
 }

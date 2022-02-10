@@ -155,7 +155,7 @@ where
     type Construct = ConstructContext;
     type Deconstruct = DeconstructContext;
 
-    #[instrument(skip(self), fields(application=%app.metadata.name),ret)]
+    #[instrument(skip(self), fields(application=%app.metadata.name), err)]
     async fn eval_state(
         &self,
         app: Self::Input,
@@ -174,7 +174,7 @@ where
         )
     }
 
-    #[instrument(skip(self, ctx), ret)]
+    #[instrument(skip(self, ctx), err)]
     async fn construct(
         &self,
         ctx: Self::Construct,

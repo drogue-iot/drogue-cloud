@@ -23,6 +23,7 @@ use drogue_cloud_service_api::kafka::{
 };
 use indexmap::IndexMap;
 use std::time::Duration;
+use tracing::instrument;
 use url::Url;
 
 struct DittoKafkaOptions {
@@ -78,6 +79,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateApplication<'o> {
 }
 
 impl<'a> CreateApplication<'a> {
+    #[instrument(skip_all)]
     async fn create_inbound(
         &self,
         ctx: ConstructContext,
@@ -93,6 +95,7 @@ impl<'a> CreateApplication<'a> {
         Ok(ctx)
     }
 
+    #[instrument(skip_all)]
     async fn create_outbound(
         &self,
         ctx: ConstructContext,
@@ -104,6 +107,7 @@ impl<'a> CreateApplication<'a> {
         Ok(ctx)
     }
 
+    #[instrument(skip_all, ret)]
     async fn create_connection(&self, connection: Connection) -> Result<(), ReconcileError> {
         let command = DevopsCommand {
             target_actor_selection: "/system/sharding/connection".to_string(),
@@ -167,6 +171,7 @@ impl<'o> DeleteApplication<'o> {
         Ok(())
     }
 
+    #[instrument(skip_all, ret)]
     async fn delete_connection(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         delete_connection(
             self.ditto,
@@ -183,6 +188,7 @@ impl<'o> DeleteApplication<'o> {
         Ok(())
     }
 
+    #[instrument(skip_all, ret)]
     async fn block_namespace(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let response = self
             .ditto
@@ -203,6 +209,7 @@ impl<'o> DeleteApplication<'o> {
         eval_ns_response(response)
     }
 
+    #[instrument(skip_all, ret)]
     async fn unblock_namespace(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let response = self
             .ditto
@@ -223,6 +230,7 @@ impl<'o> DeleteApplication<'o> {
         eval_ns_response(response)
     }
 
+    #[instrument(skip_all, ret)]
     async fn purge_namespace(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let response = self
             .ditto

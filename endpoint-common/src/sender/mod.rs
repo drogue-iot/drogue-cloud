@@ -173,6 +173,7 @@ where
 
     #[allow(clippy::needless_lifetimes)]
     #[instrument(
+        level = "debug",
         skip(self,publish,body),
         field(
             application=publish.application.metadata.name,
