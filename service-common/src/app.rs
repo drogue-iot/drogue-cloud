@@ -1,3 +1,4 @@
+use opentelemetry::sdk::trace::Sampler;
 use std::env;
 #[macro_export]
 macro_rules! app {
@@ -46,21 +47,30 @@ pub fn init_tracing(name: &str) {
         return;
     }
 
+    println!("Using Jaeger tracing");
+
     use crate::tracing::{self, tracing_subscriber::prelude::*};
 
     tracing::opentelemetry::global::set_text_map_propagator(
         tracing::opentelemetry::sdk::propagation::TraceContextPropagator::new(),
     );
-    let tracer = tracing::opentelemetry_jaeger::new_pipeline()
+    let pipeline = tracing::opentelemetry_jaeger::new_pipeline()
         .with_service_name(name)
+        .with_trace_config(
+            tracing::opentelemetry::sdk::trace::Config::default().with_sampler(
+                Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(0.001))),
+            ),
+        );
+
+    println!("{:#?}", pipeline);
+
+    let tracer = pipeline
         .install_batch(tracing::opentelemetry::runtime::Tokio)
         .unwrap();
 
     tracing::tracing_subscriber::Registry::default()
         .with(tracing::tracing_opentelemetry::layer().with_tracer(tracer))
         .init();
-
-    log::info!("Using Jaeger tracing");
 }
 
 #[cfg(not(feature = "jaeger"))]
@@ -70,5 +80,5 @@ fn init_tracing(_: &str) {
 
 fn init_no_tracing() {
     env_logger::init();
-    log::info!("No tracing implementation enabled");
+    log::info!("Tracing is not enabled");
 }
