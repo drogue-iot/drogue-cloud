@@ -27,7 +27,7 @@ cloudevents-sdk = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 mime = "0.3"
 
-rdkafka = { version = "0.25", features = ["ssl", "sasl"], optional = true }
+rdkafka = { version = "0.28", features = ["ssl", "sasl"], optional = true }
 
 drogue-cloud-database-common = { path = "../database-common", optional = true }
 drogue-cloud-event-common = { path = "../event-common" }

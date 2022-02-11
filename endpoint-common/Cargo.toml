@@ -40,7 +40,7 @@ thiserror = "1"
 
 cloudevents-sdk = { version = "0.4", features = ["actix", "reqwest", "rdkafka"] }
 
-rdkafka = { version = "0.25", features = ["ssl", "sasl"] }
+rdkafka = { version = "0.28", features = ["ssl", "sasl"] }
 
 percent-encoding = "2"
 base64 = "0.13"

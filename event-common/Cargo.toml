@@ -20,7 +20,7 @@ cloudevents-sdk = { version = "0.4", features = ["rdkafka"] }
 drogue-cloud-service-api = { path = "../service-api" }
 
 [dependencies.rdkafka]
-version = "0.25"
+version = "0.28"
 features = ["ssl", "sasl"]
 
 [dev-dependencies]

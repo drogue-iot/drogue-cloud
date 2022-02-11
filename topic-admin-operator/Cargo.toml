@@ -37,4 +37,4 @@ drogue-cloud-operator-common = { path = "../operator-common", features = ["with_
 
 drogue-client = "0.9.0-alpha.1"
 
-rdkafka = "0.25.0"
+rdkafka = "0.28.0"

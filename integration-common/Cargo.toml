@@ -33,5 +33,5 @@ drogue-cloud-event-common = { path = "../event-common" }
 drogue-client = "0.9.0-alpha.1"
 
 [dependencies.rdkafka]
-version = "0.25"
+version = "0.28"
 features = ["ssl", "sasl"]

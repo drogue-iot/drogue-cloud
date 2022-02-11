@@ -1111,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk"
 version = "0.4.0"
-source = "git+https://github.com/cloudevents/sdk-rust?branch=actix-web-4.0.0-beta.19#2d2a4d57a102e0415d6a25b760be296820db35e0"
+source = "git+https://github.com/cloudevents/sdk-rust?branch=actix-web-4.0.0-beta.19#7871ea63ebcfdb18a901b4cdfbca3c65327f12df"
 dependencies = [
  "actix-http 3.0.0-beta.18",
  "actix-web",
@@ -4959,9 +4959,9 @@ dependencies = [
 
 [[package]]
 name = "rdkafka"
-version = "0.25.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8acd8f5c5482fdf89e8878227bafa442d8c4409f6287391c85549ca83626c27"
+checksum = "1de127f294f2dba488ed46760b129d5ecbeabbd337ccbf3739cb29d50db2161c"
 dependencies = [
  "futures",
  "libc",
@@ -4976,9 +4976,9 @@ dependencies = [
 
 [[package]]
 name = "rdkafka-sys"
-version = "3.0.0+1.6.0"
+version = "4.2.0+1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca35e95c88e08cdc643b25744e38ccee7c93c7e90d1ac6850fe74cbaa40803c3"
+checksum = "9e542c6863b04ce0fa0c5719bc6b7b348cf8dd21af1bb03c9db5f9805b2a6473"
 dependencies = [
  "cmake",
  "libc",

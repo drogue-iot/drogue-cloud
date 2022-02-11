@@ -56,10 +56,7 @@ where
     Ack: AckMode,
 {
     _marker: PhantomData<Ack>,
-    upstream: OwningHandle<
-        Box<StreamConsumer>,
-        Box<rdkafka::consumer::MessageStream<'s, DefaultConsumerContext>>,
-    >,
+    upstream: OwningHandle<Box<StreamConsumer>, Box<rdkafka::consumer::MessageStream<'s>>>,
     topic: String,
 }
 
