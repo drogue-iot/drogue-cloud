@@ -33,7 +33,6 @@ impl From<serde_json::Error> for ReconcileError {
 impl From<kube::Error> for ReconcileError {
     fn from(err: kube::Error) -> Self {
         match err {
-            kube::Error::Connection(_) => Self::temporary(err),
             _ => Self::permanent(err),
         }
     }

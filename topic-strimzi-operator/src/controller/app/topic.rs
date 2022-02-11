@@ -12,6 +12,7 @@ use kube::{
     Api, Resource,
 };
 use operator_framework::process::create_or_update_by;
+use operator_framework::utils::UseOrCreate;
 use serde_json::json;
 
 pub struct CreateTopic<'o> {
@@ -42,14 +43,14 @@ impl CreateTopic<'_> {
             |this, that| this.metadata == that.metadata && this.data == that.data,
             |mut topic| {
                 // set target cluster
-                topic
-                    .metadata
-                    .labels
-                    .insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
-                topic
-                    .metadata
-                    .annotations
-                    .insert(ANNOTATION_APP_NAME.into(), target.app_name().into());
+                topic.metadata.labels.use_or_create(|labels| {
+                    labels.insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
+                });
+
+                topic.metadata.annotations.use_or_create(|annotations| {
+                    annotations.insert(ANNOTATION_APP_NAME.into(), target.app_name().into());
+                });
+
                 // set config
                 topic.data["spec"] = json!({
                     "config": {},

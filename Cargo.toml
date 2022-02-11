@@ -45,7 +45,7 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "bf45eda16ad77335b92ec5916d5b27be8e8711dc" } # FIXME: awaiting release
 #drogue-client = { path = "../drogue-client" }
 
-#operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "b2b0fc88beca2deb07bad6a963d0d5322c9ddff8" }
+operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" }
 
 actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.4 when available
 

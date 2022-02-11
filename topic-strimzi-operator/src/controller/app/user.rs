@@ -15,6 +15,7 @@ use kube::{
     api::{ApiResource, DynamicObject},
     Api, Resource,
 };
+use operator_framework::utils::UseOrCreate;
 use operator_framework::{
     install::Delete,
     process::{create_or_update, create_or_update_by},
@@ -52,13 +53,13 @@ impl CreateUser<'_> {
             },
             |this, that| this.metadata == that.metadata && this.data == that.data,
             |mut user| {
-                // set target cluster
-                user.metadata
-                    .labels
-                    .insert(LABEL_KAFKA_CLUSTER.into(), self.config.cluster_name.clone());
-                user.metadata
-                    .annotations
-                    .insert(ANNOTATION_APP_NAME.into(), app.clone());
+                user.metadata.labels.use_or_create(|labels| {
+                    // set target cluster
+                    labels.insert(LABEL_KAFKA_CLUSTER.into(), self.config.cluster_name.clone());
+                });
+                user.metadata.annotations.use_or_create(|annotations| {
+                    annotations.insert(ANNOTATION_APP_NAME.into(), app.clone());
+                });
 
                 let password = match password.is_some() {
                     true => Some(json!({
@@ -130,14 +131,15 @@ impl CreateUser<'_> {
                 Some(&self.config.topic_namespace),
                 password_name,
                 |mut secret| {
-                    secret
-                        .metadata
-                        .annotations
-                        .insert(ANNOTATION_APP_NAME.into(), app.clone());
-                    secret.data.clear();
-                    secret
-                        .data
-                        .insert(KEY_PASSWORD.into(), ByteString(password.into_bytes()));
+                    secret.metadata.annotations.use_or_create(|annotations| {
+                        annotations.insert(ANNOTATION_APP_NAME.into(), app.clone());
+                    });
+
+                    secret.data.use_or_create(|data| {
+                        data.clear();
+                        data.insert(KEY_PASSWORD.into(), ByteString(password.into_bytes()));
+                    });
+
                     Ok::<_, ReconcileError>(secret)
                 },
             )
@@ -212,7 +214,8 @@ impl<'o> ProgressOperation<ConstructContext> for UserReady<'o> {
             ctx.app_user_name.as_ref().cloned(),
             app_user_secret.and_then(|s| {
                 s.data
-                    .get(KEY_PASSWORD)
+                    .as_ref()
+                    .and_then(|data| data.get(KEY_PASSWORD))
                     .and_then(|s| String::from_utf8(s.0.clone()).ok())
             }),
         ) {

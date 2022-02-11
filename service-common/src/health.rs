@@ -99,9 +99,9 @@ macro_rules! health_endpoint {
 }
 
 macro_rules! health_app {
-    ($checker:expr) => {
+    ($checker:expr, $app_data:ident) => {
         App::new()
-            .app_data($checker.clone())
+            .$app_data($checker.clone())
             .route("/", web::get().to(index))
             .route("/readiness", web::get().to(readiness))
             .route("/liveness", web::get().to(liveness))
@@ -143,7 +143,7 @@ impl HealthServer {
         HttpServer::new(move || {
             use actix_web::App;
 
-            health_app!(checker).wrap(prometheus.clone())
+            health_app!(checker, app_data).wrap(prometheus.clone())
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)
@@ -157,13 +157,13 @@ impl HealthServer {
     pub async fn run_ntex(self) -> anyhow::Result<()> {
         use ntex::web as ntex_web;
         use ntex::web;
-        use ntex::web::types::Data;
+        use ntex::web::types::State as Data;
         health_endpoint!(ntex_web);
 
-        let checker = ntex::web::types::Data::new(self.checker);
+        let checker = ntex::web::types::State::new(self.checker);
         ntex::web::server(move || {
             use ntex::web::App;
-            health_app!(checker).route("/metrics", web::get().to(HealthServer::metrics))
+            health_app!(checker, app_state).route("/metrics", web::get().to(HealthServer::metrics))
         })
         .bind(self.config.bind_addr)?
         .workers(self.config.workers)

@@ -87,7 +87,11 @@ where
     }
 
     fn extract<R: Resource>(&self, resource: &R) -> Option<String> {
-        resource.meta().annotations.get(&self.annotation).cloned()
+        resource
+            .meta()
+            .annotations
+            .as_ref()
+            .and_then(|a| a.get(&self.annotation).cloned())
     }
 }
 
