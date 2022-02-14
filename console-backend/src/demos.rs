@@ -15,7 +15,11 @@ pub async fn get_demos(
         .await
         .map_err(|_| ServiceError::ServiceUnavailable("Failed to enumerate demos".into()))?
     {
-        if let (Some(label), Some(href)) = (cm.data.get("label"), cm.data.get("href")) {
+        if let Some((label, href)) = cm
+            .data
+            .as_ref()
+            .and_then(|data| data.get("label").zip(data.get("href")))
+        {
             result.push((label.to_string(), href.to_string()));
         }
     }
