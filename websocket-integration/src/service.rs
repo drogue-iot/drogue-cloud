@@ -140,7 +140,10 @@ impl<TP: TokenProvider> Service<TP> {
 
         // create stream
         let stream = EventStream::new(EventStreamConfig {
-            kafka: app_res.kafka_config(KafkaEventType::Events, kafka_config)?,
+            kafka: app_res
+                .kafka_target(KafkaEventType::Events, kafka_config)
+                .map_err(|_| ServiceError::InternalError("This should be infallible".into()))?
+                .into(),
             consumer_group: group_id,
         })
         .map_err(|err| {

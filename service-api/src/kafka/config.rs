@@ -52,7 +52,7 @@ impl From<KafkaClientConfig> for rdkafka::ClientConfig {
     }
 }
 
-impl Deref for KafkaConfig {
+impl<'a> Deref for KafkaConfig {
     type Target = KafkaClientConfig;
 
     fn deref(&self) -> &Self::Target {

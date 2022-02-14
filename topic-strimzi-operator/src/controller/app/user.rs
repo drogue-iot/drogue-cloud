@@ -1,8 +1,9 @@
 use super::{condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER};
 use crate::controller::ControllerConfig;
 use async_trait::async_trait;
+use drogue_client::registry::v1::DownstreamSpec;
 use drogue_client::{
-    registry::v1::{Application, DownstreamSpec, KafkaAppStatus, KafkaUserStatus},
+    registry::v1::{Application, KafkaAppStatus, KafkaUserStatus},
     Translator,
 };
 use drogue_cloud_operator_common::controller::reconciler::{
@@ -15,10 +16,10 @@ use kube::{
     api::{ApiResource, DynamicObject},
     Api, Resource,
 };
-use operator_framework::utils::UseOrCreate;
 use operator_framework::{
     install::Delete,
     process::{create_or_update, create_or_update_by},
+    utils::UseOrCreate,
 };
 use serde_json::json;
 
@@ -35,11 +36,12 @@ impl CreateUser<'_> {
     async fn ensure_kafka_user(
         &self,
         app: String,
+        // a user provided password to apply
         password: Option<String>,
     ) -> Result<(DynamicObject, String), ReconcileError> {
-        let user_name = make_kafka_resource_name(ResourceType::Users(app.clone()));
-        let topic_name = make_kafka_resource_name(ResourceType::Events(app.clone()));
-        let password_name = make_kafka_resource_name(ResourceType::Passwords(app.clone()));
+        let user_name = make_kafka_resource_name(ResourceType::Users(&app));
+        let topic_name = make_kafka_resource_name(ResourceType::Events(&app));
+        let password_name = make_kafka_resource_name(ResourceType::Passwords(&app));
 
         let user = create_or_update_by(
             self.users_api,
@@ -249,9 +251,5 @@ impl<'o> ProgressOperation<ConstructContext> for UserReady<'o> {
 fn find_user_password(app: &Application) -> Option<String> {
     app.section::<DownstreamSpec>()
         .and_then(|s| s.ok())
-        .and_then(|spec| match spec {
-            DownstreamSpec::Internal(spec) => Some(spec),
-            _ => None,
-        })
         .and_then(|spec| spec.password)
 }

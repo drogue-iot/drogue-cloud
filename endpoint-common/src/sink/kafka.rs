@@ -7,9 +7,7 @@ use cloudevents::{
     AttributesReader,
 };
 use drogue_client::{core, registry, Translator};
-use drogue_cloud_service_api::kafka::{
-    KafkaClientConfig, KafkaConfigExt, KafkaEventType, KafkaTarget,
-};
+use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfigExt, KafkaEventType};
 use drogue_cloud_service_common::config::ConfigFromEnv;
 use futures::channel::oneshot;
 use rdkafka::{
@@ -154,9 +152,9 @@ impl Sink for KafkaSink {
             return Err(SinkError::Transport(KafkaSinkError::NotReady));
         }
 
-        let kafka = match target {
-            SinkTarget::Commands(app) => app.kafka_target(KafkaEventType::Commands),
-            SinkTarget::Events(app) => app.kafka_target(KafkaEventType::Events),
+        let topic = match target {
+            SinkTarget::Commands(app) => app.kafka_topic(KafkaEventType::Commands),
+            SinkTarget::Events(app) => app.kafka_topic(KafkaEventType::Events),
         }
         .map_err(|err| SinkError::Target(Box::new(err)))?;
 
@@ -166,24 +164,11 @@ impl Sink for KafkaSink {
         }
         .into();
 
-        log::debug!("Key: {}, Kafka Config: {:?}", key, kafka);
+        log::debug!("Key: {}, Kafka Topic: {:?}", key, topic);
 
         let message_record = MessageRecord::from_event(event)?;
 
-        match kafka {
-            KafkaTarget::Internal { topic } => {
-                Self::send_with(&self.internal_producer, topic, key, message_record).await
-            }
-            KafkaTarget::External { config } => {
-                let topic = config.topic;
-                match Self::create_producer(config.client) {
-                    Ok(producer) => Self::send_with(&producer, topic, key, message_record).await,
-                    Err(err) => {
-                        return Err(SinkError::Transport(KafkaSinkError::Kafka(err)));
-                    }
-                }
-            }
-        }
+        Self::send_with(&self.internal_producer, topic, key, message_record).await
     }
 }
 

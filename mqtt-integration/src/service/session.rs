@@ -179,7 +179,8 @@ where
 
         let event_stream = EventStream::new(EventStreamConfig {
             kafka: app_res
-                .kafka_config(KafkaEventType::Events, &self.config.kafka)
+                .kafka_target(KafkaEventType::Events, &self.config.kafka)
+                .map(|target| target.into())
                 .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
             consumer_group: group_id,
         })
