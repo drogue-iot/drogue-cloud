@@ -47,8 +47,6 @@ pub fn init_tracing(name: &str) {
         return;
     }
 
-    println!("Using Jaeger tracing");
-
     use crate::tracing::{self, tracing_subscriber::prelude::*};
 
     tracing::opentelemetry::global::set_text_map_propagator(
@@ -62,7 +60,9 @@ pub fn init_tracing(name: &str) {
             ),
         );
 
+    println!("Using Jaeger tracing.");
     println!("{:#?}", pipeline);
+    println!("Tracing is enabled. This console will not show any logging information.");
 
     let tracer = pipeline
         .install_batch(tracing::opentelemetry::runtime::Tokio)
