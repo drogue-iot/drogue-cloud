@@ -69,6 +69,7 @@ pub fn init_tracing(name: &str) {
         .unwrap();
 
     tracing::tracing_subscriber::Registry::default()
+        .with(tracing::tracing_subscriber::EnvFilter::from_default_env())
         .with(tracing::tracing_opentelemetry::layer().with_tracer(tracer))
         .init();
 }
