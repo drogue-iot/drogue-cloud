@@ -139,7 +139,11 @@ impl Sink for KafkaSink {
     type Error = KafkaSinkError;
 
     #[allow(clippy::needless_lifetimes)]
-    #[instrument(level = "debug")]
+    #[instrument(level = "debug", skip_all, fields(
+        application=%target.metadata.name,
+        id=%event.id(),
+        device=?event.extension("device"),
+    ))]
     async fn publish<'a>(
         &self,
         target: SinkTarget<'a>,
