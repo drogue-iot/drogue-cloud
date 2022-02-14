@@ -19,7 +19,7 @@ chrono = "0.4"
 dotenv = "0.15"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common", features = ["jaeger"] }
+drogue-cloud-service-common = { path = "../service-common" }
 drogue-client = "0.9.0-alpha.1"
 env_logger = "0.9"
 futures = "0.3"
@@ -34,3 +34,7 @@ prometheus = { version = "^0.13", default-features = false }
 [dev-dependencies]
 url = "2.2"
 regex = "1.5"
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

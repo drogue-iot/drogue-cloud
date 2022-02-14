@@ -36,7 +36,7 @@ uuid = { version = "0.8", features = ["v4"] }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common", features = ["jaeger"] }
+drogue-cloud-service-common = { path = "../service-common" }
 
 drogue-client = "0.9.0-alpha.1"
 drogue-ttn = "0.5"
@@ -51,6 +51,7 @@ package = "openssl"
 features = ["v111"]
 
 [features]
-default = ["openssl"]
+default = ["openssl", "jaeger"]
 openssl = ["drogue-cloud-service-api/openssl"]
 rustls = ["drogue-cloud-service-api/rustls"]
+jaeger = ["drogue-cloud-service-common/jaeger"]
