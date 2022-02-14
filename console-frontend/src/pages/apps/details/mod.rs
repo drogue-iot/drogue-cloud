@@ -3,11 +3,9 @@ mod debug;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
-use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::{
-    backend::{Backend, Token},
-    error::error,
+    backend::{ApiResponse, Backend, Json, JsonHandlerScopeExt, Nothing, RequestHandle, Token},
+    error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
     page::AppRoute,
     pages::{
@@ -21,7 +19,6 @@ use crate::{
 };
 use drogue_client::registry::v1::Application;
 use drogue_cloud_console_common::EndpointInformation;
-use drogue_cloud_service_api::kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget};
 use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
@@ -284,22 +281,6 @@ impl Details {
                         <DescriptionList>
                             <DescriptionGroup term="State">
                                 {app.render_condition("KafkaReady")}
-                            </DescriptionGroup>
-                            <DescriptionGroup term="Type">
-                            {
-                                match app.kafka_target(KafkaEventType::Events) {
-                                    Ok(KafkaTarget::Internal{..}) => html!{
-                                        {"Internal "}
-                                    },
-                                    Ok(KafkaTarget::External{..}) => html!{
-                                        {"External"}
-                                    },
-                                    Err(err) => {
-                                        log::info!("Failed to eval kafka target: {}", err);
-                                        html!{}
-                                    },
-                                }
-                            }
                             </DescriptionGroup>
                         </DescriptionList>
                     </Card>

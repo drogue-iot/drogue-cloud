@@ -10,7 +10,7 @@ use drogue_client::{
 };
 use drogue_cloud_service_api::{
     endpoints::{Endpoints, HttpEndpoint, MqttEndpoint},
-    kafka::{KafkaConfigExt, KafkaEventType, KafkaTarget},
+    kafka::{KafkaConfigExt, KafkaEventType},
 };
 use java_properties::PropertiesWriter;
 use monaco::{
@@ -26,7 +26,7 @@ use yew::prelude::*;
 
 struct KafkaInfo {
     pub bootstrap: String,
-    pub target: KafkaTarget,
+    pub topic: String,
     pub user: KafkaUserStatus,
 }
 
@@ -203,7 +203,7 @@ impl IntegrationDetails<'_> {
     fn kafka_info(&self) -> Option<KafkaInfo> {
         let bootstrap = self.endpoints.kafka_bootstrap_servers.as_ref().cloned();
 
-        let target = self.application.kafka_target(KafkaEventType::Events);
+        let topic = self.application.kafka_topic(KafkaEventType::Events);
 
         let user = self
             .application
@@ -211,10 +211,10 @@ impl IntegrationDetails<'_> {
             .and_then(|s| s.ok())
             .and_then(|s| s.user);
 
-        match (bootstrap, target, user) {
-            (Some(bootstrap), Ok(target), Some(user)) => Some(KafkaInfo {
+        match (bootstrap, topic, user) {
+            (Some(bootstrap), Ok(topic), Some(user)) => Some(KafkaInfo {
                 bootstrap,
-                target,
+                topic,
                 user,
             }),
             _ => None,
@@ -231,11 +231,7 @@ impl IntegrationDetails<'_> {
     }
 
     fn render_kafka_examples(&self, info: &KafkaInfo) -> Html {
-        let topic = match &info.target {
-            KafkaTarget::Internal { topic } => topic.clone(),
-            KafkaTarget::External { config } => config.topic.clone(),
-        };
-
+        let topic = &info.topic;
         let podman = {
             let mut command = format!(
                 r#"podman run --rm -ti docker.io/bitnami/kafka:latest kafka-console-consumer.sh
@@ -371,29 +367,12 @@ stringData:
         html! {
             <>
             <DescriptionList>
-                {
-                    match &info.target {
-                        KafkaTarget::Internal { topic } => {
-                            html! {
-                                <>
-                                <DescriptionGroup term="Device-to-Cloud topic">
-                                    <Clipboard code=true readonly=true value={topic.clone()}/>
-                                </DescriptionGroup>
-                                <DescriptionGroup term="Bootstrap Servers">
-                                    <Clipboard code=true readonly=true value={info.bootstrap.clone()}/>
-                                </DescriptionGroup>
-                                </>
-                            }
-                        }
-                        KafkaTarget::External { config } => {
-                            html! {
-                                 <DescriptionGroup term="Device-to-Cloud topic">
-                                    <Clipboard code=true readonly=true value={config.topic.clone()}/>
-                                </DescriptionGroup>
-                            }
-                        }
-                    }
-                }
+                <DescriptionGroup term="Device-to-Cloud topic">
+                    <Clipboard code=true readonly=true value={info.topic.clone()}/>
+                </DescriptionGroup>
+                <DescriptionGroup term="Bootstrap Servers">
+                    <Clipboard code=true readonly=true value={info.bootstrap.clone()}/>
+                </DescriptionGroup>
 
                 <DescriptionGroup term="User">
                     <Clipboard code=true readonly=true value={info.user.username.clone()}/>
