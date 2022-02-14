@@ -28,11 +28,10 @@ use std::{
 };
 use tracing::instrument;
 
-
 #[derive(Clone)]
 pub enum Dialect {
     DrogueV1,
-    LongTopicDialect
+    LongTopicDialect,
 }
 
 struct ParseError;
@@ -42,9 +41,7 @@ struct ParsedTopic<'a> {
     device: Option<&'a str>,
 }
 
-
 impl Dialect {
-
     fn handle<'a>(&self, path: &'a str) -> Result<ParsedTopic<'a>, ParseError> {
         match &self {
             Self::DrogueV1 => {
@@ -53,15 +50,23 @@ impl Dialect {
                 log::debug!("Topic: {:?}", topic);
 
                 match topic.as_slice() {
-                    [channel] => Ok(ParsedTopic {channel: channel, device: None}),
-                    [channel, as_device] => Ok(ParsedTopic {channel: channel, device: Some(as_device)}),
+                    [channel] => Ok(ParsedTopic {
+                        channel: channel,
+                        device: None,
+                    }),
+                    [channel, as_device] => Ok(ParsedTopic {
+                        channel: channel,
+                        device: Some(as_device),
+                    }),
                     _ => Err(ParseError),
                 }
-
-            },
+            }
             Self::LongTopicDialect => {
                 // New Parsing strategy, just take the complete path
-                Ok(ParsedTopic { channel: path, device: None })
+                Ok(ParsedTopic {
+                    channel: path,
+                    device: None,
+                })
             }
         }
     }
@@ -69,8 +74,8 @@ impl Dialect {
 
 #[derive(Clone)]
 pub struct Session<S>
-    where
-        S: Sink,
+where
+    S: Sink,
 {
     sender: DownstreamSender<S>,
     application: registry::v1::Application,
@@ -85,8 +90,8 @@ pub struct Session<S>
 }
 
 impl<S> Session<S>
-    where
-        S: Sink,
+where
+    S: Sink,
 {
     pub fn new(
         config: &EndpointConfig,
@@ -141,7 +146,7 @@ impl<S> Session<S>
                     self.sink.clone(),
                     force_device,
                 )
-                    .await;
+                .await;
                 entry.insert(subscription);
             }
         }
@@ -152,46 +157,37 @@ impl<S> Session<S>
         &self,
         publish: &Publish<'_>,
     ) -> Result<(String, Arc<registry::v1::Device>), PublishError> {
-
-
         // TODO this should be removed and is just there as an example
 
         match &self.dialect.handle(publish.topic().path()) {
-            Ok(topic) => {
-                match topic.device {
-                    Some(device) => {
-                        self
-                            .device_cache
-                            .fetch(device, |device| {
-                                self.auth
-                                    .authorize_as(
-                                        &self.application.metadata.name,
-                                        &self.device.metadata.name,
-                                        device,
-                                    )
-                                    .map_ok(|result| match result.outcome {
-                                        GatewayOutcome::Pass { r#as } => Some(r#as),
-                                        _ => None,
-                                    })
+            Ok(topic) => match topic.device {
+                Some(device) => self
+                    .device_cache
+                    .fetch(device, |device| {
+                        self.auth
+                            .authorize_as(
+                                &self.application.metadata.name,
+                                &self.device.metadata.name,
+                                device,
+                            )
+                            .map_ok(|result| match result.outcome {
+                                GatewayOutcome::Pass { r#as } => Some(r#as),
+                                _ => None,
                             })
-                            .await
-                            .map(|r| (topic.channel.to_string(), r))
-                    }
-                    None => {
-                        Ok((topic.channel.to_string(), self.device.clone()))
-                    }
-                }
-            }
+                    })
+                    .await
+                    .map(|r| (topic.channel.to_string(), r)),
+                None => Ok((topic.channel.to_string(), self.device.clone())),
+            },
             Err(_) => Err(PublishError::TopicNameInvalid),
         }
-
     }
 }
 
 #[async_trait(? Send)]
 impl<S> mqtt::Session for Session<S>
-    where
-        S: Sink,
+where
+    S: Sink,
 {
     #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
@@ -275,7 +271,7 @@ impl<S> mqtt::Session for Session<S>
                         CommandFilter::wildcard(self.id.app_id.clone(), self.id.device_id.clone()),
                         false,
                     )
-                        .await;
+                    .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
                 ["command", "inbox", "", "#"] => {
@@ -284,7 +280,7 @@ impl<S> mqtt::Session for Session<S>
                         CommandFilter::device(self.id.app_id.clone(), self.id.device_id.clone()),
                         false,
                     )
-                        .await;
+                    .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
                 ["command", "inbox", device, "#"] => {
@@ -297,7 +293,7 @@ impl<S> mqtt::Session for Session<S>
                         ),
                         true,
                     )
-                        .await;
+                    .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
                 _ => {
