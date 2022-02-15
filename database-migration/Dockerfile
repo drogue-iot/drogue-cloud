@@ -1,6 +1,6 @@
 # Build
 
-FROM ghcr.io/drogue-iot/diesel-base:0.1.0
+FROM ghcr.io/drogue-iot/diesel-base:0.1.1
 
 LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-cloud"
 
