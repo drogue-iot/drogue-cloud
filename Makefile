@@ -319,7 +319,7 @@ tag-image($(IMAGES)): require-container-registry
 .PHONY: push-image($(IMAGES))
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
-	cd $(TOP_DIR) && ./scripts/bin/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && env CONTAINER=$(CONTAINER) ./scripts/bin/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
