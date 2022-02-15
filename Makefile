@@ -306,7 +306,7 @@ build-image($(IMAGES)):
 # Tag Images.
 #
 .PHONY: tag-images
-.PHONY: tag-image($(IMAGES)):
+.PHONY: tag-image($(IMAGES))
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
 	cd $(TOP_DIR) && $(CONTAINER) tag localhost/$%:latest $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
