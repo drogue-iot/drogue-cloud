@@ -55,9 +55,8 @@ pub fn init_tracing(name: &str) {
     let pipeline = tracing::opentelemetry_jaeger::new_pipeline()
         .with_service_name(name)
         .with_trace_config(
-            tracing::opentelemetry::sdk::trace::Config::default().with_sampler(
-                Sampler::ParentBased(Box::new(Sampler::TraceIdRatioBased(0.001))),
-            ),
+            tracing::opentelemetry::sdk::trace::Config::default()
+                .with_sampler(Sampler::ParentBased(Box::new(tracing::sampler()))),
         );
 
     println!("Using Jaeger tracing.");
