@@ -1,6 +1,12 @@
 [serve]
 port = 8010
 
+[tools]
+# needs to be aligned with the builder image
+sass = "1.49.7 compiled with dart2js 2.15.1"
+wasm_bindgen = "0.2.79"
+wasm_opt = "version_105"
+
 [[hooks]]
 stage = "build"
 command = "bash"
