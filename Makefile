@@ -2,6 +2,7 @@
 #
 # By default, build and push artifacts and containers.
 #
+.PHONY: all
 all: build test
 
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
@@ -20,12 +21,14 @@ ifneq ($(MODULE),)
 	IMAGES=$(MODULE)
 endif
 
+
 # evaluate which container tool we use
 ifeq (, $(shell which podman 2>/dev/null))
 	CONTAINER ?= docker
 else
 	CONTAINER ?= podman
 endif
+
 
 # evaluate the arguments we need for this container tool
 ifeq ($(CONTAINER),docker)
@@ -89,9 +92,11 @@ CARGO_PROFILE_RELEASE_DEBUG=true
 export CARGO_PROFILE_RELEASE_DEBUG
 endif
 
+
 #
 # Restore a clean environment.
 #
+.PHONY: clean
 clean:
 	cargo clean
 	rm -Rf .cargo-container-home
@@ -100,36 +105,42 @@ clean:
 #
 # Pre-check the code, just check checks
 #
+.PHONY: pre-check
 pre-check: host-pre-check
 
 
 #
 # Check the code
 #
+.PHONY: check
 check: host-check
 
 
 #
 # Build artifacts and containers.
 #
+.PHONY: build
 build: host-build build-images
 
 
 #
 # Run all tests.
 #
+.PHONY: test
 test: host-test
 
 
 #
 # Run pre-checks on the source code
 #
+.PHONY: container-pre-check
 container-pre-check: cargo-pre-check
 
 
 #
 # Run checks on the source code
 #
+.PHONY: container-check
 container-check: cargo-check
 
 
@@ -138,6 +149,7 @@ container-check: cargo-check
 #
 # If you have the same environment as the build container, you can also run this on the host, instead of `host-build`.
 #
+.PHONY: container-build
 container-build: cargo-build
 ifeq ($(MODULE),)
 container-build: frontend-build
@@ -149,12 +161,14 @@ endif
 #
 # If you have the same environment as the build container, you can also run this on the host, instead of `host-test`.
 #
+.PHONY: container-test
 container-test: cargo-test
 
 
 #
 # Run pre-checks on the host, forking off into the build container.
 #
+.PHONY: host-pre-check
 host-pre-check:
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check \
 		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
@@ -162,6 +176,7 @@ host-pre-check:
 #
 # Run checks on the host, forking off into the build container.
 #
+.PHONY: host-check
 host-check:
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check \
 		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
@@ -170,6 +185,7 @@ host-check:
 #
 # Run a build on the host, forking off into the build container.
 #
+.PHONY: host-build
 host-build:
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build \
 		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
@@ -178,6 +194,7 @@ host-build:
 #
 # Run tests on the host, forking off into the build container.
 #
+.PHONY: host-test
 host-test:
 	if [ -z "$$($(CONTAINER) network ls --format '{{.Name}}' | grep drogue)" ]; then $(CONTAINER) network create drogue; fi
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t \
@@ -190,6 +207,7 @@ host-test:
 #
 # Run an interactive shell inside the build container.
 #
+.PHONY: build-shell
 build-shell:
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -ti -v "$(CURRENT_DIR):/usr/src:z" -e FIX_UID="$(shell id -u)" "$(BUILDER_IMAGE)" bash
 
@@ -208,6 +226,7 @@ test-shell:
 #
 # Pre-check code
 #
+.PHONY: cargo-pre-check
 cargo-pre-check:
 	cargo fmt --all -- --check
 
@@ -215,6 +234,7 @@ cargo-pre-check:
 #
 # Check the code
 #
+.PHONY: cargo-check
 cargo-check: cargo-pre-check cargo-check-frontend
 	cargo check $(CARGO_PROFILE)
 	cargo clippy $(CARGO_PROFILE) --all-features
@@ -244,6 +264,7 @@ cargo-build: CARGO_BUILD_ARGS += --exclude drogue-cloud-server
 endif
 endif
 
+.PHONY: cargo-build
 cargo-build:
 	@#
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
@@ -255,6 +276,7 @@ cargo-build:
 #
 # Run the cargo tests.
 #
+.PHONY: cargo-test
 cargo-test:
 	cargo test $(CARGO_PROFILE) -- $(CARGO_TEST_OPTS)
 
@@ -262,6 +284,7 @@ cargo-test:
 #
 # Run the frontend build.
 #
+.PHONY: frontend-build
 frontend-build: cargo-build
 	cd console-frontend && npm install
 	cd console-frontend && trunk build $(CARGO_PROFILE)
@@ -272,6 +295,8 @@ frontend-build: cargo-build
 #
 # You might want to consider doing a `build` first, but we don't enforce that.
 #
+.PHONY: build-imagesd
+.PHONY: build-image($(IMAGES))
 build-images: build-image($(IMAGES))
 build-image($(IMAGES)):
 	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t localhost/$%:latest
@@ -280,6 +305,8 @@ build-image($(IMAGES)):
 #
 # Tag Images.
 #
+.PHONY: tag-images
+.PHONY: tag-image($(IMAGES)):
 tag-images: tag-image($(IMAGES))
 tag-image($(IMAGES)): require-container-registry
 	cd $(TOP_DIR) && $(CONTAINER) tag localhost/$%:latest $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
@@ -288,6 +315,8 @@ tag-image($(IMAGES)): require-container-registry
 #
 # Push images.
 #
+.PHONY: push-images
+.PHONY: push-image($(IMAGES))
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry
 	cd $(TOP_DIR) && ./scripts/bin/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
@@ -296,6 +325,7 @@ push-image($(IMAGES)): require-container-registry
 #
 # Save all images.
 #
+.PHONY: save-images
 save-images:
 	mkdir -p "$(TOP_DIR)/build/images"
 	rm -Rf "$(TOP_DIR)/build/images/all.tar"
@@ -305,6 +335,7 @@ save-images:
 #
 # Load image into kind
 #
+.PHONY: kind-load
 kind-load: require-container-registry
 	for i in $(ALL_IMAGES); do \
 		kind load docker-image $(CONTAINER_REGISTRY)/$${i}:$(IMAGE_TAG); \
@@ -314,24 +345,28 @@ kind-load: require-container-registry
 #
 # Tag and push images.
 #
+.PHONY: push
 push: tag-images push-images
 
 
 #
 # Build and push images.
 #
+.PHONY: images
 images: build-images tag-images push-images
 
 
 #
 # Quick local build without tests and pushing images
 #
+.PHONY: quick
 quick: build build-images tag-images
 
 
 #
 # A shortcut for building and pushing the frontend only
 #
+.PHONY: frontend
 frontend: host-build
 	make -C console-frontend images
 
@@ -352,6 +387,7 @@ deploy:
 #
 # Check if we have a container registry set.
 #
+.PHONY: require-container-registry
 require-container-registry:
 ifndef CONTAINER_REGISTRY
 	$(error CONTAINER_REGISTRY is undefined)
@@ -368,18 +404,3 @@ helm-lint:
 		helm lint --with-subcharts deploy/helm/charts/drogue-cloud-$$i; \
 	done
 
-
-.PHONY: all clean pre-check check build test push images
-.PHONY: require-container-registry
-.PHONY: deploy gen-deploy
-.PHONY: quick frontend
-
-.PHONY: build-images tag-images push-images
-.PHONY: build-image($(IMAGES)) tag-image($(IMAGES)) push-image($(IMAGES))
-
-.PHONY: save-images
-.PHONY: fix-permissions
-
-.PHONY: container-pre-check container-check container-build container-test
-.PHONY: host-pre-check host-check host-build host-test
-.PHONY: cargo-pre-check cargo-check cargo-build cargo-test
