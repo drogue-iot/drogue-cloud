@@ -17,6 +17,7 @@ ntex-rt = "0.4"
 ntex-service = "0.3"
 ntex-mqtt = "0.8"
 prometheus = { version = "^0.13", default-features = false }
+tracing = { version = "0.1", features = ["log-always"] }
 
 bytes = "1"
 bytestring = "1"
@@ -66,6 +67,7 @@ package = "rustls"
 features = ["dangerous_configuration"]
 
 [features]
-default = ["openssl"]
+default = ["openssl", "jaeger"]
 openssl = ["open-ssl", "ntex/openssl"]
 rustls = ["rust-tls", "ntex/rustls"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

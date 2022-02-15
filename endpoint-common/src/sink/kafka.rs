@@ -7,9 +7,7 @@ use cloudevents::{
     AttributesReader,
 };
 use drogue_client::{core, registry, Translator};
-use drogue_cloud_service_api::kafka::{
-    KafkaClientConfig, KafkaConfigExt, KafkaEventType, KafkaTarget,
-};
+use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfigExt, KafkaEventType};
 use drogue_cloud_service_common::config::ConfigFromEnv;
 use futures::channel::oneshot;
 use rdkafka::{
@@ -17,7 +15,9 @@ use rdkafka::{
     producer::{FutureProducer, FutureRecord},
     ClientConfig,
 };
+use std::fmt::Formatter;
 use thiserror::Error;
+use tracing::instrument;
 
 #[derive(Debug, Error)]
 pub enum KafkaSinkError {
@@ -33,6 +33,14 @@ pub enum KafkaSinkError {
 pub struct KafkaSink {
     internal_producer: FutureProducer,
     check_ready: bool,
+}
+
+impl Debug for KafkaSink {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KafkaSink")
+            .field("check_ready", &self.check_ready)
+            .finish()
+    }
 }
 
 impl KafkaSink {
@@ -52,11 +60,13 @@ impl KafkaSink {
         })
     }
 
+    #[instrument]
     fn create_producer(config: KafkaClientConfig) -> Result<FutureProducer, KafkaError> {
         let config: ClientConfig = config.into();
         config.create()
     }
 
+    #[instrument(level = "debug", skip(producer, message_record))]
     async fn send_with(
         producer: &FutureProducer,
         topic: String,
@@ -67,11 +77,20 @@ impl KafkaSink {
             .key(&key)
             .message_record(&message_record);
 
-        match producer.send_result(record) {
-            // accepted deliver
+        log::debug!("Sending record");
+
+        let scheduled = producer.send_result(record);
+
+        tracing::debug!("Send returned");
+
+        match scheduled {
+            // accepted delivery
             Ok(fut) => match fut.await {
                 // received outcome & outcome ok
-                Ok(Ok(_)) => Ok(PublishOutcome::Accepted),
+                Ok(Ok((partition, offset))) => {
+                    tracing::info!(partition, offset, "Publish accepted");
+                    Ok(PublishOutcome::Accepted)
+                }
                 // received outcome & outcome failed
                 Ok(Err((err, _))) => {
                     log::debug!("Kafka transport error: {}", err);
@@ -118,6 +137,11 @@ impl Sink for KafkaSink {
     type Error = KafkaSinkError;
 
     #[allow(clippy::needless_lifetimes)]
+    #[instrument(level = "debug", skip_all, fields(
+        application=%target.metadata.name,
+        id=%event.id(),
+        device=?event.extension("device"),
+    ))]
     async fn publish<'a>(
         &self,
         target: SinkTarget<'a>,
@@ -128,9 +152,9 @@ impl Sink for KafkaSink {
             return Err(SinkError::Transport(KafkaSinkError::NotReady));
         }
 
-        let kafka = match target {
-            SinkTarget::Commands(app) => app.kafka_target(KafkaEventType::Commands),
-            SinkTarget::Events(app) => app.kafka_target(KafkaEventType::Events),
+        let topic = match target {
+            SinkTarget::Commands(app) => app.kafka_topic(KafkaEventType::Commands),
+            SinkTarget::Events(app) => app.kafka_topic(KafkaEventType::Events),
         }
         .map_err(|err| SinkError::Target(Box::new(err)))?;
 
@@ -140,24 +164,11 @@ impl Sink for KafkaSink {
         }
         .into();
 
-        log::debug!("Key: {}, Kafka Config: {:?}", key, kafka);
+        log::debug!("Key: {}, Kafka Topic: {:?}", key, topic);
 
         let message_record = MessageRecord::from_event(event)?;
 
-        match kafka {
-            KafkaTarget::Internal { topic } => {
-                Self::send_with(&self.internal_producer, topic, key, message_record).await
-            }
-            KafkaTarget::External { config } => {
-                let topic = config.topic;
-                match Self::create_producer(config.client) {
-                    Ok(producer) => Self::send_with(&producer, topic, key, message_record).await,
-                    Err(err) => {
-                        return Err(SinkError::Transport(KafkaSinkError::Kafka(err)));
-                    }
-                }
-            }
-        }
+        Self::send_with(&self.internal_producer, topic, key, message_record).await
     }
 }
 

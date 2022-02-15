@@ -23,10 +23,7 @@ where
         ClientError<reqwest::Error>,
     > {
         Ok(
-            match try_join!(
-                self.get_app(&key.0, Default::default()),
-                self.get_device(&key.0, &key.1, Default::default()),
-            )? {
+            match try_join!(self.get_app(&key.0,), self.get_device(&key.0, &key.1,),)? {
                 (Some(app), Some(device)) => Some((app, device)),
                 _ => None,
             },
@@ -41,7 +38,7 @@ where
         current.update_section(core::v1::Conditions::aggregate_ready)?;
 
         if original != &current {
-            match self.update_device(&current, Default::default()).await {
+            match self.update_device(&current).await {
                 Ok(_) => Ok(()),
                 Err(err) => match err {
                     ClientError::Syntax(msg) => Err(ReconcileError::permanent(format!(

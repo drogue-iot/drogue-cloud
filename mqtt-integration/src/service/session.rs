@@ -7,7 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use cloudevents::Data;
-use drogue_client::{openid::OpenIdTokenProvider, registry, Context};
+use drogue_client::{openid::OpenIdTokenProvider, registry};
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
 use drogue_cloud_integration_common::{
     self,
@@ -95,15 +95,12 @@ where
         );
 
         let response = user_auth
-            .authorize(
-                AuthorizationRequest {
-                    application,
-                    permission,
-                    user_id: self.user.user_id().map(ToString::to_string),
-                    roles: self.user.roles().clone(),
-                },
-                Default::default(),
-            )
+            .authorize(AuthorizationRequest {
+                application,
+                permission,
+                user_id: self.user.user_id().map(ToString::to_string),
+                roles: self.user.roles().clone(),
+            })
             .await
             .map_err(|_| ())?;
 
@@ -173,7 +170,7 @@ where
 
         let app_res = self
             .registry
-            .get_app(app, Default::default())
+            .get_app(app)
             .await
             .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?
             .ok_or(v5::codec::SubscribeAckReason::UnspecifiedError)?;
@@ -182,7 +179,8 @@ where
 
         let event_stream = EventStream::new(EventStreamConfig {
             kafka: app_res
-                .kafka_config(KafkaEventType::Events, &self.config.kafka)
+                .kafka_target(KafkaEventType::Events, &self.config.kafka)
+                .map(|target| target.into())
                 .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
             consumer_group: group_id,
         })
@@ -344,9 +342,8 @@ where
             }
 
             let response = futures::try_join!(
-                self.registry.get_app(&app, Context::default()),
-                self.registry
-                    .get_device_and_gateways(&app, &device, Context::default())
+                self.registry.get_app(&app),
+                self.registry.get_device_and_gateways(&app, &device)
             );
 
             match response {

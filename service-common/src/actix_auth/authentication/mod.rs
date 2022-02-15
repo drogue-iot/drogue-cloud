@@ -1,9 +1,10 @@
 use crate::client::UserAuthClient;
 use crate::error::ServiceError;
 use crate::openid::Authenticator;
-use drogue_client::Context;
-use drogue_cloud_service_api::auth::user::authn::{AuthenticationRequest, Outcome};
-use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_api::auth::user::{
+    authn::{AuthenticationRequest, Outcome},
+    UserInformation,
+};
 
 mod middleware;
 
@@ -63,13 +64,10 @@ impl AuthN {
                         }
 
                         let auth_response = token
-                            .authenticate_access_token(
-                                AuthenticationRequest {
-                                    user_id: creds.username.clone(),
-                                    access_token: creds.access_token.clone().unwrap_or_default(),
-                                },
-                                Context::default(),
-                            )
+                            .authenticate_access_token(AuthenticationRequest {
+                                user_id: creds.username.clone(),
+                                access_token: creds.access_token.clone().unwrap_or_default(),
+                            })
                             .await
                             .map_err(|e| ServiceError::InternalError(e.to_string()))?;
                         match auth_response.outcome {

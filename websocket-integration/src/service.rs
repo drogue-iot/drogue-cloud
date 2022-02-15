@@ -133,14 +133,17 @@ impl<TP: TokenProvider> Service<TP> {
         );
 
         let app_res = registry
-            .get_app(application.clone(), Default::default())
+            .get_app(application.clone())
             .await
             .map_err(|_| ServiceError::InternalError(String::from("Request to registry error")))?
             .ok_or_else(|| ServiceError::InternalError(String::from("Cannot find application")))?;
 
         // create stream
         let stream = EventStream::new(EventStreamConfig {
-            kafka: app_res.kafka_config(KafkaEventType::Events, kafka_config)?,
+            kafka: app_res
+                .kafka_target(KafkaEventType::Events, kafka_config)
+                .map_err(|_| ServiceError::InternalError("This should be infallible".into()))?
+                .into(),
             consumer_group: group_id,
         })
         .map_err(|err| {

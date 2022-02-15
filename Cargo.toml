@@ -42,10 +42,10 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "bf45eda16ad77335b92ec5916d5b27be8e8711dc" } # FIXME: awaiting release
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "92215e9f9d4d86c86576e171e342f05165cd7dfd" } # FIXME: awaiting release
 #drogue-client = { path = "../drogue-client" }
 
-operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" }
+operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" } # FIXME: awaiting release
 
 actix-web-prom = { git = "https://github.com/nlopes/actix-web-prom", branch="nlopes/bump-to-actix-web-14" } #FIXME: use 0.6.0-beta.4 when available
 

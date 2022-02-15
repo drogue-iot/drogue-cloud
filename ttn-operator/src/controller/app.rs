@@ -349,7 +349,7 @@ impl<'a> ApplicationReconciler<'a> {
     ) -> Result<String, ReconcileError> {
         let gateway = self
             .registry
-            .get_device(&metadata.name, TTN_GATEWAY_NAME, Default::default())
+            .get_device(&metadata.name, TTN_GATEWAY_NAME)
             .await
             .map_err(ReconcileError::temporary)?;
 
@@ -374,7 +374,7 @@ impl<'a> ApplicationReconciler<'a> {
                 let password = self.ensure_gateway_config(app_id, &mut gateway, ctx)?;
 
                 self.registry
-                    .create_device(&gateway, Default::default())
+                    .create_device(&gateway)
                     .await
                     .map_err(ReconcileError::temporary)?;
 
@@ -386,7 +386,7 @@ impl<'a> ApplicationReconciler<'a> {
                 let password = self.ensure_gateway_config(app_id, &mut gateway, ctx)?;
 
                 self.registry
-                    .update_device(&gateway, Default::default())
+                    .update_device(&gateway)
                     .await
                     .map_err(ReconcileError::temporary)?;
 

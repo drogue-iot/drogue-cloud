@@ -13,6 +13,7 @@ use drogue_cloud_mqtt_common::{
 };
 use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
 use std::fmt::Debug;
+use tracing::instrument;
 
 #[derive(Clone, Debug)]
 pub struct App<S>
@@ -30,6 +31,7 @@ where
     S: Sink,
 {
     /// authenticate a client
+    #[instrument]
     pub async fn authenticate(
         &self,
         username: Option<&str>,
@@ -64,6 +66,7 @@ impl<S> Service<Session<S>> for App<S>
 where
     S: Sink,
 {
+    #[instrument]
     async fn connect<'a>(
         &'a self,
         mut connect: Connect<'a>,

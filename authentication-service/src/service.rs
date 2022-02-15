@@ -26,6 +26,7 @@ use sha_crypt::sha512_check;
 use std::io::Cursor;
 use std::time::SystemTime;
 use tokio_postgres::NoTls;
+use tracing::instrument;
 
 macro_rules! pass {
     ($application:expr, $device:expr, $as_device:expr) => {{
@@ -84,6 +85,7 @@ impl PostgresAuthenticationService {
         })
     }
 
+    #[instrument(skip(accessor), err)]
     async fn validate_gateway<'c, C>(
         as_id: String,
         accessor: PostgresDeviceAccessor<'c, C>,
@@ -151,6 +153,7 @@ impl PostgresAuthenticationService {
 impl AuthenticationService for PostgresAuthenticationService {
     type Error = ServiceError;
 
+    #[instrument(skip(self), err)]
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error> {
         let c = self.pool.get().await?;
 
@@ -207,6 +210,7 @@ impl AuthenticationService for PostgresAuthenticationService {
         )
     }
 
+    #[instrument(skip(self), err)]
     async fn authorize_gateway(
         &self,
         request: AuthorizeGatewayRequest,
@@ -293,6 +297,7 @@ fn validate_app(app: &registry::v1::Application) -> bool {
     true
 }
 
+#[instrument(ret)]
 fn validate_credential(
     app: &registry::v1::Application,
     device: &registry::v1::Device,
@@ -341,6 +346,7 @@ fn password_matches(expected: &Password, provided: &str) -> bool {
 }
 
 /// validate if a provided password matches
+#[instrument(ret)]
 fn validate_password(
     device: &registry::v1::Device,
     credentials: &[registry::v1::Credential],
@@ -374,6 +380,7 @@ fn validate_password(
 }
 
 /// validate if a provided username/password combination matches
+#[instrument(ret)]
 fn validate_username_password(
     device: &registry::v1::Device,
     credentials: &[registry::v1::Credential],
@@ -402,6 +409,7 @@ fn validate_username_password(
 }
 
 /// validate if a provided certificate chain matches
+#[instrument(ret)]
 fn validate_certificate(
     app: &registry::v1::Application,
     _device: &registry::v1::Device,
@@ -431,6 +439,7 @@ fn validate_certificate(
 }
 
 /// validate if a provided certificate chain matches the trust anchor to test
+#[instrument(ret)]
 fn validate_trust_anchor(
     anchor: &registry::v1::ApplicationStatusTrustAnchorEntry,
     now: &DateTime<Utc>,

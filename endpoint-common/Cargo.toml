@@ -37,6 +37,7 @@ env_logger = "0.9"
 log = "0.4"
 config = "0.11"
 thiserror = "1"
+tracing = "0.1"
 
 cloudevents-sdk = { version = "0.4", features = ["actix", "reqwest", "rdkafka"] }
 

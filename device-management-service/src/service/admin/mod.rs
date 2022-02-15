@@ -14,6 +14,7 @@ use drogue_cloud_service_api::admin::{MemberEntry, Members, TransferOwnership};
 use drogue_cloud_service_api::auth::user::{authz::Permission, UserInformation};
 use drogue_cloud_service_common::keycloak::KeycloakClient;
 use indexmap::map::IndexMap;
+use tracing::instrument;
 
 #[async_trait]
 impl<S, K> AdminService for PostgresManagementService<S, K>
@@ -23,6 +24,7 @@ where
 {
     type Error = PostgresManagementServiceError<S::Error>;
 
+    #[instrument(skip(self))]
     async fn transfer(
         &self,
         identity: &UserInformation,
@@ -87,6 +89,7 @@ where
         Ok(())
     }
 
+    #[instrument(skip(self))]
     async fn cancel(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -123,6 +126,7 @@ where
         }
     }
 
+    #[instrument(skip(self))]
     async fn accept(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -157,6 +161,7 @@ where
         }
     }
 
+    #[instrument(skip(self))]
     async fn read_transfer_state(
         &self,
         identity: &UserInformation,
@@ -196,6 +201,7 @@ where
         }
     }
 
+    #[instrument(skip(self))]
     async fn get_members(
         &self,
         identity: &UserInformation,
@@ -236,6 +242,7 @@ where
         })
     }
 
+    #[instrument(skip(self))]
     async fn set_members(
         &self,
         identity: &UserInformation,

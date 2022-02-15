@@ -12,6 +12,7 @@ use reqwest::RequestBuilder;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{fmt::Debug, time::Duration};
+use tracing::instrument;
 use url::{ParseError, Url};
 
 #[derive(Debug, Clone)]
@@ -36,6 +37,7 @@ pub enum Error {
 
 impl Error {
     /// Check if the error is temporary, so that we can re-try
+    #[instrument(ret)]
     pub fn is_temporary(&self) -> bool {
         match self {
             Self::Request(err) => {
@@ -64,6 +66,7 @@ impl Client {
         Self { client, url }
     }
 
+    #[instrument(skip_all)]
     pub async fn request<TP, R>(
         &self,
         token_provider: &TP,
@@ -76,7 +79,7 @@ impl Client {
     {
         let req = request
             .into_builder(self)?
-            .inject_token(token_provider, Default::default())
+            .inject_token(token_provider)
             .await
             .map_err(Error::Token)?;
 
@@ -97,6 +100,7 @@ impl Client {
         }
     }
 
+    #[instrument(skip(self, token_provider))]
     pub async fn devops<TP, R>(
         &self,
         token_provider: &TP,
@@ -117,7 +121,7 @@ impl Client {
         let req = self
             .client
             .post(url)
-            .inject_token(token_provider, Default::default())
+            .inject_token(token_provider)
             .await
             .map_err(Error::Token)?;
 

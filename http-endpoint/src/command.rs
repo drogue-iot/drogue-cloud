@@ -9,9 +9,11 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_service_api::webapp::{http, web, HttpResponse};
 use std::time::Duration;
+use tracing::instrument;
 
 const HEADER_COMMAND: &str = "command";
 
+#[instrument(skip(commands))]
 pub async fn wait_for_command(
     commands: web::Data<Commands>,
     filter: CommandFilter,

@@ -34,3 +34,7 @@ prometheus = { version = "^0.13", default-features = false }
 [dev-dependencies]
 url = "2.2"
 regex = "1.5"
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

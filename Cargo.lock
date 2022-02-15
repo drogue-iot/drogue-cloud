@@ -440,6 +440,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-web-opentelemetry"
+version = "0.11.0-beta.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c64ad2ffafb94b03b776a258d6f122110b01079faa817caa8db7c71327740ea"
+dependencies = [
+ "actix-http 3.0.0-beta.18",
+ "actix-web",
+ "futures-util",
+ "opentelemetry",
+ "opentelemetry-semantic-conventions",
+ "serde 1.0.136",
+]
+
+[[package]]
 name = "actix-web-prom"
 version = "0.6.0-beta.4"
 source = "git+https://github.com/nlopes/actix-web-prom?branch=nlopes/bump-to-actix-web-14#d9fdf591ebf67458855fcc2d1b57a5b408e2ae64"
@@ -1471,6 +1485,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
+dependencies = [
+ "cfg-if 1.0.0",
+ "num_cpus",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1661,7 +1685,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-client"
 version = "0.9.0-alpha.1"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=bf45eda16ad77335b92ec5916d5b27be8e8711dc#bf45eda16ad77335b92ec5916d5b27be8e8711dc"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=92215e9f9d4d86c86576e171e342f05165cd7dfd#92215e9f9d4d86c86576e171e342f05165cd7dfd"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1669,12 +1693,16 @@ dependencies = [
  "base64-serde",
  "chrono",
  "futures",
+ "http",
  "log",
  "openid",
+ "opentelemetry",
+ "opentelemetry-http",
  "reqwest",
  "serde 1.0.136",
  "serde_json",
  "thiserror",
+ "tracing",
  "url",
 ]
 
@@ -1784,6 +1812,7 @@ dependencies = [
  "thiserror",
  "tokio 1.16.1",
  "tokio-postgres",
+ "tracing",
 ]
 
 [[package]]
@@ -1872,8 +1901,8 @@ dependencies = [
  "env_logger 0.9.0",
  "failure",
  "futures",
- "k8s-openapi 0.12.0",
- "kube 0.58.1",
+ "k8s-openapi",
+ "kube",
  "log",
  "mime",
  "openid",
@@ -1922,6 +1951,7 @@ dependencies = [
  "thiserror",
  "tokio 1.16.1",
  "tokio-postgres",
+ "tracing",
  "uuid",
 ]
 
@@ -1971,6 +2001,7 @@ dependencies = [
  "thiserror",
  "tokio 1.16.1",
  "tokio-postgres",
+ "tracing",
  "url",
  "uuid",
  "x509-parser",
@@ -2015,6 +2046,7 @@ dependencies = [
  "serde_with",
  "thiserror",
  "tokio 1.16.1",
+ "tracing",
  "url",
  "x509-parser",
 ]
@@ -2060,6 +2092,7 @@ dependencies = [
  "tokio 1.16.1",
  "tokio-openssl",
  "tokio-rustls 0.22.0",
+ "tracing",
  "uuid",
  "x509-parser",
 ]
@@ -2116,6 +2149,7 @@ dependencies = [
  "serde_json",
  "snafu",
  "tokio 1.16.1",
+ "tracing",
  "uuid",
 ]
 
@@ -2168,6 +2202,7 @@ dependencies = [
  "rustls 0.20.2",
  "rustls-pemfile",
  "serde 1.0.136",
+ "thiserror",
 ]
 
 [[package]]
@@ -2205,6 +2240,7 @@ dependencies = [
  "serde 1.0.136",
  "serde_json",
  "tokio 1.16.1",
+ "tracing",
  "uuid",
  "webpki 0.21.4",
 ]
@@ -2271,7 +2307,7 @@ dependencies = [
  "drogue-cloud-test-common",
  "env_logger 0.9.0",
  "futures",
- "kube 0.68.0",
+ "kube",
  "kube-runtime",
  "log",
  "reqwest",
@@ -2282,6 +2318,7 @@ dependencies = [
  "thiserror",
  "tokio 1.16.1",
  "tokio-postgres",
+ "tracing",
 ]
 
 [[package]]
@@ -2336,6 +2373,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio 1.16.1",
+ "tracing",
  "uuid",
 ]
 
@@ -2391,6 +2429,7 @@ dependencies = [
  "actix-utils 3.0.0",
  "actix-web",
  "actix-web-httpauth",
+ "actix-web-opentelemetry",
  "actix-web-prom",
  "async-trait",
  "base64 0.13.0",
@@ -2435,12 +2474,15 @@ dependencies = [
  "http",
  "humantime",
  "humantime-serde",
- "k8s-openapi 0.12.0",
+ "k8s-openapi",
  "keycloak",
- "kube 0.58.1",
+ "kube",
  "log",
  "ntex",
  "openid",
+ "opentelemetry",
+ "opentelemetry-http",
+ "opentelemetry-jaeger",
  "pem 1.0.2",
  "prometheus",
  "reqwest",
@@ -2449,6 +2491,9 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio 1.16.1",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
  "url",
  "webpki 0.21.4",
 ]
@@ -2518,8 +2563,8 @@ dependencies = [
  "futures",
  "humantime",
  "humantime-serde",
- "k8s-openapi 0.14.0",
- "kube 0.68.0",
+ "k8s-openapi",
+ "kube",
  "kube-derive",
  "kube-runtime",
  "log",
@@ -3326,6 +3371,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "integer-encoding"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90c11140ffea82edce8dcd74137ce9324ec24b3cf0175fc9d7e29164da9915b8"
+
+[[package]]
 name = "iovec"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3430,23 +3481,6 @@ dependencies = [
 
 [[package]]
 name = "k8s-openapi"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbff78f6da26dde0d74188966d23fc763431d730d0f766ecf7699209f8fc243c"
-dependencies = [
- "base64 0.13.0",
- "bytes 1.1.0",
- "chrono",
- "http",
- "percent-encoding",
- "serde 1.0.136",
- "serde-value",
- "serde_json",
- "url",
-]
-
-[[package]]
-name = "k8s-openapi"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0489fc937cc7616a9abfa61bf39c250d7e32e1325ef028c8d9278dd24ea395b3"
@@ -3493,48 +3527,13 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.58.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21d3c79fb97a822a63ce9422f7302484748032c808954898ba248705e99ea110"
-dependencies = [
- "base64 0.13.0",
- "bytes 1.1.0",
- "chrono",
- "dirs-next",
- "either",
- "futures",
- "http",
- "http-body",
- "hyper",
- "hyper-timeout",
- "hyper-tls",
- "jsonpath_lib",
- "k8s-openapi 0.12.0",
- "kube-core 0.58.1",
- "openssl",
- "pem 0.8.3",
- "pin-project 1.0.10",
- "serde 1.0.136",
- "serde_json",
- "serde_yaml",
- "thiserror",
- "tokio 1.16.1",
- "tokio-native-tls",
- "tokio-util 0.6.9",
- "tower",
- "tower-http 0.1.3",
- "tracing",
-]
-
-[[package]]
-name = "kube"
 version = "0.68.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d41f782ddd187a0d8965607679bbd741052106b75330696ce7d7712b13194d88"
 dependencies = [
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "kube-client",
- "kube-core 0.68.0",
+ "kube-core",
  "kube-derive",
 ]
 
@@ -3556,8 +3555,8 @@ dependencies = [
  "hyper-timeout",
  "hyper-tls",
  "jsonpath_lib",
- "k8s-openapi 0.14.0",
- "kube-core 0.68.0",
+ "k8s-openapi",
+ "kube-core",
  "openssl",
  "pem 1.0.2",
  "pin-project 1.0.10",
@@ -3570,22 +3569,8 @@ dependencies = [
  "tokio-native-tls",
  "tokio-util 0.6.9",
  "tower",
- "tower-http 0.2.2",
+ "tower-http",
  "tracing",
-]
-
-[[package]]
-name = "kube-core"
-version = "0.58.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffbce0d890efc42abb31e974419e25a643a97ab7c6b3b9498bda686d10b55f8d"
-dependencies = [
- "form_urlencoded",
- "http",
- "k8s-openapi 0.12.0",
- "serde 1.0.136",
- "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -3598,7 +3583,7 @@ dependencies = [
  "form_urlencoded",
  "http",
  "json-patch",
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "once_cell",
  "schemars",
  "serde 1.0.136",
@@ -3630,7 +3615,7 @@ dependencies = [
  "derivative",
  "futures",
  "json-patch",
- "k8s-openapi 0.14.0",
+ "k8s-openapi",
  "kube-client",
  "parking_lot",
  "pin-project 1.0.10",
@@ -3770,6 +3755,15 @@ name = "match_cfg"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
+
+[[package]]
+name = "matchers"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
+dependencies = [
+ "regex-automata",
+]
 
 [[package]]
 name = "matches"
@@ -4431,6 +4425,65 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6105e89802af13fdf48c49d7646d3b533a70e536d818aae7e78ba0433d01acb8"
+dependencies = [
+ "async-trait",
+ "crossbeam-channel",
+ "dashmap",
+ "fnv",
+ "futures-channel",
+ "futures-executor",
+ "futures-util",
+ "js-sys",
+ "lazy_static 1.4.0",
+ "percent-encoding",
+ "pin-project 1.0.10",
+ "rand 0.8.4",
+ "thiserror",
+ "tokio 1.16.1",
+ "tokio-stream",
+]
+
+[[package]]
+name = "opentelemetry-http"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "449048140ee61e28f57abe6e9975eedc1f3a29855c7407bd6c12b18578863379"
+dependencies = [
+ "async-trait",
+ "bytes 1.1.0",
+ "http",
+ "opentelemetry",
+]
+
+[[package]]
+name = "opentelemetry-jaeger"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8c0b12cd9e3f9b35b52f6e0dac66866c519b26f424f4bbf96e3fe8bfbdc5229"
+dependencies = [
+ "async-trait",
+ "lazy_static 1.4.0",
+ "opentelemetry",
+ "opentelemetry-semantic-conventions",
+ "thiserror",
+ "thrift",
+ "tokio 1.16.1",
+]
+
+[[package]]
+name = "opentelemetry-semantic-conventions"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "985cc35d832d412224b2cffe2f9194b1b89b6aa5d0bef76d080dce09d90e62bd"
+dependencies = [
+ "opentelemetry",
+]
+
+[[package]]
 name = "operator-framework"
 version = "0.6.0"
 source = "git+https://github.com/ctron/operator-framework?rev=d4415ccbc03417942f38573a0e164143bae9a25e#d4415ccbc03417942f38573a0e164143bae9a25e"
@@ -4440,13 +4493,22 @@ dependencies = [
  "chrono",
  "either",
  "futures",
- "k8s-openapi 0.14.0",
- "kube 0.68.0",
+ "k8s-openapi",
+ "kube",
  "log",
  "serde 1.0.136",
  "serde_derive",
  "serde_json",
  "sha1",
+]
+
+[[package]]
+name = "ordered-float"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3305af35278dd29f46fcdd139e0b1fbfae2153f0e5928b39b035542dd31e37b7"
+dependencies = [
+ "num-traits 0.2.14",
 ]
 
 [[package]]
@@ -5042,6 +5104,9 @@ name = "regex-automata"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
+dependencies = [
+ "regex-syntax",
+]
 
 [[package]]
 name = "regex-syntax"
@@ -5437,7 +5502,7 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
 dependencies = [
- "ordered-float",
+ "ordered-float 2.10.0",
  "serde 1.0.136",
 ]
 
@@ -5652,6 +5717,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sharded-slab"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "900fba806f70c630b0a382d0d825e17a0f19fcd059a2ade1ff237bcddf446b31"
+dependencies = [
+ "lazy_static 1.4.0",
+]
+
+[[package]]
 name = "shared_child"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5779,7 +5853,7 @@ dependencies = [
  "chrono",
  "log",
  "termcolor",
- "thread_local",
+ "thread_local 0.3.4",
 ]
 
 [[package]]
@@ -5977,12 +6051,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "thread_local"
+version = "1.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5516c27b78311c50bf42c071425c560ac799b11c30b31f87e3081965fe5e0180"
+dependencies = [
+ "once_cell",
+]
+
+[[package]]
 name = "threadpool"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d050e60b33d41c19108b32cea32164033a9013fe3b46cbd4457559bfbf77afaa"
 dependencies = [
  "num_cpus",
+]
+
+[[package]]
+name = "thrift"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b82ca8f46f95b3ce96081fe3dd89160fdea970c254bb72925255d1b62aae692e"
+dependencies = [
+ "byteorder",
+ "integer-encoding",
+ "log",
+ "ordered-float 1.1.1",
+ "threadpool",
 ]
 
 [[package]]
@@ -6272,24 +6368,6 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81eca72647e58054bbfa41e6f297c23436f1c60aff6e5eb38455a0f9ca420bb5"
-dependencies = [
- "base64 0.13.0",
- "bytes 1.1.0",
- "futures-core",
- "futures-util",
- "http",
- "http-body",
- "pin-project 1.0.10",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
-name = "tower-http"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33ed53e1fd082268841975cb39587fa9fca9a7a30da84f97818ef667c97f2872"
@@ -6351,6 +6429,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03cfcb51380632a72d3111cb8d3447a8d908e577d31beeac006f836383d29a23"
 dependencies = [
  "lazy_static 1.4.0",
+ "valuable",
 ]
 
 [[package]]
@@ -6361,6 +6440,48 @@ checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
 dependencies = [
  "pin-project 1.0.10",
  "tracing",
+]
+
+[[package]]
+name = "tracing-log"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6923477a48e41c1951f1999ef8bb5a3023eb723ceadafe78ffb65dc366761e3"
+dependencies = [
+ "lazy_static 1.4.0",
+ "log",
+ "tracing-core",
+]
+
+[[package]]
+name = "tracing-opentelemetry"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a73d0f08e0d227c4c63e6d003804946767f4c4f01f52098b56821ae22e336bfc"
+dependencies = [
+ "opentelemetry",
+ "tracing",
+ "tracing-core",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "tracing-subscriber"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74786ce43333fcf51efe947aed9718fbe46d5c7328ec3f1029e818083966d9aa"
+dependencies = [
+ "ansi_term",
+ "lazy_static 1.4.0",
+ "matchers",
+ "regex",
+ "sharded-slab",
+ "smallvec",
+ "thread_local 1.1.4",
+ "tracing",
+ "tracing-core",
+ "tracing-log",
 ]
 
 [[package]]
@@ -6538,6 +6659,12 @@ name = "validator_types"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ad9680608df133af2c1ddd5eaf1ddce91d60d61b6bc51494ef326458365a470a"
+
+[[package]]
+name = "valuable"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 
 [[package]]
 name = "value-bag"

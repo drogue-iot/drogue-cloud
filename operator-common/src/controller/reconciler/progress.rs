@@ -16,6 +16,7 @@ use std::{
     future::Future,
     time::Duration,
 };
+use tracing::instrument;
 
 pub struct Progressor<'c, C>(Vec<Box<dyn ProgressOperation<C> + 'c>>);
 
@@ -41,11 +42,21 @@ where
 
 pub type Result<T> = std::result::Result<OperationOutcome<T>, ReconcileError>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Progress<C> {
     Complete(C, Conditions),
     Retry(C, Option<Duration>, Conditions),
     Failed(ReconcileError, Conditions),
+}
+
+impl<C> Debug for Progress<C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Complete(_, _) => f.debug_tuple("Complete").finish(),
+            Self::Retry(_, delay, _) => f.debug_tuple("Retry").field(&delay).finish(),
+            Self::Failed(err, _) => f.debug_tuple("Failed").field(&err).finish(),
+        }
+    }
 }
 
 impl<'c, C> Progressor<'c, C>
@@ -56,6 +67,7 @@ where
         Self(steps)
     }
 
+    #[instrument(skip(self, conditions, context), ret)]
     pub async fn run(&self, mut conditions: Conditions, mut context: C) -> Progress<C> {
         let mut i = self.0.iter();
 

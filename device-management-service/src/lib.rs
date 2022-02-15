@@ -102,6 +102,7 @@ macro_rules! crud {
 macro_rules! app {
     ($sender:ty, $keycloak:ty, $max_json_payload_size:expr, $auth:expr) => {{
         let app = App::new()
+            .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::JsonConfig::default().limit($max_json_payload_size));
 

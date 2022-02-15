@@ -1,26 +1,27 @@
 mod config;
 
 pub use self::config::*;
+use std::convert::Infallible;
 
-use drogue_client::{registry, Translator};
+use drogue_client::registry;
 use lazy_static::lazy_static;
 use regex::Regex;
 
 #[derive(Clone, Debug)]
-pub enum ResourceType {
-    Events(String),
-    Commands(String),
-    Users(String),
-    Passwords(String),
+pub enum ResourceType<'a> {
+    Events(&'a str),
+    Commands(&'a str),
+    Users(&'a str),
+    Passwords(&'a str),
 }
 
-impl ResourceType {
+impl<'a> ResourceType<'a> {
     pub fn app_name(&self) -> &str {
         match self {
-            Self::Commands(app) => app.as_str(),
-            Self::Events(app) => app.as_str(),
-            Self::Users(app) => app.as_str(),
-            Self::Passwords(app) => app.as_str(),
+            Self::Commands(app) => app,
+            Self::Events(app) => app,
+            Self::Users(app) => app,
+            Self::Passwords(app) => app,
         }
     }
 }
@@ -32,7 +33,7 @@ pub enum KafkaEventType {
 }
 
 impl KafkaEventType {
-    fn make_topic(&self, name: String) -> String {
+    fn make_topic(&self, name: &str) -> String {
         make_kafka_resource_name(match self {
             Self::Commands => ResourceType::Commands(name),
             Self::Events => ResourceType::Events(name),
@@ -41,27 +42,16 @@ impl KafkaEventType {
 }
 
 #[derive(Clone, Debug)]
-pub enum KafkaTarget {
-    Internal { topic: String },
-    External { config: KafkaConfig },
+pub struct KafkaTarget<'a> {
+    pub client: &'a KafkaClientConfig,
+    pub topic: String,
 }
 
-impl KafkaTarget {
-    pub fn topic_name(&self) -> &str {
-        match self {
-            Self::Internal { topic } => topic,
-            Self::External { config } => &config.topic,
-        }
-    }
-
-    /// Turn a target into a config, by filling in gaps from the default config
-    pub fn into_config(self, default_kafka: &KafkaClientConfig) -> KafkaConfig {
-        match self {
-            KafkaTarget::External { config } => config,
-            KafkaTarget::Internal { topic } => KafkaConfig {
-                client: default_kafka.clone(),
-                topic,
-            },
+impl<'a> From<KafkaTarget<'a>> for KafkaConfig {
+    fn from(target: KafkaTarget<'a>) -> Self {
+        KafkaConfig {
+            client: target.client.clone(),
+            topic: target.topic,
         }
     }
 }
@@ -69,45 +59,33 @@ impl KafkaTarget {
 pub trait KafkaConfigExt {
     type Error;
 
-    /// Get a Kafka target, this can be either internal or external.
+    /// Get a Kafka topic..
     ///
     /// This method must only return an Internal topic from a trusted source. Otherwise the user
     /// could internally redirect traffic.
-    fn kafka_target(&self, event_type: KafkaEventType) -> Result<KafkaTarget, Self::Error>;
+    fn kafka_topic(&self, event_type: KafkaEventType) -> Result<String, Self::Error>;
 
     /// Get a Kafka config, this can be either internal or external.
     ///
     /// This method must only return an Internal topic from a trusted source. Otherwise the user
     /// could internally redirect traffic.
-    fn kafka_config(
+    fn kafka_target<'a>(
         &self,
         event_type: KafkaEventType,
-        default_kafka: &KafkaClientConfig,
-    ) -> Result<KafkaConfig, Self::Error> {
-        Ok(self.kafka_target(event_type)?.into_config(default_kafka))
+        default_kafka: &'a KafkaClientConfig,
+    ) -> Result<KafkaTarget<'a>, Self::Error> {
+        Ok(KafkaTarget {
+            client: default_kafka,
+            topic: self.kafka_topic(event_type)?,
+        })
     }
 }
 
 impl KafkaConfigExt for registry::v1::Application {
-    type Error = serde_json::Error;
+    type Error = Infallible;
 
-    fn kafka_target(&self, event_type: KafkaEventType) -> Result<KafkaTarget, Self::Error> {
-        let status = self.section::<registry::v1::KafkaAppStatus>().transpose()?;
-
-        Ok(match status.and_then(|s| s.downstream) {
-            Some(status) => KafkaTarget::External {
-                config: KafkaConfig {
-                    client: KafkaClientConfig {
-                        bootstrap_servers: status.bootstrap_servers,
-                        properties: status.properties,
-                    },
-                    topic: status.topic,
-                },
-            },
-            None => KafkaTarget::Internal {
-                topic: event_type.make_topic(self.metadata.name.clone()),
-            },
-        })
+    fn kafka_topic(&self, event_type: KafkaEventType) -> Result<String, Self::Error> {
+        Ok(event_type.make_topic(&self.metadata.name))
     }
 }
 
@@ -133,7 +111,7 @@ fn resource_name(prefix: &str, hashed_prefix: &str, resource: &str) -> String {
 }
 
 pub fn make_kafka_resource_name(target: ResourceType) -> String {
-    let name = match &target {
+    let name = match target {
         ResourceType::Events(app) => resource_name("events", "evt", app),
         ResourceType::Users(app) => resource_name("user", "usr", app),
         ResourceType::Passwords(app) => resource_name("password", "pwd", app),
@@ -169,10 +147,7 @@ mod test {
             ("FOO", "evt-901890a8e9c8cf6d5a1a542b229febff-foo"),
             ("foo-", "evt-03f19ca8da08c40c2d036c8915d383e2-foo"),
         ] {
-            assert_eq!(
-                i.1,
-                make_kafka_resource_name(ResourceType::Events(i.0.to_string()))
-            )
+            assert_eq!(i.1, make_kafka_resource_name(ResourceType::Events(i.0)))
         }
     }
 }

@@ -51,7 +51,9 @@ macro_rules! app {
 
         let prom: Optional<drogue_cloud_service_api::webapp::prom::PrometheusMetrics> =
             Optional::new($prometheus);
+
         App::new()
+            .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
             .wrap(prom)
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::JsonConfig::default().limit($max_json_payload_size))

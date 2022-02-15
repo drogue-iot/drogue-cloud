@@ -19,6 +19,7 @@ use anyhow::Context;
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use drogue_client::error::ClientError;
+use std::fmt::Formatter;
 use std::{
     fmt::Debug,
     marker::PhantomData,
@@ -26,6 +27,7 @@ use std::{
     time::Duration,
 };
 use tokio_postgres::NoTls;
+use tracing::instrument;
 
 pub const CONDITION_RECONCILED: &str = "Reconciled";
 
@@ -221,13 +223,14 @@ where
 #[async_trait]
 pub trait ControllerOperation<K, RI, RO>: ResourceOperations<K, RI, RO>
 where
-    K: Send + Sync,
+    K: Debug + Send + Sync,
     RI: Clone + Send + Sync,
     RO: Clone + Send + Sync,
 {
     async fn process_resource(&self, application: RI)
         -> Result<ProcessOutcome<RO>, ReconcileError>;
 
+    #[instrument(skip(self), ret)]
     /// Process the key, any permanent error returned is a fatal error,
     async fn process(&self, key: &K) -> Result<OperationOutcome, ReconcileError> {
         // read the resource ...
@@ -281,10 +284,19 @@ where
     async fn recover(&self, message: &str, resource: RI) -> Result<RO, ()>;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum ProcessOutcome<T> {
     Complete(T),
     Retry(T, Option<Duration>),
+}
+
+impl<T> Debug for ProcessOutcome<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Retry(_, delay) => f.debug_tuple("Retry").field(&"...").field(delay).finish(),
+            Self::Complete(_) => f.debug_tuple("Complete").field(&"...").finish(),
+        }
+    }
 }
 
 impl<T> Deref for ProcessOutcome<T> {

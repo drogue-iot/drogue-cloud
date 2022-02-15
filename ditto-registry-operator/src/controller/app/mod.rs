@@ -24,6 +24,7 @@ use drogue_cloud_operator_common::controller::{
     },
 };
 use std::ops::Deref;
+use tracing::instrument;
 
 const FINALIZER: &str = "ditto";
 
@@ -77,6 +78,7 @@ impl<TP> ControllerOperation<String, registry::v1::Application, registry::v1::Ap
 where
     TP: TokenProvider,
 {
+    #[instrument(skip(self), fields(application=%application.metadata.name))]
     async fn process_resource(
         &self,
         application: registry::v1::Application,
@@ -92,6 +94,7 @@ where
         .await
     }
 
+    #[instrument(skip(self), fields(application=%app.metadata.name, message=message))]
     async fn recover(
         &self,
         message: &str,
@@ -152,6 +155,7 @@ where
     type Construct = ConstructContext;
     type Deconstruct = DeconstructContext;
 
+    #[instrument(skip(self), fields(application=%app.metadata.name), err)]
     async fn eval_state(
         &self,
         app: Self::Input,
@@ -170,6 +174,7 @@ where
         )
     }
 
+    #[instrument(skip(self, ctx), err)]
     async fn construct(
         &self,
         ctx: Self::Construct,
@@ -191,6 +196,7 @@ where
         .await
     }
 
+    #[instrument(skip(self, ctx), ret)]
     async fn deconstruct(
         &self,
         mut ctx: Self::Deconstruct,

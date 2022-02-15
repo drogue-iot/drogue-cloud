@@ -15,6 +15,7 @@ use drogue_cloud_operator_common::controller::reconciler::{
 };
 use http::StatusCode;
 use indexmap::IndexMap;
+use tracing::instrument;
 
 pub struct CreatePolicy<'o> {
     pub config: &'o ControllerConfig,
@@ -28,6 +29,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreatePolicy<'o> {
         "CreatePolicy".into()
     }
 
+    #[instrument(skip_all, ret)]
     async fn run(
         &self,
         ctx: ConstructContext,
@@ -146,6 +148,7 @@ pub struct DeletePolicy<'o> {
 }
 
 impl<'o> DeletePolicy<'o> {
+    #[instrument(skip_all, ret)]
     pub async fn run(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let resp = self
             .ditto

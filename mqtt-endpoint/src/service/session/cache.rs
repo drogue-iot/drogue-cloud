@@ -9,6 +9,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use tracing::instrument;
 
 struct DeviceCacheEntry<T> {
     pub device: Option<Arc<T>>,
@@ -47,6 +48,7 @@ impl<T> DeviceCache<T> {
         }
     }
 
+    #[instrument(level = "debug", skip(self, retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
     pub async fn fetch<'f, F, Fut, E>(
         &self,
         as_device: &'f str,
@@ -61,22 +63,30 @@ impl<T> DeviceCache<T> {
         // let as_device = as_device.as_ref();
         match cache.get_mut(as_device) {
             // entry found, and not expired
-            Some(outcome) if !outcome.expired() => match &outcome.device {
-                Some(r#as) => Ok(r#as.clone()),
-                _ => Err(PublishError::NotAuthorized),
-            },
+            Some(outcome) if !outcome.expired() => {
+                log::trace!("Cache hit");
+                match &outcome.device {
+                    Some(r#as) => Ok(r#as.clone()),
+                    _ => Err(PublishError::NotAuthorized),
+                }
+            }
             // entry found, but expired
             Some(_) => {
+                log::trace!("Cache expired");
                 // remove the existing entry
                 cache.pop(as_device);
                 self.load_and_cache(as_device, &mut cache, retriever).await
             }
             // No cache entry found
-            None => self.load_and_cache(as_device, &mut cache, retriever).await,
+            None => {
+                log::trace!("Cache miss");
+                self.load_and_cache(as_device, &mut cache, retriever).await
+            }
         }
     }
 
     /// Load device information and cache the outcome.
+    #[instrument(level = "debug", skip(self,cache,retriever),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict),err)]
     async fn load_and_cache<'f, F, Fut, E>(
         &self,
         as_device: &'f str,
@@ -110,6 +120,7 @@ impl<T> DeviceCache<T> {
     }
 
     #[allow(unused)]
+    #[instrument(skip(self),fields(self.ttl = ?self.ttl,self.next_evict=?self.next_evict))]
     pub async fn evict(&self) {
         let mut cache = self.cache.lock().await;
         Self::do_evict(&mut cache).await;

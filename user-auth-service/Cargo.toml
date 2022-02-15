@@ -54,3 +54,7 @@ actix-service = "2.0.0-beta.4"
 testcontainers = "0.12"
 serial_test = "0.5"
 drogue-cloud-test-common = { path = "../test-common" }
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

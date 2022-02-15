@@ -10,8 +10,9 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_service_api::auth::device::authn;
 use drogue_cloud_service_api::webapp::{http::header, web, HttpResponse};
 use serde::Deserialize;
+use tracing::instrument;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct PublishCommonOptions {
     pub application: Option<String>,
     pub device: Option<String>,
@@ -19,7 +20,7 @@ pub struct PublishCommonOptions {
     pub data_schema: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct PublishOptions {
     #[serde(flatten)]
     pub common: PublishCommonOptions,
@@ -88,6 +89,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
+#[instrument(skip(sender, auth, commands))]
 pub async fn publish<S>(
     sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,

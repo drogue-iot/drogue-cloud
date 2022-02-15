@@ -3,6 +3,7 @@ use async_std::sync::Mutex;
 use async_trait::async_trait;
 use kube::Resource;
 use std::{boxed::Box, sync::Arc};
+use tracing::instrument;
 
 #[async_trait]
 pub trait EventProcessor<E>: Send + Sync {
@@ -103,6 +104,7 @@ where
     RO: Clone + Send + Sync + 'static,
     O: ControllerOperation<String, RI, RO> + Send + Sync + 'static,
 {
+    #[instrument(skip(self,event),fields(meta=?event.meta()))]
     async fn handle(&self, event: &R) -> Result<bool, ()> {
         let key = self.extract(event);
         log::debug!("Extracted key from event: {:?}", key);

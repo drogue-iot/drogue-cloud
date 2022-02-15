@@ -205,14 +205,12 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
     ) -> Result<ProcessOutcome<Self::Output>, ReconcileError> {
         // delete
 
-        let topic_name =
-            make_kafka_resource_name(ResourceType::Events(ctx.app.metadata.name.clone()));
+        let topic_name = make_kafka_resource_name(ResourceType::Events(&ctx.app.metadata.name));
 
-        let user_name =
-            make_kafka_resource_name(ResourceType::Users(ctx.app.metadata.name.clone()));
+        let user_name = make_kafka_resource_name(ResourceType::Users(&ctx.app.metadata.name));
 
         let password_name =
-            make_kafka_resource_name(ResourceType::Passwords(ctx.app.metadata.name.clone()));
+            make_kafka_resource_name(ResourceType::Passwords(&ctx.app.metadata.name));
 
         // remove topic
 

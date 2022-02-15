@@ -13,6 +13,7 @@ pub mod kube;
 pub mod middleware;
 pub mod openid;
 pub mod reqwest;
+pub mod tracing;
 mod utils;
 
 pub use id::*;

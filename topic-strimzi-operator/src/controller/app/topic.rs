@@ -26,7 +26,7 @@ impl CreateTopic<'_> {
         kafka_topics: &Api<DynamicObject>,
         kafka_topic_resource: &ApiResource,
         config: &ControllerConfig,
-        target: ResourceType,
+        target: ResourceType<'_>,
     ) -> Result<(DynamicObject, String), ReconcileError> {
         let topic_name = make_kafka_resource_name(target.clone());
 
@@ -86,7 +86,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateTopic<'o> {
             self.api,
             self.resource,
             self.config,
-            ResourceType::Events(ctx.app.metadata.name.clone()),
+            ResourceType::Events(&ctx.app.metadata.name),
         )
         .await?;
 

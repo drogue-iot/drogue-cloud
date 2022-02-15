@@ -43,15 +43,12 @@ impl AuthZ {
                 );
 
                 let response = client
-                    .authorize(
-                        AuthorizationRequest {
-                            application: application.to_string(),
-                            permission: self.permission,
-                            user_id: user.user_id().map(ToString::to_string),
-                            roles: user.roles().clone(),
-                        },
-                        Default::default(),
-                    )
+                    .authorize(AuthorizationRequest {
+                        application: application.to_string(),
+                        permission: self.permission,
+                        user_id: user.user_id().map(ToString::to_string),
+                        roles: user.roles().clone(),
+                    })
                     .await
                     .map_err(|e| ServiceError::InternalError(e.to_string()))?;
 

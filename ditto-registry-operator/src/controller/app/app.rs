@@ -18,11 +18,10 @@ use drogue_cloud_operator_common::controller::reconciler::{
     progress::{self, OperationOutcome, ProgressOperation},
     ReconcileError,
 };
-use drogue_cloud_service_api::kafka::{
-    KafkaClientConfig, KafkaConfigExt, KafkaEventType, KafkaTarget,
-};
+use drogue_cloud_service_api::kafka::{KafkaClientConfig, KafkaConfigExt, KafkaEventType};
 use indexmap::IndexMap;
 use std::time::Duration;
+use tracing::instrument;
 use url::Url;
 
 struct DittoKafkaOptions {
@@ -78,6 +77,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateApplication<'o> {
 }
 
 impl<'a> CreateApplication<'a> {
+    #[instrument(skip_all)]
     async fn create_inbound(
         &self,
         ctx: ConstructContext,
@@ -93,6 +93,7 @@ impl<'a> CreateApplication<'a> {
         Ok(ctx)
     }
 
+    #[instrument(skip_all)]
     async fn create_outbound(
         &self,
         ctx: ConstructContext,
@@ -104,6 +105,7 @@ impl<'a> CreateApplication<'a> {
         Ok(ctx)
     }
 
+    #[instrument(skip_all, ret)]
     async fn create_connection(&self, connection: Connection) -> Result<(), ReconcileError> {
         let command = DevopsCommand {
             target_actor_selection: "/system/sharding/connection".to_string(),
@@ -167,6 +169,7 @@ impl<'o> DeleteApplication<'o> {
         Ok(())
     }
 
+    #[instrument(skip_all, ret)]
     async fn delete_connection(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         delete_connection(
             self.ditto,
@@ -183,6 +186,7 @@ impl<'o> DeleteApplication<'o> {
         Ok(())
     }
 
+    #[instrument(skip_all, ret)]
     async fn block_namespace(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let response = self
             .ditto
@@ -203,6 +207,7 @@ impl<'o> DeleteApplication<'o> {
         eval_ns_response(response)
     }
 
+    #[instrument(skip_all, ret)]
     async fn unblock_namespace(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let response = self
             .ditto
@@ -223,6 +228,7 @@ impl<'o> DeleteApplication<'o> {
         eval_ns_response(response)
     }
 
+    #[instrument(skip_all, ret)]
     async fn purge_namespace(&self, ctx: &DeconstructContext) -> Result<(), ReconcileError> {
         let response = self
             .ditto
@@ -252,8 +258,10 @@ fn inbound_connection_definition(
     ingress: Option<&Ingress>,
     default_config: &KafkaClientConfig,
 ) -> Result<Connection, ReconcileError> {
-    let target = ctx.app.kafka_target(KafkaEventType::Events)?;
-    let topic_name = target.topic_name().to_string();
+    let topic = ctx
+        .app
+        .kafka_topic(KafkaEventType::Events)
+        .map_err(|_| ReconcileError::permanent("This should be infallible"))?;
     let id = ConnectionType::Inbound.connection_id(&ctx.app);
     let group_id = format!("ditto-{}", id);
     let DittoKafkaOptions {
@@ -261,7 +269,7 @@ fn inbound_connection_definition(
         specific_config,
         validate_certificates,
         ca,
-    } = connection_info_from_target(target, group_id, default_config)?;
+    } = connection_info(default_config, group_id)?;
     Ok(Connection {
         id,
         connection_type: "kafka".to_string(),
@@ -273,7 +281,7 @@ fn inbound_connection_definition(
         validate_certificates,
         ca,
         sources: vec![Source {
-            addresses: vec![topic_name],
+            addresses: vec![topic],
             qos: Some(QoS::AtLeastOnce),
             consumer_count: ingress.as_ref().and_then(|i| i.consumers).unwrap_or(1),
             authorization_context: vec!["pre-authenticated:drogue-cloud".to_string()],
@@ -462,15 +470,6 @@ impl ConnectionType {
             Self::Outbound => format!("drogue-out-{}", app.metadata.name),
         }
     }
-}
-
-fn connection_info_from_target(
-    target: KafkaTarget,
-    group_id: String,
-    default_config: &KafkaClientConfig,
-) -> Result<DittoKafkaOptions, ReconcileError> {
-    let config = target.into_config(default_config);
-    connection_info(&config, group_id)
 }
 
 fn connection_info(

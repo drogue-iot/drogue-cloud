@@ -22,6 +22,7 @@ use tokio_postgres::{
     types::{Json, ToSql, Type},
     Row,
 };
+use tracing::instrument;
 use uuid::Uuid;
 
 /// A device entity record.
@@ -77,6 +78,7 @@ pub trait DeviceAccessor {
     async fn delete(&self, app: &str, device: &str) -> Result<(), ServiceError>;
 
     /// Get a device.
+    #[instrument(name = "database_device_lookup", skip(self, lock), err)]
     async fn get(
         &self,
         app: &str,
@@ -186,6 +188,7 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
 #[async_trait]
 impl<'c, C: Client> DeviceAccessor for PostgresDeviceAccessor<'c, C> {
+    #[instrument(name = "database_device_alias_lookup", skip(self), err)]
     async fn lookup(&self, app: &str, alias: &str) -> Result<Option<Device>, ServiceError> {
         let sql = r#"
 SELECT

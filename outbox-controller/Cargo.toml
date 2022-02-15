@@ -37,3 +37,6 @@ drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

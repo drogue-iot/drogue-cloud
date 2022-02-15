@@ -8,7 +8,11 @@ CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
 BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.1.19
+
+# Control if the server binary is skipped. The server binary increases build times a lot.
 SKIP_SERVER ?= false
+# Control the build options (release, debug, perf)
+BUILD_PROFILE ?= release
 
 MODULE:=$(basename $(shell realpath --relative-to $(TOP_DIR) $(CURRENT_DIR)))
 
@@ -69,6 +73,21 @@ endif
 #
 IMAGES ?= $(ALL_IMAGES)
 
+
+#
+# Cargo build profile
+#
+ifeq ($(BUILD_PROFILE),)
+CARGO_PROFILE=--release
+else ifeq ($(BUILD_PROFILE),release)
+CARGO_PROFILE=--release
+else ifeq ($(BUILD_PROFILE),debug)
+CARGO_PROFILE=
+else ifeq ($(BUILD_PROFILE),perf)
+CARGO_PROFILE=--release
+CARGO_PROFILE_RELEASE_DEBUG=true
+export CARGO_PROFILE_RELEASE_DEBUG
+endif
 
 #
 # Restore a clean environment.
@@ -137,21 +156,23 @@ container-test: cargo-test
 # Run pre-checks on the host, forking off into the build container.
 #
 host-pre-check:
-	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check
-
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-pre-check \
+		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
 
 #
 # Run checks on the host, forking off into the build container.
 #
 host-check:
-	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-check \
+		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
 
 
 #
 # Run a build on the host, forking off into the build container.
 #
 host-build:
-	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build SKIP_SERVER=$(SKIP_SERVER)
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) container-build \
+		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
 
 
 #
@@ -195,8 +216,8 @@ cargo-pre-check:
 # Check the code
 #
 cargo-check: cargo-pre-check cargo-check-frontend
-	cargo check --release
-	cargo clippy --release --all-features
+	cargo check $(CARGO_PROFILE)
+	cargo clippy $(CARGO_PROFILE) --all-features
 
 
 #
@@ -204,19 +225,23 @@ cargo-check: cargo-pre-check cargo-check-frontend
 #
 .PHONY: cargo-check-frontend
 cargo-check-frontend:
-	cd console-frontend && cargo check --release
-	cd console-frontend && cargo clippy --release --all-features
+	cd console-frontend && cargo check $(CARGO_PROFILE)
+	cd console-frontend && cargo clippy $(CARGO_PROFILE) --all-features
 
 
 #
 # Run the cargo build.
 #
 ifneq ($(MODULE),)
-cargo-build: CARGO_BUILD_ARGS := --package drogue-cloud-$(MODULE)
-endif
-
+# build only a single package
+cargo-build: CARGO_BUILD_ARGS += --package drogue-cloud-$(MODULE)
+else
+# build the workspace
+cargo-build: CARGO_BUILD_ARGS += --workspace
 ifneq ($(SKIP_SERVER), false)
-cargo-build: CARGO_BUILD_ARGS := --exclude drogue-cloud-server $(CARGO_BUILD_ARGS)
+# but exclude the server binary if requested
+cargo-build: CARGO_BUILD_ARGS += --exclude drogue-cloud-server
+endif
 endif
 
 cargo-build:
@@ -224,14 +249,14 @@ cargo-build:
 	@# We build everything, expect the wasm stuff. Wasm will be compiled in a separate step, and we don't need
 	@# the build to compile all the dependencies, which we only use in wasm, for the standard target triple.
 	@#
-	cargo build --release --workspace $(CARGO_BUILD_ARGS)
+	cargo build $(CARGO_PROFILE) $(CARGO_BUILD_ARGS)
 
 
 #
 # Run the cargo tests.
 #
 cargo-test:
-	cargo test --release -- $(CARGO_TEST_OPTS)
+	cargo test $(CARGO_PROFILE) -- $(CARGO_TEST_OPTS)
 
 
 #
@@ -239,7 +264,7 @@ cargo-test:
 #
 frontend-build: cargo-build
 	cd console-frontend && npm install
-	cd console-frontend && trunk build --release
+	cd console-frontend && trunk build $(CARGO_PROFILE)
 
 
 #

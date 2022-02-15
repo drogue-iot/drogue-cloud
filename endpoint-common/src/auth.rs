@@ -18,6 +18,7 @@ use http::HeaderValue;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use tracing::instrument;
 use x509_parser::prelude::X509Certificate;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -85,17 +86,15 @@ impl DeviceAuthenticator {
         D: Into<String>,
     {
         self.client
-            .authorize_as(
-                AuthorizeGatewayRequest {
-                    application: application.into(),
-                    device: device.into(),
-                    r#as: r#as.into(),
-                },
-                Default::default(),
-            )
+            .authorize_as(AuthorizeGatewayRequest {
+                application: application.into(),
+                device: device.into(),
+                r#as: r#as.into(),
+            })
             .await
     }
 
+    #[instrument]
     pub async fn authenticate<A, D>(
         &self,
         application: A,
@@ -104,25 +103,23 @@ impl DeviceAuthenticator {
         r#as: Option<String>,
     ) -> AuthResult<AuthenticationResponse>
     where
-        A: ToString,
-        D: ToString,
+        A: ToString + Debug,
+        D: ToString + Debug,
     {
         self.client
-            .authenticate(
-                AuthenticationRequest {
-                    application: application.to_string(),
-                    device: device.to_string(),
-                    credential,
-                    r#as,
-                },
-                Default::default(),
-            )
+            .authenticate(AuthenticationRequest {
+                application: application.to_string(),
+                device: device.to_string(),
+                credential,
+                r#as,
+            })
             .await
     }
 
     /// Authenticate a device from a client cert only.
     ///
     /// This will take the issuerDn as application id, and the subjectDn as device id.
+    #[instrument]
     pub async fn authenticate_cert(
         &self,
         certs: Vec<Vec<u8>>,
@@ -131,7 +128,9 @@ impl DeviceAuthenticator {
         self.authenticate(app_id, device_id, Credential::Certificate(certs), None)
             .await
     }
+
     /// authenticate for a typical CoAP request
+    #[instrument]
     pub async fn authenticate_coap<T, D>(
         &self,
         application: Option<T>,
@@ -139,8 +138,8 @@ impl DeviceAuthenticator {
         auth: Option<&HeaderValue>,
     ) -> AuthResult<AuthenticationResponse>
     where
-        T: AsRef<str>,
-        D: AsRef<str>,
+        T: AsRef<str> + Debug,
+        D: AsRef<str> + Debug,
     {
         match (application, device, auth.map(AuthValue::from)) {
             // POST /<channel> -> basic auth `<device>@<tenant>` / `<password>` -> Password(<password>)
@@ -204,7 +203,9 @@ impl DeviceAuthenticator {
             _ => Ok(AuthenticationResponse::failed()),
         }
     }
+
     /// authenticate for a typical MQTT request
+    #[instrument]
     pub async fn authenticate_mqtt<U, P, C>(
         &self,
         username: Option<U>,
@@ -269,6 +270,7 @@ impl DeviceAuthenticator {
     }
 
     /// authenticate for a typical HTTP request
+    #[instrument]
     pub async fn authenticate_http<T, D>(
         &self,
         application: Option<T>,
@@ -278,8 +280,8 @@ impl DeviceAuthenticator {
         r#as: Option<String>,
     ) -> AuthResult<AuthenticationResponse>
     where
-        T: AsRef<str>,
-        D: AsRef<str>,
+        T: AsRef<str> + Debug,
+        D: AsRef<str> + Debug,
     {
         match (application, device, auth.map(AuthValue::from), certs) {
             // POST /<channel> -> basic auth `<device>@<application>` / `<password>` -> Password(<password>)

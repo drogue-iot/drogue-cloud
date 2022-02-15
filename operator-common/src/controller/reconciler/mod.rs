@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use core::fmt::{Debug, Formatter};
 use drogue_client::meta::v1::CommonMetadata;
+use tracing::instrument;
 
 pub enum ReconcileState<I, C, D> {
     Ignore(I),
@@ -84,6 +85,7 @@ pub trait Reconciler {
     /// An implementor, using this function, should:
     /// * When constructing, first set the finalizer (and RetryNow), then perform all necessary operations.
     /// * When deconstructing, first perform all necessary options. At last, remove the finalizer.
+    #[instrument(skip(ctx, construct, deconstruct, ignore), ret)]
     fn eval_by_finalizer<CTX, FC, FD, FI>(
         requested: bool,
         ctx: CTX,
@@ -127,6 +129,7 @@ impl<R> ReconcileProcessor<R>
 where
     R: Reconciler,
 {
+    #[instrument(skip_all, ret)]
     pub async fn reconcile(
         &self,
         input: R::Input,

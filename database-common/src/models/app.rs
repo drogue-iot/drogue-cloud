@@ -24,6 +24,7 @@ use tokio_postgres::{
     types::{Json, ToSql, Type},
     Row,
 };
+use tracing::instrument;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -115,6 +116,7 @@ pub trait ApplicationAccessor {
     async fn delete(&self, app: &str) -> Result<(), ServiceError>;
 
     /// Get an application
+    #[instrument(name = "database_app_lookup", skip(self, lock), err)]
     async fn get(&self, app: &str, lock: Lock) -> Result<Option<Application>, ServiceError> {
         Ok(self
             .list(
@@ -239,6 +241,7 @@ trait Param: ToSql + Sync {}
 
 #[async_trait]
 impl<'c, C: Client> ApplicationAccessor for PostgresApplicationAccessor<'c, C> {
+    #[instrument(name = "database_app_alias_lookup", skip(self), err)]
     async fn lookup(&self, alias: &str) -> Result<Option<Application>, ServiceError> {
         let sql = r#"
 SELECT

@@ -46,3 +46,7 @@ drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-operator-common = { path = "../operator-common", features = ["kube-runtime", "kube"] }
 
 drogue-client = "0.9.0-alpha.1"
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

@@ -50,6 +50,7 @@ pub struct Config {
 macro_rules! app {
     ($data:expr, $api_key_ty:ty, $api_key:expr, $max_json_payload_size:expr, $enable_auth: expr, $auth: expr) => {
         App::new()
+            .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::JsonConfig::default().limit($max_json_payload_size))
             .app_data($data.clone())

@@ -44,3 +44,7 @@ drogue-client = "0.9.0-alpha.1"
 
 jsonwebtokens = "1.0.0-alpha.13"
 base64 = "0.13"
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

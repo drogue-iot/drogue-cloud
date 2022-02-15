@@ -28,8 +28,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateTopic<'o> {
         ctx: ConstructContext,
     ) -> drogue_cloud_operator_common::controller::reconciler::progress::Result<ConstructContext>
     {
-        let topic_name =
-            make_kafka_resource_name(ResourceType::Events(ctx.app.metadata.name.clone()));
+        let topic_name = make_kafka_resource_name(ResourceType::Events(&ctx.app.metadata.name));
 
         let mut config = Vec::with_capacity(self.config.properties.len());
         for (k, v) in &self.config.properties {
