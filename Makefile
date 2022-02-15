@@ -376,6 +376,7 @@ frontend: host-build
 #
 # For a local deploy, we allow using the default container registry of the project
 #
+.PHONY: deploy
 deploy: CONTAINER_REGISTRY ?= "ghcr.io/drogue-iot"
 deploy:
 	test -d deploy/helm/charts || git submodule update --init
