@@ -51,3 +51,10 @@ drogueCloudCore:
                               location ~* "^/auth/realms/master/metrics" {
                                   return 301 /auth/realms/master;
                               }
+global:
+  drogueCloud:
+    jaeger:
+      enabled: false
+      deployOperator: false
+      ingress:
+        port: 30010
