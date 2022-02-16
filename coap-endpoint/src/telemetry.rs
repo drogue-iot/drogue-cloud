@@ -3,7 +3,7 @@ use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
-    sender::{self, DownstreamSender},
+    sender::{self, DownstreamSender, ToPublishId},
     sink::Sink,
 };
 use drogue_cloud_service_api::auth::device::authn;
@@ -121,17 +121,17 @@ where
     // If we have an "as" parameter, we publish as another device.
     let (sender_id, device_id) = match r#as {
         // use the "as" information as device id
-        Some(r#as) => (device.metadata.name, r#as.metadata.name),
+        Some(r#as) => ((&device.metadata).to_id(), (&r#as.metadata).to_id()),
         // use the original device id
-        None => (device.metadata.name.clone(), device.metadata.name),
+        None => ((&device.metadata).to_id(), (&device.metadata).to_id()),
     };
 
     // Create Publish Object
     let publish = sender::Publish {
         channel,
         application: &application,
-        device_id,
-        sender_id,
+        device: device_id,
+        sender: sender_id,
         options: sender::PublishOptions {
             data_schema: opts.common.data_schema,
             topic: suffix,

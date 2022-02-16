@@ -3,7 +3,10 @@ mod sender;
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{
     error::HttpEndpointError,
-    sender::{Publish, PublishOptions, PublishOutcome, Publisher, UpstreamSender},
+    sender::{
+        IntoPublishId, Publish, PublishOptions, PublishOutcome, Publisher, ToPublishId,
+        UpstreamSender,
+    },
     sink::Sink,
 };
 use drogue_cloud_service_api::webapp::HttpResponse;
@@ -77,8 +80,8 @@ where
                 Publish {
                     channel: opts.command.clone(),
                     application: &application,
-                    device_id: opts.device.clone(),
-                    sender_id: target,
+                    device: opts.device.to_id(),
+                    sender: target.into_id(),
                     options: PublishOptions {
                         content_type: opts.content_type.clone(),
                         ..Default::default()

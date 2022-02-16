@@ -35,8 +35,8 @@ where
     ) -> Result<Option<CoapResponse>, CoapEndpointError> {
         let filter = CommandFilter::proxied_device(
             &publish.application.metadata.name,
-            &publish.sender_id,
-            &publish.device_id,
+            &publish.sender.name,
+            &publish.device.name,
         );
         match self.publish(publish, &req.message.payload).await {
             // ok, and accepted

@@ -3,12 +3,14 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command::Commands,
     error::{EndpointError, HttpEndpointError},
-    sender::{self, DownstreamSender},
+    sender::{self, DownstreamSender, PublishIdPair},
     sink::Sink,
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth::device::authn;
-use drogue_cloud_service_api::webapp::{http::header, web, HttpResponse};
+use drogue_cloud_service_api::{
+    auth::device::authn,
+    webapp::{http::header, web, HttpResponse},
+};
 use serde::Deserialize;
 use tracing::instrument;
 
@@ -89,9 +91,9 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-#[instrument(skip(sender, auth, commands))]
+#[instrument(skip(downstream, auth, commands, body))]
 pub async fn publish<S>(
-    sender: web::Data<DownstreamSender<S>>,
+    downstream: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     channel: String,
@@ -127,21 +129,15 @@ where
         } => (application, device, r#as),
     };
 
-    // If we have an "as" parameter, we publish as another device.
-    let (sender_id, device_id) = match r#as {
-        // use the "as" information as device id
-        Some(r#as) => (device.metadata.name, r#as.metadata.name),
-        // use the original device id
-        None => (device.metadata.name.clone(), device.metadata.name),
-    };
+    let PublishIdPair { device, sender } = PublishIdPair::with_devices(device, r#as);
 
     // publish
 
     let publish = sender::Publish {
         channel,
         application: &application,
-        device_id,
-        sender_id,
+        device,
+        sender,
         options: sender::PublishOptions {
             data_schema: opts.common.data_schema,
             topic: suffix,
@@ -154,7 +150,7 @@ where
         },
     };
 
-    sender
+    downstream
         .publish_and_await(publish, commands, opts.ct, body)
         .await
 }

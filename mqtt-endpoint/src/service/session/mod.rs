@@ -5,6 +5,7 @@ use crate::{auth::DeviceAuthenticator, config::EndpointConfig, CONNECTIONS_COUNT
 use async_trait::async_trait;
 use cache::DeviceCache;
 use drogue_client::registry;
+use drogue_cloud_endpoint_common::sender::ToPublishId;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
     sender::{
@@ -164,8 +165,8 @@ where
                 sender::Publish {
                     channel: channel.to_string(),
                     application: &self.application,
-                    device_id: device.metadata.name.clone(),
-                    sender_id: self.device.metadata.name.clone(),
+                    device: device.metadata.to_id(),
+                    sender: self.device.metadata.to_id(),
                     options: PublishOptions {
                         content_type,
                         ..Default::default()

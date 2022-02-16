@@ -42,8 +42,8 @@ where
     {
         let filter = CommandFilter::proxied_device(
             &publish.application.metadata.name,
-            &publish.sender_id,
-            &publish.device_id,
+            &publish.sender.name,
+            &publish.device.name,
         );
         match self.publish(publish, body).await {
             // ok, and accepted
