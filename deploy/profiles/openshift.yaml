@@ -26,3 +26,12 @@ drogueCloudCore:
     mqttWs:
       ingress:
         port: 443
+
+global:
+  drogueCloud:
+    jaeger:
+      enabled: false
+      deployOperator: false # false for openshift
+      sampling: 1.0
+      ingress:
+        port: {}

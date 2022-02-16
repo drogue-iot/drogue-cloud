@@ -345,6 +345,7 @@ deploy: CONTAINER_REGISTRY ?= "ghcr.io/drogue-iot"
 deploy:
 	test -d deploy/helm/charts || git submodule update --init
 	env TEST_CERTS_IMAGE=$(CONTAINER_REGISTRY)/test-cert-generator:$(IMAGE_TAG) ./scripts/drgadm deploy \
+		-M \
 		-s drogueCloudCore.defaults.images.repository=$(CONTAINER_REGISTRY) \
 		-s drogueCloudCore.defaults.images.tag=latest $(DEPLOY_ARGS)
 
