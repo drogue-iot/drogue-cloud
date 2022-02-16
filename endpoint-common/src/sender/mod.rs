@@ -8,9 +8,14 @@ use crate::{
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use cloudevents::{event::Data, Event, EventBuilder, EventBuilderV10};
-use drogue_client::registry;
-use drogue_cloud_service_api::webapp::HttpResponse;
-use drogue_cloud_service_api::{EXT_INSTANCE, EXT_SENDER};
+use drogue_client::{
+    meta::v1::{NonScopedMetadata, ScopedMetadata},
+    registry,
+};
+use drogue_cloud_service_api::{
+    webapp::HttpResponse, EXT_APPLICATION_UID, EXT_DEVICE_UID, EXT_INSTANCE, EXT_SENDER,
+    EXT_SENDER_UID,
+};
 use drogue_cloud_service_common::{Id, IdInjector};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use process::Processor;
@@ -37,14 +42,124 @@ const DEFAULT_TYPE_EVENT: &str = "io.drogue.event.v1";
 pub struct Publish<'a> {
     pub application: &'a registry::v1::Application,
     /// The device id this message originated from.
-    pub device_id: String,
+    pub device: PublishId,
     /// The device id this message was sent by.
     ///
     /// In case of a gateway sending for another device, this would be the gateway id. In case
     /// of a device sending for its own, this would be equal to the device_id.
-    pub sender_id: String,
+    pub sender: PublishId,
     pub channel: String,
     pub options: PublishOptions,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PublishId {
+    pub name: String,
+    pub uid: Option<String>,
+}
+
+pub struct PublishIdPair {
+    /// The device which originally sent the event
+    pub device: PublishId,
+    /// The device which transmitted the event
+    pub sender: PublishId,
+}
+
+impl PublishIdPair {
+    /// Create a new pair of publish IDs for a typical (connected) device and as-device combination.
+    ///
+    /// If the `as` device is provided, then the connected device is used as sender and the `as`
+    /// device is used as device.
+    ///
+    /// If no `as` device is provided, both sender and device will be set to the device id.
+    pub fn with_devices(
+        device: registry::v1::Device,
+        r#as: Option<registry::v1::Device>,
+    ) -> PublishIdPair {
+        let device_id = match r#as {
+            // use the "as" information as device id
+            Some(r#as) => r#as.metadata.to_id(),
+            // use the original device id
+            None => device.metadata.to_id(),
+        };
+        PublishIdPair {
+            device: device_id,
+            sender: device.metadata.into_id(),
+        }
+    }
+}
+
+pub trait IntoPublishId {
+    fn into_id(self) -> PublishId;
+}
+
+pub trait ToPublishId {
+    fn to_id(&self) -> PublishId;
+}
+
+macro_rules! into_impl_into {
+    ($name:ty) => {
+        impl IntoPublishId for $name {
+            fn into_id(self) -> PublishId {
+                PublishId {
+                    name: self.into(),
+                    uid: None,
+                }
+            }
+        }
+    };
+}
+macro_rules! to_impl_into {
+    ($name:ty) => {
+        impl ToPublishId for $name {
+            fn to_id(&self) -> PublishId {
+                PublishId {
+                    name: self.into(),
+                    uid: None,
+                }
+            }
+        }
+    };
+}
+
+into_impl_into!(String);
+to_impl_into!(str);
+to_impl_into!(String);
+
+impl ToPublishId for ScopedMetadata {
+    fn to_id(&self) -> PublishId {
+        PublishId {
+            name: self.name.clone(),
+            uid: Some(self.uid.clone()),
+        }
+    }
+}
+
+impl ToPublishId for NonScopedMetadata {
+    fn to_id(&self) -> PublishId {
+        PublishId {
+            name: self.name.clone(),
+            uid: Some(self.uid.clone()),
+        }
+    }
+}
+
+impl IntoPublishId for ScopedMetadata {
+    fn into_id(self) -> PublishId {
+        PublishId {
+            name: self.name,
+            uid: Some(self.uid),
+        }
+    }
+}
+
+impl IntoPublishId for NonScopedMetadata {
+    fn into_id(self) -> PublishId {
+        PublishId {
+            name: self.name,
+            uid: Some(self.uid),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -177,8 +292,8 @@ where
         skip(self,publish,body),
         field(
             application=publish.application.metadata.name,
-            sender=publish.sender_id,
-            device=publish.device_id,
+            sender=publish.sender,
+            device=publish.device,
             channel=publish.channel,
             body_length=body.len()
         ),
@@ -195,7 +310,7 @@ where
     {
         let app_id = publish.application.metadata.name.clone();
         let app_enc = utf8_percent_encode(&app_id, NON_ALPHANUMERIC);
-        let device_enc = utf8_percent_encode(&publish.device_id, NON_ALPHANUMERIC);
+        let device_enc = utf8_percent_encode(&publish.device.name, NON_ALPHANUMERIC);
 
         let source = format!("{}/{}", app_enc, device_enc);
 
@@ -205,13 +320,25 @@ where
             // we need an "absolute" URL for the moment: until 0.4 is released
             // see: https://github.com/cloudevents/sdk-rust/issues/106
             .source(format!("drogue://{}", source))
-            .inject(Id::new(app_id, publish.device_id))
+            .inject(Id::new(app_id, publish.device.name))
             .subject(&publish.channel)
             .time(Utc::now());
 
+        event = event.extension(
+            EXT_APPLICATION_UID,
+            publish.application.metadata.uid.clone(),
+        );
+
+        if let Some(uid) = publish.device.uid {
+            event = event.extension(EXT_DEVICE_UID, uid);
+        }
+        if let Some(uid) = publish.sender.uid {
+            event = event.extension(EXT_SENDER_UID, uid);
+        }
+
         event = event.extension(EXT_PARTITIONKEY, source);
         event = event.extension(EXT_INSTANCE, self.instance());
-        event = event.extension(EXT_SENDER, publish.sender_id);
+        event = event.extension(EXT_SENDER, publish.sender.name);
 
         if let Some(data_schema) = publish.options.data_schema {
             event = event.extension("dataschema", data_schema);

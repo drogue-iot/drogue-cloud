@@ -10,12 +10,14 @@ use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     error::{EndpointError, HttpEndpointError},
-    sender::{self, DownstreamSender, Publisher},
+    sender::{self, DownstreamSender, PublishId, PublishIdPair, Publisher},
     sink::Sink,
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::auth::device::authn;
-use drogue_cloud_service_api::webapp::{web, HttpResponse};
+use drogue_cloud_service_api::{
+    auth::device::authn,
+    webapp::{web, HttpResponse},
+};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -53,7 +55,7 @@ pub struct Uplink {
 }
 
 async fn publish_uplink<S>(
-    sender: web::Data<DownstreamSender<S>>,
+    downstream: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     opts: PublishCommonOptions,
     req: web::HttpRequest,
@@ -131,12 +133,13 @@ where
         }
     };
 
+    let PublishIdPair { device, sender } = PublishIdPair::with_devices(device, r#as);
+
     send_uplink(
-        sender,
+        downstream,
         application,
-        r#as.map(|d| d.metadata.name)
-            .unwrap_or_else(|| device.metadata.name.clone()),
-        device.metadata.name,
+        device,
+        sender,
         port,
         time,
         content_type,
@@ -148,11 +151,12 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
+#[inline]
 async fn send_uplink<B, S>(
-    sender: web::Data<DownstreamSender<S>>,
+    downstream: web::Data<DownstreamSender<S>>,
     application: registry::v1::Application,
-    device_id: String,
-    sender_id: String,
+    device: PublishId,
+    sender: PublishId,
     port: String,
     time: DateTime<Utc>,
     content_type: Option<String>,
@@ -164,13 +168,13 @@ where
     B: AsRef<[u8]> + Send + Sync,
     S: Sink,
 {
-    Ok(sender
+    Ok(downstream
         .publish_http_default(
             sender::Publish {
                 channel: port,
                 application: &application,
-                device_id,
-                sender_id,
+                device,
+                sender,
                 options: sender::PublishOptions {
                     time: Some(time),
                     content_type,
@@ -196,7 +200,7 @@ mod test {
     #[test]
     fn test_model_mapping() {
         let lorawan_spec = json!({
-            "ports": {
+        "ports": {
              "1": { "data_schema": "mod1",},
              "5": {"data_schema": "mod5",},
             }
