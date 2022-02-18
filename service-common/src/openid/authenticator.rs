@@ -1,4 +1,4 @@
-use crate::{defaults, openid::ExtendedClaims, reqwest::add_service_cert};
+use crate::{defaults, openid::ExtendedClaims, reqwest::ClientFactory};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use failure::Fail;
@@ -36,6 +36,12 @@ pub struct AuthenticatorGlobalConfig {
 
     #[serde(default)]
     pub redirect_url: Option<String>,
+
+    #[serde(default)]
+    pub tls_insecure: bool,
+
+    #[serde(default)]
+    pub tls_ca_certificates: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -86,6 +92,14 @@ impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
             .ok_or_else(|| anyhow::anyhow!("Missing issuer or SSO URL"))?;
 
         Url::parse(&url).context("Failed to parse issuer/SSO URL")
+    }
+
+    fn tls_insecure(&self) -> bool {
+        self.0.tls_insecure
+    }
+
+    fn tls_ca_certificates(&self) -> Vec<String> {
+        self.0.tls_ca_certificates.clone()
     }
 }
 
@@ -238,14 +252,22 @@ pub trait ClientConfig {
     fn client_secret(&self) -> String;
     fn redirect_url(&self) -> Option<String>;
     fn issuer_url(&self) -> anyhow::Result<Url>;
+    fn tls_insecure(&self) -> bool;
+    fn tls_ca_certificates(&self) -> Vec<String>;
 }
 
 pub async fn create_client<C: ClientConfig, P: CompactJson + Claims>(
     config: &C,
 ) -> anyhow::Result<openid::Client<Discovered, P>> {
-    let mut client = reqwest::ClientBuilder::new();
+    let mut client = ClientFactory::new();
 
-    client = add_service_cert(client)?;
+    if config.tls_insecure() {
+        client = client.make_insecure();
+    }
+
+    for ca in config.tls_ca_certificates() {
+        client = client.add_ca_cert(ca);
+    }
 
     let client = openid::Client::<Discovered, P>::discover_with_client(
         client.build()?,

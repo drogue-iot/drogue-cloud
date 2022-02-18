@@ -76,9 +76,9 @@ mod test {
 
         let env = config::Environment::with_prefix(&format!("{}_", "KAFKA"));
 
-        let mut cfg = config::Config::new();
-        cfg.merge(env.separator("__")).unwrap();
-        let kafka: KafkaClientConfig = cfg.try_into().unwrap();
+        let cfg = config::Config::builder();
+        let cfg = cfg.add_source(env.separator("__")).build().unwrap();
+        let kafka: KafkaClientConfig = cfg.try_deserialize().unwrap();
 
         assert_eq!(kafka.properties.get("a_b_c").cloned(), Some("d.e.f".into()));
 

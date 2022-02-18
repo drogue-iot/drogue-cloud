@@ -11,6 +11,7 @@ use drogue_cloud_registry_events::{
     stream::{KafkaEventStream, KafkaStreamConfig},
     Event,
 };
+use drogue_cloud_service_common::reqwest::ClientFactory;
 use drogue_cloud_service_common::{
     client::RegistryConfig,
     defaults,
@@ -70,8 +71,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // client
 
-    let client = reqwest::Client::new();
-    let registry = config.registry.into_client(client.clone()).await?;
+    let client = ClientFactory::new().build()?;
+    let registry = config.registry.into_client().await?;
 
     // controller
 

@@ -56,7 +56,7 @@ impl DeviceAuthenticator {
         let token_provider = match (config.auth_disabled, config.token_config) {
             (false, Some(token_config)) => Some(
                 token_config
-                    .discover_from(reqwest::Client::new())
+                    .discover_from()
                     .await
                     .context("Failed to discover OAuth2 client")?,
             ),
