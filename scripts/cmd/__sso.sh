@@ -9,6 +9,8 @@ set -e
 : "${KEYCLOAK_OPERATOR_VERSION:=17.0.0}"
 : "${KEYCLOAK_CRDS:=true}"
 
+progress "📦 Deploying pre-requisites (Keycloak v${KEYCLOAK_OPERATOR_VERSION}) ... "
+
 if [[ "$KEYCLOAK_CRDS" == true ]]; then
 
     progress -n "  🗂 Deploying CRDs ... "

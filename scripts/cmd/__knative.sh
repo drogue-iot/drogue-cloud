@@ -8,9 +8,11 @@ set -e
 : "${EVENTING_KAFKA_VERSION:=0.26.7}"
 : "${EVENTING_KAFKA_BROKER_VERSION:=0.26.5}"
 
+progress "📦 Deploying pre-requisites (Knative) ... "
+
 # Knative Serving
 
-progress -n "  🏗 Deploying Knative serving ... "
+progress -n "  🏗 Deploying Knative serving (v${KNATIVE_SERVING_VERSION}) ... "
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-crds.yaml
 kubectl apply -f https://github.com/knative/serving/releases/download/v$KNATIVE_SERVING_VERSION/serving-core.yaml
 progress "done!"
@@ -99,7 +101,7 @@ esac
 
 # Knative Eventing
 
-progress -n "  🏗 Deploying Knative eventing ... "
+progress -n "  🏗 Deploying Knative eventing (v${KNATIVE_EVENTING_VERSION})... "
 
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-crds.yaml
 kubectl apply -f https://github.com/knative/eventing/releases/download/v$KNATIVE_EVENTING_VERSION/eventing-core.yaml

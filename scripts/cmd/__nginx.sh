@@ -5,6 +5,7 @@ set -e
 : "${NGINX_VERSION:=1.1.0}"
 
 echo "Installing NGINX Ingress Controller: ${NGINX_VERSION}"
+progress "📦 Deploying pre-requisites (NGINX Ingress Controller v${NGINX_VERSION}) ... "
 
 progress -n "  🏗 Deploying operator ... "
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v${NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml

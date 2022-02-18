@@ -6,9 +6,11 @@
 
 set -e
 
-: "${DITTO_OPERATOR_HELM_VERSION:=0.4.0}"
+: "${DITTO_OPERATOR_HELM_VERSION:=0.4.2}"
 : "${DITTO_CRDS:=true}"
 : "${DITTO_OPERATOR_HELM_REPO:=https://ctron.github.io/helm-charts}"
+
+progress "📦 Deploying pre-requisites (Ditto Operator v${DITTO_OPERATOR_HELM_VERSION}) ... "
 
 #
 # To directly install the Helm chart from the GitHub repository install the helm-git addon:

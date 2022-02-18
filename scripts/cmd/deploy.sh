@@ -153,23 +153,18 @@ fi
 # install pre-reqs
 
 if [[ "$INSTALL_NGINX_INGRESS" == true ]]; then
-    progress "📦 Deploying pre-requisites (NGINX Ingress Controller) ... "
     source "$BASEDIR/cmd/__nginx.sh"
 fi
 if [[ "$INSTALL_STRIMZI" == true ]]; then
-    progress "📦 Deploying pre-requisites (Strimzi) ... "
     source "$BASEDIR/cmd/__strimzi.sh"
 fi
 if [[ "$INSTALL_KNATIVE" == true ]]; then
-    progress "📦 Deploying pre-requisites (Knative) ... "
     source "$BASEDIR/cmd/__knative.sh"
 fi
 if [[ "$INSTALL_KEYCLOAK_OPERATOR" == true ]]; then
-    progress "📦 Deploying pre-requisites (Keycloak) ... "
     source "$BASEDIR/cmd/__sso.sh"
 fi
 if [[ "$INSTALL_DITTO_OPERATOR" == true && "$DEPLOY_TWIN" == true ]]; then
-    progress "📦 Deploying pre-requisites (Ditto Operator) ... "
     source "$BASEDIR/cmd/__ditto.sh"
 fi
 
