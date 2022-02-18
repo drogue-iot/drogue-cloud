@@ -6,7 +6,7 @@
 
 set -e
 
-: "${KEYCLOAK_OPERATOR_VERSION:=15.0.1}"
+: "${KEYCLOAK_OPERATOR_VERSION:=17.0.0}"
 : "${KEYCLOAK_CRDS:=true}"
 
 if [[ "$KEYCLOAK_CRDS" == true ]]; then
