@@ -96,8 +96,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // client
 
-    let client = reqwest::Client::new();
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config.registry.into_client().await?;
 
     // controller
 

@@ -33,5 +33,8 @@ pub struct KeycloakAdminClientConfig {
     pub admin_password: String,
 
     #[serde(default)]
-    pub tls_noverify: bool,
+    pub tls_insecure: bool,
+
+    #[serde(default)]
+    pub tls_ca_certificates: Vec<String>,
 }

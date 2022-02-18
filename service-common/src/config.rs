@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 pub trait ConfigFromEnv<'de>: Sized + Deserialize<'de> {
     fn from_env() -> Result<Self, config::ConfigError> {
-        Self::from(config::Environment::new())
+        Self::from(config::Environment::default())
     }
 
     fn from_env_prefix<S: AsRef<str>>(prefix: S) -> Result<Self, config::ConfigError> {
@@ -17,31 +17,37 @@ pub trait ConfigFromEnv<'de>: Sized + Deserialize<'de> {
 
 impl<'de, T: Deserialize<'de> + Sized> ConfigFromEnv<'de> for T {
     fn from(env: config::Environment) -> Result<T, config::ConfigError> {
-        let mut cfg = config::Config::new();
-        cfg.merge(env.separator("__"))?;
-        cfg.try_into()
+        let env = env.try_parsing(true).separator("__");
+
+        let cfg = config::Config::builder().add_source(env);
+        cfg.build()?.try_deserialize()
     }
 }
 
 #[cfg(test)]
 mod test {
-
     use super::*;
+    use config::Environment;
     use serde::Deserialize;
+    use std::collections::HashMap;
 
     #[test]
     fn test_prefix() {
         #[derive(Debug, Deserialize)]
         struct Foo {
             pub bar: String,
+            pub r#bool: bool,
         }
 
-        std::env::set_var("FOO__BAR", "baz");
+        let mut env = HashMap::<String, String>::new();
+        env.insert("FOO__BAR".into(), "baz".into());
+        env.insert("FOO__BOOL".into(), "true".into());
 
-        let foo = Foo::from_env_prefix("FOO").unwrap();
+        let foo =
+            <Foo as ConfigFromEnv>::from(Environment::default().prefix("FOO").source(Some(env)))
+                .unwrap();
         assert_eq!(foo.bar, "baz");
-
-        std::env::remove_var("FOO__BAR");
+        assert_eq!(foo.r#bool, true);
     }
 
     #[test]
@@ -60,11 +66,13 @@ mod test {
             pub value: String,
         }
 
-        std::env::set_var("FOO__BAR__BAZ__VALUE", "s1");
-        let foo = Foo::from_env_prefix("FOO").unwrap();
+        let mut env = HashMap::<String, String>::new();
+        env.insert("FOO__BAR__BAZ__VALUE".into(), "s1".into());
+
+        let foo =
+            <Foo as ConfigFromEnv>::from(Environment::default().prefix("FOO").source(Some(env)))
+                .unwrap();
 
         assert_eq!(foo.bar.unwrap().baz.value, "s1");
-
-        std::env::remove_var("FOO__BAR__BAZ__VALUE");
     }
 }

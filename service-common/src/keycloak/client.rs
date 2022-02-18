@@ -1,6 +1,7 @@
-use crate::keycloak::{error::Error, KeycloakAdminClientConfig, KeycloakClient};
-use crate::reqwest::{add_service_cert, make_insecure};
-
+use crate::{
+    keycloak::{error::Error, KeycloakAdminClientConfig, KeycloakClient},
+    reqwest::ClientFactory,
+};
 use async_trait::async_trait;
 use keycloak::{KeycloakAdmin, KeycloakAdminToken};
 
@@ -16,20 +17,18 @@ pub struct KeycloakAdminClient {
 #[async_trait]
 impl KeycloakClient for KeycloakAdminClient {
     fn new(config: KeycloakAdminClientConfig) -> Result<Self, Error> {
-        let mut client = reqwest::ClientBuilder::new();
+        let mut client = ClientFactory::new();
 
-        if config.tls_noverify {
-            client = make_insecure(client);
+        if config.tls_insecure {
+            client = client.make_insecure();
         }
 
-        client = add_service_cert(client).map_err(|_| {
-            Error::Internal(
-                "Error attaching the service certificate to the HTTP client".to_string(),
-            )
-        })?;
+        client = client.add_ca_certs(&config.tls_ca_certificates);
 
         Ok(Self {
-            client: client.build()?,
+            client: client
+                .build()
+                .map_err(|err| Error::Internal(format!("Failed to create client: {err}")))?,
             url: {
                 let url: String = config.url.into();
                 url.trim_end_matches('/').into()

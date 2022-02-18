@@ -58,6 +58,8 @@ struct ServerConfig {
     pub database: Database,
     pub keycloak: Keycloak,
     pub kafka: KafkaClientConfig,
+    pub tls_insecure: bool,
+    pub tls_ca_certificates: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -83,6 +85,8 @@ impl ServerConfig {
             .unwrap_or("localhost")
             .to_string();
         ServerConfig {
+            tls_insecure: matches.is_present("insecure"),
+            tls_ca_certificates: vec![],
             kafka: KafkaClientConfig {
                 bootstrap_servers: matches
                     .value_of("kafka-bootstrap-servers")
@@ -415,6 +419,11 @@ fn main() {
             SubCommand::with_name("run")
                 .about("run server")
                 .arg(
+                    Arg::with_name("insecure")
+                        .long("--insecure")
+                        .help("Run insecure, like disabling TLS checks")
+                )
+                .arg(
                     Arg::with_name("bind-address")
                         .long("--bind-address")
                         .help("bind to specific network address (default localhost)")
@@ -596,6 +605,8 @@ fn main() {
             sso_url: Url::parse(eps.sso.as_ref().unwrap()).ok(),
             realm: server.keycloak.realm.clone(),
             refresh_before: None,
+            tls_insecure: server.tls_insecure,
+            tls_ca_certificates: server.tls_ca_certificates.clone(),
         };
 
         let mut oauth = AuthenticatorConfig {
@@ -605,6 +616,8 @@ fn main() {
                 issuer_url: eps.issuer_url.clone(),
                 realm: server.keycloak.realm.clone(),
                 redirect_url: eps.redirect_url.clone(),
+                tls_insecure: server.tls_insecure,
+                tls_ca_certificates: server.tls_ca_certificates.clone(),
             },
             clients: HashMap::new(),
         };
@@ -630,7 +643,8 @@ fn main() {
             realm: server.keycloak.realm.clone(),
             admin_username: server.keycloak.user.clone(),
             admin_password: server.keycloak.password.clone(),
-            tls_noverify: true,
+            tls_insecure: true,
+            tls_ca_certificates: server.tls_ca_certificates.clone(),
         };
 
         let registry = RegistryConfig {

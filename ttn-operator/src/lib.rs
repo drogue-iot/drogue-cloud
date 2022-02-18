@@ -80,23 +80,23 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         .and_then(|url| Ok(Url::parse(&url)?))?
         .join("/ttn/v3")?;
 
-    let client = reqwest::Client::new();
+    let registry = config.registry.into_client().await?;
 
-    let registry = config.registry.into_client(client.clone()).await?;
+    let ttn_client = reqwest::Client::new();
 
     let app_processor = BaseController::new(
         config.work_queue.clone(),
         "app",
         ApplicationController::new(
             registry.clone(),
-            ttn::Client::new(client.clone()),
+            ttn::Client::new(ttn_client.clone()),
             endpoint_url,
         ),
     )?;
     let device_processor = BaseController::new(
         config.work_queue,
         "device",
-        DeviceController::new(registry, ttn::Client::new(client)),
+        DeviceController::new(registry, ttn::Client::new(ttn_client)),
     )?;
 
     let controller = EventDispatcher::new(vec![

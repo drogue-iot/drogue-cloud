@@ -1,3 +1,4 @@
+use crate::reqwest::ClientFactory;
 use crate::{defaults, openid::TokenConfig};
 use drogue_client::{
     core::WithTracing,
@@ -46,16 +47,14 @@ impl UserAuthClient {
         })
     }
 
-    pub async fn from_config(
-        client: reqwest::Client,
-        config: UserAuthClientConfig,
-    ) -> anyhow::Result<Self> {
+    pub async fn from_config(config: UserAuthClientConfig) -> anyhow::Result<Self> {
         let token_provider = if let Some(config) = config.token_config {
-            Some(config.discover_from(client.clone()).await?)
+            Some(config.discover_from().await?)
         } else {
             None
         };
-        Self::new(client, config.url, token_provider)
+
+        Self::new(ClientFactory::new().build()?, config.url, token_provider)
     }
 
     #[instrument]

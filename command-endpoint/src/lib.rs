@@ -72,20 +72,18 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let enable_access_token = config.enable_access_token;
 
-    let client = reqwest::Client::new();
-
     // set up authentication
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
+        let user_auth = UserAuthClient::from_config(user_auth).await?;
         Some(user_auth)
     } else {
         None
     };
 
     let client = reqwest::Client::new();
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config.registry.into_client().await?;
 
     // main server
 

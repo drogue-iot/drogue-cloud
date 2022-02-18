@@ -101,8 +101,6 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         DemoFetcher::None
     };
 
-    let client = reqwest::Client::new();
-
     // OpenIdConnect
 
     let app_config = config.clone();
@@ -115,10 +113,10 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             .console_token_config
             .context("unable to find console token config")?;
         let ui_client = console_token_config
-            .into_client(client.clone(), endpoints.redirect_url.clone())
+            .into_client(endpoints.redirect_url.clone())
             .await?;
 
-        let user_auth = UserAuthClient::from_config(client.clone(), user_auth).await?;
+        let user_auth = UserAuthClient::from_config(user_auth).await?;
 
         let account_url = match config.disable_account_url {
             true => None,
@@ -158,7 +156,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         },
     });
 
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config.registry.into_client().await?;
 
     // upstream API url
     #[cfg(feature = "forward")]

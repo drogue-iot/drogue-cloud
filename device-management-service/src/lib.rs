@@ -176,8 +176,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        let client = reqwest::Client::new();
-        let user_auth = UserAuthClient::from_config(client, user_auth).await?;
+        let user_auth = UserAuthClient::from_config(user_auth).await?;
         Some(user_auth)
     } else {
         None

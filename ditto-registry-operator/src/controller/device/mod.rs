@@ -54,11 +54,7 @@ where
             .zip(ditto.password)
             .map(|(user, token)| AccessTokenProvider { user, token });
 
-        let admin_provider = config
-            .ditto_admin
-            .clone()
-            .discover_from(client.clone())
-            .await?;
+        let admin_provider = config.ditto_admin.clone().discover_from().await?;
 
         Ok(Self {
             config,

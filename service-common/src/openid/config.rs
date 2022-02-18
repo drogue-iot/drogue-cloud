@@ -1,4 +1,5 @@
 use crate::defaults;
+use crate::reqwest::ClientFactory;
 use core::fmt::Debug;
 use drogue_client::openid::OpenIdTokenProvider;
 use serde::Deserialize;
@@ -17,6 +18,12 @@ pub struct TokenConfig {
 
     #[serde(default)]
     pub sso_url: Option<Url>,
+
+    #[serde(default)]
+    pub tls_insecure: bool,
+
+    #[serde(default)]
+    pub tls_ca_certificates: Vec<String>,
 
     #[serde(default = "defaults::realm")]
     pub realm: String,
@@ -44,15 +51,18 @@ impl TokenConfig {
 }
 
 impl TokenConfig {
-    pub async fn into_client(
-        self,
-        client: reqwest::Client,
-        redirect: Option<String>,
-    ) -> anyhow::Result<openid::Client> {
+    pub async fn into_client(self, redirect: Option<String>) -> anyhow::Result<openid::Client> {
         let issuer = self.issuer_url()?;
 
+        let mut client = ClientFactory::new();
+        client = client.add_ca_certs(self.tls_ca_certificates);
+
+        if self.tls_insecure {
+            client = client.make_insecure();
+        }
+
         Ok(openid::Client::discover_with_client(
-            client,
+            client.build()?,
             self.client_id,
             self.client_secret,
             redirect,
@@ -62,17 +72,14 @@ impl TokenConfig {
     }
 
     /// Create a new provider by discovering the OAuth2 client from the configuration
-    pub async fn discover_from(
-        self,
-        client: reqwest::Client,
-    ) -> anyhow::Result<OpenIdTokenProvider> {
+    pub async fn discover_from(self) -> anyhow::Result<OpenIdTokenProvider> {
         let refresh_before = self
             .refresh_before
             .and_then(|d| chrono::Duration::from_std(d).ok())
             .unwrap_or_else(|| chrono::Duration::seconds(15));
 
         Ok(OpenIdTokenProvider::new(
-            self.into_client(client, None).await?,
+            self.into_client(None).await?,
             refresh_before,
         ))
     }
@@ -91,6 +98,8 @@ mod test {
             sso_url: None,
             realm: "".into(),
             refresh_before: None,
+            tls_insecure: false,
+            tls_ca_certificates: vec![],
         };
 
         let url = config.issuer_url();
@@ -106,6 +115,8 @@ mod test {
             sso_url: Some(Url::parse("http://foo.bar/baz/buz").unwrap()),
             realm: "drogue".to_string(),
             refresh_before: None,
+            tls_insecure: false,
+            tls_ca_certificates: vec![],
         };
 
         let url = config.issuer_url();

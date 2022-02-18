@@ -5,6 +5,7 @@ pub use crate::service::ServiceConfig;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::reqwest::ClientFactory;
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
@@ -107,19 +108,17 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     );
     log::info!("Kafka servers: {}", config.service.kafka.bootstrap_servers);
 
-    let client = reqwest::Client::new();
-
     // set up security
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        let user_auth = Arc::new(UserAuthClient::from_config(client.clone(), user_auth).await?);
+        let user_auth = Arc::new(UserAuthClient::from_config(user_auth).await?);
         Some(user_auth)
     } else {
         None
     };
 
-    let registry = config.registry.into_client(client.clone()).await?;
+    let registry = config.registry.into_client().await?;
 
     let sender = UpstreamSender::new(
         config.instance,
@@ -136,7 +135,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         user_auth,
         config: config.service.clone(),
         sender,
-        client,
+        client: ClientFactory::new().build()?,
         registry,
     };
 
