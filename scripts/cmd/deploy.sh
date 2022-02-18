@@ -118,7 +118,11 @@ echo "Minimize: $MINIMIZE"
 INSTALL_KNATIVE="false"
 
 if [[ "$DEPLOY_TWIN" == true ]] || [[ "$DEPLOY_EXAMPLES" == true ]]; then
-    INSTALL_KNATIVE="true"
+    # default to global default
+    : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
+else
+    # default to false
+    : "${INSTALL_KNATIVE:=false}"
 fi
 
 case $CLUSTER in
