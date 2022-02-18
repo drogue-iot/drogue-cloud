@@ -205,7 +205,10 @@ echo "Helm arguments: $HELM_ARGS"
 
 # install Drogue IoT
 
-progress -n "🔨 Deploying Drogue IoT ... "
+progress "🔨 Deploying Drogue IoT... "
+progress "  ☕ This will take a while!"
+progress "  🔬 Track its progress using \`watch kubectl -n $DROGUE_NS get pods\`)! "
+progress -n "  🚀 Performing deployment... "
 helm dependency update "$BASEDIR/../deploy/install"
 helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-metrics"
 # shellcheck disable=SC2086
@@ -274,11 +277,11 @@ progress "      URL:      ${CONSOLE_URL}"
 progress "      User:     admin"
 progress "      Password: admin123456"
 progress
-progress "  * Get drg: https://github.com/drogue-iot/drg/releases/latest"
 progress "  * Log in using 'drg':"
-progress "      drg login ${API_URL}"
+progress "      * Get it from: https://github.com/drogue-iot/drg/releases/latest"
+progress "      * Run:         drg login ${API_URL}"
 progress
-progress "  * Execute: "
+progress "  * Execute (to see more examples): "
 
 ENVS=""
 if [[ "$DEPLOY_TWIN" == true ]]; then
