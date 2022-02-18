@@ -1,6 +1,6 @@
-use crate::service::session::Dialect::DrogueV1;
 use crate::{auth::DeviceAuthenticator, config::EndpointConfig, service::session::Session};
 use async_trait::async_trait;
+use drogue_client::{registry::v1::MqttSpec, Translator};
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
@@ -95,13 +95,26 @@ where
                 device,
                 r#as: _,
             }) => {
+                let dialect = match device
+                    .section::<MqttSpec>()
+                    .or_else(|| application.section())
+                {
+                    Some(Ok(mqtt)) => mqtt.dialect,
+                    Some(Err(err)) => {
+                        let msg = format!("Unable to parse MQTT spec section. Rejecting connection. Reason: {err}");
+                        log::warn!("{msg}");
+                        return Err(ServerError::Configuration(msg));
+                    }
+                    None => Default::default(),
+                };
+
                 let session = Session::<S>::new(
                     &self.config,
                     self.authenticator.clone(),
                     self.downstream.clone(),
                     connect.sink(),
                     application,
-                    DrogueV1,
+                    dialect,
                     device,
                     self.commands.clone(),
                 );

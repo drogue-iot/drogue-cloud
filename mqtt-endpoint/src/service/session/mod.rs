@@ -1,6 +1,8 @@
 mod cache;
+mod dialect;
 mod inbox;
 
+use crate::service::session::dialect::DefaultTopicParser;
 use crate::{auth::DeviceAuthenticator, config::EndpointConfig, CONNECTIONS_COUNTER};
 use async_trait::async_trait;
 use cache::DeviceCache;
@@ -29,50 +31,6 @@ use std::{
 use tracing::instrument;
 
 #[derive(Clone)]
-pub enum Dialect {
-    DrogueV1,
-    LongTopicDialect,
-}
-
-struct ParseError;
-
-struct ParsedTopic<'a> {
-    channel: &'a str,
-    device: Option<&'a str>,
-}
-
-impl Dialect {
-    fn handle<'a>(&self, path: &'a str) -> Result<ParsedTopic<'a>, ParseError> {
-        match &self {
-            Self::DrogueV1 => {
-                // This should mimic the behavior of the current parser
-                let topic = path.split('/').collect::<Vec<_>>();
-                log::debug!("Topic: {:?}", topic);
-
-                match topic.as_slice() {
-                    [channel] => Ok(ParsedTopic {
-                        channel: channel,
-                        device: None,
-                    }),
-                    [channel, as_device] => Ok(ParsedTopic {
-                        channel: channel,
-                        device: Some(as_device),
-                    }),
-                    _ => Err(ParseError),
-                }
-            }
-            Self::LongTopicDialect => {
-                // New Parsing strategy, just take the complete path
-                Ok(ParsedTopic {
-                    channel: path,
-                    device: None,
-                })
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
 pub struct Session<S>
 where
     S: Sink,
@@ -80,7 +38,7 @@ where
     sender: DownstreamSender<S>,
     application: registry::v1::Application,
     device: Arc<registry::v1::Device>,
-    dialect: Dialect,
+    dialect: registry::v1::MqttDialect,
     commands: Commands,
     auth: DeviceAuthenticator,
     sink: mqtt::Sink,
@@ -99,7 +57,7 @@ where
         sender: DownstreamSender<S>,
         sink: mqtt::Sink,
         application: registry::v1::Application,
-        dialect: Dialect,
+        dialect: registry::v1::MqttDialect,
         device: registry::v1::Device,
         commands: Commands,
     ) -> Self {
@@ -157,9 +115,7 @@ where
         &self,
         publish: &Publish<'_>,
     ) -> Result<(String, Arc<registry::v1::Device>), PublishError> {
-        // TODO this should be removed and is just there as an example
-
-        match &self.dialect.handle(publish.topic().path()) {
+        match self.dialect.parse_publish(publish.topic().path()) {
             Ok(topic) => match topic.device {
                 Some(device) => self
                     .device_cache

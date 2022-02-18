@@ -27,6 +27,7 @@ pub enum ServerError {
     AuthenticationFailed,
     NotAuthorized,
     PublishError(PublishError),
+    Configuration(String),
 }
 
 impl From<PublishError> for ServerError {
