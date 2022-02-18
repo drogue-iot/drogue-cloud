@@ -22,7 +22,7 @@ function detect_domain() {
         domain=.$(minikube ip).nip.io
         ;;
     openshift)
-        domain=${DROGUE_NS}.$(kubectl -n openshift-ingress-operator get ingresscontrollers.operator.openshift.io default -o jsonpath='{.status.domain}')
+        domain=-${DROGUE_NS}.$(kubectl -n openshift-ingress-operator get ingresscontrollers.operator.openshift.io default -o jsonpath='{.status.domain}')
         ;;
     *)
         die "Unable to auto-detect DNS domain on Kubernetes platform '$CLUSTER': Use -d or set DOMAIN to the base DNS domain."
