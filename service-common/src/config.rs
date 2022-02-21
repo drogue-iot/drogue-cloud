@@ -7,10 +7,7 @@ pub trait ConfigFromEnv<'de>: Sized + Deserialize<'de> {
     }
 
     fn from_env_prefix<S: AsRef<str>>(prefix: S) -> Result<Self, config::ConfigError> {
-        Self::from(config::Environment::with_prefix(&format!(
-            "{}_",
-            prefix.as_ref()
-        )))
+        Self::from(config::Environment::with_prefix(prefix.as_ref()))
     }
 
     fn from(env: config::Environment) -> Result<Self, config::ConfigError>;
@@ -53,9 +50,8 @@ mod test {
         env.insert("FOO__BAR".into(), "baz".into());
         env.insert("FOO__BOOL".into(), "true".into());
 
-        let foo =
-            <Foo as ConfigFromEnv>::from(Environment::default().prefix("FOO").source(Some(env)))
-                .unwrap();
+        let foo = <Foo as ConfigFromEnv>::from(Environment::with_prefix("FOO").source(Some(env)))
+            .unwrap();
         assert_eq!(foo.bar, "baz");
         assert_eq!(foo.r#bool, true);
     }
