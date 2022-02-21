@@ -42,6 +42,10 @@ drogueCloudCore:
   console:
     localCertificates: true
 
+  oauth2:
+    tls:
+      insecure: true
+
   services:
     sso:
       ingress:
