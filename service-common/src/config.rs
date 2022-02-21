@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 
 pub trait ConfigFromEnv<'de>: Sized + Deserialize<'de> {
     fn from_env() -> Result<Self, config::ConfigError> {
@@ -13,6 +14,15 @@ pub trait ConfigFromEnv<'de>: Sized + Deserialize<'de> {
     }
 
     fn from(env: config::Environment) -> Result<Self, config::ConfigError>;
+
+    fn from_set<K, V>(set: HashMap<K, V>) -> Result<Self, config::ConfigError>
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        let set = set.into_iter().map(|(k, v)| (k.into(), v.into())).collect();
+        Self::from(config::Environment::default().source(Some(set)))
+    }
 }
 
 impl<'de, T: Deserialize<'de> + Sized> ConfigFromEnv<'de> for T {

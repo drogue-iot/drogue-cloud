@@ -38,7 +38,7 @@ nom = { version = "6", optional = true }
 rdkafka = { version = "*", optional = true }
 
 [dev-dependencies]
-config = "0.11"
+config = "0.12"
 
 [features]
 default = ["nom", "actix"]
