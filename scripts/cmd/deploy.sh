@@ -115,8 +115,6 @@ echo "Minimize: $MINIMIZE"
 : "${INSTALL_DITTO_OPERATOR:=${INSTALL_DEPS}}"
 : "${HELM_TIMEOUT:=15m}"
 
-INSTALL_KNATIVE="false"
-
 if [[ "$DEPLOY_TWIN" == true ]] || [[ "$DEPLOY_EXAMPLES" == true ]]; then
     # default to global default
     : "${INSTALL_KNATIVE:=${INSTALL_DEPS}}"
