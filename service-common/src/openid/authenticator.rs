@@ -335,43 +335,26 @@ mod test {
         set.insert("OAUTH__CLIENTS__BAR__CLIENT_ID", "client.id.2");
         set.insert("OAUTH__CLIENTS__BAR__CLIENT_SECRET", "");
 
-        with_env(set, || {
-            let cfg = Config::from_env().expect("Config should be ok");
+        let cfg = Config::from_set(set).expect("Config should be ok");
 
-            assert_eq!(cfg.oauth.global.sso_url, Some("http://sso.url".into()));
+        assert_eq!(cfg.oauth.global.sso_url, Some("http://sso.url".into()));
 
-            assert_eq!(
-                cfg.oauth.clients.get("foo"),
-                Some(&AuthenticatorClientConfig {
-                    client_id: "client.id.1".into(),
-                    client_secret: "client.secret.1".into(),
-                    scopes: defaults::oauth2_scopes(),
-                })
-            );
+        assert_eq!(
+            cfg.oauth.clients.get("foo"),
+            Some(&AuthenticatorClientConfig {
+                client_id: "client.id.1".into(),
+                client_secret: "client.secret.1".into(),
+                scopes: defaults::oauth2_scopes(),
+            })
+        );
 
-            assert_eq!(
-                cfg.oauth.clients.get("bar"),
-                Some(&AuthenticatorClientConfig {
-                    client_id: "client.id.2".into(),
-                    client_secret: "".into(),
-                    scopes: defaults::oauth2_scopes(),
-                })
-            );
-        });
-    }
-
-    fn with_env<F>(vars: HashMap<&str, &str>, f: F)
-    where
-        F: FnOnce(),
-    {
-        for (k, v) in &vars {
-            std::env::set_var(k, v);
-        }
-
-        f();
-
-        for (k, _) in vars {
-            std::env::remove_var(k);
-        }
+        assert_eq!(
+            cfg.oauth.clients.get("bar"),
+            Some(&AuthenticatorClientConfig {
+                client_id: "client.id.2".into(),
+                client_secret: "".into(),
+                scopes: defaults::oauth2_scopes(),
+            })
+        );
     }
 }

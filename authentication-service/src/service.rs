@@ -12,19 +12,18 @@ use drogue_cloud_database_common::{
     models::{app::*, device::*},
     Client, DatabaseService,
 };
-use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{
     auth::device::authn::{
         self, AuthenticationRequest, AuthorizeGatewayRequest, GatewayOutcome, Outcome,
     },
     health::{HealthCheckError, HealthChecked},
+    webapp as actix_web,
 };
 use rustls::{server::AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use rustls_pemfile::Item;
 use serde::Deserialize;
 use sha_crypt::sha512_check;
-use std::io::Cursor;
-use std::time::SystemTime;
+use std::{io::Cursor, time::SystemTime};
 use tokio_postgres::NoTls;
 use tracing::instrument;
 

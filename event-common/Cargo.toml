@@ -25,4 +25,4 @@ features = ["ssl", "sasl"]
 
 [dev-dependencies]
 url = "2"
-config = "0.11"
+config = "0.12"

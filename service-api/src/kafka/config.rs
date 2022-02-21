@@ -72,17 +72,23 @@ mod test {
 
     #[test]
     fn test_custom() {
-        std::env::set_var("KAFKA__PROPERTIES__A_B_C", "d.e.f");
+        let mut envs = HashMap::new();
+        envs.insert(
+            "KAFKA__BOOTSTRAP_SERVERS".to_string(),
+            "localhost:1234".to_string(),
+        );
+        envs.insert("KAFKA__PROPERTIES__A_B_C".to_string(), "d.e.f".to_string());
 
-        let env = config::Environment::with_prefix(&format!("{}_", "KAFKA"));
+        let env = config::Environment::with_prefix(&format!("{}", "KAFKA")).source(Some(envs));
 
         let cfg = config::Config::builder();
         let cfg = cfg.add_source(env.separator("__")).build().unwrap();
         let kafka: KafkaClientConfig = cfg.try_deserialize().unwrap();
 
-        assert_eq!(kafka.properties.get("a_b_c").cloned(), Some("d.e.f".into()));
+        println!("{:?}", kafka);
 
-        std::env::remove_var("KAFKA__PROPERTIES__A_B_C");
+        assert_eq!(kafka.bootstrap_servers, "localhost:1234");
+        assert_eq!(kafka.properties.get("a_b_c").cloned(), Some("d.e.f".into()));
     }
 
     /// Test what we can also deserialize from JSON, in addition to the config crate.
