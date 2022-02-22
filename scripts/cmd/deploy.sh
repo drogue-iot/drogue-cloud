@@ -213,8 +213,10 @@ progress "  🔬 Track its progress using \`watch kubectl -n $DROGUE_NS get pods
 progress -n "  🚀 Performing deployment... "
 helm dependency update "$BASEDIR/../deploy/install"
 helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-metrics"
+set -x
 # shellcheck disable=SC2086
 helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/install" --install $HELM_ARGS
+set +x
 progress "done!"
 
 # source the endpoint information
