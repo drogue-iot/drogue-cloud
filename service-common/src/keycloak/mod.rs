@@ -2,10 +2,8 @@ pub mod client;
 pub mod error;
 pub mod mock;
 
-use crate::defaults;
-
+use crate::{defaults, openid::CommaSeparatedVec};
 use async_trait::async_trait;
-
 use keycloak::KeycloakAdmin;
 use serde::Deserialize;
 use url::Url;
@@ -36,5 +34,5 @@ pub struct KeycloakAdminClientConfig {
     pub tls_insecure: bool,
 
     #[serde(default)]
-    pub tls_ca_certificates: Vec<String>,
+    pub tls_ca_certificates: CommaSeparatedVec,
 }

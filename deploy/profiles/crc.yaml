@@ -1,4 +1,0 @@
-drogueCloudCore:
-  oauth2:
-    tls:
-      insecure: true

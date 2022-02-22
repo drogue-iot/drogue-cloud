@@ -16,8 +16,9 @@ use actix_web::{
 };
 use anyhow::Context;
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
-use drogue_cloud_service_api::webapp as actix_web;
-use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
+use drogue_cloud_service_api::{
+    endpoints::Endpoints, kafka::KafkaClientConfig, webapp as actix_web,
+};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},

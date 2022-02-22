@@ -1,4 +1,8 @@
-use crate::{defaults, openid::ExtendedClaims, reqwest::ClientFactory};
+use crate::{
+    defaults,
+    openid::{CommaSeparatedVec, ExtendedClaims},
+    reqwest::ClientFactory,
+};
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
 use failure::Fail;
@@ -41,7 +45,7 @@ pub struct AuthenticatorGlobalConfig {
     pub tls_insecure: bool,
 
     #[serde(default)]
-    pub tls_ca_certificates: Vec<String>,
+    pub tls_ca_certificates: CommaSeparatedVec,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -99,7 +103,7 @@ impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
     }
 
     fn tls_ca_certificates(&self) -> Vec<String> {
-        self.0.tls_ca_certificates.clone()
+        self.0.tls_ca_certificates.0.clone()
     }
 }
 

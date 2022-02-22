@@ -209,28 +209,13 @@ echo "Helm arguments: $HELM_ARGS"
 
 progress "🔨 Deploying Drogue IoT... "
 progress "  ☕ This will take a while!"
-progress "  🔬 Track its progress using \`watch kubectl -n $DROGUE_NS get pods\`)! "
+progress "  🔬 Track its progress using \`watch kubectl -n $DROGUE_NS get pods\`! "
 progress -n "  🚀 Performing deployment... "
 helm dependency update "$BASEDIR/../deploy/install"
 helm dependency update "$BASEDIR/../deploy/helm/charts/drogue-cloud-metrics"
 # shellcheck disable=SC2086
 helm -n "$DROGUE_NS" upgrade drogue-iot "$BASEDIR/../deploy/install" --install $HELM_ARGS
 progress "done!"
-
-# wait for the Keycloak ingress resource
-
-case $CLUSTER in
-    openshift)
-        progress -n "👀 Waiting for keycloak Route resource ..."
-        wait_for_resource route/keycloak
-        progress "done!"
-        ;;
-    *)
-        progress -n "👀 Waiting for keycloak Ingress resource ... "
-        wait_for_resource ingress/keycloak
-        progress "done!"
-        ;;
-esac
 
 # source the endpoint information
 
@@ -241,7 +226,7 @@ SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"
 
 if [ "$CLUSTER" != "openshift" ]; then
-    kubectl -n "$DROGUE_NS" annotate ingress/keycloak --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'
+    kubectl -n "$DROGUE_NS" annotate ingress/sso --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'
 fi
 
 # wait for other Knative services
