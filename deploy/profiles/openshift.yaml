@@ -26,3 +26,6 @@ drogueCloudCore:
     mqttWs:
       ingress:
         port: 443
+
+  keycloak:
+    useServiceCA: true

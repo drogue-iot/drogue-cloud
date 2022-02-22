@@ -38,7 +38,7 @@ impl KeycloakAdminClientConfig {
             admin_username: "admin".to_string(),
             admin_password: "password".to_string(),
             tls_insecure: false,
-            tls_ca_certificates: vec![],
+            tls_ca_certificates: vec![].into(),
         }
     }
 }

@@ -606,7 +606,7 @@ fn main() {
             realm: server.keycloak.realm.clone(),
             refresh_before: None,
             tls_insecure: server.tls_insecure,
-            tls_ca_certificates: server.tls_ca_certificates.clone(),
+            tls_ca_certificates: server.tls_ca_certificates.clone().into(),
         };
 
         let mut oauth = AuthenticatorConfig {
@@ -617,7 +617,7 @@ fn main() {
                 realm: server.keycloak.realm.clone(),
                 redirect_url: eps.redirect_url.clone(),
                 tls_insecure: server.tls_insecure,
-                tls_ca_certificates: server.tls_ca_certificates.clone(),
+                tls_ca_certificates: server.tls_ca_certificates.clone().into(),
             },
             clients: HashMap::new(),
         };
@@ -644,7 +644,7 @@ fn main() {
             admin_username: server.keycloak.user.clone(),
             admin_password: server.keycloak.password.clone(),
             tls_insecure: true,
-            tls_ca_certificates: server.tls_ca_certificates.clone(),
+            tls_ca_certificates: server.tls_ca_certificates.clone().into(),
         };
 
         let registry = RegistryConfig {

@@ -23,7 +23,7 @@ impl KeycloakClient for KeycloakAdminClient {
             client = client.make_insecure();
         }
 
-        client = client.add_ca_certs(&config.tls_ca_certificates);
+        client = client.add_ca_certs(&config.tls_ca_certificates.0);
 
         Ok(Self {
             client: client
