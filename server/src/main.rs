@@ -627,6 +627,9 @@ fn main() {
                 client_id: "drogue".to_string(),
                 client_secret: SERVICE_CLIENT_SECRET.to_string(),
                 scopes: "openid profile email".into(),
+                issuer_url: None,
+                tls_insecure: None,
+                tls_ca_certificates: None,
             },
         );
         oauth.clients.insert(
@@ -635,6 +638,9 @@ fn main() {
                 client_id: "services".to_string(),
                 client_secret: SERVICE_CLIENT_SECRET.to_string(),
                 scopes: "openid profile email".into(),
+                issuer_url: None,
+                tls_insecure: None,
+                tls_ca_certificates: None,
             },
         );
 
