@@ -10,9 +10,10 @@ use futures::{stream, StreamExt, TryStreamExt};
 use openid::{
     biscuit::jws::Compact, Claims, Client, CompactJson, Configurable, Discovered, Empty, Jws,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use thiserror::Error;
+use tracing::instrument;
 use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -48,12 +49,19 @@ pub struct AuthenticatorGlobalConfig {
     pub tls_ca_certificates: CommaSeparatedVec,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct AuthenticatorClientConfig {
     pub client_id: String,
     pub client_secret: String,
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
+    #[serde(default)]
+    pub issuer_url: Option<String>,
+
+    #[serde(default)]
+    pub tls_insecure: Option<bool>,
+    #[serde(default)]
+    pub tls_ca_certificates: Option<CommaSeparatedVec>,
 }
 
 impl AuthenticatorConfig {
@@ -83,10 +91,10 @@ impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
 
     fn issuer_url(&self) -> anyhow::Result<Url> {
         let url = self
-            .0
+            .1
             .issuer_url
-            .as_ref()
-            .cloned()
+            .clone()
+            .or_else(|| self.0.issuer_url.clone())
             .or_else(|| {
                 self.0
                     .sso_url
@@ -99,11 +107,15 @@ impl ClientConfig for (&AuthenticatorGlobalConfig, &AuthenticatorClientConfig) {
     }
 
     fn tls_insecure(&self) -> bool {
-        self.0.tls_insecure
+        self.1.tls_insecure.unwrap_or(self.0.tls_insecure)
     }
 
     fn tls_ca_certificates(&self) -> Vec<String> {
-        self.0.tls_ca_certificates.0.clone()
+        self.1
+            .tls_ca_certificates
+            .clone()
+            .unwrap_or_else(|| self.0.tls_ca_certificates.clone())
+            .0
     }
 }
 
@@ -216,6 +228,7 @@ impl Authenticator {
     }
 
     /// Validate a bearer token.
+    #[instrument(level = "debug", skip_all, fields(token=token.as_ref()), ret)]
     pub async fn validate_token<S: AsRef<str>>(
         &self,
         token: S,
@@ -349,6 +362,9 @@ mod test {
                 client_id: "client.id.1".into(),
                 client_secret: "client.secret.1".into(),
                 scopes: defaults::oauth2_scopes(),
+                issuer_url: None,
+                tls_insecure: None,
+                tls_ca_certificates: None,
             })
         );
 
@@ -358,6 +374,9 @@ mod test {
                 client_id: "client.id.2".into(),
                 client_secret: "".into(),
                 scopes: defaults::oauth2_scopes(),
+                issuer_url: None,
+                tls_insecure: None,
+                tls_ca_certificates: None,
             })
         );
     }

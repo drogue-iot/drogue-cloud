@@ -106,17 +106,24 @@ where
             // authentication
             let auth_result = match credentials {
                 Ok(c) => auth.authenticate(c).await,
-                Err(_) => Err(ServiceError::AuthenticationError),
+                Err(err) => {
+                    log::info!("Credentials error: {err}");
+                    Err(ServiceError::AuthenticationError)
+                }
             };
 
             match auth_result {
                 Ok(u) => {
+                    log::debug!("Authenticated: {u:?}");
                     // insert the UserInformation in the request
                     req.extensions_mut().insert(u);
                     // then forward it to the next service
                     srv.call(req).await
                 }
-                Err(e) => Err(e.into()),
+                Err(err) => {
+                    log::debug!("Authentication error: {err}");
+                    Err(err.into())
+                }
             }
         })
     }

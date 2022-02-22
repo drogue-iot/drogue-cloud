@@ -62,7 +62,6 @@ impl AuthN {
                                 "No access token provided.",
                             )));
                         }
-
                         let auth_response = token
                             .authenticate_access_token(AuthenticationRequest {
                                 user_id: creds.username.clone(),
@@ -86,12 +85,15 @@ impl AuthN {
                 }
                 Credentials::OpenIDToken(token) => match openid.validate_token(&token).await {
                     Ok(token) => Ok(UserInformation::Authenticated(token.into())),
-                    Err(_) => Err(ServiceError::AuthenticationError),
+                    Err(err) => {
+                        log::debug!("Authentication error: {err}");
+                        Err(ServiceError::AuthenticationError)
+                    }
                 },
                 Credentials::Anonymous => Ok(UserInformation::Anonymous),
             }
-            //authentication disabled
         } else {
+            //authentication disabled
             Ok(UserInformation::Anonymous)
         }
     }
