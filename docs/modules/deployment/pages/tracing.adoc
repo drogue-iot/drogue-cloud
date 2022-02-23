@@ -1,0 +1,17 @@
+= Tracing
+
+Tracing using Jaeger tracing can be enabled for Drogue Cloud during deployment.
+
+== Helm Charts
+
+In the Helm charts, set the value:
+
+[source,yaml]
+----
+global:
+  drogueCloud:
+    jaeger:
+      enabled: true
+----
+
+By default, tracing is disabled.
