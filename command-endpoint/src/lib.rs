@@ -3,6 +3,7 @@ mod v1alpha1;
 use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use drogue_client::openid::OpenIdTokenProvider;
+use drogue_cloud_endpoint_common::sender::ExternalClientPoolConfig;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
@@ -48,6 +49,9 @@ pub struct Config {
 
     #[serde(default = "defaults::instance")]
     pub instance: String,
+
+    #[serde(default)]
+    pub endpoint_pool: ExternalClientPoolConfig,
 }
 
 #[derive(Debug)]
@@ -66,6 +70,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let sender = UpstreamSender::new(
         config.instance,
         KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?,
+        config.endpoint_pool,
     )?;
 
     let max_json_payload_size = config.max_json_payload_size;

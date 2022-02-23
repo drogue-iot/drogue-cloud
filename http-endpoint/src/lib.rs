@@ -10,11 +10,10 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use drogue_cloud_endpoint_common::{
-    auth::AuthConfig,
+    auth::{AuthConfig, DeviceAuthenticator},
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
-};
-use drogue_cloud_endpoint_common::{
-    auth::DeviceAuthenticator, sender::DownstreamSender, sink::KafkaSink,
+    sender::{DownstreamSender, ExternalClientPoolConfig},
+    sink::KafkaSink,
 };
 use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
@@ -60,6 +59,9 @@ pub struct Config {
 
     #[serde(default)]
     pub workers: Option<usize>,
+
+    #[serde(default)]
+    pub endpoint_pool: ExternalClientPoolConfig,
 }
 
 #[get("/")]
@@ -76,6 +78,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             config.check_kafka_topic_ready,
         )?,
         config.instance,
+        config.endpoint_pool,
     )?;
     let commands = Commands::new();
 

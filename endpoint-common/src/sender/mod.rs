@@ -1,7 +1,9 @@
 mod process;
 
+pub use process::ExternalClientPoolConfig;
+
 use crate::{
-    sender::process::Outcome,
+    sender::process::{ExternalClientPool, Outcome},
     sink::{Sink, SinkError, SinkTarget},
     EXT_PARTITIONKEY,
 };
@@ -17,6 +19,7 @@ use drogue_cloud_service_api::{
     EXT_SENDER_UID,
 };
 use drogue_cloud_service_common::{Id, IdInjector};
+use lazy_static::lazy_static;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use process::Processor;
 use prometheus::{CounterVec, Opts};
@@ -24,8 +27,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use thiserror::Error;
-
-use lazy_static::lazy_static;
 use tracing::instrument;
 
 lazy_static! {
@@ -181,6 +182,14 @@ pub enum PublishOutcome {
     QueueFull,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Direction {
+    /// Cloud to device messaging
+    Upstream,
+    /// Device to cloud messaging
+    Downstream,
+}
+
 /// A sender delivering events upstream, from the cloud to the device.
 #[derive(Debug, Clone)]
 pub struct UpstreamSender<S>
@@ -189,16 +198,22 @@ where
 {
     sink: S,
     instance: String,
+    pool: ExternalClientPool,
 }
 
 impl<S> UpstreamSender<S>
 where
     S: Sink,
 {
-    pub fn new<I: Into<String>>(instance: I, sink: S) -> anyhow::Result<Self> {
+    pub fn new<I: Into<String>>(
+        instance: I,
+        sink: S,
+        config: ExternalClientPoolConfig,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             sink,
             instance: instance.into(),
+            pool: ExternalClientPool::new(config),
         })
     }
 }
@@ -211,17 +226,26 @@ where
 {
     sink: S,
     instance: String,
+    pool: ExternalClientPool,
 }
 
 impl<S> DownstreamSender<S>
 where
     S: Sink,
 {
-    pub fn new(sink: S, instance: String) -> anyhow::Result<Self> {
+    pub fn new(
+        sink: S,
+        instance: String,
+        config: ExternalClientPoolConfig,
+    ) -> anyhow::Result<Self> {
         prometheus::default_registry()
             .register(Box::new(DOWNSTREAM_EVENTS_COUNTER.clone()))
             .unwrap();
-        Ok(Self { sink, instance })
+        Ok(Self {
+            sink,
+            instance,
+            pool: ExternalClientPool::new(config),
+        })
     }
 }
 
@@ -246,6 +270,15 @@ where
         self.instance.clone()
     }
 
+    fn pool(&self) -> ExternalClientPool {
+        self.pool.clone()
+    }
+
+    #[inline]
+    fn direction() -> Direction {
+        Direction::Downstream
+    }
+
     async fn send(
         &self,
         app: &registry::v1::Application,
@@ -264,6 +297,15 @@ where
         self.instance.clone()
     }
 
+    fn pool(&self) -> ExternalClientPool {
+        self.pool.clone()
+    }
+
+    #[inline]
+    fn direction() -> Direction {
+        Direction::Upstream
+    }
+
     async fn send(
         &self,
         app: &registry::v1::Application,
@@ -279,6 +321,10 @@ where
     S: Sink,
 {
     fn instance(&self) -> String;
+
+    fn pool(&self) -> ExternalClientPool;
+
+    fn direction() -> Direction;
 
     async fn send(
         &self,
@@ -381,7 +427,8 @@ where
 
         // handle publish steps
 
-        let processor = Processor::try_from(publish.application).map_err(PublishError::Spec)?;
+        let processor = Processor::try_from((Self::direction(), publish.application, self.pool()))
+            .map_err(PublishError::Spec)?;
         match processor.process(event).await? {
             Outcome::Rejected(reason) => {
                 // event was rejected

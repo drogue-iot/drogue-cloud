@@ -1,8 +1,26 @@
 use reqwest::Certificate;
-use std::path::PathBuf;
-use std::{fs::File, io::Read, path::Path};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
+
+/// Convert the name to an HTTP method.
+///
+/// If the name is empty, [`None`] is returned. If the method is invalid, and error will be returned.
+pub fn to_method(name: &str) -> Result<Option<reqwest::Method>, String> {
+    if name.is_empty() {
+        Ok(None)
+    } else {
+        match reqwest::Method::from_str(name) {
+            Ok(m) => Ok(Some(m)),
+            Err(_) => Err(format!("Invalid HTTP method: {}", name)),
+        }
+    }
+}
 
 fn add_cert<P: AsRef<Path>>(
     mut client: reqwest::ClientBuilder,

@@ -2,15 +2,18 @@ mod service;
 
 pub use crate::service::ServiceConfig;
 
-use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
+use drogue_cloud_endpoint_common::{
+    sender::{ExternalClientPoolConfig, UpstreamSender},
+    sink::KafkaSink,
+};
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_common::reqwest::ClientFactory;
 use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
     openid::AuthenticatorConfig,
+    reqwest::ClientFactory,
 };
 use futures::TryFutureExt;
 use lazy_static::lazy_static;
@@ -64,6 +67,9 @@ pub struct Config {
 
     #[serde(default = "defaults::instance")]
     pub instance: String,
+
+    #[serde(default)]
+    pub endpoint_pool: ExternalClientPoolConfig,
 }
 
 impl TlsConfig for Config {
@@ -123,6 +129,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let sender = UpstreamSender::new(
         config.instance,
         KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?,
+        config.endpoint_pool,
     )?;
 
     log::info!("Authenticator: {:?}", authenticator);

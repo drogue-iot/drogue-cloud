@@ -10,7 +10,7 @@ impl Sender for DefaultSender {
     async fn send(
         &self,
         ctx: Context,
-        endpoint: registry::v1::ExternalEndpoint,
+        endpoint: registry::v1::ExternalCommandEndpoint,
         command: CommandOptions,
         payload: web::Bytes,
     ) -> Result<(), Error> {

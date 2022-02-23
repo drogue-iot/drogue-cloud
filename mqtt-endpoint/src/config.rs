@@ -1,4 +1,6 @@
-use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
+use drogue_cloud_endpoint_common::{
+    auth::AuthConfig, command::KafkaCommandSourceConfig, sender::ExternalClientPoolConfig,
+};
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
@@ -64,6 +66,9 @@ pub struct Config {
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
+
+    #[serde(default)]
+    pub endpoint_pool: ExternalClientPoolConfig,
 }
 
 impl TlsConfig for Config {

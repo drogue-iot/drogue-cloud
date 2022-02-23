@@ -6,6 +6,7 @@ use crate::commands::CommandOptions;
 use async_trait::async_trait;
 use drogue_client::registry;
 use drogue_cloud_service_api::webapp::web;
+use drogue_cloud_service_common::reqwest::to_method;
 use reqwest::{
     header::{HeaderName, HeaderValue},
     Response, StatusCode,
@@ -24,7 +25,7 @@ pub trait Sender {
     async fn send(
         &self,
         ctx: Context,
-        endpoint: registry::v1::ExternalEndpoint,
+        endpoint: registry::v1::ExternalCommandEndpoint,
         command: CommandOptions,
         body: web::Bytes,
     ) -> Result<(), Error>;
@@ -55,7 +56,7 @@ impl std::error::Error for HttpError {}
 
 pub async fn send_to_external(
     ctx: Context,
-    endpoint: registry::v1::ExternalEndpoint,
+    endpoint: registry::v1::ExternalCommandEndpoint,
     command: CommandOptions,
     payload: web::Bytes,
 ) -> Result<(), Error> {
@@ -79,34 +80,19 @@ pub async fn send_to_external(
     }
 }
 
-/// Convert the name to an HTTP method.
-///
-/// If the name is empty, [`None`] is returned. If the method is invalid, and error will be returned.
-fn to_method(name: &str) -> Result<Option<reqwest::Method>, Error> {
-    if name.is_empty() {
-        Ok(None)
-    } else {
-        match reqwest::Method::from_str(name) {
-            Ok(m) => Ok(Some(m)),
-            Err(_) => Err(Error::InvalidConfiguration(format!(
-                "Invalid HTTP method: {}",
-                name
-            ))),
-        }
-    }
-}
-
 /// Takes an external endpoint and creates an HTTP request builder from it.
 pub(crate) fn to_builder<F>(
     client: reqwest::Client,
     default_method: reqwest::Method,
-    endpoint: &registry::v1::ExternalEndpoint,
+    endpoint: &registry::v1::ExternalCommandEndpoint,
     f: F,
 ) -> Result<reqwest::RequestBuilder, Error>
 where
     F: FnOnce(Url) -> Result<Url, Error>,
 {
-    let method = to_method(&endpoint.method)?.unwrap_or(default_method);
+    let method = to_method(&endpoint.method)
+        .map_err(Error::InvalidConfiguration)?
+        .unwrap_or(default_method);
     let url = Url::parse(&endpoint.url)
         .map_err(|err| Error::InvalidConfiguration(format!("Unable to parse URL: {}", err)))?;
 

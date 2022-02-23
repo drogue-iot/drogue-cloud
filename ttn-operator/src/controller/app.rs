@@ -324,7 +324,7 @@ impl<'a> ApplicationReconciler<'a> {
 
         gateway.set_section(registry::v1::DeviceSpecCommands {
             commands: vec![registry::v1::Command::External(
-                registry::v1::ExternalEndpoint {
+                registry::v1::ExternalCommandEndpoint {
                     r#type: Some("ttnv3".to_string()),
                     url: downlink_url.to_string(),
                     headers,
