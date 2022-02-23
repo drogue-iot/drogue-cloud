@@ -307,6 +307,7 @@ jobs:
         run: |
           ./scripts/drgadm deploy \
             -m \
+            -e \
             -s drogueCloudCore.defaults.images.repository=dev.local \
             -S drogueCloudCore.defaults.images.tag=${{ github.sha }} \
             -s drogueCloudCore.defaults.images.pullPolicy=Never \
