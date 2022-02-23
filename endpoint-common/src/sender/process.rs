@@ -1,10 +1,8 @@
-use cloudevents::event::ExtensionValue;
-use cloudevents::{AttributesReader, AttributesWriter};
-use drogue_client::registry::v1::{Step, When};
+use cloudevents::{event::ExtensionValue, AttributesReader, AttributesWriter};
 use drogue_client::{
     registry::{
         self,
-        v1::{Application, PublishSpec},
+        v1::{Application, PublishSpec, Step, When},
     },
     Translator,
 };

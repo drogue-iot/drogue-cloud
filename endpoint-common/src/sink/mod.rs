@@ -3,13 +3,12 @@ mod kafka;
 
 pub use self::http::HttpSink;
 pub use kafka::*;
-use std::fmt::Debug;
 
 use crate::sender::PublishOutcome;
 use async_trait::async_trait;
 use cloudevents::Event;
 use drogue_client::registry;
-use std::ops::Deref;
+use std::{fmt::Debug, ops::Deref};
 use thiserror::Error;
 
 #[derive(Debug)]

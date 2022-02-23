@@ -9,10 +9,12 @@ use drogue_cloud_service_api::{
 };
 use futures::StreamExt;
 use serde::Deserialize;
-use std::sync::Arc;
 use std::{
     convert::TryFrom,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 use tokio::task::JoinHandle;
 
