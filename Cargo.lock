@@ -1739,7 +1739,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-client"
 version = "0.9.0-alpha.1"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=32d29e670abf7a1c9ebb99d3cadda64bcf1748f6#32d29e670abf7a1c9ebb99d3cadda64bcf1748f6"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=a5c028dbc88d77552d553903d546ed14cbf80513#a5c028dbc88d77552d553903d546ed14cbf80513"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1748,6 +1748,7 @@ dependencies = [
  "chrono",
  "futures",
  "http",
+ "humantime-serde",
  "log",
  "openid",
  "opentelemetry",
@@ -2130,6 +2131,7 @@ dependencies = [
  "http",
  "lazy_static 1.4.0",
  "log",
+ "lru",
  "mime",
  "ntex",
  "openid",
@@ -3202,6 +3204,9 @@ name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+dependencies = [
+ "ahash 0.7.6",
+]
 
 [[package]]
 name = "headers"
@@ -3823,6 +3828,15 @@ checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if 1.0.0",
  "value-bag",
+]
+
+[[package]]
+name = "lru"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "274353858935c992b13c0ca408752e2121da852d07dec7ce5f108c77dfa14d1f"
+dependencies = [
+ "hashbrown 0.11.2",
 ]
 
 [[package]]

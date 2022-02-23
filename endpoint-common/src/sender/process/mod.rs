@@ -1,12 +1,19 @@
+mod external;
+
+pub use external::{ExternalClientPool, ExternalClientPoolConfig};
+
+use crate::sender::{is_json, process::external::ExternalError, Direction};
 use cloudevents::{event::ExtensionValue, AttributesReader, AttributesWriter};
 use drogue_client::{
     registry::{
         self,
-        v1::{Application, PublishSpec, Step, When},
+        v1::{Application, ExternalEndpoint, Rule, Step, When},
     },
     Translator,
 };
+use http::{header::CONTENT_TYPE, StatusCode};
 use reqwest::Url;
+use serde_json::Value;
 use thiserror::Error;
 use tracing::instrument;
 
@@ -19,12 +26,18 @@ pub enum StepOutcome {
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Build event error")]
+    #[error("Build event error: {0}")]
     Build(#[from] cloudevents::event::EventBuilderError),
+    #[error("Event error: {0}")]
+    Event(#[from] cloudevents::message::Error),
     #[error("Configuration error: {0}")]
     Config(String),
     #[error("Internal error: {0}")]
     Internal(Box<dyn std::error::Error + Send>),
+    #[error("External endpoint error: {0}")]
+    ExternalEndpoint(#[from] ExternalError),
+    #[error("External endpoint response: {0}")]
+    ExternalResponse(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,19 +51,22 @@ pub enum Outcome {
     Dropped,
 }
 
-pub struct Processor(PublishSpec);
+pub struct Processor {
+    pool: ExternalClientPool,
+    rules: Vec<Rule>,
+}
 
 impl Processor {
     #[inline]
-    pub fn new(spec: PublishSpec) -> Self {
-        Self(spec)
+    pub fn new(pool: ExternalClientPool, rules: Vec<Rule>) -> Self {
+        Self { pool, rules }
     }
 
-    #[instrument(level = "debug", skip_all, err, fields(num_rules=self.0.rules.len()))]
+    #[instrument(level = "debug", skip_all, err, fields(num_rules=self.rules.len()))]
     pub async fn process(&self, mut event: cloudevents::Event) -> Result<Outcome, Error> {
-        for rule in &self.0.rules {
+        for rule in &self.rules {
             if Self::is_when(&rule.when, &event) {
-                event = match Self::handle(&rule.then, event).await? {
+                event = match self.handle(&rule.then, event).await? {
                     // continue processing
                     StepOutcome::Continue(event) => event,
                     // stop processing, return as accepted
@@ -104,9 +120,13 @@ impl Processor {
         }
     }
 
-    async fn handle(then: &[Step], mut event: cloudevents::Event) -> Result<StepOutcome, Error> {
+    async fn handle(
+        &self,
+        then: &[Step],
+        mut event: cloudevents::Event,
+    ) -> Result<StepOutcome, Error> {
         for step in then {
-            event = match Self::step(step, event).await? {
+            event = match self.step(step, event).await? {
                 StepOutcome::Continue(event) => event,
                 StepOutcome::Accept(event) => return Ok(StepOutcome::Accept(event)),
                 StepOutcome::Drop => return Ok(StepOutcome::Drop),
@@ -117,7 +137,7 @@ impl Processor {
         Ok(StepOutcome::Continue(event))
     }
 
-    async fn step(step: &Step, mut event: cloudevents::Event) -> Result<StepOutcome, Error> {
+    async fn step(&self, step: &Step, mut event: cloudevents::Event) -> Result<StepOutcome, Error> {
         match step {
             Step::Drop => Ok(StepOutcome::Drop),
             Step::Break => Ok(StepOutcome::Accept(event)),
@@ -138,6 +158,72 @@ impl Processor {
                 event.remove_extension(name);
                 Ok(StepOutcome::Continue(event))
             }
+            Step::Validate(spec) => self.validate(spec, event).await,
+            Step::Enrich(spec) => self.enrich(spec, event).await,
+        }
+    }
+
+    #[instrument(skip_all)]
+    async fn enrich(
+        &self,
+        spec: &ExternalEndpoint,
+        event: cloudevents::Event,
+    ) -> Result<StepOutcome, Error> {
+        let client = self.pool.get(spec).await?;
+        let response = client.process(event, spec).await?;
+
+        log::debug!("External endpoint reported: {}", response.status());
+
+        match response.status() {
+            StatusCode::OK => Ok(StepOutcome::Continue(
+                cloudevents::binding::reqwest::response_to_event(response).await?,
+            )),
+            code => Err(Error::ExternalResponse(format!(
+                "Unexpected endpoint response: {code}"
+            ))),
+        }
+    }
+
+    #[instrument(skip_all)]
+    async fn validate(
+        &self,
+        spec: &ExternalEndpoint,
+        event: cloudevents::Event,
+    ) -> Result<StepOutcome, Error> {
+        let client = self.pool.get(spec).await?;
+        let response = client.process(event.clone(), spec).await?;
+
+        log::debug!("External endpoint reported: {}", response.status());
+
+        match response.status() {
+            // event is ok, progress
+            StatusCode::OK | StatusCode::NO_CONTENT => Ok(StepOutcome::Continue(event)),
+            // event is accepted directly
+            StatusCode::ACCEPTED => Ok(StepOutcome::Accept(event)),
+            // client error -> reject, extract reason
+            code if code.is_client_error() => {
+                let reason = if is_json(
+                    response
+                        .headers()
+                        .get(CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or(""),
+                ) {
+                    let body: Value = response.json().await.map_err(ExternalError::Request)?;
+                    body["reason"].as_str().unwrap_or("Rejected").into()
+                } else {
+                    response
+                        .text()
+                        .await
+                        .map_err(ExternalError::Request)?
+                        .clone()
+                };
+                Ok(StepOutcome::Reject(reason))
+            }
+            // just fail
+            code => Err(Error::ExternalResponse(format!(
+                "Unexpected endpoint response: {code}"
+            ))),
         }
     }
 
@@ -181,24 +267,26 @@ impl Processor {
     }
 }
 
-impl TryFrom<&registry::v1::Application> for Processor {
+impl TryFrom<(Direction, &registry::v1::Application, ExternalClientPool)> for Processor {
     type Error = serde_json::Error;
 
-    fn try_from(value: &Application) -> Result<Self, Self::Error> {
+    fn try_from(value: (Direction, &Application, ExternalClientPool)) -> Result<Self, Self::Error> {
         Ok(Self::new(
-            value
-                .section::<registry::v1::PublishSpec>()
-                .transpose()?
-                .unwrap_or_default(),
+            value.2,
+            match value.0 {
+                Direction::Upstream => value
+                    .1
+                    .section::<registry::v1::CommandSpec>()
+                    .transpose()?
+                    .map(|spec| spec.rules),
+                Direction::Downstream => value
+                    .1
+                    .section::<registry::v1::PublishSpec>()
+                    .transpose()?
+                    .map(|spec| spec.rules),
+            }
+            .unwrap_or_default(),
         ))
-    }
-}
-
-impl TryFrom<serde_json::Value> for Processor {
-    type Error = serde_json::Error;
-
-    fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
-        Ok(Self::new(serde_json::from_value(value)?))
     }
 }
 
@@ -207,6 +295,17 @@ mod test {
     use super::*;
     use cloudevents::EventBuilder;
     use serde_json::json;
+
+    impl TryFrom<serde_json::Value> for Processor {
+        type Error = serde_json::Error;
+
+        fn try_from(value: serde_json::Value) -> Result<Self, Self::Error> {
+            Ok(Self::new(
+                Default::default(),
+                serde_json::from_value(value)?,
+            ))
+        }
+    }
 
     #[tokio::test]
     async fn test_default() {

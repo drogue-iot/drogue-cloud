@@ -819,6 +819,7 @@ fn main() {
                         kafka_command_config: kafka,
                         check_kafka_topic_ready: false,
                         bind_addr: server.http.clone().into(),
+                        endpoint_pool: Default::default(),
                     };
 
                     handles.push(Box::pin(drogue_cloud_http_endpoint::run(config)));
@@ -894,6 +895,7 @@ fn main() {
                         kafka_downstream_config: kafka.clone(),
                         kafka_command_config: kafka,
                         check_kafka_topic_ready: false,
+                        endpoint_pool: Default::default(),
                     };
 
                     handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config.clone())));
@@ -939,6 +941,7 @@ fn main() {
                         user_auth: None,
                         instance: "drogue".to_string(),
                         command_kafka_sink: kafka,
+                        endpoint_pool: Default::default(),
                     };
 
                     handles.push(Box::pin(drogue_cloud_mqtt_integration::run(config.clone())));
@@ -982,6 +985,7 @@ fn main() {
                     kafka_downstream_config: kafka.clone(),
                     kafka_command_config: kafka,
                     check_kafka_topic_ready: false,
+                    endpoint_pool: Default::default(),
                 };
 
                 runner.block_on(async move {

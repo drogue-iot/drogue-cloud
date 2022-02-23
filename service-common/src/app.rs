@@ -1,5 +1,3 @@
-use opentelemetry::sdk::trace::Sampler;
-use std::env;
 #[macro_export]
 macro_rules! app {
     () => {
@@ -33,8 +31,9 @@ Drogue IoT {} - {} {} ({})
     }};
 }
 
+#[cfg(feature = "jaeger")]
 fn enable_tracing() -> bool {
-    env::var("ENABLE_TRACING")
+    std::env::var("ENABLE_TRACING")
         .ok()
         .map(|s| s.eq_ignore_ascii_case("true"))
         .unwrap_or_default()
@@ -55,8 +54,9 @@ pub fn init_tracing(name: &str) {
     let pipeline = tracing::opentelemetry_jaeger::new_pipeline()
         .with_service_name(name)
         .with_trace_config(
-            tracing::opentelemetry::sdk::trace::Config::default()
-                .with_sampler(Sampler::ParentBased(Box::new(tracing::sampler()))),
+            tracing::opentelemetry::sdk::trace::Config::default().with_sampler(
+                opentelemetry::sdk::trace::Sampler::ParentBased(Box::new(tracing::sampler())),
+            ),
         );
 
     println!("Using Jaeger tracing.");
@@ -74,10 +74,12 @@ pub fn init_tracing(name: &str) {
 }
 
 #[cfg(not(feature = "jaeger"))]
+#[allow(unused)]
 fn init_tracing(_: &str) {
     init_no_tracing()
 }
 
+#[allow(unused)]
 fn init_no_tracing() {
     env_logger::init();
     log::info!("Tracing is not enabled");

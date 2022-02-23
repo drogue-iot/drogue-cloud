@@ -36,6 +36,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                 config.check_kafka_topic_ready,
             )?,
             config.instance.clone(),
+            config.endpoint_pool.clone(),
         )?,
 
         authenticator: DeviceAuthenticator(

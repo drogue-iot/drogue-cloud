@@ -8,6 +8,7 @@ mod telemetry;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap::Server;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
+use drogue_cloud_endpoint_common::sender::ExternalClientPoolConfig;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -56,6 +57,9 @@ pub struct Config {
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
+
+    #[serde(default)]
+    pub endpoint_pool: ExternalClientPoolConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -230,6 +234,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             config.check_kafka_topic_ready,
         )?,
         config.instance,
+        config.endpoint_pool,
     )?;
 
     let app = App {
