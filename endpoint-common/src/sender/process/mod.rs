@@ -361,6 +361,29 @@ mod test {
         )
     }
 
+    #[tokio::test]
+    async fn test_parse_1() {
+        let spec = json!({
+          "rules": [
+            {
+              "when":
+                {
+                    "isChannel": "state"
+                },
+              "then": [
+                {
+                  "enrich": {
+                    "method": "POST",
+                    "url": "https://some-external-service/path/to"
+                  }
+                }
+              ]
+            }
+          ]
+        });
+        let _: PublishSpec = serde_json::from_value(spec).unwrap();
+    }
+
     async fn assert_process(spec: serde_json::Value, input: cloudevents::Event, expected: Outcome) {
         let spec: PublishSpec = serde_json::from_value(spec).unwrap();
         let processor = Processor::from(spec.rules);
