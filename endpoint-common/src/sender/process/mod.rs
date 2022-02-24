@@ -294,6 +294,7 @@ impl TryFrom<(Direction, &registry::v1::Application, ExternalClientPool)> for Pr
 mod test {
     use super::*;
     use cloudevents::EventBuilder;
+    use drogue_client::registry::v1::PublishSpec;
     use serde_json::json;
 
     impl TryFrom<serde_json::Value> for Processor {
@@ -304,6 +305,12 @@ mod test {
                 Default::default(),
                 serde_json::from_value(value)?,
             ))
+        }
+    }
+
+    impl From<Vec<Rule>> for Processor {
+        fn from(rules: Vec<Rule>) -> Self {
+            Self::new(Default::default(), rules)
         }
     }
 
@@ -319,8 +326,8 @@ mod test {
 
     #[tokio::test]
     async fn test_s1() {
-        let processor = Processor::try_from(json!({
-            "rules": [
+        let processor = Processor::try_from(json!(
+             [
                 {
                     "when": {
                         "isChannel": "chan1",
@@ -330,8 +337,8 @@ mod test {
                         { "removeExtension": "my-ext-1" },
                     ]
                 }
-            ],
-        }))
+            ]
+        ))
         .unwrap();
 
         assert_eq!(
@@ -355,7 +362,8 @@ mod test {
     }
 
     async fn assert_process(spec: serde_json::Value, input: cloudevents::Event, expected: Outcome) {
-        let processor = Processor::try_from(spec).unwrap();
+        let spec: PublishSpec = serde_json::from_value(spec).unwrap();
+        let processor = Processor::from(spec.rules);
         let output = processor.process(input.clone()).await.unwrap();
 
         assert_eq!(output, expected);
