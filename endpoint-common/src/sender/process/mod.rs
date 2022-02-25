@@ -164,13 +164,15 @@ impl Processor {
         }
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, fields(response_type=?spec.response_type))]
     async fn enrich(
         &self,
         spec: &EnrichSpec,
         event: cloudevents::Event,
     ) -> Result<StepOutcome, Error> {
         let client = self.pool.get(&spec.endpoint).await?;
+
+        log::debug!("Expected response type: {:?}", spec.response_type);
 
         match spec.response_type {
             ResponseType::CloudEvent => {
@@ -404,6 +406,7 @@ mod test {
               "then": [
                 {
                   "enrich": {
+                    "responseType": "raw",
                     "endpoint":{
                         "method": "POST",
                         "url": "https://some-external-service/path/to"
@@ -418,7 +421,7 @@ mod test {
         assert!(matches!(
             spec.rules[0].then[0],
             Step::Enrich(EnrichSpec {
-                response_type: ResponseType::CloudEvent,
+                response_type: ResponseType::Raw,
                 ..
             })
         ));
