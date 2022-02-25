@@ -4,10 +4,11 @@ pub use external::{ExternalClientPool, ExternalClientPoolConfig};
 
 use crate::sender::{is_json, process::external::ExternalError, Direction};
 use cloudevents::{event::ExtensionValue, AttributesReader, AttributesWriter};
+use drogue_client::registry::v1::ResponseType;
 use drogue_client::{
     registry::{
         self,
-        v1::{Application, ExternalEndpoint, Rule, Step, When},
+        v1::{Application, EnrichSpec, Rule, Step, ValidateSpec, When},
     },
     Translator,
 };
@@ -166,32 +167,62 @@ impl Processor {
     #[instrument(skip_all)]
     async fn enrich(
         &self,
-        spec: &ExternalEndpoint,
+        spec: &EnrichSpec,
         event: cloudevents::Event,
     ) -> Result<StepOutcome, Error> {
-        let client = self.pool.get(spec).await?;
-        let response = client.process(event, spec).await?;
+        let client = self.pool.get(&spec.endpoint).await?;
 
-        log::debug!("External endpoint reported: {}", response.status());
+        match spec.response_type {
+            ResponseType::CloudEvent => {
+                let response = client.process(event, &spec.endpoint).await?;
+                log::debug!("External endpoint reported: {}", response.status());
 
-        match response.status() {
-            StatusCode::OK => Ok(StepOutcome::Continue(
-                cloudevents::binding::reqwest::response_to_event(response).await?,
-            )),
-            code => Err(Error::ExternalResponse(format!(
-                "Unexpected endpoint response: {code}"
-            ))),
+                match response.status() {
+                    StatusCode::OK => Ok(StepOutcome::Continue(
+                        cloudevents::binding::reqwest::response_to_event(response).await?,
+                    )),
+                    code => Err(Error::ExternalResponse(format!(
+                        "Unexpected endpoint response: {code}"
+                    ))),
+                }
+            }
+            ResponseType::Raw => {
+                let response = client.process(event.clone(), &spec.endpoint).await?;
+                log::debug!("External endpoint reported: {}", response.status());
+
+                match response.status() {
+                    StatusCode::OK => Ok(StepOutcome::Continue({
+                        let mut event = event;
+                        let content_type = response
+                            .headers()
+                            .get(http::header::CONTENT_TYPE)
+                            .and_then(|v| v.to_str().ok())
+                            .unwrap_or("application/octet-stream")
+                            .to_string();
+                        let data = response
+                            .bytes()
+                            .await
+                            .map_err(ExternalError::Request)?
+                            .to_vec();
+                        event.set_data(content_type, data);
+                        event
+                    })),
+                    code => Err(Error::ExternalResponse(format!(
+                        "Unexpected endpoint response: {code}"
+                    ))),
+                }
+            }
         }
     }
 
     #[instrument(skip_all)]
     async fn validate(
         &self,
-        spec: &ExternalEndpoint,
+        spec: &ValidateSpec,
         event: cloudevents::Event,
     ) -> Result<StepOutcome, Error> {
-        let client = self.pool.get(spec).await?;
-        let response = client.process(event.clone(), spec).await?;
+        let client = self.pool.get(&spec.endpoint).await?;
+        let response = client.process(event.clone(), &spec.endpoint).await?;
 
         log::debug!("External endpoint reported: {}", response.status());
 
@@ -373,15 +404,24 @@ mod test {
               "then": [
                 {
                   "enrich": {
-                    "method": "POST",
-                    "url": "https://some-external-service/path/to"
+                    "endpoint":{
+                        "method": "POST",
+                        "url": "https://some-external-service/path/to"
+                    }
                   }
                 }
               ]
             }
           ]
         });
-        let _: PublishSpec = serde_json::from_value(spec).unwrap();
+        let spec: PublishSpec = serde_json::from_value(spec).unwrap();
+        assert!(matches!(
+            spec.rules[0].then[0],
+            Step::Enrich(EnrichSpec {
+                response_type: ResponseType::CloudEvent,
+                ..
+            })
+        ));
     }
 
     async fn assert_process(spec: serde_json::Value, input: cloudevents::Event, expected: Outcome) {
