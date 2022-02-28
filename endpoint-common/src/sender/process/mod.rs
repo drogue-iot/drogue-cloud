@@ -2,13 +2,16 @@ mod external;
 
 pub use external::{ExternalClientPool, ExternalClientPoolConfig};
 
-use crate::sender::{is_json, process::external::ExternalError, Direction};
+use crate::sender::{
+    is_json,
+    process::external::{ExternalError, IntoPayload},
+    Direction,
+};
 use cloudevents::{event::ExtensionValue, AttributesReader, AttributesWriter};
-use drogue_client::registry::v1::ResponseType;
 use drogue_client::{
     registry::{
         self,
-        v1::{Application, EnrichSpec, Rule, Step, ValidateSpec, When},
+        v1::{Application, EnrichSpec, ResponseType, Rule, Step, ValidateSpec, When},
     },
     Translator,
 };
@@ -164,7 +167,10 @@ impl Processor {
         }
     }
 
-    #[instrument(skip_all, fields(response_type=?spec.response_type))]
+    #[instrument(skip_all, fields(
+        request_type=?spec.request,
+        response_type=?spec.response,
+    ))]
     async fn enrich(
         &self,
         spec: &EnrichSpec,
@@ -172,24 +178,37 @@ impl Processor {
     ) -> Result<StepOutcome, Error> {
         let client = self.pool.get(&spec.endpoint).await?;
 
-        log::debug!("Expected response type: {:?}", spec.response_type);
+        log::debug!("Expected response type: {:?}", spec.response);
 
-        match spec.response_type {
-            ResponseType::CloudEvent => {
-                let response = client.process(event, &spec.endpoint).await?;
+        match spec.response {
+            ResponseType::CloudEvent | ResponseType::AssumeStructuredCloudEvent => {
+                let response = client
+                    .process(spec.request.to_payload(event), &spec.endpoint)
+                    .await?;
                 log::debug!("External endpoint reported: {}", response.status());
 
                 match response.status() {
-                    StatusCode::OK => Ok(StepOutcome::Continue(
-                        cloudevents::binding::reqwest::response_to_event(response).await?,
-                    )),
+                    StatusCode::OK => {
+                        let event =
+                            if matches!(spec.response, ResponseType::AssumeStructuredCloudEvent) {
+                                // we assume it is a structured cloud event, and just deserialize it
+                                response.json().await.map_err(ExternalError::Request)?
+                            } else {
+                                // we do the proper processing, handling binary and structured mode
+                                cloudevents::binding::reqwest::response_to_event(response).await?
+                            };
+
+                        Ok(StepOutcome::Continue(event))
+                    }
                     code => Err(Error::ExternalResponse(format!(
                         "Unexpected endpoint response: {code}"
                     ))),
                 }
             }
             ResponseType::Raw => {
-                let response = client.process(event.clone(), &spec.endpoint).await?;
+                let response = client
+                    .process(spec.request.to_payload(event.clone()), &spec.endpoint)
+                    .await?;
                 log::debug!("External endpoint reported: {}", response.status());
 
                 match response.status() {
@@ -217,14 +236,16 @@ impl Processor {
         }
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, fields(request_type=?spec.request))]
     async fn validate(
         &self,
         spec: &ValidateSpec,
         event: cloudevents::Event,
     ) -> Result<StepOutcome, Error> {
         let client = self.pool.get(&spec.endpoint).await?;
-        let response = client.process(event.clone(), &spec.endpoint).await?;
+        let response = client
+            .process(spec.request.to_payload(event.clone()), &spec.endpoint)
+            .await?;
 
         log::debug!("External endpoint reported: {}", response.status());
 
@@ -406,7 +427,7 @@ mod test {
               "then": [
                 {
                   "enrich": {
-                    "responseType": "raw",
+                    "response": "raw",
                     "endpoint":{
                         "method": "POST",
                         "url": "https://some-external-service/path/to"
@@ -421,7 +442,7 @@ mod test {
         assert!(matches!(
             spec.rules[0].then[0],
             Step::Enrich(EnrichSpec {
-                response_type: ResponseType::Raw,
+                response: ResponseType::Raw,
                 ..
             })
         ));
