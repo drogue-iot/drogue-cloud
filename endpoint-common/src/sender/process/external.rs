@@ -1,5 +1,12 @@
 use async_std::sync::Mutex;
-use drogue_client::registry::v1::{Authentication, ExternalEndpoint, TlsOptions};
+use cloudevents::{
+    binding::reqwest::{RequestBuilderExt, RequestSerializer},
+    message::StructuredDeserializer,
+    Event,
+};
+use drogue_client::registry::v1::{
+    Authentication, ContentMode, ExternalEndpoint, RequestType, TlsOptions,
+};
 use drogue_cloud_service_common::reqwest::to_method;
 use http::{header::HeaderName, HeaderMap, HeaderValue, Method};
 use lru::LruCache;
@@ -65,6 +72,27 @@ pub struct ExternalClient {
     client: reqwest::Client,
 }
 
+#[derive(Clone, Debug)]
+pub enum RequestPayload {
+    CloudEvent {
+        mode: ContentMode,
+        event: cloudevents::Event,
+    },
+}
+
+/// A trait to easily translate type and event into payload
+pub trait IntoPayload {
+    fn to_payload(&self, event: cloudevents::Event) -> RequestPayload;
+}
+
+impl IntoPayload for RequestType {
+    fn to_payload(&self, event: Event) -> RequestPayload {
+        match self {
+            Self::CloudEvent { mode } => RequestPayload::CloudEvent { event, mode: *mode },
+        }
+    }
+}
+
 impl ExternalClient {
     pub fn new(tls: Option<&TlsOptions>) -> Result<Self, reqwest::Error> {
         let mut client = reqwest::Client::builder();
@@ -89,7 +117,7 @@ impl ExternalClient {
 
     pub async fn process(
         &self,
-        event: cloudevents::Event,
+        payload: RequestPayload,
         endpoint: &ExternalEndpoint,
     ) -> Result<reqwest::Response, ExternalError> {
         let method = to_method(endpoint.method.as_deref().unwrap_or(""))
@@ -136,7 +164,24 @@ impl ExternalClient {
 
         // cloud event mapping
 
-        request = cloudevents::binding::reqwest::event_to_request(event, request)?;
+        match payload {
+            RequestPayload::CloudEvent {
+                mode: ContentMode::Binary,
+                event,
+            } => {
+                request = request.event(event)?;
+            }
+            RequestPayload::CloudEvent {
+                mode: ContentMode::Structured,
+                event,
+            } => {
+                request = StructuredDeserializer::deserialize_structured(
+                    event,
+                    RequestSerializer::new(request),
+                )?;
+                // request = cloudevents::binding::reqwest::event_to_request(event, request)?;
+            }
+        }
 
         // execute
 
