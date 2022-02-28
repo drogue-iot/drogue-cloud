@@ -7,18 +7,16 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use anyhow::Context;
 use drogue_cloud_admin_service::apps;
-use drogue_cloud_registry_events::sender::KafkaEventSender;
-use drogue_cloud_registry_events::sender::KafkaSenderConfig;
+use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
 use drogue_cloud_service_api::webapp as actix_web;
-use drogue_cloud_service_common::actix_auth::authentication::AuthN;
-use drogue_cloud_service_common::client::{UserAuthClient, UserAuthClientConfig};
-use drogue_cloud_service_common::openid::AuthenticatorConfig;
 use drogue_cloud_service_common::{
+    actix_auth::authentication::AuthN,
+    client::{UserAuthClient, UserAuthClientConfig},
     defaults,
-    health::HealthServerConfig,
+    health::{HealthServer, HealthServerConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
+    openid::{Authenticator, AuthenticatorConfig},
 };
-use drogue_cloud_service_common::{health::HealthServer, openid::Authenticator};
 use futures::TryFutureExt;
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;
