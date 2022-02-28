@@ -8,7 +8,7 @@ license = "Apache-2.0"
 
 [dependencies]
 
-actix-cors = "=0.6.0-beta.8"
+actix-cors = "0.6"
 tokio-stream = { version = "0.1", features = ["time"] }
 prometheus = { version = "^0.13", default-features = false }
 
@@ -54,7 +54,7 @@ drogue-cloud-access-token-service = { path = "../access-token-service" }
 
 drogue-client = "0.9.0-alpha.1"
 
-awc = { version = "=3.0.0-beta.18", optional = true, features = ["rustls"] }
+awc = { version = "3.0.0-beta.21", optional = true, features = ["rustls"] }
 
 [features]
 default = ["jaeger"]
