@@ -10,7 +10,7 @@ license = "Apache-2.0"
 anyhow = "1"
 thiserror = "1"
 
-actix-cors = "=0.6.0-beta.8"
+actix-cors = "0.6"
 
 prometheus = { version = "^0.13", default-features = false }
 

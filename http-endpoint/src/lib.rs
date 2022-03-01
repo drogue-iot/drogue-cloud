@@ -5,7 +5,7 @@ mod ttn;
 mod x509;
 
 use actix_web::{
-    get, middleware,
+    middleware,
     web::{self, Data},
     App, HttpResponse, HttpServer, Responder,
 };
@@ -64,7 +64,6 @@ pub struct Config {
     pub endpoint_pool: ExternalClientPoolConfig,
 }
 
-#[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
@@ -105,7 +104,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
         let app = app.app_data(Data::new(device_authenticator.clone()));
 
-        app.service(index)
+        app.service(web::resource("/").route(web::get().to(index)))
             // the standard endpoint
             .service(
                 web::scope("/v1")

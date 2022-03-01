@@ -1,7 +1,7 @@
 use drogue_client::{openid::TokenProvider, registry};
 use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender, sink::Sink};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
-use drogue_cloud_service_api::webapp::{http::header, web, HttpResponse};
+use drogue_cloud_service_api::webapp::{http::header, web, HttpRequest, HttpResponse};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -15,7 +15,7 @@ pub async fn command<S, TP>(
     client: web::Data<reqwest::Client>,
     path: web::Path<(String, String)>,
     web::Query(opts): web::Query<CommandQuery>,
-    req: web::HttpRequest,
+    req: HttpRequest,
     body: web::Bytes,
     registry: web::Data<registry::v1::Client<TP>>,
 ) -> Result<HttpResponse, HttpEndpointError>

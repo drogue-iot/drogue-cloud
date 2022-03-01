@@ -58,7 +58,9 @@ macro_rules! app {
             .service(
                 web::scope("/api")
                     .wrap(actix_web::middleware::Condition::new($enable_auth, $auth))
-                    .service(web::scope("/v1/user").service(endpoints::authorize))
+                    .service(web::scope("/v1/user").service(
+                        web::resource("/authz").route(web::post().to(endpoints::authorize)),
+                    ))
                     .service(web::resource("/user/v1alpha1/authn").route(web::post().to(
                         drogue_cloud_access_token_service::endpoints::authenticate::<$api_key_ty>,
                     ))),

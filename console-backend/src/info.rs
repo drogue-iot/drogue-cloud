@@ -1,7 +1,6 @@
 use crate::demos::get_demos;
 use actix_web::{get, web, HttpResponse, Responder};
 use drogue_cloud_console_common::EndpointInformation;
-use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{endpoints::Endpoints, version::DrogueVersion};
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;

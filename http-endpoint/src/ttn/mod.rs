@@ -16,7 +16,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_service_api::{
     auth::device::authn,
-    webapp::{web, HttpResponse},
+    webapp::{web, HttpRequest, HttpResponse},
 };
 use serde_json::Value;
 use std::collections::HashMap;
@@ -58,7 +58,7 @@ async fn publish_uplink<S>(
     downstream: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     opts: PublishCommonOptions,
-    req: web::HttpRequest,
+    req: HttpRequest,
     cert: Option<ClientCertificateChain>,
     body: web::Bytes,
     uplink: Uplink,

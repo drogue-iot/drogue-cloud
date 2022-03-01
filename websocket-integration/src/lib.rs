@@ -101,7 +101,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                         token: user_auth.clone(),
                         enable_access_token,
                     })
-                    .service(route::start_connection),
+                    .service(web::resource("").route(web::get().to(route::start_connection))),
             )
     })
     .bind(config.bind_addr)?;

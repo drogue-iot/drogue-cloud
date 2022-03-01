@@ -9,7 +9,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_service_api::{
     auth::device::authn,
-    webapp::{http::header, web, HttpResponse},
+    webapp::{http::header, web, HttpRequest, HttpResponse},
 };
 use serde::Deserialize;
 use tracing::instrument;
@@ -40,7 +40,7 @@ pub async fn publish_plain<S>(
     commands: web::Data<Commands>,
     channel: web::Path<String>,
     web::Query(opts): web::Query<PublishOptions>,
-    req: web::HttpRequest,
+    req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>
@@ -68,7 +68,7 @@ pub async fn publish_tail<S>(
     commands: web::Data<Commands>,
     path: web::Path<(String, String)>,
     web::Query(opts): web::Query<PublishOptions>,
-    req: web::HttpRequest,
+    req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>
@@ -99,7 +99,7 @@ pub async fn publish<S>(
     channel: String,
     suffix: Option<String>,
     opts: PublishOptions,
-    req: web::HttpRequest,
+    req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>

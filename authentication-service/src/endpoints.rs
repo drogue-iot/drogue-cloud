@@ -2,7 +2,7 @@ use crate::{
     service::{self, AuthenticationService},
     WebData,
 };
-use actix_web::{post, web, HttpResponse};
+use actix_web::{web, HttpResponse};
 use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
     AuthorizeGatewayResponse,
@@ -11,7 +11,6 @@ use drogue_cloud_service_api::webapp as actix_web;
 use tracing::instrument;
 
 #[instrument(skip(data))]
-#[post("/auth")]
 pub async fn authenticate(
     req: web::Json<AuthenticationRequest>,
     data: web::Data<WebData<service::PostgresAuthenticationService>>,
@@ -25,7 +24,6 @@ pub async fn authenticate(
 }
 
 #[instrument(skip(data))]
-#[post("/authorize_as")]
 pub async fn authorize_as(
     req: web::Json<AuthorizeGatewayRequest>,
     data: web::Data<WebData<service::PostgresAuthenticationService>>,
