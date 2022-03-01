@@ -1169,7 +1169,7 @@ dependencies = [
 [[package]]
 name = "cloudevents-sdk"
 version = "0.4.0"
-source = "git+https://github.com/jcrossley3/sdk-rust?branch=actix-web-4#42521f44eeb36949a0a45e6e4ccba31d0740956a"
+source = "git+https://github.com/cloudevents/sdk-rust?rev=5a9f64868dd8d2142f1e699da0d60f0601299b0b#5a9f64868dd8d2142f1e699da0d60f0601299b0b"
 dependencies = [
  "actix-http 3.0.0",
  "actix-web",
