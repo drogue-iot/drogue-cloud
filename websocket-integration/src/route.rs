@@ -1,7 +1,6 @@
 use crate::{service::Service, wshandler::WsHandler};
 use actix::Addr;
 use actix_web::{
-    get,
     web::{self, Payload},
     Error, HttpRequest, HttpResponse,
 };
@@ -15,7 +14,6 @@ pub struct GroupId {
     group_id: Option<String>,
 }
 
-#[get("")]
 pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,

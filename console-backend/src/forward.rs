@@ -1,6 +1,5 @@
 use actix_web::{web, Error, HttpRequest, HttpResponse, ResponseError};
 use awc::Client;
-use drogue_cloud_service_api::webapp as actix_web;
 use std::fmt::Formatter;
 use url::Url;
 

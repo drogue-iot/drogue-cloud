@@ -9,14 +9,14 @@ use drogue_cloud_endpoint_common::{
     sink::Sink,
     x509::ClientCertificateChain,
 };
-use drogue_cloud_service_api::webapp::{web, HttpResponse};
+use drogue_cloud_service_api::webapp::{web, HttpRequest, HttpResponse};
 use drogue_ttn::v2;
 
 pub async fn publish_v2<S>(
     sender: web::Data<DownstreamSender<S>>,
     auth: web::Data<DeviceAuthenticator>,
     web::Query(opts): web::Query<PublishCommonOptions>,
-    req: web::HttpRequest,
+    req: HttpRequest,
     body: web::Bytes,
     cert: Option<ClientCertificateChain>,
 ) -> Result<HttpResponse, HttpEndpointError>

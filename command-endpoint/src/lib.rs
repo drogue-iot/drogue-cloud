@@ -1,7 +1,7 @@
 mod v1alpha1;
 
 use actix_cors::Cors;
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
 use drogue_client::openid::OpenIdTokenProvider;
 use drogue_cloud_endpoint_common::sender::ExternalClientPoolConfig;
 use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
@@ -59,7 +59,6 @@ pub struct WebData {
     pub authenticator: Option<Authenticator>,
 }
 
-#[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
@@ -99,7 +98,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(registry.clone()))
             .app_data(web::Data::new(client.clone()))
-            .service(index)
+            .service(web::resource("/").route(web::get().to(index)))
             .service(
                 web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
                     .wrap(AuthZ {
