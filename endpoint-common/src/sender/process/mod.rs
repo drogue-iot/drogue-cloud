@@ -427,7 +427,9 @@ mod test {
               "then": [
                 {
                   "enrich": {
-                    "response": "raw",
+                    "response": {
+                        "type": "raw",
+                    },
                     "endpoint":{
                         "method": "POST",
                         "url": "https://some-external-service/path/to"
