@@ -443,10 +443,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-web-httpauth"
-version = "0.6.0-beta.8"
+name = "actix-web-extras"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d818f2220aab365d18a1b67c53121e6a656f0b742eee5de7bd20e75338377a5f"
+checksum = "ef1dfa234e9b71ed142e54b26b4cc9e13ef4ac563cf1a2be810b0c3d057781ea"
+dependencies = [
+ "actix-web",
+ "futures-core",
+ "futures-util",
+ "pin-project-lite 0.2.8",
+]
+
+[[package]]
+name = "actix-web-httpauth"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08c25a48b4684f90520183cd1a688e5f4f7e9905835fa75d02c0fe4f60fcdbe6"
 dependencies = [
  "actix-service 2.0.2",
  "actix-utils 3.0.0",
@@ -459,9 +471,9 @@ dependencies = [
 
 [[package]]
 name = "actix-web-opentelemetry"
-version = "0.11.0-beta.8"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c64ad2ffafb94b03b776a258d6f122110b01079faa817caa8db7c71327740ea"
+checksum = "503ff1136a085f39fc9fd96818a5e9c7ab58ccd36682f3cfc32a001d01cc3a50"
 dependencies = [
  "actix-http 3.0.0",
  "actix-web",
@@ -1520,16 +1532,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dashmap"
-version = "4.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e77a43b28d0668df09411cb0bc9a8c2adc40f9a048afe863e05fd43251e8e39c"
-dependencies = [
- "cfg-if 1.0.0",
- "num_cpus",
-]
-
-[[package]]
 name = "data-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2484,6 +2486,7 @@ dependencies = [
  "actix-rt 2.6.0",
  "actix-utils 3.0.0",
  "actix-web",
+ "actix-web-extras",
  "actix-web-httpauth",
  "actix-web-opentelemetry",
  "actix-web-prom",
@@ -4549,8 +4552,6 @@ checksum = "6105e89802af13fdf48c49d7646d3b533a70e536d818aae7e78ba0433d01acb8"
 dependencies = [
  "async-trait",
  "crossbeam-channel",
- "dashmap",
- "fnv",
  "futures-channel",
  "futures-executor",
  "futures-util",
