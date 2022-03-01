@@ -26,11 +26,12 @@ drogue-client = { version = "0.9.0-alpha.1", default-features = false }
 drogue-cloud-macros = { path = "../macros" }
 
 actix-web = { version = "4", optional = true }
-actix-web-httpauth = { version = "0.6.0-beta.8", optional = true }
+actix-web-httpauth = { version = "0.6", optional = true }
 actix-web-prom = { version = "0.6", optional = true }
 actix-rt = { version = "2", optional = true }
 actix-utils = { version = "3", optional = true }
-actix-web-opentelemetry = { version = "0.11.0-beta.8", optional = true }
+actix-web-opentelemetry = { version = "0.12", optional = true }
+actix-web-extras = "0.1"
 
 nom = { version = "6", optional = true }
 

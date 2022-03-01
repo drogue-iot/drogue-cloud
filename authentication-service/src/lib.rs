@@ -47,10 +47,10 @@ pub struct Config {
 #[macro_export]
 macro_rules! app {
     ($data:expr, $max_json_payload_size:expr, $enable_auth: expr, $auth: expr, $prometheus: expr) => {{
-        use drogue_cloud_service_common::middleware::Optional;
+        use drogue_cloud_service_api::webapp::extras::middleware::Condition;
 
-        let prom: Optional<drogue_cloud_service_api::webapp::prom::PrometheusMetrics> =
-            Optional::new($prometheus);
+        let prom: Condition<drogue_cloud_service_api::webapp::prom::PrometheusMetrics> =
+            Condition::from_option($prometheus);
 
         App::new()
             .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
