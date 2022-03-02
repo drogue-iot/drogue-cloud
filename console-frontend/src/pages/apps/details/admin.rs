@@ -220,7 +220,7 @@ impl Component for Admin {
                                     <TextInput
                                             disabled={self.fetch.is_some()}
                                             onchange={ctx.link().callback(Msg::NewMemberId)}
-                                            placeholder="User id"/>
+                                            placeholder="User name"/>
                                     </ToolbarItem>
                                     <ToolbarItem>
                                         <Select<Role>
