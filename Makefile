@@ -120,7 +120,7 @@ check: host-check
 # Build artifacts and containers.
 #
 .PHONY: build
-build: host-build build-images
+build: host-build
 
 
 #
@@ -295,10 +295,10 @@ frontend-build: cargo-build
 #
 # You might want to consider doing a `build` first, but we don't enforce that.
 #
-.PHONY: build-imagesd
+.PHONY: build-images
 .PHONY: build-image($(IMAGES))
 build-images: build-image($(IMAGES))
-build-image($(IMAGES)):
+build-image($(IMAGES)): | build
 	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t localhost/$%:latest
 
 
@@ -308,7 +308,8 @@ build-image($(IMAGES)):
 .PHONY: tag-images
 .PHONY: tag-image($(IMAGES))
 tag-images: tag-image($(IMAGES))
-tag-image($(IMAGES)): require-container-registry
+tag-image($(IMAGES)): | build-image($(IMAGES))
+tag-image($(IMAGES)): require-container-registry | build
 	cd $(TOP_DIR) && $(CONTAINER) tag localhost/$%:latest $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
@@ -318,7 +319,8 @@ tag-image($(IMAGES)): require-container-registry
 .PHONY: push-images
 .PHONY: push-image($(IMAGES))
 push-images: push-image($(IMAGES))
-push-image($(IMAGES)): require-container-registry
+push-image($(IMAGES)): | tag-image($(IMAGES))
+push-image($(IMAGES)): require-container-registry | build
 	cd $(TOP_DIR) && env CONTAINER=$(CONTAINER) ./scripts/bin/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 

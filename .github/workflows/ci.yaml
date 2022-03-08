@@ -128,7 +128,7 @@ jobs:
 
       - name: Run build
         run: |
-          make build SKIP_SERVER=1
+          make build build-images SKIP_SERVER=1
 
       - name: Save images
         run: |
