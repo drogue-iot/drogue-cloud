@@ -54,8 +54,8 @@ bcrypt = "0.9"
 sha-crypt = "0.2"
 
 [dev-dependencies]
-actix-rt = "2.0.0-beta.2"
-actix-service = "2.0.0-beta.4"
+actix-rt = "2"
+actix-service = "2"
 testcontainers = "0.12"
 serial_test = "0.5"
 drogue-cloud-test-common = { path = "../test-common" }
