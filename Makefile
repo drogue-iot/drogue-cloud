@@ -321,7 +321,7 @@ tag-image($(IMAGES)): require-container-registry | build
 push-images: push-image($(IMAGES))
 push-image($(IMAGES)): | tag-image($(IMAGES))
 push-image($(IMAGES)): require-container-registry | build
-	cd $(TOP_DIR) && env CONTAINER=$(CONTAINER) ./scripts/bin/retry.sh push $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
+	cd $(TOP_DIR) && env CONTAINER=$(CONTAINER) ./scripts/bin/retry.sh push -q $(CONTAINER_REGISTRY)/$%:$(IMAGE_TAG)
 
 
 #
