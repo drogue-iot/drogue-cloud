@@ -1,3 +1,4 @@
+use log::{log, Level};
 use thiserror::Error;
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -12,8 +13,14 @@ impl ReconcileError {
     pub fn permanent<S: ToString>(s: S) -> Self {
         Self::Permanent(s.to_string())
     }
+
     pub fn temporary<S: ToString>(s: S) -> Self {
         Self::Temporary(s.to_string())
+    }
+
+    pub fn log(self, level: Level) -> Self {
+        log!(level, "{self}");
+        self
     }
 }
 

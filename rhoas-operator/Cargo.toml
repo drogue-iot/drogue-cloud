@@ -1,0 +1,43 @@
+[package]
+name = "drogue-cloud-rhoas-operator"
+description = "RHOAS operator"
+version = "0.9.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+
+actix = "0.12"
+anyhow = "1"
+async-std = "1"
+async-trait = "0.1"
+config = "0.12"
+dotenv = "0.15"
+env_logger = "0.9"
+futures = "0.3"
+humantime = "2"
+humantime-serde = "1"
+log = "0.4"
+prometheus = { version = "^0.13", default-features = false }
+reqwest = "0.11"
+serde = "1"
+serde_json = "1"
+thiserror = "1"
+tokio = "1"
+url = "2"
+
+rhoas-kafka-management-sdk = { git = "https://github.com/ctron/app-services-sdk-rust" }
+rhoas-kafka-instance-sdk = { git = "https://github.com/ctron/app-services-sdk-rust" }
+
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-operator-common = { path = "../operator-common", features = ["with_kube"] }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+
+drogue-client = "0.9.0-alpha.1"
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

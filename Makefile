@@ -44,24 +44,26 @@ endif
 # all possible container images that we build and push (so it does not include the "builder")
 #
 ALL_IMAGES=\
+	authentication-service \
 	coap-endpoint \
-	http-endpoint \
-	mqtt-endpoint \
+	command-endpoint \
 	console-backend \
 	console-frontend \
-	authentication-service \
-	device-management-service \
 	database-migration \
-	command-endpoint \
-	test-cert-generator \
-	outbox-controller \
-	user-auth-service \
-	mqtt-integration \
-	ttn-operator \
-	topic-strimzi-operator \
-	topic-admin-operator \
-	websocket-integration \
+	device-management-service \
 	ditto-registry-operator \
+	http-endpoint \
+	mqtt-endpoint \
+	mqtt-integration \
+	outbox-controller \
+	rhoas-operator \
+	test-cert-generator \
+	topic-admin-operator \
+	topic-strimzi-operator \
+	ttn-operator \
+	user-auth-service \
+	user-auth-service \
+	websocket-integration \
 
 
 
