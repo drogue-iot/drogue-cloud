@@ -56,9 +56,10 @@ impl AuthZ {
 
                 match response.outcome {
                     authz::Outcome::Allow => Ok(()),
-                    authz::Outcome::Deny => {
-                        Err(ServiceError::InvalidRequest(String::from("Unauthorized")))
-                    }
+                    authz::Outcome::Deny => Err(ServiceError::NotFound(
+                        String::from("Application"),
+                        application.to_string(),
+                    )),
                 }
             }
             // No auth client
