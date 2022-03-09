@@ -13,7 +13,7 @@ use crate::{
     utils::{navigate_to, url_encode},
 };
 use drogue_client::registry::v1::{Application, Device};
-use http::Method;
+use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
 
@@ -69,6 +69,7 @@ pub enum Msg {
     AppSearch(String),
 
     ShowOverview(String),
+    Delete(String),
     TriggerModal,
 }
 
@@ -154,6 +155,10 @@ impl Component for Index {
                         />
                 }),
             }),
+            Msg::Delete(name) => match self.delete(ctx, name) {
+                Ok(task) => self.fetch_task = Some(task),
+                Err(err) => error("Failed to delete", err),
+            },
         };
         true
     }
@@ -249,12 +254,14 @@ impl Index {
                         .into_iter()
                         .map(move |device| {
                             let name = device.metadata.name.clone();
+                            let name_copy = device.metadata.name.clone();
                             let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
+                            let on_delete = link.callback_once(move |_| Msg::Delete(name_copy));
 
                             DeviceEntry {
                                 device,
                                 on_overview,
-                                on_delete: Default::default(),
+                                on_delete,
                             }
                         })
                         .collect();
@@ -280,6 +287,26 @@ impl Index {
                     Msg::SetApps(entries)
                 }
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load applications")),
+            }),
+        )?)
+    }
+
+    fn delete(&self, ctx: &Context<Self>, name: String) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.info.request(
+            Method::DELETE,
+            format!(
+                "/api/registry/v1alpha1/apps/{}/devices/{}",
+                url_encode(&self.app),
+                url_encode(name)
+            ),
+            Nothing,
+            vec![],
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::Load,
+                ApiResponse::Success(_, code) => {
+                    Msg::Error(format!("Unknown message code: {}", code).notify("Failed to delete"))
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
             }),
         )?)
     }
