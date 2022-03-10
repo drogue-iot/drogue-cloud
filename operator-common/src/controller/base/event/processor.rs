@@ -60,6 +60,12 @@ where
     }
 }
 
+#[derive(Clone, Debug)]
+pub enum NameSource {
+    Name,
+    Annotation(String),
+}
+
 pub struct ResourceProcessor<K, RI, RO, O>
 where
     K: Key,
@@ -68,7 +74,8 @@ where
     O: ControllerOperation<K, RI, RO> + Send + Sync + 'static,
 {
     controller: Arc<Mutex<BaseController<K, RI, RO, O>>>,
-    annotation: String,
+    /// The source for the name of the resource to reconcile
+    source: NameSource,
 }
 
 impl<RI, RO, O> ResourceProcessor<String, RI, RO, O>
@@ -77,22 +84,22 @@ where
     RO: Clone + Send + Sync + 'static,
     O: ControllerOperation<String, RI, RO> + Send + Sync + 'static,
 {
-    pub fn new<S>(controller: Arc<Mutex<BaseController<String, RI, RO, O>>>, annotation: S) -> Self
-    where
-        S: Into<String>,
-    {
-        Self {
-            controller,
-            annotation: annotation.into(),
-        }
+    pub fn new(
+        controller: Arc<Mutex<BaseController<String, RI, RO, O>>>,
+        source: NameSource,
+    ) -> Self {
+        Self { controller, source }
     }
 
     fn extract<R: Resource>(&self, resource: &R) -> Option<String> {
-        resource
-            .meta()
-            .annotations
-            .as_ref()
-            .and_then(|a| a.get(&self.annotation).cloned())
+        match &self.source {
+            NameSource::Name => resource.meta().name.clone(),
+            NameSource::Annotation(annotation) => resource
+                .meta()
+                .annotations
+                .as_ref()
+                .and_then(|a| a.get(annotation).cloned()),
+        }
     }
 }
 
@@ -104,7 +111,7 @@ where
     RO: Clone + Send + Sync + 'static,
     O: ControllerOperation<String, RI, RO> + Send + Sync + 'static,
 {
-    #[instrument(skip(self,event),fields(meta=?event.meta()))]
+    #[instrument(skip_all, fields(meta=?event.meta()))]
     async fn handle(&self, event: &R) -> Result<bool, ()> {
         let key = self.extract(event);
         log::debug!("Extracted key from event: {:?}", key);

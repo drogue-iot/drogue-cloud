@@ -1,0 +1,48 @@
+[package]
+name = "drogue-cloud-knative-operator"
+description = "KNative exporter operator"
+version = "0.9.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+
+actix = "0.12"
+async-std = "1"
+async-trait = "0.1"
+futures = "0.3"
+tokio = "1"
+
+anyhow = "1"
+dotenv = "0.15"
+humantime = "2"
+humantime-serde = "1"
+config = "0.12"
+thiserror = "1"
+env_logger = "0.9"
+log = "0.4"
+
+url = "2"
+serde = "1"
+serde_json = "1"
+reqwest = "0.11"
+prometheus = { version = "^0.13", default-features = false }
+
+kube = "0.68"
+kube-derive = "0.68"
+kube-runtime = "0.68"
+k8s-openapi = { version = "0.14", features = ["v1_19"] }
+operator-framework = "0.6.0"
+
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-service-common = { path = "../service-common" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-operator-common = { path = "../operator-common", features = ["with_kube"] }
+
+drogue-client = "0.9.0-alpha.1"
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

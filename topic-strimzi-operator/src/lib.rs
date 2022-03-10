@@ -6,6 +6,7 @@ use crate::controller::{
 };
 use anyhow::{anyhow, Context};
 use async_std::sync::{Arc, Mutex};
+use drogue_cloud_operator_common::controller::base::NameSource;
 use drogue_cloud_operator_common::{
     controller::base::{
         queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
@@ -126,7 +127,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let watcher_topics = watcher(kafka_topics, ListParams::default());
     let watcher_topics = watcher_topics.run_stream(EventDispatcher::one(ResourceProcessor::new(
         controller.clone(),
-        ANNOTATION_APP_NAME,
+        NameSource::Annotation(ANNOTATION_APP_NAME.into()),
     )));
 
     // event source - KafkaUser
@@ -134,7 +135,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let watcher_users = watcher(kafka_users, ListParams::default());
     let watcher_users = watcher_users.run_stream(EventDispatcher::one(ResourceProcessor::new(
         controller.clone(),
-        ANNOTATION_APP_NAME,
+        NameSource::Annotation(ANNOTATION_APP_NAME.into()),
     )));
 
     // event source - Secret
@@ -142,7 +143,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let watcher_secret = watcher(secrets, ListParams::default());
     let watcher_secret = watcher_secret.run_stream(EventDispatcher::one(ResourceProcessor::new(
         controller,
-        ANNOTATION_APP_NAME,
+        NameSource::Annotation(ANNOTATION_APP_NAME.into()),
     )));
 
     // run
