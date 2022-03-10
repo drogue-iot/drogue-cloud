@@ -44,7 +44,7 @@ pub struct HealthChecker {
 }
 
 impl HealthChecker {
-    #[instrument(level = "debug", skip(self), ret)]
+    #[instrument(level = "trace", skip(self), ret)]
     pub async fn is_ready(&self) -> Vec<Result<(), HealthCheckError>> {
         futures::stream::iter(self.checks.iter())
             .then(|check| check.is_ready())
@@ -52,7 +52,7 @@ impl HealthChecker {
             .await
     }
 
-    #[instrument(level = "debug", skip(self), ret)]
+    #[instrument(level = "trace", skip(self), ret)]
     pub async fn is_alive(&self) -> Vec<Result<(), HealthCheckError>> {
         futures::stream::iter(self.checks.iter())
             .then(|check| check.is_alive())
