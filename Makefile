@@ -53,6 +53,7 @@ ALL_IMAGES=\
 	device-management-service \
 	ditto-registry-operator \
 	http-endpoint \
+	knative-operator \
 	mqtt-endpoint \
 	mqtt-integration \
 	outbox-controller \
