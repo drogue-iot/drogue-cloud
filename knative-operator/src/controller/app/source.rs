@@ -1,9 +1,8 @@
 use super::{condition_ready, retry, ConstructContext};
-use crate::{controller::ControllerConfig, ANNOTATION_APP_NAME, DEFAULT_IMAGE};
+use crate::{controller::ControllerConfig, ANNOTATION_APP_NAME, DEFAULT_IMAGE, LABEL_APP_MARKER};
 use async_trait::async_trait;
-use drogue_client::registry::v1::KnativeAppSpec;
 use drogue_client::{
-    registry::v1::{Application, KafkaAppStatus},
+    registry::v1::{Authentication, KafkaAppStatus, KnativeAppSpec},
     Translator,
 };
 use drogue_cloud_operator_common::controller::reconciler::{
@@ -11,6 +10,7 @@ use drogue_cloud_operator_common::controller::reconciler::{
     ReconcileError,
 };
 use drogue_cloud_service_api::kafka::{make_kafka_resource_name, ResourceType};
+use humantime::format_duration;
 use k8s_openapi::{api::apps::v1::Deployment, apimachinery::pkg::apis::meta::v1::LabelSelector};
 use kube::Api;
 use operator_framework::{
@@ -37,7 +37,7 @@ impl CreateDeployment<'_> {
             self.deployments,
             Some(self.config.target_namespace.clone()),
             &topic_name,
-            |deployment| self.reconcile_deployment(deployment, ctx, spec),
+            |deployment| self.reconcile_deployment(deployment, ctx, spec, &topic_name),
         )
         .await
         .map_err(|err| {
@@ -55,8 +55,11 @@ impl CreateDeployment<'_> {
         mut deployment: Deployment,
         ctx: &ConstructContext,
         spec: &KnativeAppSpec,
+        topic_name: &str,
     ) -> anyhow::Result<Deployment> {
-        let selector_labels = BTreeMap::new();
+        let mut selector_labels = BTreeMap::new();
+        selector_labels.insert(LABEL_APP_MARKER.to_string(), "".to_string());
+        selector_labels.insert("name".to_string(), topic_name.to_string());
 
         let mut labels = BTreeMap::new();
         labels.extend(selector_labels.clone());
@@ -69,6 +72,7 @@ impl CreateDeployment<'_> {
             .use_or_create(|annotations| {
                 annotations.insert(
                     ANNOTATION_APP_NAME.to_string(),
+                    // use the actual name
                     ctx.app.metadata.name.clone(),
                 )
             });
@@ -111,12 +115,84 @@ impl CreateDeployment<'_> {
             container.command = None;
             container.working_dir = None;
 
+            // clear up
+
+            if let Some(env) = &mut container.env {
+                env.retain(|e| {
+                    !e.name.starts_with("ENDPOINT__HEADERS__")
+                        && !e.name.starts_with("PROPERTIES__")
+                });
+            }
+
+            // mode
+
             container.add_env("MODE", "kafka")?;
+
+            // endpoint config
 
             container.add_env("K_SINK", &spec.endpoint.url)?;
 
-            // FIXME: add from config
-            //container.add_env("BOOTSTRAP_SERVERS", self.config.);
+            let (username, password, bearer) = match &spec.endpoint.auth {
+                Authentication::None => (None, None, None),
+                Authentication::Basic { username, password } => {
+                    (Some(username), password.as_ref(), None)
+                }
+                Authentication::Bearer { token } => (None, None, Some(token)),
+            };
+
+            container.set_env("ENDPOINT__USERNAME", username)?;
+            container.set_env("ENDPOINT__PASSWORD", password)?;
+            container.set_env("ENDPOINT__TOKEN", bearer)?;
+
+            container.add_env(
+                "ENDPOINT__TLS_INSECURE",
+                spec.endpoint
+                    .tls
+                    .as_ref()
+                    .map(|tls| tls.insecure)
+                    .unwrap_or_default()
+                    .to_string(),
+            )?;
+            container.set_env(
+                "ENDPOINT__TLS_CERTIFICATE",
+                spec.endpoint
+                    .tls
+                    .as_ref()
+                    .and_then(|tls| tls.certificate.as_ref()),
+            )?;
+
+            container.set_env("ENDPOINT__METHOD", spec.endpoint.method.as_ref())?;
+            container.set_env(
+                "ENDPOINT__TIMEOUT",
+                spec.endpoint
+                    .timeout
+                    .map(format_duration)
+                    .map(|d| d.to_string()),
+            )?;
+
+            // set headers
+
+            for h in &spec.endpoint.headers {
+                container.add_env(format!("ENDPOINT__HEADERS__{}", &h.name), &h.value)?;
+            }
+
+            // kafka config
+
+            container.add_env("TOPIC", topic_name)?;
+            container.add_env("BOOTSTRAP_SERVERS", &self.config.kafka.bootstrap_servers)?;
+
+            for (k, v) in &self.config.kafka.properties {
+                container.add_env(format!("PROPERTIES__{}", k.to_uppercase()), v)?;
+            }
+
+            container.add_env(
+                "PROPERTIES__GROUP_ID",
+                spec.group_id
+                    .clone()
+                    .unwrap_or_else(|| "knative-source".to_string()),
+            )?;
+
+            // done
 
             Ok(())
         })?;

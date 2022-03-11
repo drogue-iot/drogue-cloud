@@ -1,5 +1,6 @@
 pub mod app;
 
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -9,6 +10,9 @@ pub struct ControllerConfig {
 
     #[serde(default)]
     pub template: DeploymentTemplate,
+
+    #[serde(default)]
+    pub kafka: KafkaClientConfig,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]

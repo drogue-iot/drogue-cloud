@@ -64,6 +64,7 @@ where
 pub enum NameSource {
     Name,
     Annotation(String),
+    Label(String),
 }
 
 pub struct ResourceProcessor<K, RI, RO, O>
@@ -97,6 +98,11 @@ where
             NameSource::Annotation(annotation) => resource
                 .meta()
                 .annotations
+                .as_ref()
+                .and_then(|a| a.get(annotation).cloned()),
+            NameSource::Label(annotation) => resource
+                .meta()
+                .labels
                 .as_ref()
                 .and_then(|a| a.get(annotation).cloned()),
         }
