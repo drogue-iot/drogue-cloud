@@ -1,0 +1,38 @@
+= Knative integration
+
+A Drogue IoT cloud application can also act as a Knative event source. It will try to deliver events to the
+Knative serving endpoint you configure.
+
+The difference to integrations like MQTT and WebSocket is, that in this case, Drogue Cloud will actively try to
+deliver events, rather than waiting for a consumer to attach.
+
+== Configuration
+
+You can configure this using the section `.spec.knative`:
+
+[source,yaml]
+----
+spec:
+  knative:
+    endpoint: # <1>
+      url: https://my-knative-endpoint
+----
+<1> External endpoint definition as described in xref:common.adoc#defining_external_endpoints[Defining external endpoints].
+
+This will create a publisher, which will start sending new events as they come in.
+
+=== Temporarily disabling
+
+You can temporarily disable the source using:
+
+[source,yaml]
+----
+spec:
+  knative:
+    disable: true # <1>
+    endpoint:
+      url: https://my-knative-endpoint
+----
+<1> Marks the source disabled
+
+This will disable the source. It can later be resumed by setting the value to `false` or removing the field.
