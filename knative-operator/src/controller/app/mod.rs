@@ -4,19 +4,21 @@ use source::*;
 
 use crate::controller::ControllerConfig;
 use async_trait::async_trait;
-use drogue_client::registry::v1::KnativeAppSpec;
 use drogue_client::{
     core::v1::Conditions,
     meta::v1::CommonMetadataMut,
     openid::TokenProvider,
     registry::{
         self,
-        v1::{KafkaAppStatus, KnativeAppStatus},
+        v1::{KnativeAppSpec, KnativeAppStatus},
     },
     Translator,
 };
 use drogue_cloud_operator_common::controller::{
-    base::{ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, CONDITION_RECONCILED},
+    base::{
+        ConditionExt, ControllerOperation, ProcessOutcome, ReadyState, StatusSection,
+        CONDITION_RECONCILED,
+    },
     reconciler::{
         operation::HasFinalizer,
         progress::{self, OperationOutcome, Progressor, ResourceAccessor, RunConstructor},
@@ -76,13 +78,13 @@ impl<TP: TokenProvider>
         mut app: registry::v1::Application,
     ) -> Result<registry::v1::Application, ()> {
         let mut conditions = app
-            .section::<KafkaAppStatus>()
+            .section::<KnativeAppStatus>()
             .and_then(|s| s.ok().map(|s| s.conditions))
             .unwrap_or_default();
 
         conditions.update(CONDITION_RECONCILED, ReadyState::Failed(message.into()));
 
-        app.finish_ready::<KafkaAppStatus>(conditions, app.metadata.generation)
+        app.finish_ready::<KnativeAppStatus>(conditions, app.metadata.generation)
             .map_err(|_| ())?;
 
         Ok(app)
@@ -162,7 +164,7 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
                 config: self.config,
             }),
         ])
-        .run_with::<KafkaAppStatus>(ctx)
+        .run_with::<KnativeAppStatus>(ctx)
         .await
     }
 
@@ -184,6 +186,12 @@ impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
             // remove finalizer
 
             ctx.app.metadata.remove_finalizer(FINALIZER);
+
+            // remove status
+
+            ctx.app
+                .update_section(|c: Conditions| c.clear_ready(KnativeAppStatus::ready_name()))?;
+            ctx.app.clear_section::<KnativeAppStatus>();
 
             // done
 
@@ -216,7 +224,7 @@ impl ResourceAccessor for ConstructContext {
 
     fn conditions(&self) -> Conditions {
         self.app
-            .section::<KafkaAppStatus>()
+            .section::<KnativeAppStatus>()
             .and_then(|s| s.ok())
             .unwrap_or_default()
             .conditions

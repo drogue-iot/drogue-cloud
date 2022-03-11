@@ -1,7 +1,7 @@
 use crate::controller::{base::CONDITION_RECONCILED, reconciler::ReconcileError};
 use drogue_client::{
     core::v1::{ConditionStatus, Conditions},
-    registry::v1::KafkaAppStatus,
+    registry::v1::{KafkaAppStatus, KnativeAppStatus},
     Dialect, Translator,
 };
 use serde::{Deserialize, Serialize};
@@ -124,11 +124,20 @@ pub trait StatusSection: Serialize + for<'de> Deserialize<'de> + Dialect + Defau
     fn update_status(&mut self, conditions: Conditions, observed_generation: u64);
 }
 
-const CONDITION_KAFKA_READY: &str = "KafkaReady";
-
 impl StatusSection for KafkaAppStatus {
     fn ready_name() -> &'static str {
-        CONDITION_KAFKA_READY
+        "KafkaReady"
+    }
+
+    fn update_status(&mut self, conditions: Conditions, observed_generation: u64) {
+        self.conditions = conditions;
+        self.observed_generation = observed_generation;
+    }
+}
+
+impl StatusSection for KnativeAppStatus {
+    fn ready_name() -> &'static str {
+        "KnativeReady"
     }
 
     fn update_status(&mut self, conditions: Conditions, observed_generation: u64) {

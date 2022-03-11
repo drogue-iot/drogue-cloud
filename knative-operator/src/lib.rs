@@ -19,12 +19,17 @@ use drogue_cloud_service_common::{
     defaults,
     health::{HealthServer, HealthServerConfig},
 };
+use futures::{select, FutureExt};
 use kube::{api::ListParams, Api};
 use kube_runtime::watcher;
 use serde::Deserialize;
 use std::fmt::Debug;
 
+pub const LABEL_APP_MARKER: &str = "drogue.io/application";
+/// We need an annotation to store the actual Drogue Cloud application name, which is not a valid
+/// Kubernetes label value.
 pub const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
+
 pub const DEFAULT_IMAGE: &str = "ghcr.io/drogue-iot/knative-event-source:latest";
 
 #[derive(Clone, Debug, Deserialize)]
@@ -52,10 +57,12 @@ fn is_relevant(event: &Event) -> Option<String> {
         Event::Application {
             path, application, ..
         } if
-        // watch the creation of a new application
-        path == "." ||
+            // watch the creation of a new application
+            path == "." 
             // watch the finalizer addition
-            path == ".metadata" => Some(application.clone()),
+            || path == ".metadata"
+            // watch the spec section
+            || path == ".spec.knative" => Some(application.clone()),
 
         _ => None,
     }
@@ -93,7 +100,14 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // event source - Deployment
 
-    let watcher_deployments = watcher(deployments, ListParams::default());
+    let watcher_deployments = watcher(
+        deployments,
+        ListParams {
+            // only watch deployments having the app name annotation
+            label_selector: Some(format!("{}", LABEL_APP_MARKER)),
+            ..Default::default()
+        },
+    );
     let watcher_deployments =
         watcher_deployments.run_stream(EventDispatcher::one(ResourceProcessor::new(
             controller,
@@ -106,9 +120,16 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     if let Some(health) = config.health {
         let health =
             HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(health.run(), registry, watcher_deployments)?;
+        select! {
+            _ = health.run().fuse() => (),
+            _ = registry.fuse() => (),
+            _ = watcher_deployments.fuse() => (),
+        }
     } else {
-        futures::try_join!(registry, watcher_deployments)?;
+        select! {
+            _ = registry.fuse() => (),
+            _ = watcher_deployments.fuse() => (),
+        }
     }
 
     // exiting
