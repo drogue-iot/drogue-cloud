@@ -9,5 +9,7 @@
 ** Integrations
 *** xref:integration-kafka.adoc[Apache Kafka™ Integration]
 *** xref:integration-command.adoc[HTTP Command Integration]
+*** xref:integration-knative.adoc[Knative Integration]
 *** xref:integration-mqtt.adoc[MQTT Integration]
 *** xref:integration-ws.adoc[WebSocket Integration]
+** xref:common.adoc[Common topics]
