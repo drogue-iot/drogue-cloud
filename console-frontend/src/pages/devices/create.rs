@@ -1,6 +1,6 @@
 use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::pages::devices::{AppRoute, ApplicationContext, DetailsSection, Pages};
-use crate::utils::url_encode;
+use crate::utils::{success, url_encode};
 use crate::{backend::Backend, error::error};
 use http::{Method, StatusCode};
 
@@ -57,6 +57,7 @@ impl Component for CreateDialog {
             Msg::Success => {
                 ctx.props().on_close.emit(());
                 BackdropDispatcher::default().close();
+                success("Device successfully created");
                 RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
                     AppRoute::Devices(Pages::Details {
                         app: ApplicationContext::Single(ctx.props().app.clone()),

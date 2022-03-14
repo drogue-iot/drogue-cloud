@@ -1,5 +1,6 @@
 use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::pages::apps::{AppRoute, DetailsSection, Pages};
+use crate::utils::success;
 use crate::{backend::Backend, error::error};
 use http::Method;
 use patternfly_yew::*;
@@ -52,6 +53,7 @@ impl Component for CreateDialog {
             Msg::Success => {
                 ctx.props().on_close.emit(());
                 BackdropDispatcher::default().close();
+                success("Application successfully created");
                 RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
                     AppRoute::Applications(Pages::Details {
                         name: self.new_app_name.clone(),
