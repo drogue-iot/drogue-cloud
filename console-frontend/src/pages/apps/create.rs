@@ -1,8 +1,10 @@
 use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::pages::apps::{AppRoute, DetailsSection, Pages};
 use crate::{backend::Backend, error::error};
 use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_router::{agent::RouteRequest, prelude::*};
 
 use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, RequestHandle};
 use serde_json::json;
@@ -49,7 +51,13 @@ impl Component for CreateDialog {
             },
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close()
+                BackdropDispatcher::default().close();
+                RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
+                    AppRoute::Applications(Pages::Details {
+                        name: self.new_app_name.clone(),
+                        details: DetailsSection::Overview,
+                    }),
+                )))
             }
             Msg::NewAppName(name) => self.new_app_name = name,
         };
