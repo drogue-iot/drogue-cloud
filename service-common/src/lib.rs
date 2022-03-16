@@ -10,6 +10,7 @@ pub mod health;
 pub mod id;
 pub mod keycloak;
 pub mod kube;
+pub mod metrics;
 pub mod openid;
 pub mod reqwest;
 pub mod tracing;

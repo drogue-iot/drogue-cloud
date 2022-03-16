@@ -11,7 +11,7 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_mqtt_common::server::build;
-use drogue_cloud_service_common::health::HealthServer;
+use drogue_cloud_service_common::{health::HealthServer, metrics};
 use futures::TryFutureExt;
 use lazy_static::lazy_static;
 use prometheus::{IntGauge, Opts};
@@ -60,9 +60,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
     if let Some(health) = config.health {
-        prometheus::default_registry()
-            .register(Box::new(CONNECTIONS_COUNTER.clone()))
-            .unwrap();
+        metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
         // health server
         let health = HealthServer::new(
             health,

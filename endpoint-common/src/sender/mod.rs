@@ -18,7 +18,7 @@ use drogue_cloud_service_api::{
     webapp::HttpResponse, EXT_APPLICATION_UID, EXT_DEVICE_UID, EXT_INSTANCE, EXT_SENDER,
     EXT_SENDER_UID,
 };
-use drogue_cloud_service_common::{Id, IdInjector};
+use drogue_cloud_service_common::{metrics, Id, IdInjector};
 use lazy_static::lazy_static;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use process::Processor;
@@ -238,9 +238,7 @@ where
         instance: String,
         config: ExternalClientPoolConfig,
     ) -> anyhow::Result<Self> {
-        prometheus::default_registry()
-            .register(Box::new(DOWNSTREAM_EVENTS_COUNTER.clone()))
-            .unwrap();
+        metrics::register(Box::new(DOWNSTREAM_EVENTS_COUNTER.clone()))?;
         Ok(Self {
             sink,
             instance,
