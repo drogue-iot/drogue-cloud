@@ -51,6 +51,8 @@ impl Overview {
         let mut integration_cards = Vec::new();
         let mut demo_cards = Vec::new();
 
+        // Services column
+
         if let Some(backend) = Backend::get() {
             service_cards.push(self.render_linked_card(
                 "API",
@@ -73,6 +75,8 @@ impl Overview {
             service_cards.push(self.render_card("Kafka bootstrap servers", &kafka, false));
         }
 
+        //endpoint column
+
         if let Some(coap) = &endpoints.coap {
             endpoint_cards.push(self.render_card("CoAP endpoint", &coap.url, false));
         }
@@ -82,12 +86,28 @@ impl Overview {
         if let Some(mqtt) = &endpoints.mqtt {
             endpoint_cards.push(self.render_mqtt_endpoint(mqtt, "MQTT endpoint"));
         }
+        if let Some(mqtt_ws) = &endpoints.mqtt_ws {
+            endpoint_cards.push(self.render_card(
+                "MQTT over Websocket endpoint",
+                &mqtt_ws.url,
+                false,
+            ));
+        }
         if let Some(url) = &endpoints.command_url {
             endpoint_cards.push(self.render_card("Command endpoint", url, false));
         }
 
+        // integrations column
+
         if let Some(mqtt) = &endpoints.mqtt_integration {
             integration_cards.push(self.render_mqtt_endpoint(mqtt, "MQTT integration"));
+        }
+        if let Some(mqtt_ws) = &endpoints.mqtt_integration_ws {
+            integration_cards.push(self.render_card(
+                "MQTT over Websocket integration",
+                &mqtt_ws.url,
+                false,
+            ));
         }
         if let Some(ws) = &endpoints.websocket_integration {
             integration_cards.push(self.render_card("Websocket integration", &ws.url, false));
