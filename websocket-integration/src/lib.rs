@@ -14,6 +14,7 @@ use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
+    metrics,
     openid::AuthenticatorConfig,
 };
 use futures::TryFutureExt;
@@ -114,9 +115,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
     if let Some(health) = config.health {
-        prometheus::default_registry()
-            .register(Box::new(CONNECTIONS_COUNTER.clone()))
-            .unwrap();
+        metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
         let health =
             HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
         futures::try_join!(health.run(), main.err_into())?;
