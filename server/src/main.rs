@@ -46,10 +46,12 @@ struct ServerConfig {
     pub frontend: Endpoint,
     pub mqtt: Endpoint,
     pub mqtt_ws: Endpoint,
+    pub mqtt_ws_browser: Endpoint,
     pub http: Endpoint,
     pub coap: Endpoint,
     pub mqtt_integration: Endpoint,
     pub mqtt_integration_ws: Endpoint,
+    pub mqtt_integration_ws_browser: Endpoint,
     pub websocket_integration: Endpoint,
     pub command: Endpoint,
     pub registry: Endpoint,
@@ -158,6 +160,14 @@ impl ServerConfig {
                     20880
                 },
             },
+            mqtt_ws_browser: Endpoint {
+                host: iface.to_string(),
+                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
+                    21443
+                } else {
+                    21880
+                },
+            },
             http: Endpoint {
                 host: iface.to_string(),
                 port: 8088,
@@ -173,6 +183,10 @@ impl ServerConfig {
             mqtt_integration_ws: Endpoint {
                 host: iface.to_string(),
                 port: 10443,
+            },
+            mqtt_integration_ws_browser: Endpoint {
+                host: iface.to_string(),
+                port: 11443,
             },
             websocket_integration: Endpoint {
                 host: iface.to_string(),
@@ -1081,6 +1095,12 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
         mqtt_ws: Some(HttpEndpoint {
             url: format!("http://{}:{}", config.mqtt_ws.host, config.mqtt_ws.port),
         }),
+        mqtt_ws_browser: Some(HttpEndpoint {
+            url: format!(
+                "http://{}:{}",
+                config.mqtt_ws_browser.host, config.mqtt_ws_browser.port
+            ),
+        }),
         mqtt_integration: Some(MqttEndpoint {
             host: config.mqtt_integration.host.clone(),
             port: config.mqtt_integration.port,
@@ -1089,6 +1109,12 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
             url: format!(
                 "http://{}:{}",
                 config.mqtt_integration_ws.host, config.mqtt_integration_ws.port
+            ),
+        }),
+        mqtt_integration_ws_browser: Some(HttpEndpoint {
+            url: format!(
+                "http://{}:{}",
+                config.mqtt_integration_ws_browser.host, config.mqtt_integration_ws_browser.port
             ),
         }),
         websocket_integration: Some(HttpEndpoint {

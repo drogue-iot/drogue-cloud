@@ -93,6 +93,13 @@ impl Overview {
                 false,
             ));
         }
+        if let Some(mqtt_ws_browser) = &endpoints.mqtt_ws_browser {
+            endpoint_cards.push(self.render_card(
+                "MQTT over Websocket endpoint for browser",
+                &mqtt_ws_browser.url,
+                false,
+            ));
+        }
         if let Some(url) = &endpoints.command_url {
             endpoint_cards.push(self.render_card("Command endpoint", url, false));
         }
@@ -102,6 +109,9 @@ impl Overview {
         if let Some(mqtt) = &endpoints.mqtt_integration {
             integration_cards.push(self.render_mqtt_endpoint(mqtt, "MQTT integration"));
         }
+        if let Some(ws) = &endpoints.websocket_integration {
+            integration_cards.push(self.render_card("Websocket integration", &ws.url, false));
+        }
         if let Some(mqtt_ws) = &endpoints.mqtt_integration_ws {
             integration_cards.push(self.render_card(
                 "MQTT over Websocket integration",
@@ -109,8 +119,12 @@ impl Overview {
                 false,
             ));
         }
-        if let Some(ws) = &endpoints.websocket_integration {
-            integration_cards.push(self.render_card("Websocket integration", &ws.url, false));
+        if let Some(mqtt_ws_browser) = &endpoints.mqtt_integration_ws_browser {
+            integration_cards.push(self.render_card(
+                "MQTT over Websocket integration for browser",
+                &mqtt_ws_browser.url,
+                false,
+            ));
         }
 
         for (label, url) in &endpoints.demos {

@@ -37,11 +37,15 @@ pub struct EndpointConfig {
     #[serde(default)]
     pub mqtt_endpoint_ws_url: Option<String>,
     #[serde(default)]
+    pub mqtt_endpoint_ws_browser_url: Option<String>,
+    #[serde(default)]
     pub mqtt_integration_host: Option<String>,
     #[serde(default = "defaults::mqtts_port")]
     pub mqtt_integration_port: u16,
     #[serde(default)]
     pub mqtt_integration_ws_url: Option<String>,
+    #[serde(default)]
+    pub mqtt_integration_ws_browser_url: Option<String>,
     #[serde(default)]
     pub device_registry_url: Option<String>,
     #[serde(default)]
@@ -102,6 +106,11 @@ impl EndpointSource for EnvEndpointSource {
             .mqtt_endpoint_ws_url
             .clone()
             .map(|url| HttpEndpoint { url });
+        let mqtt_ws_browser = self
+            .0
+            .mqtt_endpoint_ws_browser_url
+            .clone()
+            .map(|url| HttpEndpoint { url });
         let mqtt_integration = self
             .0
             .mqtt_integration_host
@@ -113,6 +122,11 @@ impl EndpointSource for EnvEndpointSource {
         let mqtt_integration_ws = self
             .0
             .mqtt_integration_ws_url
+            .clone()
+            .map(|url| HttpEndpoint { url });
+        let mqtt_integration_ws_browser = self
+            .0
+            .mqtt_integration_ws_browser_url
             .clone()
             .map(|url| HttpEndpoint { url });
         let registry = self
@@ -135,8 +149,10 @@ impl EndpointSource for EnvEndpointSource {
             http,
             mqtt,
             mqtt_ws,
+            mqtt_ws_browser,
             mqtt_integration,
             mqtt_integration_ws,
+            mqtt_integration_ws_browser,
             websocket_integration,
             sso,
             api,
