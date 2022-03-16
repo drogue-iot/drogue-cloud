@@ -1224,9 +1224,8 @@ checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 
 [[package]]
 name = "patternfly-yew"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe024437c1f113c2dacf6183c1663c9ebe94e5f0f8b7134058a65103caffe0e4"
+version = "0.1.2"
+source = "git+https://github.com/ctron/patternfly-yew?rev=4fa57135cd25a63f441da3fb30ee527b4b10501e#4fa57135cd25a63f441da3fb30ee527b4b10501e"
 dependencies = [
  "chrono",
  "gloo-timers",
