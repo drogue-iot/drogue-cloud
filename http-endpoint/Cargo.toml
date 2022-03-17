@@ -13,7 +13,7 @@ actix-tls = "^3.0.0"
 anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
-cloudevents-sdk = { version = "0.4", features = ["actix"] }
+cloudevents-sdk = { version = "0.5", features = ["actix"] }
 config = "0.12"
 dotenv = "0.15.0"
 env_logger = "0.9"

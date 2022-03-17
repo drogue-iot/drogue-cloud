@@ -1168,8 +1168,9 @@ dependencies = [
 
 [[package]]
 name = "cloudevents-sdk"
-version = "0.4.0"
-source = "git+https://github.com/cloudevents/sdk-rust?rev=5a9f64868dd8d2142f1e699da0d60f0601299b0b#5a9f64868dd8d2142f1e699da0d60f0601299b0b"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38c036aa864420e0e684386a979f1847e8e170d3bfa8375b0675132bc8ab46b4"
 dependencies = [
  "actix-http 3.0.0",
  "actix-web",

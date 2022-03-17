@@ -60,7 +60,7 @@ http = "0.2"
 java-properties = "1"
 bstr = "0.2"
 
-cloudevents-sdk = "0.4"
+cloudevents-sdk = ">=0.4"
 
 log = "0.4"
 wasm-logger = "0.2"

@@ -23,7 +23,7 @@ chrono = "0.4"
 
 reqwest = { version = "0.11", optional = true }
 
-cloudevents-sdk = "0.4"
+cloudevents-sdk = "0.5"
 
 uuid = { version = "0.8", features = ["v4"] }
 mime = "0.3"
