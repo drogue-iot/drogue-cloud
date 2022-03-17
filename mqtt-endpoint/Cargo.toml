@@ -45,7 +45,7 @@ thiserror = "1"
 
 webpki = "0.21"
 
-cloudevents-sdk = "0.4"
+cloudevents-sdk = "0.5"
 
 drogue-cloud-mqtt-common = { path = "../mqtt-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common", features = ["ntex"] }

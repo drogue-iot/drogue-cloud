@@ -45,7 +45,7 @@ openid = "0.9"
 
 webpki = "0.21"
 
-cloudevents-sdk = "0.4"
+cloudevents-sdk = "0.5"
 url = "2"
 
 drogue-cloud-mqtt-common = { path = "../mqtt-common" }

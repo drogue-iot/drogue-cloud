@@ -14,7 +14,7 @@ bytes = "1"
 bytestring = "1"
 coap = "0.11"
 coap-lite = "0.7"
-cloudevents-sdk = "0.4"
+cloudevents-sdk = "0.5"
 chrono = "0.4"
 dotenv = "0.15"
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }

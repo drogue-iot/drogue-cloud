@@ -46,7 +46,7 @@ futures = "0.3"
 kube = { version = "0.68" }
 k8s-openapi = { version = "0.14.0", features = ["v1_19"] }
 
-cloudevents-sdk = { version = "0.4", features = ["reqwest"] }
+cloudevents-sdk = { version = "0.5", features = ["reqwest"] }
 
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-event-common = { path = "../event-common" }

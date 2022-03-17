@@ -48,5 +48,4 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "cd
 
 operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" } # FIXME: awaiting release
 
-cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "5a9f64868dd8d2142f1e699da0d60f0601299b0b" } # FIXME: awaiting release
 pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
