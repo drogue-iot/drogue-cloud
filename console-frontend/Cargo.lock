@@ -1237,8 +1237,9 @@ checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
 
 [[package]]
 name = "patternfly-yew"
-version = "0.1.2"
-source = "git+https://github.com/ctron/patternfly-yew?rev=4fa57135cd25a63f441da3fb30ee527b4b10501e#4fa57135cd25a63f441da3fb30ee527b4b10501e"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "953d26e4180a66fb33797459d6c655566f2ef26cd1990c99c2d69b2528294c15"
 dependencies = [
  "chrono",
  "gloo-timers",
@@ -1918,3 +1919,8 @@ dependencies = [
 name = "drogue-client"
 version = "0.9.0-alpha.1"
 source = "git+https://github.com/drogue-iot/drogue-client?rev=bf45eda16ad77335b92ec5916d5b27be8e8711dc#bf45eda16ad77335b92ec5916d5b27be8e8711dc"
+
+[[patch.unused]]
+name = "patternfly-yew"
+version = "0.1.2"
+source = "git+https://github.com/ctron/patternfly-yew?rev=4fa57135cd25a63f441da3fb30ee527b4b10501e#4fa57135cd25a63f441da3fb30ee527b4b10501e"
