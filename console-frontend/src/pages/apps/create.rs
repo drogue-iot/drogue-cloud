@@ -118,6 +118,7 @@ impl CreateDialog {
         Ok(ctx.props().backend.request(
             Method::POST,
             "/api/registry/v1alpha1/apps",
+            vec![],
             Json(payload),
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {

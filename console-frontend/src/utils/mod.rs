@@ -1,8 +1,10 @@
+mod paging;
 mod shell;
 mod toast;
 mod validators;
 mod yaml;
 
+pub use paging::*;
 pub use shell::*;
 pub use toast::*;
 pub use validators::*;

@@ -304,6 +304,7 @@ impl Admin {
                 "/api/admin/v1alpha1/apps/{}/members",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<Json<Members>, _>(move |response| match response {
@@ -328,6 +329,7 @@ impl Admin {
                     "/api/admin/v1alpha1/apps/{}/members",
                     url_encode(&ctx.props().name)
                 ),
+                vec![],
                 Json(members),
                 vec![],
                 ctx.callback_api::<(), _>(move |response| match response {
@@ -369,6 +371,7 @@ impl Admin {
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Json(payload),
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {
@@ -401,6 +404,7 @@ impl Admin {
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<(), _>(|response| match response {
@@ -417,6 +421,7 @@ impl Admin {
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<Option<Json<TransferOwnership>>, _>(move |response| {

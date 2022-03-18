@@ -141,6 +141,7 @@ impl Ownership {
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {
@@ -158,6 +159,7 @@ impl Ownership {
                 "/api/admin/v1alpha1/apps/{}/accept-ownership",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {
@@ -174,6 +176,7 @@ impl Ownership {
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {

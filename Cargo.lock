@@ -72,58 +72,11 @@ dependencies = [
 [[package]]
 name = "actix-http"
 version = "3.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5885cb81a0d4d0d322864bea1bb6c2a8144626b4fdc625d4c51eba197e7797a"
-dependencies = [
- "actix-codec 0.3.0",
- "actix-connect",
- "actix-rt 1.1.1",
- "actix-service 1.0.6",
- "actix-threadpool",
- "actix-utils 2.0.0",
- "base64 0.13.0",
- "bitflags",
- "brotli",
- "bytes 0.5.6",
- "cookie 0.14.4",
- "copyless",
- "derive_more",
- "either",
- "encoding_rs",
- "flate2",
- "futures-channel",
- "futures-core",
- "futures-util",
- "fxhash",
- "h2 0.2.7",
- "http",
- "httparse",
- "indexmap",
- "itoa 0.4.8",
- "language-tags 0.2.2",
- "lazy_static 1.4.0",
- "log",
- "mime",
- "percent-encoding",
- "pin-project 1.0.10",
- "rand 0.7.3",
- "regex",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sha-1 0.9.8",
- "slab",
- "time 0.2.27",
-]
-
-[[package]]
-name = "actix-http"
-version = "3.0.4"
 source = "git+https://github.com/lulf/actix-web?rev=936839319e18da302209f56ef1288ce29c956858#936839319e18da302209f56ef1288ce29c956858"
 dependencies = [
- "actix-codec 0.5.0",
- "actix-rt 2.6.0",
- "actix-service 2.0.2",
+ "actix-codec",
+ "actix-rt",
+ "actix-service",
  "actix-tls",
  "actix-utils",
  "ahash 0.7.6",
@@ -253,9 +206,9 @@ name = "actix-web"
 version = "4.0.1"
 source = "git+https://github.com/lulf/actix-web?rev=936839319e18da302209f56ef1288ce29c956858#936839319e18da302209f56ef1288ce29c956858"
 dependencies = [
- "actix-codec 0.5.0",
- "actix-http 3.0.4",
- "actix-macros 0.2.3",
+ "actix-codec",
+ "actix-http",
+ "actix-macros",
  "actix-router",
  "actix-rt",
  "actix-server",
@@ -295,8 +248,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31efe7896f3933ce03dd4710be560254272334bb321a18fd8ff62b1a557d9d19"
 dependencies = [
  "actix",
- "actix-codec 0.5.0",
- "actix-http 3.0.4",
+ "actix-codec",
+ "actix-http",
  "actix-web",
  "bytes 1.1.0",
  "bytestring",
@@ -350,7 +303,7 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "503ff1136a085f39fc9fd96818a5e9c7ab58ccd36682f3cfc32a001d01cc3a50"
 dependencies = [
- "actix-http 3.0.4",
+ "actix-http",
  "actix-web",
  "futures-util",
  "opentelemetry",
@@ -875,7 +828,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38c036aa864420e0e684386a979f1847e8e170d3bfa8375b0675132bc8ab46b4"
 dependencies = [
- "actix-http 3.0.4",
+ "actix-http",
  "actix-web",
  "async-trait",
  "base64 0.12.3",
@@ -1685,8 +1638,8 @@ name = "drogue-cloud-device-management-service"
 version = "0.10.0"
 dependencies = [
  "actix-cors",
- "actix-http 3.0.4",
- "actix-rt 2.6.0",
+ "actix-http",
+ "actix-rt",
  "anyhow",
  "async-trait",
  "base64 0.13.0",
