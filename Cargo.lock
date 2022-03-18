@@ -4145,9 +4145,9 @@ dependencies = [
 
 [[package]]
 name = "ntex"
-version = "0.5.14"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "609e7515a93b175acb2587ce73a87a1191fa03afb2a18adbe1d40e9ce8b7b4c0"
+checksum = "901e2731e4875cf4c993c29afbb87f07aa3e0a0be1beff36576b194520f7b021"
 dependencies = [
  "async-channel",
  "async-oneshot",
@@ -4182,7 +4182,6 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sha-1 0.10.0",
- "slab",
  "socket2 0.4.4",
  "thiserror",
  "webpki-roots",
@@ -4211,9 +4210,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-io"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dee396c845eeea6995cd7819edee06bce4a49a4448d03ab1781bbbd1f719d0b6"
+checksum = "73e474d6c9c784982c484b7aa5a40718f2af8623e681e1823b0818d4e9beff2e"
 dependencies = [
  "bitflags",
  "log",
@@ -4237,14 +4236,15 @@ dependencies = [
 
 [[package]]
 name = "ntex-mqtt"
-version = "0.8.3"
+version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18adbb1bf0766057d5fea9be9600d81287ed94650359f353ad2838fc3764cf95"
+checksum = "2697578407c3a5863a4eda8170c4bd48f5bcbffedf779a489b3cd891ad82c1db"
 dependencies = [
  "bitflags",
  "derive_more",
  "log",
  "ntex",
+ "ntex-util",
  "pin-project-lite 0.2.8",
  "serde",
  "serde_json",
@@ -4265,16 +4265,14 @@ dependencies = [
 
 [[package]]
 name = "ntex-rt"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "927425e81a2b1c3182d8664befed255602d43e6b36b691c9483ed3e2a0fe6668"
+checksum = "87a6e04d92fefeefc45ca760fd633516fcea6cfe2288b6d4b00a6c8994be1410"
 dependencies = [
  "async-channel",
  "async-oneshot",
- "derive_more",
  "futures-core",
  "log",
- "pin-project-lite 0.2.8",
  "tokio 1.16.1",
 ]
 
@@ -4318,9 +4316,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-util"
-version = "0.1.13"
+version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b31bf8ff9e9b59f1bbb1cc9f05c89d7bd43b2e2674a786fe6f427dc2a2e65b9"
+checksum = "ca174ec984a4cdd1f216b8ccbdf9bf0924a75f573e275c1d3371bc45ccaecac4"
 dependencies = [
  "bitflags",
  "futures-core",
