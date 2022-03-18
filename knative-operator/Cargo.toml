@@ -23,7 +23,7 @@ kube = "0.68"
 kube-derive = "0.68"
 kube-runtime = "0.68"
 log = "0.4"
-operator-framework = "0.6.0"
+operator-framework = "0.6.1"
 prometheus = { version = "^0.13", default-features = false }
 reqwest = "0.11"
 serde = "1"

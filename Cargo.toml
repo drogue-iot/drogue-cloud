@@ -46,6 +46,6 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "cd0be056830918b4aa79b8da6a4684e6d22c555d" } # FIXME: awaiting release
 #drogue-client = { path = "../drogue-client" }
 
-operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" } # FIXME: awaiting release
+#operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" } # FIXME: awaiting release
 
 pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
