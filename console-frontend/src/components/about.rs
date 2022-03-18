@@ -75,6 +75,7 @@ impl AboutModal {
         Ok(ctx.props().backend.request(
             Method::GET,
             "/.well-known/drogue-version",
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<Json<DrogueVersion>, _>(|response| match response {

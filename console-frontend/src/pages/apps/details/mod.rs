@@ -147,6 +147,7 @@ impl Details {
                     "/api/registry/v1alpha1/apps/{}",
                     url_encode(&ctx.props().name)
                 ),
+                vec![],
                 Nothing,
                 vec![],
                 ctx.callback_api::<Json<Application>, _>(move |response| match response {
@@ -160,6 +161,7 @@ impl Details {
                     "/api/admin/v1alpha1/apps/{}/members",
                     url_encode(&ctx.props().name)
                 ),
+                vec![],
                 Nothing,
                 vec![],
                 ctx.callback_api::<(), _>(move |response| match response {
@@ -181,6 +183,7 @@ impl Details {
                 "/api/registry/v1alpha1/apps/{}",
                 url_encode(&ctx.props().name)
             ),
+            vec![],
             Json(&app),
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {

@@ -164,6 +164,7 @@ impl Index {
         Ok(ctx.props().backend.request(
             Method::GET,
             "/api/registry/v1alpha1/apps",
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<Json<Vec<Application>>, _>(move |response| match response {
@@ -194,6 +195,7 @@ impl Index {
         Ok(ctx.props().backend.request(
             Method::DELETE,
             format!("/api/registry/v1alpha1/apps/{}", url_encode(name)),
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {

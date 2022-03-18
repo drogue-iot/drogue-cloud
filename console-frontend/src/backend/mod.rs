@@ -85,6 +85,7 @@ impl BackendInformation {
         &self,
         method: http::Method,
         path: S,
+        query: Vec<(&str, &str)>,
         payload: IN,
         headers: Vec<(String, String)>,
         handler: H,
@@ -98,6 +99,10 @@ impl BackendInformation {
 
         for (k, v) in headers {
             request = request.header(k.into(), v.into());
+        }
+
+        for (k, v) in query {
+            request = request.query(k.into(), v.into());
         }
 
         request = request
@@ -118,6 +123,7 @@ impl AuthenticatedBackend {
         &self,
         method: http::Method,
         path: S,
+        query: Vec<(&str, &str)>,
         payload: IN,
         headers: Vec<(String, String)>,
         handler: H,
@@ -127,13 +133,14 @@ impl AuthenticatedBackend {
         IN: RequestPayload,
         H: RequestHandler<anyhow::Result<Response>>,
     {
-        self.request_with(method, path, payload, headers, handler)
+        self.request_with(method, path, query, payload, headers, handler)
     }
 
     pub fn request_with<S, IN, H>(
         &self,
         method: http::Method,
         path: S,
+        query: Vec<(&str, &str)>,
         payload: IN,
         mut headers: Vec<(String, String)>,
         handler: H,
@@ -147,7 +154,7 @@ impl AuthenticatedBackend {
         headers.push(("Authorization".into(), bearer));
 
         self.backend
-            .unauth_request_with(method, path, payload, headers, handler)
+            .unauth_request_with(method, path, query, payload, headers, handler)
     }
 }
 

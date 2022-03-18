@@ -33,6 +33,7 @@ pub struct RequestBuilder<'b> {
     ///
     /// *Note:* This may also be a relative URL.
     url: String,
+    query: Vec<(Cow<'b, str>, Cow<'b, str>)>,
     headers: Vec<(Cow<'b, str>, Cow<'b, str>)>,
 
     body: Option<JsValue>,
@@ -50,6 +51,7 @@ impl<'b> RequestBuilder<'b> {
             method,
             url: url.into(),
             headers: vec![],
+            query: vec![],
 
             body: None,
             content_type: None,
@@ -59,6 +61,11 @@ impl<'b> RequestBuilder<'b> {
             redirect: None,
             credentials: None,
         }
+    }
+
+    pub fn query(mut self, key: Cow<'b, str>, value: Cow<'b, str>) -> Self {
+        self.query.push((key, value));
+        self
     }
 
     pub fn header(mut self, key: Cow<'b, str>, value: Cow<'b, str>) -> Self {
@@ -151,10 +158,24 @@ impl Request {
             init.signal(Some(&abort_controller.signal()));
         }
 
+        let query = if !request.query.is_empty() {
+            let mut query = Vec::<String>::new();
+            for (k, v) in request.query {
+                query.push(format!("{}={}", k, v));
+            }
+            Some(query.join("&"))
+        } else {
+            None
+        };
+
         init.body(request.body.as_ref());
 
         let window = gloo_utils::window();
-        let url = request.url.to_string();
+        let url = if let Some(query) = query {
+            format!("{}?{}", request.url.to_string(), query)
+        } else {
+            request.url.to_string()
+        };
         Self {
             url,
             init,
