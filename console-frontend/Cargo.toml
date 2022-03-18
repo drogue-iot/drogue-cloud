@@ -27,7 +27,7 @@ log = "0.4"
 md5 = "0.7"
 monaco = { version = "0.3", features = ["yew-components"] }
 once_cell = "1"
-patternfly-yew = "0.1.2"
+patternfly-yew = "0.1.3"
 percent-encoding = "2.1"
 pretty-hex = "0.2"
 serde = "1"
@@ -40,7 +40,7 @@ uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
 wasm-logger = "0.2"
 yew = "0.19"
 yew-agent = "0.1"
-yew-router = { version = "0.16", package = "yew-router-nested" }
+yew-router = { version = "0.16.1", package = "yew-router-nested" }
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
@@ -84,10 +84,10 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "4fa57135cd25a63f441da3fb30ee527b4b10501e" } # FIXME: awaiting release
+#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "4fa57135cd25a63f441da3fb30ee527b4b10501e" } # FIXME: awaiting release
 #patternfly-yew = { path = "../../patternfly-yew" }
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "bf45eda16ad77335b92ec5916d5b27be8e8711dc" } # FIXME: awaiting release
+#drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "bf45eda16ad77335b92ec5916d5b27be8e8711dc" } # FIXME: awaiting release
 
 monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
 #monaco = { path = "../../rust-monaco" }
