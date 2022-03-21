@@ -3,8 +3,7 @@ use crate::{
     components::about::AboutModal,
     data::SharedDataBridge,
     examples::{self, Examples},
-    pages::{self, apps::ApplicationContext},
-    spy::Spy,
+    pages::{self, apps::ApplicationContext, spy::Spy},
     utils::url_decode,
 };
 use drogue_cloud_console_common::EndpointInformation;

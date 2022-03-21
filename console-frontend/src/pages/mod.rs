@@ -2,6 +2,7 @@ mod access_tokens;
 pub mod apps;
 pub mod devices;
 mod overview;
+pub mod spy;
 mod token;
 
 pub use access_tokens::*;

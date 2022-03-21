@@ -9,7 +9,6 @@ mod examples;
 mod page;
 mod pages;
 mod preferences;
-mod spy;
 mod utils;
 
 use crate::app::Main;
