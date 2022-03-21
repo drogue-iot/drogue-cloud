@@ -26,6 +26,34 @@ use std::{
 };
 use uuid::Uuid;
 
+enum DeclaredContentType {
+    Json,
+    String,
+    Other,
+}
+
+impl DeclaredContentType {
+    fn detect(content_type: Option<&str>) -> Self {
+        match content_type {
+            Some(ct) if Self::is_json_content_type(ct) => Self::Json,
+            Some(ct) if Self::is_text_content_type(ct) => Self::String,
+            _ => Self::Other,
+        }
+    }
+
+    /// Check if the content type indicates a JSON payload
+    fn is_json_content_type(content_type: &str) -> bool {
+        content_type.starts_with("application/json")
+            || content_type.starts_with("text/json")
+            || content_type.ends_with("+json")
+    }
+
+    /// Check if the content type indicates a plain text payload
+    fn is_text_content_type(content_type: &str) -> bool {
+        content_type.starts_with("text/plain")
+    }
+}
+
 pub trait AckMode {
     fn configure(config: &mut ClientConfig);
 }
@@ -190,40 +218,37 @@ where
             .commit_message(msg, CommitMode::Async)
     }
 
-    /// Check if the content type indicates a JSON payload
-    fn is_json_content_type(content_type: &str) -> bool {
-        content_type.starts_with("application/json")
-            || content_type.starts_with("text/json")
-            || content_type.ends_with("+json")
-    }
-
     /// Try to ensure that the data section is JSON encoded when the content type
     /// indicated a JSON payload.
     ///
     /// This is necessary as e.g. reading from Kafka, the payload will always be binary.
     fn fixup_data_type(mut event: Event) -> Event {
         // Pre-flight check if we need to convert
-        match (event.datacontenttype(), event.data()) {
-            // There is no content.
-            (_, None) => return event,
-            // This is already JSON, we don't need to do anything.
-            (_, Some(Data::Json(_))) => {
+        let converter = match (
+            DeclaredContentType::detect(event.datacontenttype()),
+            event.data(),
+        ) {
+            (DeclaredContentType::String, Some(Data::String(_))) => {
                 return event;
             }
-            // No content type indication, no need to change anything
-            (None, _) => return event,
-            // Check if the content type indicates JSON, if not, don't convert
-            (Some(content_type), _) if !Self::is_json_content_type(content_type) => {
+            (DeclaredContentType::Json, Some(Data::Json(_))) => {
                 return event;
             }
-            _ => {}
-        }
+            (DeclaredContentType::Other, _) => {
+                return event;
+            }
+            (_, None) => {
+                return event;
+            }
+            (DeclaredContentType::Json, Some(_)) => Self::make_json,
+            (DeclaredContentType::String, Some(_)) => Self::make_string,
+        };
 
-        // we know now that the content is indicated as JSON, but currently is not -> do the conversion
+        // we know now that the content is indicated as something different -> do the conversion
 
         let (content_type, schema_type, data) = match event.take_data() {
             (Some(content_type), schema_type, Some(data)) => {
-                (Some(content_type), schema_type, Some(Self::make_json(data)))
+                (Some(content_type), schema_type, Some(converter(data)))
             }
             data => data,
         };
@@ -241,14 +266,24 @@ where
         event
     }
 
-    /// Get JSON from the data section, ignore error, don't do checks if we really need to.
+    /// Get JSON from the data section, ignore error, don't do checks if we don't need to.
     fn make_json(data: Data) -> Data {
         match data {
-            Data::Json(json) => Data::Json(json),
             Data::String(ref str) => serde_json::from_str(str).map_or_else(|_| data, Data::Json),
             Data::Binary(ref slice) => {
                 serde_json::from_slice(slice).map_or_else(|_| data, Data::Json)
             }
+            json => json,
+        }
+    }
+
+    /// Get string data from the data section, ignore error, don't do checks if we really need to.
+    fn make_string(data: Data) -> Data {
+        match data {
+            Data::Json(json) => Data::String(json.to_string()),
+            Data::Binary(slice) => String::from_utf8(slice)
+                .map_or_else(|err| Data::Binary(err.into_bytes()), Data::String),
+            string => string,
         }
     }
 }
@@ -401,6 +436,18 @@ mod test {
                 Some("text/json"),
                 Some(Data::String(r#"{"foo""#.into())),
                 Some(Data::String(r#"{"foo""#.into())),
+            ),
+            // is binary, convert to text, even though it is JSON
+            (
+                Some("text/plain"),
+                Some(Data::Binary(r#"{"foo": "bar"}"#.as_bytes().into())),
+                Some(Data::String(r#"{"foo": "bar"}"#.into())),
+            ),
+            // is binary, but unknown type, leave it
+            (
+                Some("something/different"),
+                Some(Data::Binary(r#"{"foo": "bar"}"#.as_bytes().into())),
+                Some(Data::Binary(r#"{"foo": "bar"}"#.as_bytes().into())),
             ),
         ] {
             let event = event(content_type, input);
