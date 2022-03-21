@@ -1119,7 +1119,8 @@ checksum = "2a60c7ce501c71e03a9c9c0d35b861413ae925bd979cc7a4e30d060069aaac8d"
 [[package]]
 name = "monaco"
 version = "0.3.0"
-source = "git+https://github.com/siku2/rust-monaco?rev=cb20108c317976ba8c3d05b581a84efd394c3dbe#cb20108c317976ba8c3d05b581a84efd394c3dbe"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1b882423fc90db4603ce73a57e64dd568a66ee6776ac09a91bb05622cf6c1e3"
 dependencies = [
  "js-sys",
  "paste",

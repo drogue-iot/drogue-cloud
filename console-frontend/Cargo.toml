@@ -89,6 +89,6 @@ lto = true
 
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "bf45eda16ad77335b92ec5916d5b27be8e8711dc" } # FIXME: awaiting release
 
-monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
+#monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
 #monaco = { path = "../../rust-monaco" }
 #yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" }
