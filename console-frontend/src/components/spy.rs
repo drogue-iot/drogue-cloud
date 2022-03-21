@@ -314,6 +314,7 @@ impl Entry {
     }
 }
 
+/// Render data for the details section
 fn render_data(event: &Event) -> Html {
     // let data: Option<Data> = event.get_data();
 
@@ -423,14 +424,18 @@ fn render_details(event: &Event) -> Html {
 
     attrs.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let header = html_nested! {
+    let header = html_nested! (
         <TableHeader>
             <TableColumn label="Key"/>
             <TableColumn label="Value"/>
         </TableHeader>
-    };
+    );
 
-    return html! {
+    let raw = serde_json::to_string_pretty(event)
+        .map(|raw| html!(<pre> { raw } </pre>))
+        .unwrap_or_else(|_| html!(<i>{"<Failed to encode event>"}</i>));
+
+    html! (
         <>
             <h3>{"Attributes"}</h3>
             <Table<SharedTableModel<AttributeEntry>>
@@ -442,6 +447,9 @@ fn render_details(event: &Event) -> Html {
 
             <h3>{"Payload"}</h3>
             { render_data(event) }
+
+            <h3>{"Raw"}</h3>
+            { raw }
         </>
-    };
+    )
 }
