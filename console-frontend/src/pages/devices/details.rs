@@ -77,6 +77,7 @@ impl Component for Details {
             }
             Msg::Error(msg) => {
                 msg.toast();
+                self.fetch_task = None;
             }
         }
         true

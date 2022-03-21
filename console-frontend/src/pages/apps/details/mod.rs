@@ -97,6 +97,7 @@ impl Component for Details {
             }
             Msg::Error(msg) => {
                 msg.toast();
+                self.fetch_task = None;
             }
             Msg::SetAdmin(is_admin) => {
                 self.fetch_role = None;
