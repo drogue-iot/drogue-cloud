@@ -24,7 +24,7 @@ pub struct Props {
 }
 
 pub struct Spy {
-    ws: Option<WebSocket>,
+    ws: Option<(WebSocket, Closure<dyn FnMut(&MessageEvent)>)>,
     events: SharedTableModel<Entry>,
 
     application: String,
@@ -182,7 +182,7 @@ impl Component for Spy {
     }
 
     fn destroy(&mut self, _: &Context<Self>) {
-        if let Some(ws) = self.ws.take() {
+        if let Some((ws, _)) = self.ws.take() {
             let _ = ws.close();
         }
     }
@@ -230,8 +230,6 @@ impl Spy {
 
             // set message event handler on WebSocket
             ws.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
-            // forget the callback to keep it alive
-            onmessage_callback.forget();
 
             // setup onerror
             let link = ctx.link().clone();
@@ -244,12 +242,12 @@ impl Spy {
 
             // store result
             self.running = true;
-            self.ws = Some(ws);
+            self.ws = Some((ws, onmessage_callback));
         }
     }
 
     fn stop(&mut self) {
-        if let Some(ws) = self.ws.take() {
+        if let Some((ws, _)) = self.ws.take() {
             let _ = ws.close();
         }
         self.running = false
