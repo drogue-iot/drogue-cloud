@@ -6,6 +6,7 @@ Preparing for a new version (not release, like a milestone):
 
 * Change the version in all crates to e.g. `0.4.0`
   * Pay attention to the `service-api` crate as its version will be reported externally
+  * Pay attention to the open API spec as it does not pull its version from Cargo. See `console-backend/api/index.yaml` file.
 
 ## Overall process
 
