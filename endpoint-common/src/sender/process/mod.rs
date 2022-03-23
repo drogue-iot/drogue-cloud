@@ -92,7 +92,7 @@ impl Processor {
             // matches always
             When::Always => true,
             // invert outcome
-            When::Not(when) => Self::is_when(when, event),
+            When::Not(when) => !Self::is_when(when, event),
             // matches when not empty and all children match
             When::And(when) => {
                 if when.is_empty() {
@@ -409,6 +409,46 @@ mod test {
             Outcome::Accepted(
                 event("id1", "type", "source", "chan1")
                     .data_with_schema("application/json", "urn:my:schema", json!({}))
+                    .build()
+                    .unwrap(),
+            )
+        )
+    }
+
+    #[tokio::test]
+    async fn test_s2() {
+        let processor = Processor::try_from(json!(
+             [
+                {
+                    "when": {
+                        "not" : {
+                            "isChannel": "chan1"
+                        },
+                    },
+                    "then": [
+                        { "setAttribute": { "name": "dataschema", "value": "urn:my:schema" } },
+                        { "removeExtension": "my-ext-1" },
+                    ]
+                }
+            ]
+        ))
+        .unwrap();
+
+        assert_eq!(
+            processor
+                .process(
+                    event("id1", "type", "source", "chan1")
+                        .extension("my-ext-1", "value1")
+                        .data("application/json", json!({}))
+                        .build()
+                        .unwrap()
+                )
+                .await
+                .unwrap(),
+            Outcome::Accepted(
+                event("id1", "type", "source", "chan1")
+                    .extension("my-ext-1", "value1")
+                    .data("application/json", json!({}))
                     .build()
                     .unwrap(),
             )
