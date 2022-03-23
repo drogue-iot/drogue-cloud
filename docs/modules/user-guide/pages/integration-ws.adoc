@@ -2,3 +2,29 @@
 
 The WebSocket integration allows consuming device events using a simple WebSockets based protocol.Events are
 encoded as CloudEvents.
+
+== Authentication
+
+The Websocket endpoint allows you to authenticate using the standard HTTP `Authorization` header. Both using an OAuth2
+bearer token or by using HTTP "basic auth" using username and API key.
+
+However, when using a web socket client from inside a browser, that is not supported. In this case it is however
+possible to provide the same information using HTTP query parameters:
+
+|===
+| Query Parameters | Description
+
+a| `token` | Provide an OAuth2 bearer token
+a| `username`  and `api_key` | Provide username and API key
+
+|===
+
+== Consumer Group ID
+
+You can set the consumer group ID by providing a query parameter named `group_id`. This will set the Kafka consumer
+group ID to the provided value, which allows to share the load between different consumers.
+
+If no consumer group id is provided, a temporary one will be provided.
+
+NOTE: Using a temporary consumer group might lead to missed events during re-connects. If that is a problem for your
+use case, you need to provide a stable group id.
