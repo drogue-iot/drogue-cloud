@@ -116,7 +116,7 @@ impl Processor {
                 }
                 result
             }
-            // matches when the matches is equal
+            // matches when the channel is equal
             When::IsChannel(channel) => match event.subject() {
                 Some(subject) => channel == subject,
                 _ => false,
