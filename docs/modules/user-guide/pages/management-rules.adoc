@@ -244,5 +244,5 @@ The response can be one of:
 
 * `cloudEvent` - A cloud event (binary of structured).
 * `raw` - Only use the response body as payload, keep the metadata.
-* `assumeStructuredCloudEvent` - Assume the response body contains a structured cloud event, with attributes/extensions as part of the root level. However, the response content type is ignored, altough it normally must be `application/cloudevents+json; charset=UTF-8`. This can be used for broken cloud events serialization.
+* `assumeStructuredCloudEvent` - Assume the response body contains a structured cloud event, with attributes/extensions as part of the root level. However, the response content type is ignored, although it normally must be `application/cloudevents+json; charset=UTF-8`. This can be used for broken cloud events serialization.
 
