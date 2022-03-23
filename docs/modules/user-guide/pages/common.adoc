@@ -1,6 +1,6 @@
 = Common topics
 
-This section describes a few topics common to various areas of Drogue Cloud.
+This section describes a few topics that are common to various areas of Drogue Cloud.
 
 [#defining_durations]
 == Defining durations

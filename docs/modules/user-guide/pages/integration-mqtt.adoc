@@ -73,3 +73,8 @@ You can send back a command to a device by publishing to the following topic: `c
 For example, sending the command `setTemperature` with payload `{"value": 1.23 }` to the device `my-device` of the
 application `my-app`, you would need to publish the payload `{"value": 1.23 }` to the topic
 `command/my-app/my-device/setTemperature`.
+
+== Connecting over Websockets
+
+Drogue Cloud allows connecting to MQTT over websocket too.This works the same was a standard MQTT, but
+be sure to check out some more details in the section xref:common-mqtt-websocket.adoc[MQTT over Websockets].

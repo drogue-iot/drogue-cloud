@@ -1,0 +1,23 @@
+== MQTT over Websocket
+
+Some components of Drogue Cloud support the MQTT protocol. Unless noted otherwise, all components support MQTT 3.1.1
+and 5 not only using the binary MQTT protocol, but also using MQTT over Websockets.
+
+=== Connecting
+
+Drogue Cloud provides three different, dedicated endpoint for MQTT-enabled service:
+
+* Plain MQTT
+* MQTT over Websockets
+* MQTT over Websockets without support for X.509 client certificates
+
+These are simply the same services (e.g. MQTT endpoint or integration), but running with different settings on the
+MQTT protocol layer.
+
+True, it is possible to detect if a connecting client is using MQTT or Websocket. However, it is not possible to detect
+if a browser based websocket client connects using TLS or if it is a normal one. The difference is, that a browser
+based websocket client cannot properly establish a TLS session, if the server allows the use of X.509 client
+certificates.
+
+So instead of providing a mix of auto-detect and additional endpoints, we do offer dedicated endpoint for each
+connection profile.

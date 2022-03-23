@@ -13,3 +13,5 @@
 *** xref:integration-mqtt.adoc[MQTT Integration]
 *** xref:integration-ws.adoc[WebSocket Integration]
 ** xref:common.adoc[Common topics]
+*** xref:common.adoc[Configuration]
+*** xref:common-mqtt-websocket.adoc[MQTT over websocket]

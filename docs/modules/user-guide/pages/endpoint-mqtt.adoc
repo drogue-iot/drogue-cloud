@@ -101,3 +101,8 @@ a|
 |===
 
 The payload of the command, will be the payload of the received message.
+
+== Connecting over Websockets
+
+Drogue Cloud allows connecting to MQTT over websocket too.This works the same was a standard MQTT, but
+be sure to check out some more details in the section xref:common-mqtt-websocket.adoc[MQTT over Websockets].
