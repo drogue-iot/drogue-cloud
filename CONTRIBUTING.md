@@ -176,6 +176,12 @@ If you wish to do it manually run:
 git submodule update --init
 ~~~
 
+Also, to pull changes into the existing workspace run:
+
+~~~shell
+ git submodule foreach git pull origin main
+ ~~~
+
 ## Contributing your work
 
 Thank you for reading the document up to this point and for taking the next step.
