@@ -1,7 +1,7 @@
 * xref:index.adoc[User Guide]
 ** xref:index.adoc[Overview]
 ** xref:management.adoc[Management]
-*** TODO: write about upstream and downstream processing
+*** xref:management-rules.adoc[Event pre-processing]
 ** Endpoints
 *** xref:endpoint-coap.adoc[CoAP Endpoint]
 *** xref:endpoint-http.adoc[HTTP Endpoint]
