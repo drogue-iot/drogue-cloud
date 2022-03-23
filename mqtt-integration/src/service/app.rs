@@ -15,6 +15,7 @@ use drogue_cloud_service_common::{
     openid::{Authenticator, AuthenticatorError},
 };
 use std::sync::Arc;
+use tracing::instrument;
 
 #[derive(Clone, Debug)]
 pub struct App<S: SenderSink> {
@@ -91,6 +92,7 @@ impl<S> mqtt::Service<Session<S>> for App<S>
 where
     S: SenderSink,
 {
+    #[instrument(skip(self), err(Debug), ret)]
     async fn connect<'a>(
         &'a self,
         connect: Connect<'a>,

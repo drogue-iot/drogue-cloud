@@ -2379,6 +2379,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio 1.16.1",
+ "tracing",
  "url",
  "uuid",
  "webpki 0.21.4",

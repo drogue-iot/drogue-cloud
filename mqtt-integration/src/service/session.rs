@@ -26,11 +26,11 @@ use drogue_cloud_service_api::{
     kafka::{KafkaConfigExt, KafkaEventType},
 };
 use drogue_cloud_service_common::client::UserAuthClient;
-use futures::lock::Mutex;
-use futures::StreamExt;
+use futures::{lock::Mutex, StreamExt};
 use ntex::util::Bytes;
 use ntex_mqtt::{types::QoS, v5};
-use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
+use std::fmt::Formatter;
+use std::{collections::HashMap, fmt::Debug, num::NonZeroU32, sync::Arc};
 use tokio::task::JoinHandle;
 
 pub struct Session<S: SenderSink> {
@@ -48,6 +48,24 @@ pub struct Session<S: SenderSink> {
     pub registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
 
     pub token: Option<String>,
+}
+
+impl<S: SenderSink> Debug for Session<S> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Session")
+            .field("config", &self.config)
+            .field("client_id", &self.client_id)
+            .field("user", &self.user)
+            .field(
+                "token",
+                if self.token.is_some() {
+                    &"Some(...)"
+                } else {
+                    &"None"
+                },
+            )
+            .finish()
+    }
 }
 
 impl<S> Session<S>

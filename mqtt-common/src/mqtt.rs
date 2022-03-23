@@ -25,6 +25,7 @@ where
 
 pub type AckOptions = v5::codec::ConnectAck;
 
+#[derive(Debug)]
 pub struct ConnectAck<S>
 where
     S: Session,

@@ -27,6 +27,7 @@ futures-core = "0.3"
 futures-util = "0.3"
 
 tokio = { version = "1", features = ["full"] }
+tracing = { version = "0.1", features = ["log-always"] }
 
 reqwest = "0.11"
 lazy_static = "1.4.0"
