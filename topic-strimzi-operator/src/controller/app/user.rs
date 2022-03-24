@@ -115,7 +115,9 @@ impl CreateUser<'_> {
                 });
 
                 if let Some(password) = password {
+                    // set the password secret reference
                     user.data["spec"]["authentication"]["password"] = password;
+                    // we don't need to remove it, as we overwrite the full data section above
                 }
 
                 Ok::<_, ReconcileError>(user)
