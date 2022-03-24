@@ -23,6 +23,12 @@ Preparing for a new version (not release, like a milestone):
   * Try out the example commands
 * Create a branch `release-0.x`
   * Ensure to switch the doc version to 0.x too: `docs/antora.yml`
+* Release the [helm charts](https://github.com/drogue-iot/drogue-cloud-helm-charts):
+  * Create a `release-0.x` branch
+  * Updates the charts `version` fields in `Chart.yaml` (each chart must be updated).
+  * Note : watch out for the dependencies fields. The ^ tends to break things.
+  * You can look at a previous release [example](https://github.com/drogue-iot/drogue-cloud-helm-charts/commit/120d178eea2728a09247ecee2028e5061f6392c5)
+  * GH Actions will see the new branch and will release the charts.
 
 ## Release text
 
