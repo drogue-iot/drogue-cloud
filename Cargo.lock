@@ -2640,7 +2640,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "drogue-cloud-topic-operator"
+name = "drogue-cloud-topic-strimzi-operator"
 version = "0.9.0"
 dependencies = [
  "actix",
