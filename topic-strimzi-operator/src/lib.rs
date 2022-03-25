@@ -54,11 +54,12 @@ fn is_relevant(event: &Event) -> Option<String> {
         Event::Application {
             path, application, ..
         } if
-        // watch the creation of a new application
-        path == "." ||
+            // watch the creation of a new application
+            path == "." 
             // watch the finalizer addition
-            path == ".metadata" => Some(application.clone()),
-
+            || path == ".metadata"
+            // also watch for .spec.downstream.password
+            || path == ".spec.downstream" => Some(application.clone()),
         _ => None,
     }
 }
