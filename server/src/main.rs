@@ -495,6 +495,11 @@ fn main() {
                         .help("enable websocket integration"),
                 )
                 .arg(
+                    Arg::with_name("enable-command-endpoint")
+                        .long("--enable-command-endpoint")
+                        .help("enable command endpoint"),
+                )
+                .arg(
                     Arg::with_name("server-key")
                         .long("--server-key")
                         .value_name("FILE")
@@ -589,8 +594,9 @@ fn main() {
         .unwrap();
 
     if let Some(matches) = matches.subcommand_matches("run") {
+        let tls = matches.is_present("server-cert") && matches.is_present("server-key");
         let server: ServerConfig = ServerConfig::new(matches);
-        let eps = endpoints(&server);
+        let eps = endpoints(&server, tls);
 
         run_migrations(&server.database);
 
@@ -601,6 +607,8 @@ fn main() {
             consumer_group: consumer_group.to_string(),
         };
         */
+        let http_prefix = if tls { "https" } else { "http" };
+        let mqtt_prefix = if tls { "mqtts" } else { "mqtt" };
 
         let kafka_sender = |topic: &str, config: &KafkaClientConfig| KafkaSenderConfig {
             client: kafka_config(config, topic),
@@ -642,8 +650,8 @@ fn main() {
                 client_secret: SERVICE_CLIENT_SECRET.to_string(),
                 scopes: "openid profile email".into(),
                 issuer_url: None,
-                tls_insecure: None,
-                tls_ca_certificates: None,
+                tls_insecure: Some(server.tls_insecure),
+                tls_ca_certificates: Some(server.tls_ca_certificates.clone().into()),
             },
         );
         oauth.clients.insert(
@@ -653,8 +661,8 @@ fn main() {
                 client_secret: SERVICE_CLIENT_SECRET.to_string(),
                 scopes: "openid profile email".into(),
                 issuer_url: None,
-                tls_insecure: None,
-                tls_ca_certificates: None,
+                tls_insecure: Some(server.tls_insecure),
+                tls_ca_certificates: Some(server.tls_ca_certificates.clone().into()),
             },
         );
 
@@ -663,7 +671,7 @@ fn main() {
             realm: server.keycloak.realm.clone(),
             admin_username: server.keycloak.user.clone(),
             admin_password: server.keycloak.password.clone(),
-            tls_insecure: true,
+            tls_insecure: server.tls_insecure,
             tls_ca_certificates: server.tls_ca_certificates.clone().into(),
         };
 
@@ -805,7 +813,7 @@ fn main() {
 
                     handles.push(Box::pin(drogue_cloud_console_backend::run(
                         config,
-                        endpoints(&server),
+                        endpoints(&server, tls),
                     )));
                 }
 
@@ -852,12 +860,35 @@ fn main() {
                         enable_access_token: true,
                         oauth: oauth.clone(),
                         bind_addr,
-                        registry,
+                        registry: registry.clone(),
                         kafka,
                         user_auth,
                     };
 
                     handles.push(Box::pin(drogue_cloud_websocket_integration::run(config)));
+                }
+
+                if matches.is_present("enable-command-endpoint") || matches.is_present("enable-all")
+                {
+                    log::info!("Enabling Command endpoint");
+                    let bind_addr = server.command.clone().into();
+                    let kafka = server.kafka.clone();
+                    let user_auth = user_auth.clone();
+                    let config = drogue_cloud_command_endpoint::Config {
+                        health: None,
+                        enable_access_token: true,
+                        oauth: oauth.clone(),
+                        bind_addr,
+                        registry,
+                        instance: "drogue".to_string(),
+                        check_kafka_topic_ready: false,
+                        command_kafka_sink: kafka,
+                        user_auth,
+                        max_json_payload_size: 65536,
+                        endpoint_pool: Default::default(),
+                    };
+
+                    handles.push(Box::pin(drogue_cloud_command_endpoint::run(config)));
                 }
 
                 runner.block_on(async move {
@@ -1024,9 +1055,31 @@ fn main() {
             "\tAPI:\t http://{}:{}",
             server.console.host, server.console.port
         );
-        println!("\tHTTP:\t http://{}:{}", server.http.host, server.http.port);
-        println!("\tMQTT:\t mqtt://{}:{}", server.mqtt.host, server.mqtt.port);
+        println!(
+            "\tHTTP:\t {}://{}:{}",
+            http_prefix, server.http.host, server.http.port
+        );
+        println!(
+            "\tMQTT:\t {}://{}:{}",
+            mqtt_prefix, server.mqtt.host, server.mqtt.port
+        );
         println!("\tCoAP:\t coap://{}:{}", server.coap.host, server.coap.port);
+        println!();
+        println!("Integrations:");
+        println!(
+            "\tWebSocket:\t ws://{}:{}",
+            server.websocket_integration.host, server.websocket_integration.port
+        );
+        println!(
+            "\tMQTT:\t\t {}://{}:{}",
+            mqtt_prefix, server.mqtt_integration.host, server.mqtt_integration.port
+        );
+        println!();
+        println!("Command:");
+        println!(
+            "\tHTTP:\t http://{}:{}",
+            server.command.host, server.command.port
+        );
         println!();
 
         println!("Keycloak Credentials:");
@@ -1054,7 +1107,7 @@ fn main() {
         println!();
 
         println!("Publishing data to the HTTP endpoint:");
-        println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if matches.is_present("server-cert") && matches.is_present("server-key") { "-k https" } else {"http"}, server.http.host, server.http.port);
+        println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if tls { "-k https" } else {"http"}, server.http.host, server.http.port);
         println!();
 
         if threads.is_empty() {
@@ -1072,7 +1125,8 @@ fn main() {
     }
 }
 
-fn endpoints(config: &ServerConfig) -> Endpoints {
+fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
+    let http_prefix = if tls { "https" } else { "http" };
     Endpoints {
         api: Some(format!(
             "http://{}:{}",
@@ -1086,19 +1140,25 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
             url: format!("coap://{}:{}", config.coap.host, config.coap.port),
         }),
         http: Some(HttpEndpoint {
-            url: format!("http://{}:{}", config.http.host, config.http.port),
+            url: format!(
+                "{}://{}:{}",
+                http_prefix, config.http.host, config.http.port
+            ),
         }),
         mqtt: Some(MqttEndpoint {
             host: config.mqtt.host.clone(),
             port: config.mqtt.port,
         }),
         mqtt_ws: Some(HttpEndpoint {
-            url: format!("http://{}:{}", config.mqtt_ws.host, config.mqtt_ws.port),
+            url: format!(
+                "{}://{}:{}",
+                http_prefix, config.mqtt_ws.host, config.mqtt_ws.port
+            ),
         }),
         mqtt_ws_browser: Some(HttpEndpoint {
             url: format!(
-                "http://{}:{}",
-                config.mqtt_ws_browser.host, config.mqtt_ws_browser.port
+                "{}://{}:{}",
+                http_prefix, config.mqtt_ws_browser.host, config.mqtt_ws_browser.port
             ),
         }),
         mqtt_integration: Some(MqttEndpoint {
@@ -1107,14 +1167,16 @@ fn endpoints(config: &ServerConfig) -> Endpoints {
         }),
         mqtt_integration_ws: Some(HttpEndpoint {
             url: format!(
-                "http://{}:{}",
-                config.mqtt_integration_ws.host, config.mqtt_integration_ws.port
+                "{}://{}:{}",
+                http_prefix, config.mqtt_integration_ws.host, config.mqtt_integration_ws.port
             ),
         }),
         mqtt_integration_ws_browser: Some(HttpEndpoint {
             url: format!(
-                "http://{}:{}",
-                config.mqtt_integration_ws_browser.host, config.mqtt_integration_ws_browser.port
+                "{}://{}:{}",
+                http_prefix,
+                config.mqtt_integration_ws_browser.host,
+                config.mqtt_integration_ws_browser.port
             ),
         }),
         websocket_integration: Some(HttpEndpoint {
