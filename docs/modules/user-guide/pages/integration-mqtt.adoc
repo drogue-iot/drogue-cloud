@@ -64,7 +64,7 @@ only one of the consumers will receive a message.
 
 To subscribe using shared subscriptions, use the following subscription filter: `$share/<group-id>/app/<application>`.
 So when subscribing to the application `my-app` with the shared consumer identifier `my-group`, you would use:
-`$share/my-group/my-app`.
+`$share/my-group/app/my-app`.
 
 == Publish commands
 
