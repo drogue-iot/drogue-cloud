@@ -459,7 +459,7 @@ paths:
     get:
       tags:
         - Application administration
-      description: Get curretn application members.
+      description: Get the application members.
       responses:
         200:
           description: The list of members for this application.
