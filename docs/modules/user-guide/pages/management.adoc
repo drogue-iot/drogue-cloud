@@ -8,9 +8,10 @@ the following examples will use the command line tool `drg` for performing the o
 NOTE: All following examples require that you are already logged in to a Drogue Cloud cluster using the command line
 tool `drg`.
 
+[#applications]
 == Applications
 
-An application is the container for devices. A user can have multiple applications, but each device belongs to
+An application is the container for devices.A user can have multiple applications, but each device belongs to
 a single application.
 
 === Creating a new application
@@ -47,15 +48,16 @@ An existing application can be deleted using the following command:
 drg delete app my-app
 ----
 
-NOTE: Deleting an application me be delayed, as first all devices which require to be cleaned up will be processes. Once
-this is finished, the application might require cleanup too. Only once all resources are properly cleaned up, the
+NOTE: Deleting an application me be delayed, as first all devices which require to be cleaned up will be processes.Once
+this is finished, the application might require cleanup too.Only once all resources are properly cleaned up, the
 application will be actually deleted.
 
+[#devices]
 == Devices
 
 As devices belong to an application, you need to create an application first.
 
-The following commands will explicitly select the application by providing the `--app <app name>` argument. You can
+The following commands will explicitly select the application by providing the `--app <app name>` argument.You can
 however use `drg config set-default-app`, to set a default application and omit the `--app` argument.
 
 === Create a new device
