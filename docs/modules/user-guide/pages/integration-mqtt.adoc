@@ -62,9 +62,9 @@ However, you can use https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.
 to define a shared consumer group, which maps to using the same Kafka consumer group on the backend. In this case,
 only one of the consumers will receive a message.
 
-To subscribe using shared subscriptions, use the following subscription filter: `$share/<group-id>/app/<application>`.
+To subscribe using shared subscriptions, use the following subscription filter: `$shared/<group-id>/app/<application>`.
 So when subscribing to the application `my-app` with the shared consumer identifier `my-group`, you would use:
-`$share/my-group/app/my-app`.
+`$shared/my-group/app/my-app`.
 
 == Publish commands
 
