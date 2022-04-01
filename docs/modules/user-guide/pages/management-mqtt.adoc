@@ -1,0 +1,61 @@
+= MQTT dialects
+
+Like HTTP, MQTT is "just" a protocol, which defines how events or messages are being transported over the wire. On
+top of that, oen needs to define an API. Some might disagree and say that you can just publish anything to an MQTT
+broker. However, implicitly, you have to agree (even when only working with your own components) to a data format and
+topic structure.
+
+== Introduction
+
+As Drogue Cloud is payload agnostic, we don't interfere or interpret the payload itselffootnote:[With a few exceptions].
+
+However, we sometimes need it interpret the metadata of events and messages, like the topic a client publishes or
+subscribes to.
+
+The MQTT endpoint supports multiple dialects. However, it also needs to know which dialect a device "speaks". Using
+MQTT v5, it would be easy to add some property during the connection phase, to indicate which dialect the device
+expects. However, as MQTT v3.1.1 still seems to be the dominant protocol version, that isn't
+possiblefootnote:[At least all ways of stuffing information in e.g. credentials fields somehow feels wrong].
+
+That is why Drogue Cloud keeps this configuration as part of the application or device configuration. The advantage
+of that is also, that it can be centrally managed. Just assume some protocol setting of your device, which is somewhere out in the field, is wrong. Being able to correct that in the cloud, might be beneficial.
+
+== Basic configuration
+
+The configuration for MQTT dialects is located in either the application or device resource at `.spec.mqtt.dialect`.
+The configuration of a device will override the configuration of an application. If neither the application nor
+the device has any configuration, the `drogue/v1` dialect will be used.
+
+[source,yaml]
+----
+spec:
+  mqtt:
+    dialect:
+      type: plainTopic # <1>
+      devicePrefix: true # <2>
+----
+<1> Selects the dialect.
+<2> Additional options on the same level.
+
+== Dialects
+
+The follow section describes the configuration of the different dialects. To get an understanding of the different
+dialects themselves, see xref:endpoint-mqtt.adoc#protocol_dialects[Protocol dialects].
+
+=== Drogue V1
+
+The type ID for this dialect is: `drogue/v1`.
+
+This dialect does not have any additional options.
+
+=== Plain topic
+
+The type ID for this dialect is: `plainTopic`.
+
+
+|===
+| Option | Type | Default | Description
+
+a| `devicePrefix` | boolean | `false` | Whether the first segment in the topic is interpreted as device ID.
+
+|===

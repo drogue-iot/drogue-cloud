@@ -46,14 +46,26 @@ A device can act both as direct device and as gateway a the same time.
 
 === X.509 Client certificates
 
-You may use X.509 client certificates when establishing the TLS connection. The certificate must be signed with a
+You may use X.509 client certificates when establishing the TLS connection.The certificate must be signed with a
 trust anchor stored in the device registry on the application level.
 
 === Username/password
 
 Use `<device>@<application>` and a configured password for the device.
 
-== Publish data
+[#protocol_dialects]
+== Protocol dialects
+
+The MQTT endpoint supports different "dialects" or APIs.The following subsections describe these dialects.By default,
+the "Drogue V1" dialect is use. However, you can configure the dialect of a device through the application or device
+configuration: see xref:management-mqtt.adoc[MQTT dialects].
+
+=== Drogue V1 dialect
+
+The Drogue V1 dialect is the original one, which supports all the features that Drogue Cloud offers using the MQTT
+endpoint.
+
+==== Publish data
 
 To publish data as the connected device, publish to `<channel>`. The channel information will be encoded in
 the `subject` header of the generated event.
@@ -63,7 +75,7 @@ To publish data on behalf of another device, publish to `<channel>/<device>`.
 NOTE: If the connected device is not listed as the specified device. The message will be dropped (QoS 0) or
 rejected (QoS 1).
 
-=== Payload & Content type
+===== Payload & Content type
 
 The payload of the publish message will be the "data" of the generated event.
 
@@ -74,7 +86,7 @@ By default (for MQTT 3.1.1, or when the content type is not provided), the conte
 the payload can be successfully parsed as JSON, the content type will be `application/json`. Otherwise it will
 be `application/octet-stream`.
 
-== Subscribe to commands
+==== Subscribe to commands
 
 In general, the command topic structure is `command/inbox/<device>/<command>`. It is however not possible to subscribe
 to specific commands only.
@@ -101,6 +113,21 @@ a|
 |===
 
 The payload of the command, will be the payload of the received message.
+
+=== Plain topic dialect
+
+The "plain topic" dialect doesn't impose any restrictions on the topic naming that devices publish to. So it is ideal
+for connecting existing clients via MQTT, without the need to change the publish topic structure.
+
+The downside is, that additional information (like sending on behalft of another device) which could go in the topic
+structure, now cannot be assigned a special meaning.
+
+==== Publish data
+
+The topic the client publishes to will directly be used as the channel information.
+
+If the "device prefix" option is enabled, then the first segment of the topic will *always* be used a device ID. The
+connected device will only act as a gateway. The same access rules apply as for all gateways and devices.
 
 == Connecting over Websockets
 
