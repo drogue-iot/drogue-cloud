@@ -3,10 +3,10 @@
 mod app;
 mod backend;
 mod components;
+mod console;
 mod data;
 mod error;
 mod examples;
-mod page;
 mod pages;
 mod preferences;
 mod utils;

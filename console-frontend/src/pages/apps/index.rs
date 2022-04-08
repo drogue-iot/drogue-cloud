@@ -3,8 +3,8 @@ use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::utils::url_encode;
 use crate::{
     backend::Backend,
+    console::AppRoute,
     error::error,
-    page::AppRoute,
     pages::{
         apps::{CreateDialog, DetailsSection, Pages},
         HasReadyState,

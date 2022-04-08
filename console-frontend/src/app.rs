@@ -4,9 +4,9 @@ use crate::backend::{
 use crate::{
     backend::{Backend, BackendInformation, RequestOptions, Token},
     components::placeholder::Placeholder,
+    console::Console,
     data::{SharedDataBridge, SharedDataOps},
     error::error,
-    page::AppPage,
     preferences::Preferences,
 };
 use chrono::{DateTime, Utc};
@@ -311,32 +311,26 @@ impl Component for Application {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        return html! {
+        html! (
             <>
                 <BackdropViewer/>
                 <ToastViewer/>
 
-                {
-                    if let Some(ready) = self.is_ready() {
+                if let Some(ready) = self.is_ready() {
 
-                        html!{
-                            <AppPage
-                                backend={ready.0}
-                                token={ready.1}
-                                endpoints={ready.2}
-                                on_logout={ctx.link().callback(|_|Msg::Logout)}
-                                />
-                        }
+                    <Console
+                        backend={ready.0}
+                        token={ready.1}
+                        endpoints={ready.2}
+                        on_logout={ctx.link().callback(|_|Msg::Logout)}
+                        />
 
-                    } else if let Some(backend) = self.need_login() {
-                        html!{ <Placeholder info={backend.info} /> }
-                    } else {
-                        html!{}
-                    }
+                } else if let Some(backend) = self.need_login() {
+                    <Placeholder info={backend.info} />
                 }
 
             </>
-        };
+        )
     }
 }
 
