@@ -41,6 +41,7 @@ wasm-logger = "0.2"
 yew = "0.19"
 yew-agent = "0.1"
 yew-router = { version = "0.16.1", package = "yew-router-nested" }
+yew-oauth2 = "0.1"
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
