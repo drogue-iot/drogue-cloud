@@ -1,4 +1,5 @@
 use crate::data::{self, SharedDataBridge, SharedDataOps};
+use crate::utils::not_empty;
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use serde_json::json;
@@ -111,11 +112,6 @@ impl Component for CoreExampleData {
 
 impl CoreExampleData {
     fn render_view(&self, ctx: &Context<Self>, data: &ExampleData) -> Html {
-        let v = |value: &str| match value {
-            "" => InputState::Error,
-            _ => InputState::Default,
-        };
-
         let title_app = html! {"App & Device"};
         let title_creds = html! {"Credentials"};
         let title_payload = html! {"Payload"};
@@ -134,7 +130,7 @@ impl CoreExampleData {
                                     value={data.app_id.clone()}
                                     required=true
                                     onchange={ctx.link().callback(Msg::ApplicationId)}
-                                    validator={Validator::from(v)}
+                                    validator={not_empty()}
                                     />
                             </FormGroup>
                             <FormGroup label="Device ID">
@@ -142,7 +138,7 @@ impl CoreExampleData {
                                     value={data.device_id.clone()}
                                     required=true
                                     onchange={ctx.link().callback(Msg::DeviceId)}
-                                    validator={Validator::from(v)}
+                                    validator={not_empty()}
                                     />
                             </FormGroup>
                         </Form>
@@ -156,7 +152,7 @@ impl CoreExampleData {
                                     value={data.password.clone()}
                                     required=true
                                     onchange={ctx.link().callback(Msg::Password)}
-                                    validator={Validator::from(v)}
+                                    validator={not_empty()}
                                     />
                             </FormGroup>
                         </Form>
@@ -168,7 +164,7 @@ impl CoreExampleData {
                             <TextArea
                                 value={data.payload.clone()}
                                 onchange={ctx.link().callback(Msg::Payload)}
-                                validator={Validator::from(v)}
+                                validator={not_empty()}
                                 />
                         </Form>
                     </Card>

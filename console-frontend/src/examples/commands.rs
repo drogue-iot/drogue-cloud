@@ -3,7 +3,7 @@ use crate::{
     data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
     html_prop,
-    utils::{shell_quote, shell_single_quote, url_encode},
+    utils::{not_empty, shell_quote, shell_single_quote, url_encode},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
@@ -203,10 +203,6 @@ impl Component for CommandAndControl {
         }
 
         if let Some(cmd) = &ctx.props().endpoints.command_url {
-            let v = |value: &str| match value {
-                "" => InputState::Error,
-                _ => InputState::Default,
-            };
             let token = match ctx.props().data.drg_token {
                 true => "$(drg whoami -t)",
                 false => ctx.props().token.access_token.as_str(),
@@ -233,7 +229,7 @@ impl Component for CommandAndControl {
                                 value={ctx.props().data.cmd_name.clone()}
                                 required=true
                                 onchange={ctx.link().callback(Msg::CommandName)}
-                                validator={Validator::from(v)}
+                                validator={not_empty()}
                                 />
                         </FormGroup>
                         <FormGroup label="Command payload">

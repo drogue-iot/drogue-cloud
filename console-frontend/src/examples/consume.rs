@@ -68,7 +68,7 @@ impl Component for ConsumeData {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let v = |value: &str| match value {
+        let v = |ctx: ValidationContext<String>| match ctx.value.as_str() {
             "" => InputState::Error,
             v => {
                 if v.chars().all(|c| c != '#' && c != '+' && c != '/') {

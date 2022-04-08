@@ -73,40 +73,40 @@ impl Component for CreateDialog {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let is_valid = matches!(self.new_device_name.len(), 1..=255);
-        let v = |value: &str| match value.len() {
+        let v = |ctx: ValidationContext<String>| match ctx.value.len() {
             1..=255 => InputState::Default,
             _ => InputState::Error,
         };
 
-        return html! {
+        html! (
             <>
             <Bullseye plain=true>
-            <Modal
-                title = {"Create a new device"}
-                variant= {ModalVariant::Small}
-                footer = {{html!{
-                            <>
-                                <button class="pf-c-button pf-m-primary"
-                                    disabled={!is_valid || self.fetch_task.is_some()}
-                                    type="button"
-                                    onclick={ctx.link().callback(|_|Msg::Create)}
-                                >
-                                    {"Create"}</button>
-                            </>}
-                            }}
-            >
-                <Form>
-                       <FormGroup>
-                            <TextInput
-                                validator={Validator::from(v)}
-                                onchange={ctx.link().callback(Msg::NewDeviceName)}
-                                placeholder="Device ID"/>
-                        </FormGroup>
-                </Form>
-            </Modal>
+                <Modal
+                    title = "Create a new device"
+                    variant= {ModalVariant::Small}
+                    footer = {html!(
+                                <>
+                                    <button class="pf-c-button pf-m-primary"
+                                        disabled={!is_valid || self.fetch_task.is_some()}
+                                        type="button"
+                                        onclick={ctx.link().callback(|_|Msg::Create)}
+                                    >
+                                        {"Create"}</button>
+                                </>)
+                                }
+                    >
+                    <Form>
+                           <FormGroup>
+                                <TextInput
+                                    validator={Validator::from(v)}
+                                    onchange={ctx.link().callback(Msg::NewDeviceName)}
+                                    placeholder="Device ID" />
+                            </FormGroup>
+                    </Form>
+                </Modal>
             </Bullseye>
             </>
-        };
+        )
     }
 }
 

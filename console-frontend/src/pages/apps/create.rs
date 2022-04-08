@@ -68,10 +68,12 @@ impl Component for CreateDialog {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let is_valid = hostname_validator::is_valid(self.new_app_name.as_str());
-        let v = |value: &str| match hostname_validator::is_valid(value) {
-            false => InputState::Error,
-            true => InputState::Default,
-        };
+        let v =
+            |ctx: ValidationContext<String>| match hostname_validator::is_valid(ctx.value.as_str())
+            {
+                false => InputState::Error,
+                true => InputState::Default,
+            };
 
         return html! {
             <>
