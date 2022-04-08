@@ -44,7 +44,7 @@ In any case, you will need:
 
 ### Optional requirements
 
-* **Rust 1.49+** – By default the build will run inside a container image, with Rust included. So you don't necessarily
+* **Rust 1.59+** – By default the build will run inside a container image, with Rust included. So you don't necessarily
   need to install Rust on your local machine. However, having Rust installed might come in handy at some point. If you
   want to use an IDE, that might require a Rust installation. Or if you want to quickly run tests, maybe from inside
   your IDE, then this will require Rust as well.
@@ -217,30 +217,27 @@ There are bonus points for adding your own tests ;-)
 
 ### … work on the frontend
 
+Due to a bug in `trunk`, it is currently necessary to manually install `dart` using:
+
+```
+npm install -g sass@1.49.7
+```
+
+NOTE: the version must align with the actual version in the Trunk.toml file!
+
 #### Additional dependencies
 
-You will need to have `npm` installed, as it will drive parts of the build.
+You will need to have `trunk` and `npm` installed, as it will drive parts of the build.
 
-You will also need `wasm-bindgen`, which can be installed locally using:
-
-~~~
-cargo install wasm-bindgen-cli --version "=0.2.71"
-~~~
-
-NOTE: The version (here `0.2.71`) must match the exact version of the version in `console-frontend/Cargo.toml`.
-Otherwise, the frontend cannot be properly compiled, although it looks like compilation was successful. Note the
-following line in the build output:
-
-~~~
-[INFO]: Installing wasm-bindgen...
-Error: Not able to find or install a local wasm-bindgen.
-~~~
-
-#### Running
+#### Running with a local server
 
 The simplest way to run the `console-backend` is to use [`drogue-cloud-server`](https://github.com/drogue-iot/drogue-cloud/tree/main/server). Once you have it running (bound to localhost which is the default), you can start the `console-frontend` in the development mode:
 
 ~~~
 cd console-frontend
-npm run start
+trunk serve
 ~~~
+
+#### Running with a cloud backend
+
+You can also run the frontend with a backend in the cloud (or local cluster, e.g. minikube).
