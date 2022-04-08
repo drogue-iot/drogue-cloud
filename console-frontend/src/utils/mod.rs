@@ -1,9 +1,11 @@
 mod shell;
 mod toast;
+mod validators;
 mod yaml;
 
 pub use shell::*;
 pub use toast::*;
+pub use validators::*;
 pub use yaml::*;
 
 use web_sys::Node;

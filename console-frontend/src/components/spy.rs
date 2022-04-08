@@ -1,11 +1,14 @@
-use crate::backend::{Backend, Token};
-use crate::error::error;
+use crate::{
+    backend::{Backend, Token},
+    error::error,
+    utils::not_empty,
+};
 use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
 };
 use drogue_cloud_console_common::EndpointInformation;
-use drogue_cloud_service_api::{EXT_APPLICATION, EXT_DEVICE};
+use drogue_cloud_service_api::EXT_DEVICE;
 use itertools::Itertools;
 use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
@@ -105,11 +108,6 @@ impl Component for Spy {
         let is_valid = self.app_id_filter().is_some();
         let is_running = self.running;
 
-        let v = |value: &str| match value {
-            "" => InputState::Error,
-            _ => InputState::Default,
-        };
-
         let header = html_nested! {
             <TableHeader>
                 <TableColumn label="Timestamp (UTC)"/>
@@ -129,7 +127,7 @@ impl Component for Spy {
                             <TextInput
                                 disabled={self.running}
                                 onchange={ctx.link().callback(Msg::SetApplication)}
-                                validator={Validator::from(v)}
+                                validator={not_empty()}
                                 placeholder="Application ID to spy on"/>
                         </ToolbarItem>
                         }
