@@ -2,9 +2,9 @@ use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHan
 use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::{
     backend::Backend,
+    console::AppRoute,
     data::{SharedDataDispatcher, SharedDataOps},
     error::error,
-    page::AppRoute,
     pages::{
         apps::ApplicationContext,
         devices::{CreateDialog, DetailsSection, Pages},

@@ -7,7 +7,7 @@ pub use create::*;
 pub use details::*;
 pub use index::*;
 
-use crate::page::AppRoute;
+use crate::console::AppRoute;
 use patternfly_yew::*;
 use std::fmt::Formatter;
 use std::str::FromStr;

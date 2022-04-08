@@ -3,9 +3,9 @@ use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::utils::{success, url_encode};
 use crate::{
     backend::Backend,
+    console::AppRoute,
     error::error,
     html_prop,
-    page::AppRoute,
     pages::apps::{DetailsSection, Pages},
 };
 use gloo_timers::callback::Timeout;

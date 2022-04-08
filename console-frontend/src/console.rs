@@ -39,7 +39,7 @@ pub struct Props {
     pub on_logout: Callback<()>,
 }
 
-pub struct AppPage {
+pub struct Console {
     _app_ctx_bridge: SharedDataBridge<ApplicationContext>,
     app_ctx: ApplicationContext,
 }
@@ -51,7 +51,7 @@ pub enum Msg {
     SetAppCtx(ApplicationContext),
 }
 
-impl Component for AppPage {
+impl Component for Console {
     type Message = Msg;
     type Properties = Props;
 
@@ -93,7 +93,7 @@ impl Component for AppPage {
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let app = self.app_ctx.clone();
-        let sidebar = html_nested! {
+        let sidebar = html_nested! (
             <PageSidebar>
                 <Nav>
                     <NavList>
@@ -118,7 +118,7 @@ impl Component for AppPage {
                     </NavList>
                 </Nav>
             </PageSidebar>
-        };
+        );
 
         let tools = vec![{
             let (id, name, full_name, account_url) =
@@ -171,16 +171,16 @@ impl Component for AppPage {
                 (html_nested! {<DropdownItemGroup>{texts}</DropdownItemGroup>}).into()
             });
 
-            items.push((html_nested! {<Divider/>}).into());
+            items.push((html_nested! (<Divider/>)).into());
 
             // links
             items.push({
                 let mut items = Vec::new();
                 items.push(html_nested!{<DropdownItem onclick={ctx.link().callback(|_|Msg::CurrentToken)}>{"Current Token"}</DropdownItem>});
                 if let Some(account_url) = account_url {
-                    items.push(html_nested! {
+                    items.push(html_nested! (
                         <DropdownItem target="_blank" href={account_url}>{"Account"} <span class="pf-u-pl-sm">{Icon::ExternalLinkAlt}</span></DropdownItem>
-                    });
+                    ));
                 }
                 items.push(html_nested!{<DropdownItem onclick={ctx.link().callback(|_|Msg::Logout)}>{"Logout"}</DropdownItem>});
 
@@ -189,13 +189,12 @@ impl Component for AppPage {
 
             // render
 
-            let app_toggle = html! {Icon::QuestionCircle};
-            let user_toggle = html! {<UserToggle name={full_name.unwrap_or(name)} src={src} />};
-            html! {
+            let user_toggle = html! (<UserToggle name={full_name.unwrap_or(name)} src={src} />);
+            html! (
                 <>
                 <AppLauncher
                     position={Position::Right}
-                    toggle={app_toggle}
+                    toggle={Icon::QuestionCircle}
                     >
                     <AppLauncherItem external=true href="https://book.drogue.io">{"Documentation"}</AppLauncherItem>
                     <Divider/>
@@ -211,20 +210,20 @@ impl Component for AppPage {
                 {items}
                 </Dropdown>
                 </>
-            }
+            )
         }];
 
         let endpoints = ctx.props().endpoints.clone();
         let backend = ctx.props().backend.clone();
         let token = ctx.props().token.clone();
 
-        let logo = html_nested! {
+        let logo = html_nested! (
             <Logo src="/images/logo.png" alt="Drogue IoT" />
-        };
-        return html! {
+        );
+        html! (
             <Page
-                logo={logo}
-                sidebar={sidebar}
+                {logo}
+                {sidebar}
                 tools={Children::new(tools)}
                 >
                     <Router<AppRoute, ()>
@@ -274,6 +273,6 @@ impl Component for AppPage {
                             })}
                         />
             </Page>
-        };
+        )
     }
 }

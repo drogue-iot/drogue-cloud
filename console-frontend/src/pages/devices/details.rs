@@ -2,9 +2,9 @@ use super::{DevicesTabs, Pages};
 use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::{
     backend::Backend,
+    console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
-    page::AppRoute,
     pages::{apps::ApplicationContext, devices::DetailsSection},
     utils::url_encode,
 };

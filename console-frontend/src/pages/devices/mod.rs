@@ -6,7 +6,7 @@ pub use create::*;
 pub use details::*;
 pub use index::*;
 
-use crate::page::AppRoute;
+use crate::console::AppRoute;
 use crate::pages::apps::ApplicationContext;
 use patternfly_yew::*;
 use yew_router::prelude::*;

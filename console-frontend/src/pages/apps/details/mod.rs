@@ -5,9 +5,9 @@ mod integrations;
 use super::{ApplicationTabs, Pages};
 use crate::{
     backend::{ApiResponse, Backend, Json, JsonHandlerScopeExt, Nothing, RequestHandle, Token},
+    console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
-    page::AppRoute,
     pages::{
         apps::{
             details::{admin::Admin, integrations::IntegrationDetails},
