@@ -114,6 +114,7 @@ impl Component for Spy {
             <TableHeader>
                 <TableColumn label="Timestamp (UTC)"/>
                 <TableColumn label="Device ID"/>
+                <TableColumn label="Channel"/>
                 <TableColumn label="Payload"/>
             </TableHeader>
         };
@@ -281,8 +282,10 @@ impl TableRenderer for Entry {
             0 => render_timestamp(&self.0),
             // device id
             1 => self.device().into(),
+            // channel
+            2 => self.channel().into(),
             // payload
-            2 => render_data_short(&self.0),
+            3 => render_data_short(&self.0),
             // ignore
             _ => html! {},
         }
@@ -295,10 +298,14 @@ impl TableRenderer for Entry {
 
 impl Entry {
     fn device(&self) -> String {
-        let app_id = self.extension_as_string(EXT_APPLICATION);
-        let device_id = self.extension_as_string(EXT_DEVICE);
+        self.extension_as_string(EXT_DEVICE)
+    }
 
-        format!("{} / {}", app_id, device_id)
+    fn channel(&self) -> String {
+        self.0
+            .subject()
+            .map(ToString::to_string)
+            .unwrap_or_default()
     }
 
     fn extension_as_string(&self, name: &str) -> String {
