@@ -22,7 +22,7 @@ use wasm_bindgen::JsValue;
 use web_sys::RequestCache;
 use yew::prelude::*;
 
-pub struct Main {
+pub struct Application {
     access_code: Option<String>,
     task: Option<RequestHandle>,
     refresh_task: Option<Timeout>,
@@ -61,7 +61,7 @@ pub enum Msg {
     Logout,
 }
 
-impl Component for Main {
+impl Component for Application {
     type Message = Msg;
     type Properties = ();
     fn create(ctx: &Context<Self>) -> Self {
@@ -340,7 +340,7 @@ impl Component for Main {
     }
 }
 
-impl Main {
+impl Application {
     /// Check if the app and backend are ready to show the application.
     fn is_ready(&self) -> Option<(Backend, Token, EndpointInformation)> {
         match (
