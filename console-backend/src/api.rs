@@ -1,4 +1,4 @@
-use crate::auth::OpenIdClient;
+use crate::OpenIdClient;
 use actix_web::{web, HttpRequest};
 use anyhow::Context;
 use drogue_cloud_service_api::endpoints::Endpoints;

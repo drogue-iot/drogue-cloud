@@ -55,9 +55,6 @@ drogue-cloud-access-token-service = { path = "../access-token-service" }
 
 drogue-client = "0.10"
 
-awc = { version = "=3.0.0-beta.21", optional = true, features = ["rustls"] }
-
 [features]
 default = ["jaeger"]
-forward = ["awc"]
 jaeger = ["drogue-cloud-service-common/jaeger"]
