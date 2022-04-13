@@ -94,12 +94,14 @@ lto = true
 patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "57829945179d823f754314d870290edc3de9701d" } # FIXME: awaiting release
 #patternfly-yew = { path = "../../patternfly-yew" }
 
-#drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "c67ec677dc9b1ae13fd75ee3556478d6754eb251" } # FIXME: awaiting release
-drogue-client = { path = "../../drogue-client" }
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "f235c8519d529bb5b8ce59b57bc16b4c659c90a7" } # FIXME: awaiting release
+#drogue-client = { path = "../../drogue-client" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
 #monaco = { path = "../../rust-monaco" }
 #yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" }
-yew-oauth2 = { path = "../../yew-oauth2" }
+
+#yew-oauth2 = { path = "../../yew-oauth2" }
+yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "332d605e72c16d02dffcc630f0503b2fcce18b6e" }
 
 openidconnect = { git = "https://github.com/ctron/openidconnect-rs", rev = "6ca4a9ab9de35600c44a8b830693137d4769edf4" } # FIXME: https://github.com/ramosbugs/openidconnect-rs/pull/58
