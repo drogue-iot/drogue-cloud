@@ -558,6 +558,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "drogue-client"
 version = "0.10.0"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=f235c8519d529bb5b8ce59b57bc16b4c659c90a7#f235c8519d529bb5b8ce59b57bc16b4c659c90a7"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2923,6 +2924,7 @@ dependencies = [
 [[package]]
 name = "yew-oauth2"
 version = "0.2.0"
+source = "git+https://github.com/ctron/yew-oauth2?rev=332d605e72c16d02dffcc630f0503b2fcce18b6e#332d605e72c16d02dffcc630f0503b2fcce18b6e"
 dependencies = [
  "async-trait",
  "gloo-storage",
