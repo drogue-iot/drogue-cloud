@@ -1,7 +1,7 @@
 = MQTT dialects
 
 Like HTTP, MQTT is "just" a protocol, which defines how events or messages are being transported over the wire. On
-top of that, oen needs to define an API. Some might disagree and say that you can just publish anything to an MQTT
+top of that, one needs to define an API. Some might disagree and say that you can just publish anything to an MQTT
 broker. However, implicitly, you have to agree (even when only working with your own components) to a data format and
 topic structure.
 
@@ -9,7 +9,7 @@ topic structure.
 
 As Drogue Cloud is payload agnostic, we don't interfere or interpret the payload itselffootnote:[With a few exceptions].
 
-However, we sometimes need it interpret the metadata of events and messages, like the topic a client publishes or
+However, we sometimes need to interpret the metadata of events and messages, like the topic a client publishes or
 subscribes to.
 
 The MQTT endpoint supports multiple dialects. However, it also needs to know which dialect a device "speaks". Using
