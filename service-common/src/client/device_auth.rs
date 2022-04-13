@@ -1,5 +1,5 @@
 use drogue_client::{
-    core::WithTracing,
+    core::PropagateCurrentContext,
     error::{ClientError, ErrorInformation},
     openid::{OpenIdTokenProvider, TokenInjector},
 };

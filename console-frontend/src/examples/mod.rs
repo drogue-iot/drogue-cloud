@@ -9,9 +9,10 @@ pub use consume::*;
 pub use publish::*;
 pub use register::*;
 
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::{
-    backend::{Backend, Token},
+    backend::{
+        ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
+    },
     data::SharedDataBridge,
     examples::data::ExampleData,
 };
@@ -22,6 +23,7 @@ use http::Method;
 use patternfly_yew::*;
 use std::rc::Rc;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 use yew_router::prelude::*;
 
 #[derive(Switch, Debug, Clone, PartialEq, Eq)]
@@ -47,8 +49,9 @@ impl Examples {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Properties)]
+#[derive(Clone, Debug, PartialEq, Properties)]
 pub struct Props {
+    pub backend: AuthenticatedBackend,
     pub example: Examples,
 }
 
@@ -59,8 +62,7 @@ pub struct ExamplePage {
     data: Option<ExampleData>,
     _data_agent: SharedDataBridge<ExampleData>,
 
-    token: Option<Token>,
-    _token_agent: SharedDataBridge<Option<Token>>,
+    auth: ContextValue<OAuth2Context>,
 }
 
 #[derive(Clone, Debug)]
@@ -70,7 +72,7 @@ pub enum Msg {
     OverviewUpdate(Rc<Endpoints>),
 
     ExampleData(ExampleData),
-    SetToken(Option<Token>),
+    SetAuth(OAuth2Context),
 }
 
 impl Component for ExamplePage {
@@ -81,8 +83,7 @@ impl Component for ExamplePage {
         let mut data_agent = SharedDataBridge::from(ctx.link(), Msg::ExampleData);
         data_agent.request_state();
 
-        let mut token_agent = SharedDataBridge::from(ctx.link(), Msg::SetToken);
-        token_agent.request_state();
+        let auth = ctx.use_context(Msg::SetAuth);
 
         ctx.link().send_message(Msg::FetchOverview);
 
@@ -93,8 +94,7 @@ impl Component for ExamplePage {
             data: None,
             _data_agent: data_agent,
 
-            token: None,
-            _token_agent: token_agent,
+            auth,
         }
     }
 
@@ -110,15 +110,15 @@ impl Component for ExamplePage {
             Msg::ExampleData(data) => {
                 self.data = Some(data);
             }
-            Msg::SetToken(token) => {
-                self.token = token;
+            Msg::SetAuth(auth) => {
+                self.auth.set(auth);
             }
         }
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        return html! {
+        html! (
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
@@ -129,16 +129,17 @@ impl Component for ExamplePage {
                     { self.render_overview(ctx) }
                 </PageSection>
             </>
-        };
+        )
     }
 }
 
 impl ExamplePage {
     fn fetch_overview(&self, ctx: &Context<Self>) -> Result<RequestHandle, Error> {
-        Ok(Backend::request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             "/api/console/v1alpha1/info",
             Nothing,
+            vec![],
             ctx.callback_api::<Json<Endpoints>, _>(|response| match response {
                 ApiResponse::Success(endpoints, _) => Msg::OverviewUpdate(Rc::new(endpoints)),
                 ApiResponse::Failure(_) => Msg::FetchOverviewFailed,
@@ -147,13 +148,17 @@ impl ExamplePage {
     }
 
     fn render_overview(&self, ctx: &Context<Self>) -> Html {
-        match (&self.endpoints, &self.data, &self.token) {
-            (Some(endpoints), Some(data), Some(token)) => {
-                self.render_main(ctx, endpoints.clone(), data.clone(), token.clone())
+        match (
+            &self.endpoints,
+            &self.data,
+            self.auth.get().and_then(|auth| auth.authentication()),
+        ) {
+            (Some(endpoints), Some(data), Some(auth)) => {
+                self.render_main(ctx, endpoints.clone(), data.clone(), auth.clone())
             }
-            _ => html! {
+            _ => html! (
                 <div>{"Loading..."}</div>
-            },
+            ),
         }
     }
 
@@ -162,9 +167,9 @@ impl ExamplePage {
         ctx: &Context<Self>,
         endpoints: Endpoints,
         data: ExampleData,
-        token: Token,
+        auth: Authentication,
     ) -> Html {
-        return html! {
+        html! (
             <Grid gutter=true>
 
                 <GridItem
@@ -181,27 +186,27 @@ impl ExamplePage {
                                 Examples::Register => html!{
                                     <RegisterDevices
                                         endpoints={endpoints.clone()}
-                                        data={data}
+                                        {data}
                                         />
                                 },
                                 Examples::Consume => html!{
                                     <ConsumeData
                                         endpoints={endpoints.clone()}
-                                        data={data}
-                                        token={token}
+                                        {data}
+                                        {auth}
                                         />
                                 },
                                 Examples::Publish => html!{
                                     <PublishData
                                         endpoints={endpoints.clone()}
-                                        data={data}
+                                        {data}
                                         />
                                 },
                                 Examples::Commands => html!{
                                     <CommandAndControl
                                         endpoints={endpoints.clone()}
-                                        data={data}
-                                        token={token}
+                                        {data}
+                                        {auth}
                                         />
                                 },
                             }
@@ -217,13 +222,13 @@ impl ExamplePage {
                 </GridItem>
 
             </Grid>
-        };
+        )
     }
 }
 
 fn note_local_certs(local_certs: bool) -> Html {
     match local_certs {
-        true => html! {
+        true => html! (
             <Alert  r#type={Type::Warning} title="Check your path!" inline=true>
                 <Content>
                     <p>{r#"
@@ -234,7 +239,7 @@ fn note_local_certs(local_certs: bool) -> Html {
                     "#}</p>
                 </Content>
             </Alert>
-        },
-        false => html! {},
+        ),
+        false => html!(),
     }
 }

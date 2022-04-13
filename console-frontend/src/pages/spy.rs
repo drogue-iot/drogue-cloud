@@ -1,12 +1,11 @@
-use crate::backend::{Backend, Token};
+use crate::backend::BackendInformation;
 use drogue_cloud_console_common::EndpointInformation;
 use patternfly_yew::*;
 use yew::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
-    pub backend: Backend,
-    pub token: Token,
+    pub backend: BackendInformation,
     pub endpoints: EndpointInformation,
 }
 
@@ -23,7 +22,6 @@ pub fn spy(props: &Props) -> Html {
 
                 <crate::components::spy::Spy
                         backend={props.backend.clone()}
-                        token={props.token.clone()}
                         endpoints={props.endpoints.clone()}
                     />
 

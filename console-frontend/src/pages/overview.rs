@@ -1,4 +1,4 @@
-use crate::{backend::Backend, html_prop};
+use crate::html_prop;
 use drogue_cloud_console_common::EndpointInformation;
 use drogue_cloud_service_api::endpoints::MqttEndpoint;
 use patternfly_yew::*;
@@ -53,21 +53,22 @@ impl Overview {
 
         // Services column
 
-        if let Some(backend) = Backend::get() {
+        if let Some(api) = &endpoints.api {
             service_cards.push(self.render_linked_card(
                 "API",
-                backend.current_url(),
+                api,
                 Some(("/api", "Interactive API")),
             ));
             service_cards.push(self.render_linked_card(
                 "Command line client",
-                format!("drg login {}", backend.current_url()),
+                format!("drg login {}", api),
                 Some((
                     "https://github.com/drogue-iot/drg/releases/latest",
                     "Download drg",
                 )),
             ));
         }
+
         if let Some(sso) = &endpoints.sso {
             service_cards.push(self.render_card("Single sign-on", sso, true));
         }

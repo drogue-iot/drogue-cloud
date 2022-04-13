@@ -44,7 +44,7 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "cd0be056830918b4aa79b8da6a4684e6d22c555d" } # FIXME: awaiting release
-#drogue-client = { path = "../drogue-client" }
+drogue-client = { path = "../drogue-client" }
 
 #operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "d4415ccbc03417942f38573a0e164143bae9a25e" } # FIXME: awaiting release
 

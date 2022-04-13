@@ -1,5 +1,6 @@
+use crate::backend::AuthenticatedBackend;
 use crate::{
-    backend::{Backend, Token},
+    backend::BackendInformation,
     components::about::AboutModal,
     data::SharedDataBridge,
     examples::{self, Examples},
@@ -8,7 +9,9 @@ use crate::{
 };
 use drogue_cloud_console_common::EndpointInformation;
 use patternfly_yew::*;
+use std::ops::Deref;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Switch, Debug, Clone, PartialEq, Eq)]
@@ -33,15 +36,16 @@ pub enum AppRoute {
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: BackendInformation,
     pub endpoints: EndpointInformation,
-    pub token: Token,
     pub on_logout: Callback<()>,
 }
 
 pub struct Console {
     _app_ctx_bridge: SharedDataBridge<ApplicationContext>,
     app_ctx: ApplicationContext,
+
+    auth: ContextValue<OAuth2Context>,
 }
 
 pub enum Msg {
@@ -49,6 +53,7 @@ pub enum Msg {
     About,
     CurrentToken,
     SetAppCtx(ApplicationContext),
+    Auth(OAuth2Context),
 }
 
 impl Component for Console {
@@ -58,9 +63,13 @@ impl Component for Console {
     fn create(ctx: &Context<Self>) -> Self {
         let app_ctx_bridge = SharedDataBridge::from(ctx.link(), Msg::SetAppCtx);
 
+        let auth = ctx.use_context(Msg::Auth);
+
         Self {
             _app_ctx_bridge: app_ctx_bridge,
             app_ctx: Default::default(),
+
+            auth,
         }
     }
 
@@ -72,7 +81,7 @@ impl Component for Console {
             Msg::About => BackdropDispatcher::default().open(Backdrop {
                 content: (html! {
                     <AboutModal
-                        backend={ctx.props().backend.info.clone()}
+                        backend={self.backend(ctx.props())}
                         />
                 }),
             }),
@@ -86,6 +95,9 @@ impl Component for Console {
                 } else {
                     false
                 };
+            }
+            Msg::Auth(auth) => {
+                self.auth.set(auth);
             }
         }
         true
@@ -121,28 +133,34 @@ impl Component for Console {
         );
 
         let tools = vec![{
-            let (id, name, full_name, account_url) =
-                if let Some(userinfo) = ctx.props().token.userinfo.as_ref() {
-                    let id = userinfo.id.clone();
-                    let name = userinfo.name.clone();
-                    let full_name = userinfo.full_name.as_ref().cloned();
-                    (id, name, full_name, userinfo.account_url.as_ref().cloned())
+            let (id, name, full_name, account_url, email) =
+                if let Some(claims) = self.auth.as_ref().and_then(|auth| auth.claims()) {
+                    let id = claims.subject().to_string();
+                    let name = claims
+                        .preferred_username()
+                        .map(|s| s.to_string())
+                        .unwrap_or_default();
+                    let full_name = claims
+                        .name()
+                        .and_then(|name| name.get(None))
+                        .map(|s| s.to_string());
+                    let account_url = {
+                        let mut issuer = claims.issuer().url().clone();
+                        issuer
+                            .path_segments_mut()
+                            .map_err(|_| anyhow::anyhow!("Failed to modify path"))
+                            .ok()
+                            .map(|mut paths| {
+                                paths.push("account");
+                            });
+                        issuer.to_string()
+                    };
+                    (id, name, full_name, Some(account_url), claims.email())
                 } else {
-                    (String::new(), String::new(), None, None)
+                    (String::new(), String::new(), None, None, None)
                 };
 
-            let src = ctx
-                .props()
-                .token
-                .userinfo
-                .as_ref()
-                .and_then(|user| {
-                    if user.email_verified {
-                        user.email.as_ref().cloned()
-                    } else {
-                        None
-                    }
-                })
+            let src = email
                 .map(|email| md5::compute(email.as_bytes()))
                 .map(|hash| format!("https://www.gravatar.com/avatar/{:x}?D=mp", hash))
                 .unwrap_or_else(|| "/assets/images/img_avatar.svg".into());
@@ -214,12 +232,13 @@ impl Component for Console {
         }];
 
         let endpoints = ctx.props().endpoints.clone();
-        let backend = ctx.props().backend.clone();
-        let token = ctx.props().token.clone();
 
         let logo = html_nested! (
             <Logo src="/images/logo.png" alt="Drogue IoT" />
         );
+
+        let backend = self.backend(ctx.props());
+
         html! (
             <Page
                 {logo}
@@ -236,7 +255,6 @@ impl Component for Console {
                                     />},
                                     AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
                                         backend={backend.clone()}
-                                        token={token.clone()}
                                         endpoints={endpoints.clone()}
                                         name={url_decode(&name)}
                                         details={details}
@@ -256,23 +274,35 @@ impl Component for Console {
                                         details={details}
                                     />},
                                     AppRoute::Spy => html!{<Spy
-                                        backend={backend.clone()}
-                                        token={token.clone()}
+                                        backend={backend.deref().clone()}
                                         endpoints={endpoints.clone()}
                                     />},
                                     AppRoute::AccessTokens => html!{<pages::AccessTokens
                                         backend={backend.clone()}
                                     />},
                                     AppRoute::CurrentToken => html!{<pages::CurrentToken
-                                        token={token.clone()}
                                     />},
                                     AppRoute::Examples(example) => html!{
-                                        <examples::ExamplePage example={example}/>
+                                        <examples::ExamplePage
+                                            {example}
+                                            backend={backend.clone()}
+                                            />
                                     },
                                 }
                             })}
                         />
             </Page>
+        )
+    }
+}
+
+impl Console {
+    fn backend(&self, props: &Props) -> AuthenticatedBackend {
+        props.backend.authenticated(
+            self.auth
+                .get()
+                .and_then(|auth| auth.authentication().cloned())
+                .unwrap_or_default(),
         )
     }
 }

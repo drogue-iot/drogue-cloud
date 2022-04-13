@@ -1,6 +1,7 @@
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
-use crate::error::{ErrorNotification, ErrorNotifier};
-use crate::{backend::Backend, error::error};
+use crate::backend::{
+    ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
+};
+use crate::error::{error, ErrorNotification, ErrorNotifier};
 use drogue_cloud_service_api::token::{AccessToken, AccessTokenCreated};
 use http::Method;
 use patternfly_yew::*;
@@ -39,9 +40,9 @@ impl TableRenderer for AccessTokenEntry {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Properties)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: AuthenticatedBackend,
 }
 
 pub enum Msg {
@@ -174,7 +175,7 @@ impl AccessTokens {
     fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         let link = ctx.link().clone();
 
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             "/api/tokens/v1alpha1",
             Nothing,
@@ -200,7 +201,7 @@ impl AccessTokens {
         ctx: &Context<Self>,
         token: AccessToken,
     ) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::DELETE,
             format!("/api/tokens/v1alpha1/{}", token.prefix),
             Nothing,
@@ -213,7 +214,7 @@ impl AccessTokens {
     }
 
     fn create(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::POST,
             "/api/tokens/v1alpha1",
             Nothing,

@@ -1,5 +1,9 @@
 {
   "url": "http://localhost:8011",
+  "openid": {
+    "client_id": "drogue",
+    "issuer_url": "http://keycloak/auth/realms/drogue"
+  },
   "x_login_note": "Foo bar <strong>Foo bar</strong>",
   "x_footer_band": [
     "Need an account? <a href=\"https://console-backend/api/console/v1alpha1/ui/login?kc_idp_hint=github\">Sign in</a> with GitHub."

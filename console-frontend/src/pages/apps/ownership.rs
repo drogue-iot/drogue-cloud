@@ -1,8 +1,9 @@
-use crate::backend::{ApiResponse, JsonHandlerScopeExt, Nothing, RequestHandle};
+use crate::backend::{
+    ApiResponse, AuthenticatedBackend, JsonHandlerScopeExt, Nothing, RequestHandle,
+};
 use crate::error::{ErrorNotification, ErrorNotifier};
 use crate::utils::{success, url_encode};
 use crate::{
-    backend::Backend,
     console::AppRoute,
     error::error,
     html_prop,
@@ -14,9 +15,9 @@ use patternfly_yew::*;
 use yew::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
 
-#[derive(Clone, PartialEq, Eq, Properties)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: AuthenticatedBackend,
     pub name: String,
 }
 
@@ -134,7 +135,7 @@ impl Component for Ownership {
 
 impl Ownership {
     fn load(&mut self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
@@ -151,7 +152,7 @@ impl Ownership {
     }
 
     fn accept(&mut self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::PUT,
             format!(
                 "/api/admin/v1alpha1/apps/{}/accept-ownership",
@@ -167,7 +168,7 @@ impl Ownership {
     }
 
     fn cancel(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::DELETE,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",

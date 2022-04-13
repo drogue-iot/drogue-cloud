@@ -1,32 +1,47 @@
-use crate::{backend::Token, html_prop};
+use crate::html_prop;
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 
-#[derive(Clone, PartialEq, Eq, Properties)]
-pub struct Props {
-    pub token: Token,
+pub enum Msg {
+    Auth(OAuth2Context),
 }
 
-pub struct CurrentToken {}
+pub struct CurrentToken {
+    auth: ContextValue<OAuth2Context>,
+}
 
 impl Component for CurrentToken {
-    type Message = ();
-    type Properties = Props;
+    type Message = Msg;
+    type Properties = ();
 
-    fn create(_: &Context<Self>) -> Self {
-        Self {}
+    fn create(ctx: &Context<Self>) -> Self {
+        let auth = ctx
+            .link()
+            .context::<OAuth2Context>(ctx.link().callback(Msg::Auth))
+            .into();
+
+        Self { auth }
     }
 
-    fn view(&self, ctx: &Context<Self>) -> Html {
-        let token = ctx
-            .props()
-            .token
-            .refresh_token
-            .as_ref()
-            .cloned()
+    fn update(&mut self, _ctx: &Context<Self>, msg: Self::Message) -> bool {
+        match msg {
+            Self::Message::Auth(auth) => {
+                self.auth.set(auth);
+            }
+        }
+        true
+    }
+
+    fn view(&self, _ctx: &Context<Self>) -> Html {
+        let token = self
+            .auth
+            .get()
+            .and_then(|auth| auth.access_token())
+            .map(str::to_string)
             .unwrap_or_default();
 
-        return html! {
+        html! (
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
@@ -46,6 +61,6 @@ impl Component for CurrentToken {
                     </Card>
                 </PageSection>
             </>
-        };
+        )
     }
 }

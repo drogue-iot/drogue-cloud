@@ -1,10 +1,9 @@
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
-use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::backend::AuthenticatedBackend;
 use crate::{
-    backend::Backend,
+    backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle},
     console::AppRoute,
     data::{SharedDataDispatcher, SharedDataOps},
-    error::error,
+    error::{error, ErrorNotification, ErrorNotifier},
     pages::{
         apps::ApplicationContext,
         devices::{CreateDialog, DetailsSection, Pages},
@@ -52,9 +51,9 @@ impl TableRenderer for DeviceEntry {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Properties)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: AuthenticatedBackend,
     pub app: String,
 }
 
@@ -240,7 +239,7 @@ impl Index {
     fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         let link = ctx.link().clone();
 
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices",
@@ -273,7 +272,7 @@ impl Index {
     }
 
     fn load_apps(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             "/api/registry/v1alpha1/apps",
             Nothing,
@@ -292,7 +291,7 @@ impl Index {
     }
 
     fn delete(&self, ctx: &Context<Self>, name: String) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::DELETE,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices/{}",

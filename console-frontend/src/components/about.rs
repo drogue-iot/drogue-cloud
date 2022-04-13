@@ -1,5 +1,5 @@
 use crate::backend::{
-    ApiResponse, BackendInformation, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
+    ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
 use crate::error::{error, ErrorNotification, ErrorNotifier};
 use drogue_cloud_service_api::version::DrogueVersion;
@@ -7,9 +7,9 @@ use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, Eq, Properties)]
+#[derive(Clone, Debug, PartialEq, Properties)]
 pub struct Props {
-    pub backend: BackendInformation,
+    pub backend: AuthenticatedBackend,
 }
 
 pub enum Msg {

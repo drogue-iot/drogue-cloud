@@ -1,5 +1,4 @@
 use crate::{
-    backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
     html_prop,
@@ -8,12 +7,19 @@ use crate::{
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 
-#[derive(Clone, Debug, Properties, PartialEq, Eq)]
+#[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
     pub endpoints: Endpoints,
     pub data: ExampleData,
-    pub token: Token,
+    pub auth: Authentication,
+}
+
+impl UseAuthenticationProperties for Props {
+    fn set_authentication(&mut self, auth: Authentication) {
+        self.auth = auth;
+    }
 }
 
 pub struct CommandAndControl {
@@ -205,7 +211,7 @@ impl Component for CommandAndControl {
         if let Some(cmd) = &ctx.props().endpoints.command_url {
             let token = match ctx.props().data.drg_token {
                 true => "$(drg whoami -t)",
-                false => ctx.props().token.access_token.as_str(),
+                false => ctx.props().auth.access_token.as_str(),
             };
             let send_command_cmd = format!(
                 r#"echo {payload} | http POST {url}/api/command/v1alpha1/apps/{app}/devices/{device} command=={cmd} "Authorization:Bearer {token}""#,

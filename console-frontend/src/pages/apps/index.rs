@@ -1,14 +1,14 @@
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
-use crate::error::{ErrorNotification, ErrorNotifier};
-use crate::utils::url_encode;
+use crate::backend::{
+    ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
+};
 use crate::{
-    backend::Backend,
     console::AppRoute,
-    error::error,
+    error::{error, ErrorNotification, ErrorNotifier},
     pages::{
         apps::{CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
+    utils::url_encode,
 };
 use drogue_client::registry::v1::Application;
 use http::{Method, StatusCode};
@@ -51,9 +51,9 @@ impl TableRenderer for ApplicationEntry {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Properties)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: AuthenticatedBackend,
 }
 
 pub enum Msg {
@@ -161,7 +161,7 @@ impl Index {
     fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         let link = ctx.link().clone();
 
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             "/api/registry/v1alpha1/apps",
             Nothing,
@@ -191,7 +191,7 @@ impl Index {
     }
 
     fn delete(&self, ctx: &Context<Self>, name: String) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::DELETE,
             format!("/api/registry/v1alpha1/apps/{}", url_encode(name)),
             Nothing,

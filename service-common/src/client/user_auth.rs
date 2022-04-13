@@ -1,7 +1,7 @@
 use crate::reqwest::ClientFactory;
 use crate::{defaults, openid::TokenConfig};
 use drogue_client::{
-    core::WithTracing,
+    core::PropagateCurrentContext,
     error::ClientError,
     openid::{OpenIdTokenProvider, TokenInjector},
 };
