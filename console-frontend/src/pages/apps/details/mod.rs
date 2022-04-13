@@ -3,8 +3,9 @@ mod debug;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
+use crate::backend::AuthenticatedBackend;
 use crate::{
-    backend::{ApiResponse, Backend, Json, JsonHandlerScopeExt, Nothing, RequestHandle, Token},
+    backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle},
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
@@ -22,13 +23,14 @@ use drogue_cloud_console_common::EndpointInformation;
 use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
-use std::rc::Rc;
+use std::{ops::Deref, rc::Rc};
+use yew::context::ContextHandle;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
-    pub backend: Backend,
-    pub token: Token,
+    pub backend: AuthenticatedBackend,
     pub endpoints: EndpointInformation,
     pub name: String,
     pub details: DetailsSection,
@@ -36,6 +38,7 @@ pub struct Props {
 
 #[derive(Debug)]
 pub enum Msg {
+    Auth(OAuth2Context),
     Load,
     Reset,
     SetData(Rc<Application>),
@@ -45,6 +48,9 @@ pub enum Msg {
 }
 
 pub struct Details {
+    auth: Option<OAuth2Context>,
+    _auth_handle: Option<ContextHandle<OAuth2Context>>,
+
     fetch_task: Option<RequestHandle>,
     fetch_role: Option<RequestHandle>,
 
@@ -60,17 +66,24 @@ impl Component for Details {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.link().send_message(Msg::Load);
 
+        let (auth, auth_handle) = ctx.unzipped(Msg::Auth);
+
         Self {
             content: None,
             yaml: None,
             fetch_task: None,
             fetch_role: None,
             is_admin: false,
+            auth,
+            _auth_handle: auth_handle,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
+            Msg::Auth(auth) => {
+                self.auth = Some(auth);
+            }
             Msg::Load => match self.load(ctx) {
                 Ok((task, admin_task)) => {
                     self.fetch_task = Some(task);
@@ -108,7 +121,7 @@ impl Component for Details {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        html! {
+        html! (
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
@@ -121,14 +134,14 @@ impl Component for Details {
                 <PageSection><Grid></Grid></PageSection>
             }
             </>
-        }
+        )
     }
 }
 
 impl Details {
     fn load(&self, ctx: &Context<Self>) -> Result<(RequestHandle, RequestHandle), anyhow::Error> {
         Ok((
-            ctx.props().backend.info.request(
+            ctx.props().backend.request(
                 Method::GET,
                 format!(
                     "/api/registry/v1alpha1/apps/{}",
@@ -141,7 +154,7 @@ impl Details {
                     ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load")),
                 }),
             )?,
-            ctx.props().backend.info.request(
+            ctx.props().backend.request(
                 Method::GET,
                 format!(
                     "/api/admin/v1alpha1/apps/{}/members",
@@ -162,7 +175,7 @@ impl Details {
         ctx: &Context<Self>,
         app: Application,
     ) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::PUT,
             format!(
                 "/api/registry/v1alpha1/apps/{}",
@@ -228,7 +241,7 @@ impl Details {
         });
         }
 
-        return html! {
+        html! (
             <>
                 <PageSection variant={PageSectionVariant::Light}>
                     <ApplicationTabs
@@ -249,11 +262,11 @@ impl Details {
                 }
                 </PageSection>
             </>
-        };
+        )
     }
 
     fn render_overview(&self, app: &Application) -> Html {
-        return html! {
+        html! (
             <Grid gutter=true>
                 <GridItem cols={[3]}>
                     <Card
@@ -287,41 +300,48 @@ impl Details {
                     </Card>
                 </GridItem>
             </Grid>
-        };
+        )
     }
 
     fn render_admin(&self, ctx: &Context<Self>) -> Html {
         // create the Admin component, using a copy of the same props.
-        return html! {
+        html! (
             <Admin
                 backend={ctx.props().backend.clone()}
-                token={ctx.props().token.clone()}
                 endpoints={ctx.props().endpoints.clone()}
                 name={ctx.props().name.clone()}
                 details={ctx.props().details.clone()}
             />
-        };
+        )
     }
 
     fn render_integrations(&self, ctx: &Context<Self>, application: &Application) -> Html {
+        let token = self
+            .auth
+            .as_ref()
+            .and_then(|auth| auth.access_token())
+            .unwrap_or("<token>");
+
+        let claims = self.auth.as_ref().and_then(|auth| auth.claims());
+
         IntegrationDetails {
             backend: &ctx.props().backend,
             application,
-            token: &ctx.props().token,
             endpoints: &ctx.props().endpoints,
+            token,
+            claims,
         }
         .render()
     }
 
     fn render_debug(&self, ctx: &Context<Self>, application: &Application) -> Html {
-        return html! {
+        html! (
             <debug::Debug
-                backend={ctx.props().backend.clone()}
+                backend={ctx.props().backend.deref().clone()}
                 application={application.metadata.name.clone()}
                 endpoints={ctx.props().endpoints.clone()}
-                token={ctx.props().token.clone()}
                 />
-        };
+        )
     }
 
     fn render_editor(&self, ctx: &Context<Self>) -> Html {
@@ -332,7 +352,7 @@ impl Details {
 
         let options = Rc::new(options);
 
-        return html! {
+        html! (
             <>
             <Stack>
                 <StackItem fill=true>
@@ -349,6 +369,6 @@ impl Details {
                 </StackItem>
             </Stack>
             </>
-        };
+        )
     }
 }

@@ -1,7 +1,8 @@
 use super::{DevicesTabs, Pages};
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
+use crate::backend::{
+    ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
+};
 use crate::{
-    backend::Backend,
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
@@ -17,7 +18,7 @@ use yew::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: AuthenticatedBackend,
     pub app: String,
     pub name: String,
     pub details: DetailsSection,
@@ -103,7 +104,7 @@ impl Component for Details {
 
 impl Details {
     fn load(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices/{}",
@@ -120,7 +121,7 @@ impl Details {
     }
 
     fn update(&self, ctx: &Context<Self>, app: Device) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::PUT,
             format!(
                 "/api/registry/v1alpha1/apps/{}/devices/{}",

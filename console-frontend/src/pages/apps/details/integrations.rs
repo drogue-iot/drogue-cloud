@@ -1,5 +1,5 @@
 use crate::{
-    backend::{Backend, Token},
+    backend::BackendInformation,
     html_prop,
     utils::{shell_single_quote, to_model, to_yaml_model},
 };
@@ -23,6 +23,7 @@ use serde_json::json;
 use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 
 struct KafkaInfo {
     pub bootstrap: String,
@@ -31,10 +32,11 @@ struct KafkaInfo {
 }
 
 pub struct IntegrationDetails<'a> {
-    pub backend: &'a Backend,
-    pub token: &'a Token,
+    pub backend: &'a BackendInformation,
     pub application: &'a Application,
     pub endpoints: &'a Endpoints,
+    pub token: &'a str,
+    pub claims: Option<&'a Claims>,
 }
 
 impl IntegrationDetails<'_> {
@@ -64,10 +66,8 @@ impl IntegrationDetails<'_> {
 
     fn render_mqtt_quarkus(&self, mqtt: &MqttEndpoint) -> Html {
         let user = self
-            .token
-            .userinfo
-            .as_ref()
-            .map(|user| user.name.as_str())
+            .claims
+            .and_then(|user| user.preferred_username().map(|user| user.as_str()))
             .unwrap_or("<you>")
             .to_string();
 
@@ -141,10 +141,8 @@ impl IntegrationDetails<'_> {
 
     fn render_mqtt_basic(&self, mqtt: &MqttEndpoint) -> Html {
         let user = self
-            .token
-            .userinfo
-            .as_ref()
-            .map(|user| user.name.as_str())
+            .claims
+            .and_then(|user| user.preferred_username().map(|user| user.as_str()))
             .unwrap_or("<you>")
             .to_string();
 
@@ -167,7 +165,7 @@ impl IntegrationDetails<'_> {
                         <Tab label="OAuth2 Token">
                             <DescriptionList>
                                 <DescriptionGroup term="Username (access token)">
-                                    <Clipboard readonly=true value={self.token.access_token.clone()} />
+                                    <Clipboard readonly=true value={self.token.to_string()} />
                                 </DescriptionGroup>
                             </DescriptionList>
                         </Tab>
@@ -397,20 +395,18 @@ stringData:
     }
 
     fn render_ws(&self, ws: &HttpEndpoint) -> Html {
-        return html! {
+        html! (
             <Grid gutter=true>
                 <GridItem cols={[6]}>{ self.render_ws_basic(ws) }</GridItem>
                 <GridItem cols={[6]}>{ self.render_ws_example(ws) }</GridItem>
             </Grid>
-        };
+        )
     }
 
     fn render_ws_basic(&self, ws: &HttpEndpoint) -> Html {
         let user = self
-            .token
-            .userinfo
-            .as_ref()
-            .map(|user| user.name.as_str())
+            .claims
+            .and_then(|user| user.preferred_username().map(|user| user.as_str()))
             .unwrap_or("<you>")
             .to_string();
 
@@ -427,7 +423,7 @@ stringData:
                         <Tab label="OAuth2 Token">
                             <DescriptionList>
                                 <DescriptionGroup term="Bearer token">
-                                    <Clipboard readonly=true value={self.token.access_token.clone()} />
+                                    <Clipboard readonly=true value={self.token.to_string()} />
                                 </DescriptionGroup>
                             </DescriptionList>
                         </Tab>
@@ -455,7 +451,7 @@ stringData:
             r#"websocat {}/{} -H="Authorization: Bearer {}""#,
             ws.url.clone(),
             self.application.metadata.name,
-            self.token.access_token.clone(),
+            self.token,
         );
 
         return html! {

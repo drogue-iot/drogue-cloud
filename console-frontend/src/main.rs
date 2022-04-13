@@ -8,7 +8,6 @@ mod data;
 mod error;
 mod examples;
 mod pages;
-mod preferences;
 mod utils;
 
 use crate::app::Application;

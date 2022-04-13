@@ -1,5 +1,4 @@
 use crate::{
-    backend::Backend,
     examples::data::ExampleData,
     html_prop,
     utils::{shell_quote, shell_single_quote},
@@ -47,7 +46,7 @@ impl Component for RegisterDevices {
             </Alert>
         }];
 
-        if let Some(api) = Backend::url("") {
+        if let Some(api) = &ctx.props().endpoints.api {
             let login_cmd = format!(r#"drg login {url}"#, url = shell_quote(api));
             cards.push(html!{
                 <Card title={html_prop!({"Log in"})}>

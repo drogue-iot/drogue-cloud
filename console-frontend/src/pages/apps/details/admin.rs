@@ -298,7 +298,7 @@ impl Admin {
     }
 
     fn load_members(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             format!(
                 "/api/admin/v1alpha1/apps/{}/members",
@@ -322,7 +322,7 @@ impl Admin {
     fn submit(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         if let Some(m) = &self.members {
             let members = m.serialize();
-            Ok(ctx.props().backend.info.request(
+            Ok(ctx.props().backend.request(
                 Method::PUT,
                 format!(
                     "/api/admin/v1alpha1/apps/{}/members",
@@ -363,7 +363,7 @@ impl Admin {
             .map(|console| format!("{}/transfer/{}", console, url_encode(&ctx.props().name)))
             .unwrap_or_else(|| "Error while creating the link".into());
 
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::PUT,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
@@ -395,7 +395,7 @@ impl Admin {
     }
 
     fn cancel_transfer(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::DELETE,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",
@@ -411,7 +411,7 @@ impl Admin {
     }
 
     fn load_transfer_state(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::GET,
             format!(
                 "/api/admin/v1alpha1/apps/{}/transfer-ownership",

@@ -1,15 +1,11 @@
-use crate::{
-    backend::{Backend, Token},
-    components::spy::Spy,
-};
+use crate::{backend::BackendInformation, components::spy::Spy};
 use drogue_cloud_console_common::EndpointInformation;
 use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: BackendInformation,
     pub endpoints: EndpointInformation,
-    pub token: Token,
     pub application: String,
 }
 
@@ -26,13 +22,12 @@ impl Component for Debug {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        html! {
+        html! (
             <Spy
                 backend={ctx.props().backend.clone()}
-                token={ctx.props().token.clone()}
                 endpoints={ctx.props().endpoints.clone()}
                 application={ctx.props().application.clone()}
                 />
-        }
+        )
     }
 }

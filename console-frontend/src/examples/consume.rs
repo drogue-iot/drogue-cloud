@@ -1,5 +1,4 @@
 use crate::{
-    backend::Token,
     data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
     html_prop,
@@ -7,16 +6,17 @@ use crate::{
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 use yew_router::{
     agent::{RouteAgentDispatcher, RouteRequest},
     route::Route,
 };
 
-#[derive(Clone, Debug, Properties, PartialEq, Eq)]
+#[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
     pub endpoints: Endpoints,
     pub data: ExampleData,
-    pub token: Token,
+    pub auth: Authentication,
 }
 
 pub struct ConsumeData {
@@ -103,7 +103,7 @@ impl Component for ConsumeData {
             };
             let token = match ctx.props().data.drg_token {
                 true => "\"$(drg whoami -t)\"".into(),
-                false => format!("\"{}\"", ctx.props().token.access_token),
+                false => format!("\"{}\"", ctx.props().auth.access_token),
             };
             let consume_mqtt_cmd = format!(
                 r#"mqtt sub -h {host} -p {port} -s {certs}-t '{topic}' {opts} -pw {token}"#,
@@ -170,7 +170,7 @@ impl Component for ConsumeData {
         if let Some(ws) = &ctx.props().endpoints.websocket_integration {
             let token = match ctx.props().data.drg_token {
                 true => "$(drg whoami -t)".into(),
-                false => ctx.props().token.access_token.clone(),
+                false => ctx.props().auth.access_token.clone(),
             };
             let consume_websocket_cmd = format!(
                 r#"websocat {}/{} -H="Authorization: Bearer {}""#,

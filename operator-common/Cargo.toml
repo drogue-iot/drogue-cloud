@@ -22,7 +22,7 @@ futures = "0.3"
 tokio = "1"
 chrono = "0.4"
 
-drogue-client = "0.9.0"
+drogue-client = "0.10"
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-database-common = { path = "../database-common" }

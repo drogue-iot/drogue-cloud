@@ -38,7 +38,7 @@ drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 
-drogue-client = "0.9.0"
+drogue-client = "0.10"
 drogue-ttn = "0.5"
 
 [dependencies.rust-tls]

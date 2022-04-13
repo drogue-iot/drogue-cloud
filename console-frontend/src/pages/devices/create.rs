@@ -1,19 +1,16 @@
-use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle};
+use crate::error::{error, ErrorNotification, ErrorNotifier};
 use crate::pages::devices::{AppRoute, ApplicationContext, DetailsSection, Pages};
 use crate::utils::{success, url_encode};
-use crate::{backend::Backend, error::error};
 use http::{Method, StatusCode};
-
 use patternfly_yew::*;
+use serde_json::json;
 use yew::prelude::*;
 use yew_router::{agent::RouteRequest, prelude::*};
 
-use crate::backend::{ApiResponse, Json, JsonHandlerScopeExt, RequestHandle};
-use serde_json::json;
-
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
-    pub backend: Backend,
+    pub backend: AuthenticatedBackend,
     pub on_close: Callback<()>,
     pub app: String,
 }
@@ -125,7 +122,7 @@ impl CreateDialog {
         "spec": {},
         });
 
-        Ok(ctx.props().backend.info.request(
+        Ok(ctx.props().backend.request(
             Method::POST,
             format!("/api/registry/v1alpha1/apps/{}/devices", url_encode(app)),
             Json(&payload),

@@ -1,9 +1,9 @@
-use crate::{
-    backend::{Backend, BackendInformation},
-    utils::ToHtml,
-};
+use crate::{backend::BackendInformation, utils::ToHtml};
 use patternfly_yew::*;
+use std::collections::HashMap;
 use yew::prelude::*;
+use yew_oauth2::agent::LoginOptions;
+use yew_oauth2::{openid, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -27,7 +27,7 @@ impl Component for Placeholder {
     fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Login => {
-                Backend::reauthenticate().ok();
+                OAuth2Dispatcher::<openid::Client>::new().start_login();
             }
         }
         true
@@ -120,17 +120,31 @@ impl Placeholder {
             .idps
             .iter()
             .map(|idp| {
-                // use the provided href ...
-                let href = idp.href.clone().unwrap_or_else(|| {
-                    // ... or create a default one using the idp hint
-                    let mut href = ctx.props().info.url("/api/console/v1alpha1/ui/login");
-                    href.query_pairs_mut().append_pair("kc_idp_hint", &idp.id);
-                    href.to_string()
-                });
-
                 let label = idp.label.clone().unwrap_or_default();
+                let (href, onclick) = match &idp.href {
+                    Some(href) => (Some(href.clone()), None),
+                    None => {
+                        let id = idp.id.clone();
+                        (
+                            None,
+                            Some(Callback::from(move |_: MouseEvent| {
+                                OAuth2Dispatcher::<openid::Client>::new().start_login_opts(
+                                    LoginOptions {
+                                        query: {
+                                            let mut q = HashMap::new();
+                                            q.insert("kc_idp_hint".to_string(), id.clone());
+                                            q
+                                        },
+                                        ..Default::default()
+                                    },
+                                );
+                            })),
+                        )
+                    }
+                };
+
                 html_nested! {
-                    <LoginMainFooterLink href={href} label={label}>
+                    <LoginMainFooterLink {href} {onclick} {label}>
                         { idp.icon_html.to_html() }
                     </LoginMainFooterLink>
                 }

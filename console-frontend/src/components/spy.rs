@@ -1,8 +1,4 @@
-use crate::{
-    backend::{Backend, Token},
-    error::error,
-    utils::not_empty,
-};
+use crate::{backend::BackendInformation, error::error, utils::not_empty};
 use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
@@ -16,11 +12,11 @@ use url::Url;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{MessageEvent, WebSocket};
 use yew::prelude::*;
+use yew_oauth2::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
-    pub backend: Backend,
-    pub token: Token,
+    pub backend: BackendInformation,
     pub endpoints: EndpointInformation,
     #[prop_or_default]
     pub application: Option<String>,
@@ -208,9 +204,14 @@ impl Spy {
             _ => None,
         };
 
-        if let Some(mut url) = url {
-            url.query_pairs_mut()
-                .append_pair("token", &Backend::access_token().unwrap_or_default());
+        let auth = ctx.link().context::<OAuth2Context>(Callback::noop());
+
+        if let (
+            Some(mut url),
+            Some((OAuth2Context::Authenticated(Authentication { access_token, .. }), _)),
+        ) = (url, auth)
+        {
+            url.query_pairs_mut().append_pair("token", &access_token);
 
             let ws = WebSocket::new(url.as_str()).unwrap();
 
