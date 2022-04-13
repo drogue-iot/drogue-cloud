@@ -19,7 +19,7 @@ image:data-plane.svg[Data plane overview]
 Devices communicate with the _Protocol endpoints_, which implement the protocol specific mapping between the
 actual protocol and the internal Cloud Events based message format.
 
-The protocol endpoints also authentication and authorize devices and its configured gateways. Validate credentials, or X.509 client certificates and ensure that the devices are enabled in the system.
+The protocol endpoints also authenticates and authorizes devices and its configured gateways. Validate credentials, or X.509 client certificates and ensure that the devices are enabled in the system.
 
 Once the device is granted access to publish (or receive) data, the protocol endpoint will hook up the device
 to the internal message flow. It subscribes to commands targeted towards the device, and forwards messages
@@ -31,7 +31,7 @@ The actual payload of the messages is not processed, and just passed on the Knat
 ====
 In some cases the payload of an incoming request is not equal to the payload of the actual message.
 
-For example, a request from "The Things Network" (TTN) conists of a payload, which contains meta data (like the device ID), and then the actual payload of the original message from the device.
+For example, a request from "The Things Network" (TTN) consists of a payload, which contains meta data (like the device ID), and then the actual payload of the original message from the device.
 
 In cases like this it depends on the protocol adapter what it considers payload and what is metadata. In the case
 of TTN, you can configure if you want to have the full request payload, or just the original device payload.
@@ -43,9 +43,9 @@ of TTN, you can configure if you want to have the full request payload, or just 
 When a protocol endpoint drops off an incoming message to the Knative eventing service, this service is
 backed by a Kafka topicfootnote:[Technically it is a Knative eventing service, which could be implemented by different technologies. The default implementation for Drogue Cloud though is Kafka.].
 
-The responsibility of Kafka is to deliver messages to the target consumer. Peristing messages if needed, and
+The responsibility of Kafka is to deliver messages to the target consumer. Persisting messages if needed, and
 handling shared consumer groups if requested. This allows Drogue Cloud to buffer messages when the consumer is
-unavailable or of there is a peak of messages that the consumer currently cannot handle. Also, this allows to
+unavailable or if there is a peak of messages that the consumer currently cannot handle. Also, this allows to
 drive a shared consumer model, where in a group of consumers only one receives a messages. This concept is used
 to share the load for messages to multiple instances of a consumer.
 
