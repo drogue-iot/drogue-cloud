@@ -11,7 +11,7 @@ Of course this diagram over-simplifies the problem. And still, connecting to a d
 backend application is a trivial task.
 
 So what does Drogue Cloud do? And why is it a more complex than a simple MQTT broker? The following sections will
-dive into the architecture of Drogue Cloud, and will explain what the benefit if this architecture is.
+dive into the architecture of Drogue Cloud, and will explain what the benefit of this architecture is.
 
 The following sections will use _My device_ and _My application_. These are the devices and applications that a
 user of Drogue Cloud would bring and try to connect. These applications are not provided by Drogue Cloud.
