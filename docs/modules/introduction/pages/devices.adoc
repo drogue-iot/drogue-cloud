@@ -6,7 +6,7 @@ image:devices.svg[Different device types]
 
 Device:: A device, directly connected to Drogue Cloud.
 +
-This may be an embedded device, or a more powerfull compute node
+This may be an embedded device, or a more powerful compute node
 with a full blown operating system. It may also be a containerized application, running inside an Edge node, connecting
 to Drogue Cloud.
 
