@@ -48,8 +48,8 @@ An existing application can be deleted using the following command:
 drg delete app my-app
 ----
 
-NOTE: Deleting an application me be delayed, as first all devices which require to be cleaned up will be processes.Once
-this is finished, the application might require cleanup too.Only once all resources are properly cleaned up, the
+NOTE: Deleting an application may be delayed, as first all devices which require to be cleaned up will be processed. Once
+this is finished, the application might require cleanup too. Only once all resources are properly cleaned up, the
 application will be actually deleted.
 
 [#devices]
@@ -57,7 +57,7 @@ application will be actually deleted.
 
 As devices belong to an application, you need to create an application first.
 
-The following commands will explicitly select the application by providing the `--app <app name>` argument.You can
+The following commands will explicitly select the application by providing the `--app <app name>` argument. You can
 however use `drg config set-default-app`, to set a default application and omit the `--app` argument.
 
 === Create a new device
