@@ -227,7 +227,17 @@ NOTE: the version must align with the actual version in the Trunk.toml file!
 
 #### Additional dependencies
 
-You will need to have `trunk` and `npm` installed, as it will drive parts of the build.
+You will need to have `trunk`, `npm` and `sass` installed, as it will drive parts of the build.
+
+For `sass`, you will need the exact version as specified in the `Trunk.toml` file. Currently,
+this is `1.50.0 compiled with dart2js 2.16.2`. Unfortunately, this can currently not be overridden from the command
+line. So either you install this version exactly, or change/remove the setting in the `Trunk.toml` file.
+
+Installing `sass` can be done using the following command:
+
+```shell
+npm install -g sass@1.50.0
+```
 
 #### Running with a local server
 
