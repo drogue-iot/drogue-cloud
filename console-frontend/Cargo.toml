@@ -102,6 +102,6 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "f2
 #yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" }
 
 #yew-oauth2 = { path = "../../yew-oauth2" }
-yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "332d605e72c16d02dffcc630f0503b2fcce18b6e" }
+yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "d88ef4d8ae57a816305718958c039f295f406908" } # FIXME: awaiting release
 
 openidconnect = { git = "https://github.com/ctron/openidconnect-rs", rev = "6ca4a9ab9de35600c44a8b830693137d4769edf4" } # FIXME: https://github.com/ramosbugs/openidconnect-rs/pull/58
