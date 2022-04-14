@@ -1,4 +1,5 @@
 use crate::backend::{ApiError, ApiResponse};
+use drogue_client::error::ClientError;
 use patternfly_yew::{Toast, ToastDispatcher, Type};
 use yew::prelude::*;
 
@@ -66,6 +67,15 @@ impl ErrorProvider for String {
 }
 
 impl ErrorProvider for anyhow::Error {
+    fn description(self) -> String {
+        self.to_string()
+    }
+}
+
+impl<E> ErrorProvider for ClientError<E>
+where
+    E: std::error::Error + Send + Sync + 'static,
+{
     fn description(self) -> String {
         self.to_string()
     }

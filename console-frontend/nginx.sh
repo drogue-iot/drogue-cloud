@@ -21,8 +21,10 @@ fi
 echo "$BACKEND_JSON" | jq --arg url "$API_URL" '. + {url: $url}' | tee /endpoints/backend.json
 
 # inject oauth2 information
-echo "$BACKEND_JSON" | jq --arg url "$CLIENT_ID" '. + {openid: {client_id: $url}}' | tee /endpoints/backend.json
-echo "$BACKEND_JSON" | jq --arg url "$ISSUER_URL" '. + {openid: {issuer_url: $url}}' | tee /endpoints/backend.json
+jq --arg url "$CLIENT_ID" '.openid += {client_id: $url}' < /endpoints/backend.json | tee /endpoints/backend.json.tmp
+mv /endpoints/backend.json.tmp /endpoints/backend.json
+jq --arg url "$ISSUER_URL" '.openid += {issuer_url: $url}' < /endpoints/backend.json | tee /endpoints/backend.json.tmp
+mv /endpoints/backend.json.tmp /endpoints/backend.json
 
 LOGIN_NOTE=/etc/config/login/note.html
 if [ -f "$LOGIN_NOTE" ]; then

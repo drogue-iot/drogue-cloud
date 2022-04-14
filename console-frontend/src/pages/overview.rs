@@ -6,7 +6,7 @@ use yew::{prelude::*, virtual_dom::VChild};
 
 #[derive(Clone, Properties, PartialEq, Eq)]
 pub struct Props {
-    pub endpoints: Option<EndpointInformation>,
+    pub endpoints: EndpointInformation,
 }
 
 pub struct Overview {}
@@ -20,7 +20,7 @@ impl Component for Overview {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        html! {
+        html! (
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
@@ -31,18 +31,13 @@ impl Component for Overview {
                     { self.render_overview(ctx) }
                 </PageSection>
             </>
-        }
+        )
     }
 }
 
 impl Overview {
     fn render_overview(&self, ctx: &Context<Self>) -> Html {
-        match &ctx.props().endpoints {
-            Some(endpoints) => self.render_endpoints(endpoints),
-            None => html! {
-                <div>{"Loading..."}</div>
-            },
-        }
+        self.render_endpoints(&ctx.props().endpoints)
     }
 
     fn render_endpoints(&self, endpoints: &EndpointInformation) -> Html {
