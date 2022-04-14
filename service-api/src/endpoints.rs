@@ -61,28 +61,3 @@ pub struct Endpoints {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kafka_bootstrap_servers: Option<String>,
 }
-
-impl Endpoints {
-    pub fn publicize(&self) -> Endpoints {
-        Endpoints {
-            coap: None,
-            http: None,
-            mqtt: None,
-            mqtt_ws: None,
-            mqtt_ws_browser: None,
-            mqtt_integration: None,
-            mqtt_integration_ws: None,
-            mqtt_integration_ws_browser: None,
-            websocket_integration: None,
-            sso: self.sso.clone(),
-            api: self.api.clone(),
-            console: self.console.clone(),
-            issuer_url: self.issuer_url.clone(),
-            redirect_url: None,
-            registry: self.registry.clone(),
-            command_url: None,
-            kafka_bootstrap_servers: None,
-            local_certs: false,
-        }
-    }
-}
