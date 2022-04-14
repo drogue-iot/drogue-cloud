@@ -24,6 +24,7 @@ impl IntoPropValue<openid::Config> for &LoginInformation {
         openid::Config {
             client_id: self.backend.openid.client_id.clone(),
             issuer_url: self.backend.openid.issuer_url.clone(),
+            additional: Default::default(),
         }
     }
 }
