@@ -33,7 +33,7 @@ pub async fn get_info(
 
 #[get("/drogue-endpoints")]
 pub async fn get_public_endpoints(endpoints: web::Data<Endpoints>) -> impl Responder {
-    HttpResponse::Ok().json(endpoints.publicize())
+    HttpResponse::Ok().json(endpoints)
 }
 
 #[get("/drogue-version")]
