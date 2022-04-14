@@ -249,7 +249,8 @@ impl Component for Console {
                             redirect = {Router::redirect(|_|AppRoute::Overview)}
                             render = {Router::render(move |switch: AppRoute| {
                                 match switch {
-                                    AppRoute::Overview => html!{<pages::Overview endpoints={endpoints.clone()}/>},
+                                    AppRoute::Overview => html!{<pages::Overview
+                                        endpoints={endpoints.clone()}/>},
                                     AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index
                                         backend={backend.clone()}
                                     />},
