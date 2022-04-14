@@ -5,6 +5,8 @@ set -x
 set -o pipefail
 
 : "${API_URL:=http://localhost:8011}"
+: "${ISSUER_URL:=http://localhost:8012}"
+: "${CLIENT_ID:=drogue}"
 : "${BACKEND_JSON:="{}"}"
 : "${BACKEND_JSON_FILE:=/etc/config/login/backend.json}"
 
@@ -15,7 +17,12 @@ if [ -f "$BACKEND_JSON_FILE" ]; then
     BACKEND_JSON="$(cat "$BACKEND_JSON_FILE")"
 fi
 
+# inject backend URL
 echo "$BACKEND_JSON" | jq --arg url "$API_URL" '. + {url: $url}' | tee /endpoints/backend.json
+
+# inject oauth2 information
+echo "$BACKEND_JSON" | jq --arg url "$CLIENT_ID" '. + {openid: {client_id: $url}}' | tee /endpoints/backend.json
+echo "$BACKEND_JSON" | jq --arg url "$ISSUER_URL" '. + {openid: {issuer_url: $url}}' | tee /endpoints/backend.json
 
 LOGIN_NOTE=/etc/config/login/note.html
 if [ -f "$LOGIN_NOTE" ]; then
