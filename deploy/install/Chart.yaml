@@ -19,24 +19,24 @@ kubeVersion: ">= 1.19.0-0"
 
 dependencies:
   - name: drogue-cloud-common
-    version: ^0.5.0-alpha1
+    version: ^0.6.0-alpha1
     repository: file://../helm/charts/drogue-cloud-common
   - name: drogue-cloud-core
-    version: ^0.5.0-alpha1
+    version: ^0.6.0-alpha1
     alias: drogueCloudCore
     repository: file://../helm/charts/drogue-cloud-core
   - name: drogue-cloud-metrics
-    version: ^0.5.0-alpha1
+    version: ^0.6.0-alpha1
     alias: drogueCloudMetrics
     condition: drogueCloudMetrics.enabled, global.drogueCloudMetrics.enabled
     repository: file://../helm/charts/drogue-cloud-metrics
   - name: drogue-cloud-examples
-    version: ^0.5.0-alpha1
+    version: ^0.6.0-alpha1
     alias: drogueCloudExamples
     condition: drogueCloudExamples.enabled, global.drogueCloudExamples.enabled
     repository: file://../helm/charts/drogue-cloud-examples
   - name: drogue-cloud-twin
-    version: ^0.5.0-alpha1
+    version: ^0.6.0-alpha1
     alias: drogueCloudTwin
     condition: drogueCloudTwin.enabled, global.drogueCloudTwin.enabled
     repository: file://../helm/charts/drogue-cloud-twin
