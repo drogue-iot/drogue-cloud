@@ -1,9 +1,9 @@
-use crate::{backend::BackendInformation, utils::ToHtml};
+use crate::{backend::BackendInformation, console::AppRoute, utils::ToHtml};
 use patternfly_yew::*;
 use std::collections::HashMap;
 use yew::prelude::*;
-use yew_oauth2::agent::LoginOptions;
 use yew_oauth2::{openid, prelude::*};
+use yew_router::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -34,6 +34,37 @@ impl Component for Placeholder {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        let login = self.render_login(&ctx);
+
+        html!(
+            <Router<AppRoute, ()>
+                redirect = {Router::redirect(|_|AppRoute::Overview)}
+                render = {Router::render(move |switch: AppRoute| {
+                    match switch {
+                        AppRoute::Overview => { login.clone() },
+                        _ => {
+                            html!(<openid::RouterRedirect<AppRoute> logout={AppRoute::Overview} />)
+                        }
+                    }
+                })}
+            />
+        )
+    }
+}
+
+impl Placeholder {
+    fn default_login_note() -> Html {
+        html! (
+            <>
+                <p>{"This is the login to the Drogue IoT console."}</p>
+                <List r#type={ListType::Inline}>
+                    <a href="https://drogue.io" target="_blank">{"Learn more"}</a>
+                </List>
+            </>
+        )
+    }
+
+    fn render_login(&self, ctx: &Context<Self>) -> Html {
         let header = html! {<> <img src="/images/logo.svg" /> </>};
 
         let footer = ctx
@@ -46,7 +77,8 @@ impl Component for Placeholder {
 
         let onclick = ctx.link().callback(|_| Msg::Login);
         let title = html_nested! {<Title size={Size::XXLarge}>{"Login to the console"}</Title>};
-        html! {
+
+        html! (
             <>
                 <Background filter="contrast(65%) brightness(80%)"/>
                 <Login
@@ -74,20 +106,7 @@ impl Component for Placeholder {
                     </LoginMain>
                 </Login>
             </>
-        }
-    }
-}
-
-impl Placeholder {
-    fn default_login_note() -> Html {
-        html! {
-            <>
-                <p>{"This is the login to the Drogue IoT console."}</p>
-                <List r#type={ListType::Inline}>
-                    <a href="https://drogue.io" target="_blank">{"Learn more"}</a>
-                </List>
-            </>
-        }
+        )
     }
 
     fn render_main_footer(&self, ctx: &Context<Self>) -> Html {
@@ -104,13 +123,13 @@ impl Placeholder {
             .collect();
         let band: Children = Children::new(band);
 
-        return html! {
+        html! (
             <LoginMainFooter
                     links={self.idp_links(ctx)}
                     band={band}
                 >
             </LoginMainFooter>
-        };
+        )
     }
 
     fn idp_links(&self, ctx: &Context<Self>) -> ChildrenWithProps<LoginMainFooterLink> {

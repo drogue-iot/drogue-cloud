@@ -43,7 +43,7 @@ uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
 wasm-logger = "0.2"
 yew = "0.19"
 yew-agent = "0.1"
-yew-oauth2 = { version = "0.2.0", features = ["openid"] }
+yew-oauth2 = { version = "0.2.0", features = ["openid", "router"] }
 yew-router = { version = "0.16.1", package = "yew-router-nested" }
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
@@ -102,6 +102,6 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "78
 #yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" }
 
 #yew-oauth2 = { path = "../../yew-oauth2" }
-yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "d88ef4d8ae57a816305718958c039f295f406908" } # FIXME: awaiting release
+yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "0045e462ef11890365b458d85bbe0574d054b4fc" } # FIXME: awaiting release
 
 openidconnect = { git = "https://github.com/ctron/openidconnect-rs", rev = "6ca4a9ab9de35600c44a8b830693137d4769edf4" } # FIXME: https://github.com/ramosbugs/openidconnect-rs/pull/58
