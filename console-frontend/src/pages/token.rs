@@ -37,8 +37,12 @@ impl Component for CurrentToken {
         let token = self
             .auth
             .get()
-            .and_then(|auth| auth.access_token())
-            .map(str::to_string)
+            .and_then(|auth| match auth {
+                OAuth2Context::Authenticated(Authentication { refresh_token, .. }) => {
+                    refresh_token.clone()
+                }
+                _ => None,
+            })
             .unwrap_or_default();
 
         html! (
