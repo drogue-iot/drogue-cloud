@@ -370,7 +370,7 @@ quick: build build-images tag-images
 # A shortcut for building and pushing the frontend only
 #
 .PHONY: frontend
-frontend: host-build
+frontend:
 	make -C console-frontend images
 
 
