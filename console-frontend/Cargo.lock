@@ -2924,7 +2924,7 @@ dependencies = [
 [[package]]
 name = "yew-oauth2"
 version = "0.2.0"
-source = "git+https://github.com/ctron/yew-oauth2?rev=d88ef4d8ae57a816305718958c039f295f406908#d88ef4d8ae57a816305718958c039f295f406908"
+source = "git+https://github.com/ctron/yew-oauth2?rev=0045e462ef11890365b458d85bbe0574d054b4fc#0045e462ef11890365b458d85bbe0574d054b4fc"
 dependencies = [
  "async-trait",
  "gloo-storage",
@@ -2942,6 +2942,7 @@ dependencies = [
  "web-sys",
  "yew",
  "yew-agent",
+ "yew-router-nested",
 ]
 
 [[package]]
