@@ -52,6 +52,9 @@ pub struct Config {
 
     #[serde(default)]
     pub workers: Option<usize>,
+
+    #[serde(default = "defaults::max_json_payload_size")]
+    pub max_json_payload_size: usize,
 }
 
 #[macro_export]
@@ -183,8 +186,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let sender = KafkaEventSender::new(config.kafka_sender)
         .context("Unable to create Kafka event sender")?;
 
-    let max_json_payload_size = 64 * 1024;
-
     let keycloak_admin_client = KeycloakAdminClient::new(config.keycloak)?;
 
     let service = service::PostgresManagementService::new(
@@ -200,6 +201,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
+    let max_json_payload_size = config.max_json_payload_size;
     let db_service = service.clone();
     let main = HttpServer::new(move || {
         let auth = AuthN {

@@ -736,6 +736,7 @@ fn main() {
 
                     let config = drogue_cloud_device_management_service::Config {
                         workers: Some(1),
+                        max_json_payload_size: 65536,
                         enable_access_token: true,
                         user_auth: user_auth.clone(),
                         oauth: oauth.clone(),
