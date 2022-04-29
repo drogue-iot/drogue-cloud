@@ -7,13 +7,13 @@ use drogue_cloud_service_api::{
     health::HealthChecked,
     webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
 };
+use drogue_cloud_service_common::app::run_main;
 use drogue_cloud_service_common::{
     defaults,
-    health::{HealthServer, HealthServerConfig},
+    health::HealthServerConfig,
     openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
-use futures::TryFutureExt;
 use serde::Deserialize;
 use service::AuthenticationServiceConfig;
 
@@ -120,16 +120,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        let health = HealthServer::new(
-            health,
-            vec![Box::new(data_service)],
-            Some(prometheus::default_registry().clone()),
-        );
-        futures::try_join!(health.run(), main.err_into())?;
-    } else {
-        futures::try_join!(main)?;
-    }
+    run_main(main, config.health, vec![Box::new(data_service)]).await?;
 
     // exiting
 

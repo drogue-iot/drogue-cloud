@@ -1,3 +1,9 @@
+use crate::health::{HealthServer, HealthServerConfig};
+use drogue_cloud_service_api::health::HealthChecked;
+use futures::FutureExt;
+use futures_util::select;
+use std::future::Future;
+
 #[macro_export]
 macro_rules! app {
     () => {
@@ -83,4 +89,25 @@ fn init_tracing(_: &str) {
 fn init_no_tracing() {
     env_logger::init();
     log::info!("Tracing is not enabled");
+}
+
+/// Run a standard main loop.
+pub async fn run_main(
+    main: impl Future<Output = Result<(), impl Into<anyhow::Error> + Send + Sync + 'static>>,
+    health: Option<HealthServerConfig>,
+    checks: Vec<Box<dyn HealthChecked>>,
+) -> anyhow::Result<()> {
+    if let Some(health) = health {
+        let health =
+            HealthServer::new(health, checks, Some(prometheus::default_registry().clone()));
+
+        select! {
+            _ = health.run().fuse() => (),
+            _ = main.fuse() => (),
+        }
+    } else {
+        main.await.map_err(|err| err.into())?;
+    }
+
+    Ok(())
 }

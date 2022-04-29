@@ -1,4 +1,4 @@
-use actix_http::{HttpMessage, Request};
+use actix_http::Request;
 use actix_web::{
     dev::{Service, ServiceResponse},
     http::StatusCode,
@@ -11,9 +11,8 @@ use drogue_cloud_database_common::{
     Client,
 };
 use drogue_cloud_registry_events::Event;
-use drogue_cloud_service_api::auth::user::UserInformation;
-use drogue_cloud_service_api::webapp as actix_web;
-use drogue_cloud_service_common::openid::ExtendedClaims;
+use drogue_cloud_service_api::{auth::user::UserInformation, webapp as actix_web};
+use drogue_cloud_test_common::call::call_http;
 use futures::TryStreamExt;
 use log::LevelFilter;
 use serde_json::{json, Value};
@@ -150,36 +149,6 @@ where
     }
 
     Ok(result)
-}
-
-#[allow(dead_code)]
-pub fn user<S: AsRef<str>>(id: S) -> UserInformation {
-    let claims: ExtendedClaims = serde_json::from_value(json!({
-        "sub": id.as_ref(),
-        "iss": "drogue:iot:test",
-        "aud": "drogue",
-        "exp": 0,
-        "iat": 0,
-    }))
-    .unwrap();
-
-    UserInformation::Authenticated(claims.into())
-}
-
-#[allow(dead_code)]
-pub async fn call_http<S, B, E>(
-    app: &S,
-    user: &UserInformation,
-    req: actix_web::test::TestRequest,
-) -> S::Response
-where
-    S: Service<Request, Response = ServiceResponse<B>, Error = E>,
-    E: std::fmt::Debug,
-{
-    let req = req.to_request();
-    req.extensions_mut().insert(user.clone());
-
-    actix_web::test::call_service(app, req).await
 }
 
 #[allow(dead_code)]

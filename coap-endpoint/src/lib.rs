@@ -8,22 +8,15 @@ mod telemetry;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap::Server;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
-use drogue_cloud_endpoint_common::sender::ExternalClientPoolConfig;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
-};
-use drogue_cloud_endpoint_common::{
     error::EndpointError,
-    sender::DownstreamSender,
+    sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::{KafkaSink, Sink},
 };
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_common::{
-    defaults,
-    health::{HealthServer, HealthServerConfig},
-};
-use futures::{self, TryFutureExt};
+use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
@@ -34,7 +27,7 @@ use telemetry::PublishOptions;
 // in the request, which contains HTTP-like authorization information
 const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
 //
-// Option Number 4210 correspons to the option assigned to carry command information,
+// Option Number 4210 corresponds to the option assigned to carry command information,
 // which is meant for commands to be sent back to the device in the response
 const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
 
@@ -262,16 +255,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         config.command_source_kafka,
     )?;
 
-    if let Some(health) = config.health {
-        let health = HealthServer::new(
-            health,
-            vec![Box::new(command_source)],
-            Some(prometheus::default_registry().clone()),
-        );
-        futures::try_join!(health.run(), device_to_endpoint.err_into())?;
-    } else {
-        futures::try_join!(device_to_endpoint)?;
-    }
+    run_main(
+        device_to_endpoint,
+        config.health,
+        vec![Box::new(command_source)],
+    )
+    .await?;
+
     Ok(())
 }
 

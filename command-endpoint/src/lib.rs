@@ -3,22 +3,21 @@ mod v1alpha1;
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
 use drogue_client::openid::OpenIdTokenProvider;
-use drogue_cloud_endpoint_common::sender::ExternalClientPoolConfig;
-use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::KafkaSink};
-use drogue_cloud_service_api::webapp as actix_web;
-use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
+use drogue_cloud_endpoint_common::{
+    sender::{ExternalClientPoolConfig, UpstreamSender},
+    sink::KafkaSink,
+};
+use drogue_cloud_service_api::{
+    auth::user::authz::Permission, kafka::KafkaClientConfig, webapp as actix_web,
+};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     actix_auth::authorization::AuthZ,
+    app::run_main,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     openid::AuthenticatorConfig,
 };
-use drogue_cloud_service_common::{
-    defaults,
-    health::{HealthServer, HealthServerConfig},
-    openid::Authenticator,
-};
-use futures::TryFutureExt;
+use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
 use serde::Deserialize;
 use serde_json::json;
 use std::str;
@@ -123,13 +122,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(health.run(), main.err_into())?;
-    } else {
-        futures::try_join!(main)?;
-    }
+    run_main(main, config.health, vec![]).await?;
 
     // exiting
 

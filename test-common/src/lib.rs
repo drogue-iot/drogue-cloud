@@ -1,3 +1,6 @@
+#[cfg(feature = "actix")]
+pub mod call;
+
 use anyhow::Context;
 use deadpool::managed::{PoolConfig, Timeouts};
 use serde_json::Value;

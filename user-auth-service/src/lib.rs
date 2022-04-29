@@ -7,15 +7,15 @@ use drogue_cloud_access_token_service::{
 };
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
+    app::run_main,
     defaults,
-    health::{HealthServer, HealthServerConfig},
+    health::HealthServerConfig,
     keycloak::client::KeycloakAdminClient,
     keycloak::KeycloakAdminClientConfig,
     keycloak::KeycloakClient,
     openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
-use futures::TryFutureExt;
 use serde::Deserialize;
 use service::AuthorizationServiceConfig;
 
@@ -118,16 +118,7 @@ where
         main.run()
     };
 
-    if let Some(health) = config.health {
-        let health = HealthServer::new(
-            health,
-            vec![Box::new(data_service)],
-            Some(prometheus::default_registry().clone()),
-        );
-        futures::try_join!(health.run(), main.err_into())?;
-    } else {
-        futures::try_join!(main)?;
-    }
+    run_main(main, config.health, vec![Box::new(data_service)]).await?;
 
     // exiting
 

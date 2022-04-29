@@ -1,0 +1,67 @@
+[package]
+name = "drogue-cloud-device-state-service"
+description = "Device state service"
+version = "0.9.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+actix-cors = "0.6"
+anyhow = "1"
+async-trait = "0.1"
+bytes = "1"
+chrono = { version = "0.4", features = ["serde"] }
+config = "0.12"
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+dotenv = "0.15"
+drogue-client = "0.10"
+env_logger = "0.9"
+futures = "0.3"
+hostname-validator = "1.1.0"
+http = "0.2"
+indexmap = { version = "1", features = ["serde"] }
+log = "0.4"
+pem = "1"
+pin-project = "1"
+prometheus = { version = "^0.13", default-features = false }
+rand = "0.8"
+reqwest = "0.11"
+rust-crypto = "0.2"
+serde = "1"
+serde_json = "1"
+thiserror = "1"
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+tracing = "0.1"
+url = "2"
+uuid = "0.8"
+x509-parser = "0.9"
+
+drogue-cloud-access-token-service = { path = "../access-token-service" }
+drogue-cloud-admin-service = { path = "../admin-service" }
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-service-api = { path = "../service-api", features = ["actix"] }
+drogue-cloud-service-common = { path = "../service-common" }
+
+[dev-dependencies]
+actix-http = "3"
+actix-rt = "2"
+base64 = "0.13"
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+env_logger = "0.9"
+form_urlencoded = "1"
+maplit = "1"
+openid = "0.9"
+serial_test = "0.6"
+testcontainers = "0.12"
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+
+drogue-cloud-test-common = { path = "../test-common", features = ["actix"] }
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]
