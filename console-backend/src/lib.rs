@@ -14,13 +14,13 @@ use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAcce
 use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
+    app::run_main,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
-    health::{HealthServer, HealthServerConfig},
+    health::HealthServerConfig,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{AuthenticatorConfig, TokenConfig},
 };
-use futures::TryFutureExt;
 use info::DemoFetcher;
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
@@ -254,13 +254,9 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(health.run(), main.err_into())?;
-    } else {
-        futures::try_join!(main)?;
-    }
+    run_main(main, config.health, vec![]).await?;
+
+    // done
 
     Ok(())
 }

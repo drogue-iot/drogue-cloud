@@ -10,6 +10,7 @@ members = [
     "console-common",
     "database-common",
     "device-management-service",
+    "device-state-service",
     "ditto-registry-operator",
     "endpoint-common",
     "event-common",

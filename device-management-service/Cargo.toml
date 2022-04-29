@@ -44,7 +44,7 @@ drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-registry-events = { path = "../registry-events" }
-drogue-cloud-admin-service = { path = "../admin-service"  }
+drogue-cloud-admin-service = { path = "../admin-service" }
 drogue-cloud-access-token-service = { path = "../access-token-service" }
 
 drogue-client = "0.10"
@@ -54,16 +54,17 @@ deadpool-postgres = { version = "0.7", features = ["config"] }
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
 
 [dev-dependencies]
-actix-rt = "2"
 actix-http = "3"
-testcontainers = "0.12"
-serial_test = "0.5"
-drogue-cloud-test-common = { path = "../test-common" }
+actix-rt = "2"
 base64 = "0.13"
-openid = "0.9"
-tokio = { version = "1", features = ["full"] }
-maplit = "1"
 form_urlencoded = "1"
+maplit = "1"
+openid = "0.9"
+serial_test = "0.6"
+testcontainers = "0.12"
+tokio = { version = "1", features = ["full"] }
+
+drogue-cloud-test-common = { path = "../test-common", features = ["actix"] }
 
 [features]
 default = ["jaeger"]

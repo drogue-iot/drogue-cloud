@@ -14,3 +14,10 @@ walkdir = "2"
 
 serde = "1"
 serde_json = "1"
+
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+
+[features]
+default = []
+actix = [ "drogue-cloud-service-api/actix" ]

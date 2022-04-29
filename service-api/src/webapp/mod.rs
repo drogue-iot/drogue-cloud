@@ -1,3 +1,4 @@
+pub use actix_http as http;
 pub use actix_rt as rt;
 pub use actix_utils as utils;
 pub use actix_web::*;

@@ -11,13 +11,13 @@ use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
+    app::run_main,
     client::{UserAuthClient, UserAuthClientConfig},
     defaults,
-    health::{HealthServer, HealthServerConfig},
+    health::HealthServerConfig,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{Authenticator, AuthenticatorConfig},
 };
-use futures::TryFutureExt;
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;
 
@@ -233,16 +233,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        let health = HealthServer::new(
-            health,
-            vec![Box::new(service)],
-            Some(prometheus::default_registry().clone()),
-        );
-        futures::try_join!(health.run(), main.err_into())?;
-    } else {
-        futures::try_join!(main)?;
-    }
+    run_main(main, config.health, vec![Box::new(service)]).await?;
 
     // exiting
 

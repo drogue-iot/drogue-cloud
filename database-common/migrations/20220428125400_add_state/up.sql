@@ -1,0 +1,18 @@
+CREATE TABLE sessions
+(
+    ID        UUID                     NOT NULL,
+    LAST_PING TIMESTAMP WITH TIME ZONE NOT NULL,
+
+    PRIMARY KEY (ID)
+);
+
+CREATE TABLE states
+(
+    ID      VARCHAR(255) NOT NULL,
+    SESSION UUID         NOT NULL,
+
+    LOST    BOOLEAN      NOT NULL DEFAULT false,
+
+    PRIMARY KEY (ID),
+    FOREIGN KEY (SESSION) REFERENCES sessions(ID)
+);

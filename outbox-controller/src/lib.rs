@@ -11,11 +11,8 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
-    config::ConfigFromEnv,
-    defaults,
-    health::{HealthServer, HealthServerConfig},
+    app::run_main, config::ConfigFromEnv, defaults, health::HealthServerConfig,
 };
-use futures::TryFutureExt;
 use serde::Deserialize;
 use std::{sync::Arc, time::Duration};
 
@@ -90,13 +87,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(health.run(), source.err_into())?;
-    } else {
-        futures::try_join!(source)?;
-    }
+    run_main(source, config.health, vec![]).await?;
 
     // exiting
 

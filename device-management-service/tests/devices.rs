@@ -1,8 +1,7 @@
 mod common;
 
 use crate::common::{
-    assert_events, assert_resources, call_http, create_app, create_device, init, outbox_retrieve,
-    user,
+    assert_events, assert_resources, create_app, create_device, init, outbox_retrieve,
 };
 use actix_cors::Cors;
 use actix_http::Request;
@@ -14,9 +13,8 @@ use actix_web::{
     web, App, Error,
 };
 use drogue_cloud_admin_service::apps;
-use drogue_cloud_device_management_service::crud;
 use drogue_cloud_device_management_service::{
-    app, endpoints,
+    app, crud, endpoints,
     service::{self},
     WebData,
 };
@@ -25,7 +23,10 @@ use drogue_cloud_service_api::auth::user::UserInformation;
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::keycloak::mock::KeycloakAdminMock;
 use drogue_cloud_service_common::keycloak::{KeycloakAdminClientConfig, KeycloakClient};
-use drogue_cloud_test_common::{client, db};
+use drogue_cloud_test_common::{
+    call::{call_http, user},
+    client, db,
+};
 use http::{header, HeaderValue};
 use maplit::hashmap;
 use serde_json::json;
