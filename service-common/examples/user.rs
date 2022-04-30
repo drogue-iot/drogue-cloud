@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
         client_secret,
         None,
         issuer_url,
-        // "{url}/auth/realms/{realm}/protocol/openid-connect{path}",
+        // "{url}/realms/{realm}/protocol/openid-connect{path}",
     )
     .await
     .map_err(|err| anyhow!("Failed to discover client: {}", err))?;

@@ -70,7 +70,7 @@ impl TokenConfig {
             (Some(issuer_url), _) => Ok(issuer_url.clone()),
             (None, Some(sso_url)) => {
                 // keycloak
-                Ok(sso_url.join(&format!("auth/realms/{realm}", realm = self.realm))?)
+                Ok(sso_url.join(&format!("realms/{realm}", realm = self.realm))?)
             }
             _ => {
                 anyhow::bail!(
@@ -156,7 +156,7 @@ mod test {
         assert!(url.is_ok());
         assert_eq!(
             // sso URL doesn't end with a slash, which makes it drop the last path element
-            "http://foo.bar/baz/auth/realms/drogue",
+            "http://foo.bar/baz/realms/drogue",
             url.unwrap().to_string()
         );
     }
