@@ -29,24 +29,22 @@ impl<'a> Deref for SinkTarget<'a> {
 }
 
 #[async_trait]
-pub trait Sink: Clone + Send + Sync + Debug + 'static {
-    type Error: std::error::Error + Send + 'static;
-
+pub trait Sink: Send + Sync + Debug + 'static {
     #[allow(clippy::needless_lifetimes)]
     /// Publish an event.
     async fn publish<'a>(
         &self,
         target: SinkTarget<'a>,
         event: Event,
-    ) -> Result<PublishOutcome, SinkError<Self::Error>>;
+    ) -> Result<PublishOutcome, SinkError>;
 }
 
 #[derive(Error, Debug)]
-pub enum SinkError<E: std::error::Error + 'static> {
+pub enum SinkError {
     #[error("Event error")]
     Event(#[from] cloudevents::message::Error),
     #[error("Transport error")]
-    Transport(#[source] E),
+    Transport(#[source] Box<dyn std::error::Error + Send>),
     #[error("Target error")]
     Target(#[source] Box<dyn std::error::Error + Send>),
 }

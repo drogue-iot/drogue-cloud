@@ -5,7 +5,6 @@ use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
     error::HttpEndpointError,
     sender::{DownstreamSender, Publish, PublishOutcome, Publisher, DOWNSTREAM_EVENTS_COUNTER},
-    sink::Sink,
 };
 use drogue_cloud_service_api::webapp::{web, HttpResponse};
 
@@ -24,11 +23,7 @@ pub trait HttpCommandSender {
 }
 
 #[async_trait]
-impl<S> HttpCommandSender for DownstreamSender<S>
-where
-    S: Sink + Send + Sync,
-    <S as Sink>::Error: Send,
-{
+impl HttpCommandSender for DownstreamSender {
     #[allow(clippy::needless_lifetimes)]
     async fn publish_and_await<'a, B>(
         &self,

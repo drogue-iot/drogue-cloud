@@ -26,6 +26,7 @@ use prometheus::{CounterVec, Opts};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::Arc;
 use thiserror::Error;
 use tracing::instrument;
 
@@ -192,26 +193,20 @@ pub enum Direction {
 
 /// A sender delivering events upstream, from the cloud to the device.
 #[derive(Debug, Clone)]
-pub struct UpstreamSender<S>
-where
-    S: Sink,
-{
-    sink: S,
+pub struct UpstreamSender {
+    sink: Arc<dyn Sink>,
     instance: String,
     pool: ExternalClientPool,
 }
 
-impl<S> UpstreamSender<S>
-where
-    S: Sink,
-{
+impl UpstreamSender {
     pub fn new<I: Into<String>>(
         instance: I,
-        sink: S,
+        sink: impl Sink,
         config: ExternalClientPoolConfig,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            sink,
+            sink: Arc::new(sink),
             instance: instance.into(),
             pool: ExternalClientPool::new(config),
         })
@@ -220,27 +215,21 @@ where
 
 /// A sender delivering events downstream, from the device to the cloud.
 #[derive(Debug, Clone)]
-pub struct DownstreamSender<S>
-where
-    S: Sink,
-{
-    sink: S,
+pub struct DownstreamSender {
+    sink: Arc<dyn Sink>,
     instance: String,
     pool: ExternalClientPool,
 }
 
-impl<S> DownstreamSender<S>
-where
-    S: Sink,
-{
+impl DownstreamSender {
     pub fn new(
-        sink: S,
+        sink: impl Sink,
         instance: String,
         config: ExternalClientPoolConfig,
     ) -> anyhow::Result<Self> {
         metrics::register(Box::new(DOWNSTREAM_EVENTS_COUNTER.clone()))?;
         Ok(Self {
-            sink,
+            sink: Arc::new(sink),
             instance,
             pool: ExternalClientPool::new(config),
         })
@@ -248,9 +237,9 @@ where
 }
 
 #[derive(Error, Debug)]
-pub enum PublishError<E: std::error::Error + 'static> {
+pub enum PublishError {
     #[error("Sink error")]
-    Sink(#[from] SinkError<E>),
+    Sink(#[from] SinkError),
     #[error("Publish spec error")]
     Spec(#[source] serde_json::Error),
     #[error("Build event error")]
@@ -260,10 +249,7 @@ pub enum PublishError<E: std::error::Error + 'static> {
 }
 
 #[async_trait]
-impl<S> Publisher<S> for DownstreamSender<S>
-where
-    S: Sink,
-{
+impl Publisher for DownstreamSender {
     fn instance(&self) -> String {
         self.instance.clone()
     }
@@ -281,16 +267,13 @@ where
         &self,
         app: &registry::v1::Application,
         event: Event,
-    ) -> Result<PublishOutcome, SinkError<S::Error>> {
+    ) -> Result<PublishOutcome, SinkError> {
         self.sink.publish(SinkTarget::Events(app), event).await
     }
 }
 
 #[async_trait]
-impl<S> Publisher<S> for UpstreamSender<S>
-where
-    S: Sink,
-{
+impl Publisher for UpstreamSender {
     fn instance(&self) -> String {
         self.instance.clone()
     }
@@ -308,16 +291,13 @@ where
         &self,
         app: &registry::v1::Application,
         event: Event,
-    ) -> Result<PublishOutcome, SinkError<S::Error>> {
+    ) -> Result<PublishOutcome, SinkError> {
         self.sink.publish(SinkTarget::Commands(app), event).await
     }
 }
 
 #[async_trait]
-pub trait Publisher<S>
-where
-    S: Sink,
-{
+pub trait Publisher {
     fn instance(&self) -> String;
 
     fn pool(&self) -> ExternalClientPool;
@@ -328,7 +308,7 @@ where
         &self,
         app: &registry::v1::Application,
         event: Event,
-    ) -> Result<PublishOutcome, SinkError<S::Error>>;
+    ) -> Result<PublishOutcome, SinkError>;
 
     #[allow(clippy::needless_lifetimes)]
     #[instrument(
@@ -348,7 +328,7 @@ where
         &self,
         publish: Publish<'a>,
         body: B,
-    ) -> Result<PublishOutcome, PublishError<S::Error>>
+    ) -> Result<PublishOutcome, PublishError>
     where
         B: AsRef<[u8]> + Send + Sync,
     {

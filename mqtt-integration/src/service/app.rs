@@ -1,7 +1,7 @@
 use crate::service::{session::Session, ServiceConfig};
 use async_trait::async_trait;
 use drogue_client::{openid::OpenIdTokenProvider, registry};
-use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
+use drogue_cloud_endpoint_common::sender::UpstreamSender;
 use drogue_cloud_mqtt_common::{
     error::ServerError,
     mqtt::{self, *},
@@ -17,19 +17,16 @@ use drogue_cloud_service_common::{
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
-pub struct App<S: SenderSink> {
+pub struct App {
     pub authenticator: Option<Authenticator>,
     pub user_auth: Option<Arc<UserAuthClient>>,
     pub config: ServiceConfig,
-    pub sender: UpstreamSender<S>,
+    pub sender: UpstreamSender,
     pub client: reqwest::Client,
     pub registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
 }
 
-impl<S> App<S>
-where
-    S: SenderSink,
-{
+impl App {
     /// Authenticate a connection from a connect packet
     async fn authenticate(
         &self,
@@ -87,14 +84,11 @@ where
 }
 
 #[async_trait(?Send)]
-impl<S> mqtt::Service<Session<S>> for App<S>
-where
-    S: SenderSink,
-{
+impl mqtt::Service<Session> for App {
     async fn connect<'a>(
         &'a self,
         connect: Connect<'a>,
-    ) -> Result<ConnectAck<Session<S>>, ServerError> {
+    ) -> Result<ConnectAck<Session>, ServerError> {
         log::debug!("Processing connect request");
 
         if !connect.clean_session() {

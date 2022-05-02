@@ -2,19 +2,19 @@ mod cache;
 mod dialect;
 mod inbox;
 
-use crate::service::session::dialect::DefaultTopicParser;
-use crate::{auth::DeviceAuthenticator, config::EndpointConfig, CONNECTIONS_COUNTER};
+use crate::{
+    auth::DeviceAuthenticator, config::EndpointConfig,
+    service::session::dialect::DefaultTopicParser, CONNECTIONS_COUNTER,
+};
 use async_trait::async_trait;
 use cache::DeviceCache;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::sender::ToPublishId;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
     sender::{
-        self, DownstreamSender, PublishOptions, PublishOutcome, Publisher,
+        self, DownstreamSender, PublishOptions, PublishOutcome, Publisher, ToPublishId,
         DOWNSTREAM_EVENTS_COUNTER,
     },
-    sink::Sink,
 };
 use drogue_cloud_mqtt_common::{
     error::PublishError,
@@ -32,11 +32,8 @@ use std::{
 use tracing::instrument;
 
 #[derive(Clone)]
-pub struct Session<S>
-where
-    S: Sink,
-{
-    sender: DownstreamSender<S>,
+pub struct Session {
+    sender: DownstreamSender,
     application: registry::v1::Application,
     device: Arc<registry::v1::Device>,
     dialect: registry::v1::MqttDialect,
@@ -48,14 +45,11 @@ where
     id: Id,
 }
 
-impl<S> Session<S>
-where
-    S: Sink,
-{
+impl Session {
     pub fn new(
         config: &EndpointConfig,
         auth: DeviceAuthenticator,
-        sender: DownstreamSender<S>,
+        sender: DownstreamSender,
         sink: mqtt::Sink,
         application: registry::v1::Application,
         dialect: registry::v1::MqttDialect,
@@ -142,10 +136,7 @@ where
 }
 
 #[async_trait(? Send)]
-impl<S> mqtt::Session for Session<S>
-where
-    S: Sink,
-{
+impl mqtt::Session for Session {
     #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
         let content_type = publish
