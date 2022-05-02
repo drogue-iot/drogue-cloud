@@ -4,11 +4,7 @@ mod telemetry;
 mod ttn;
 mod x509;
 
-use actix_web::{
-    middleware,
-    web::{self, Data},
-    App, HttpResponse, HttpServer, Responder,
-};
+use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -102,7 +98,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()));
 
-        let app = app.app_data(Data::new(device_authenticator.clone()));
+        let app = app.app_data(web::Data::new(device_authenticator.clone()));
 
         app.service(web::resource("/").route(web::get().to(index)))
             // the standard endpoint
