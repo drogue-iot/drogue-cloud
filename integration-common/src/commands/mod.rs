@@ -7,7 +7,6 @@ use drogue_cloud_endpoint_common::{
         IntoPublishId, Publish, PublishOptions, PublishOutcome, Publisher, ToPublishId,
         UpstreamSender,
     },
-    sink::Sink,
 };
 use drogue_cloud_service_api::webapp::HttpResponse;
 use serde::Deserialize;
@@ -22,18 +21,15 @@ pub struct CommandOptions {
 }
 
 /// Main entrypoint for processing commands
-pub async fn process_command<S>(
+pub async fn process_command(
     application: registry::v1::Application,
     device: registry::v1::Device,
     gateways: Vec<registry::v1::Device>,
-    sender: &UpstreamSender<S>,
+    sender: &UpstreamSender,
     client: reqwest::Client,
     opts: CommandOptions,
     body: bytes::Bytes,
-) -> Result<HttpResponse, HttpEndpointError>
-where
-    S: Sink,
-{
+) -> Result<HttpResponse, HttpEndpointError> {
     if !device.attribute::<registry::v1::DeviceEnabled>() {
         return Ok(HttpResponse::NotAcceptable().finish());
     }

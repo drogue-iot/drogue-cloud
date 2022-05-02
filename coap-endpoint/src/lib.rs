@@ -13,7 +13,7 @@ use drogue_cloud_endpoint_common::{
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
     error::EndpointError,
     sender::{DownstreamSender, ExternalClientPoolConfig},
-    sink::{KafkaSink, Sink},
+    sink::KafkaSink,
 };
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
@@ -56,12 +56,8 @@ pub struct Config {
 }
 
 #[derive(Clone, Debug)]
-pub struct App<S>
-where
-    S: Sink + Send,
-    <S as Sink>::Error: Send,
-{
-    pub downstream: DownstreamSender<S>,
+pub struct App {
+    pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
 }
@@ -142,14 +138,7 @@ fn params(request: &CoapRequest<SocketAddr>) -> Params {
     Ok((path_segments, queries, auth))
 }
 
-async fn publish_handler<S>(
-    mut request: CoapRequest<SocketAddr>,
-    app: App<S>,
-) -> Option<CoapResponse>
-where
-    S: Sink + Send,
-    <S as Sink>::Error: Send,
-{
+async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Option<CoapResponse> {
     log::debug!("CoAP request: {:?}", request);
 
     let mut path_segments: Vec<String> = Vec::new();

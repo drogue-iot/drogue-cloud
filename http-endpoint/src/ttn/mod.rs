@@ -11,7 +11,6 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     error::{EndpointError, HttpEndpointError},
     sender::{self, DownstreamSender, PublishId, PublishIdPair, Publisher},
-    sink::Sink,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::{
@@ -54,18 +53,15 @@ pub struct Uplink {
     pub payload_fields: Value,
 }
 
-async fn publish_uplink<S>(
-    downstream: web::Data<DownstreamSender<S>>,
+async fn publish_uplink(
+    downstream: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     opts: PublishCommonOptions,
     req: HttpRequest,
     cert: Option<ClientCertificateChain>,
     body: web::Bytes,
     uplink: Uplink,
-) -> Result<HttpResponse, HttpEndpointError>
-where
-    S: Sink,
-{
+) -> Result<HttpResponse, HttpEndpointError> {
     let device_id = uplink.device_id;
 
     let (application, device, r#as) = match auth
@@ -152,8 +148,8 @@ where
 
 #[allow(clippy::too_many_arguments)]
 #[inline]
-async fn send_uplink<B, S>(
-    downstream: web::Data<DownstreamSender<S>>,
+async fn send_uplink<B>(
+    downstream: web::Data<DownstreamSender>,
     application: registry::v1::Application,
     device: PublishId,
     sender: PublishId,
@@ -166,7 +162,6 @@ async fn send_uplink<B, S>(
 ) -> Result<HttpResponse, HttpEndpointError>
 where
     B: AsRef<[u8]> + Send + Sync,
-    S: Sink,
 {
     Ok(downstream
         .publish_http_default(

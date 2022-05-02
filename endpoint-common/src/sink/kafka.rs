@@ -72,7 +72,7 @@ impl KafkaSink {
         topic: String,
         key: String,
         message_record: MessageRecord,
-    ) -> Result<PublishOutcome, SinkError<KafkaSinkError>> {
+    ) -> Result<PublishOutcome, SinkError> {
         let record = FutureRecord::<String, Vec<u8>>::to(&topic)
             .key(&key)
             .message_record(&message_record);
@@ -94,10 +94,12 @@ impl KafkaSink {
                 // received outcome & outcome failed
                 Ok(Err((err, _))) => {
                     log::debug!("Kafka transport error: {}", err);
-                    Err(SinkError::Transport(err.into()))
+                    Err(SinkError::Transport(Box::new(err)))
                 }
                 // producer closed before delivered
-                Err(oneshot::Canceled) => Err(SinkError::Transport(KafkaSinkError::Canceled)),
+                Err(oneshot::Canceled) => {
+                    Err(SinkError::Transport(Box::new(KafkaSinkError::Canceled)))
+                }
             },
             // failed to queue up
             Err((KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull), _)) => {
@@ -106,7 +108,7 @@ impl KafkaSink {
             // some other queue error
             Err((err, _)) => {
                 log::debug!("Failed to send: {}", err);
-                Err(SinkError::Transport(err.into()))
+                Err(SinkError::Transport(Box::new(err)))
             }
         }
     }
@@ -134,8 +136,6 @@ impl KafkaSink {
 
 #[async_trait]
 impl Sink for KafkaSink {
-    type Error = KafkaSinkError;
-
     #[allow(clippy::needless_lifetimes)]
     #[instrument(level = "debug", skip_all, fields(
         application=%target.metadata.name,
@@ -146,10 +146,10 @@ impl Sink for KafkaSink {
         &self,
         target: SinkTarget<'a>,
         event: Event,
-    ) -> Result<PublishOutcome, SinkError<Self::Error>> {
+    ) -> Result<PublishOutcome, SinkError> {
         if !self.check_ready(&target) {
             log::debug!("Kafka topic is not ready yet");
-            return Err(SinkError::Transport(KafkaSinkError::NotReady));
+            return Err(SinkError::Transport(Box::new(KafkaSinkError::NotReady)));
         }
 
         let topic = match target {

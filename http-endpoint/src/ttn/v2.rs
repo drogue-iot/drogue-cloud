@@ -6,23 +6,19 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     error::{EndpointError, HttpEndpointError},
     sender::DownstreamSender,
-    sink::Sink,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::webapp::{web, HttpRequest, HttpResponse};
 use drogue_ttn::v2;
 
-pub async fn publish_v2<S>(
-    sender: web::Data<DownstreamSender<S>>,
+pub async fn publish_v2(
+    sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     web::Query(opts): web::Query<PublishCommonOptions>,
     req: HttpRequest,
     body: web::Bytes,
     cert: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError>
-where
-    S: Sink,
-{
+) -> Result<HttpResponse, HttpEndpointError> {
     let uplink: v2::Uplink = serde_json::from_slice(&body).map_err(|err| {
         log::info!("Failed to decode payload: {}", err);
         EndpointError::InvalidFormat {

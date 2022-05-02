@@ -4,14 +4,19 @@ pub mod service;
 use crate::service::{DeviceStateService, PostgresServiceConfiguration};
 use actix_web::{web, App, HttpServer};
 use anyhow::Context;
+use drogue_cloud_endpoint_common::{
+    sender::{DownstreamSender, ExternalClientPoolConfig},
+    sink::KafkaSink,
+};
 use drogue_cloud_service_api::{
     health::HealthChecked,
+    kafka::KafkaClientConfig,
     webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
 };
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     app::run_main,
-    client::{UserAuthClient, UserAuthClientConfig},
+    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::HealthServerConfig,
     openid::AuthenticatorConfig,
@@ -38,11 +43,20 @@ pub struct Config {
     #[serde(flatten)]
     pub service_config: PostgresServiceConfiguration,
 
+    pub instance: String,
+    #[serde(default = "defaults::check_kafka_topic_ready")]
+    pub check_kafka_topic_ready: bool,
+    pub kafka_downstream_config: KafkaClientConfig,
+    #[serde(default)]
+    pub endpoint_pool: ExternalClientPoolConfig,
+
     #[serde(default)]
     pub workers: Option<usize>,
 
     #[serde(default)]
     pub max_json_payload_size: usize,
+
+    pub registry: RegistryConfig,
 }
 
 #[macro_export]
@@ -91,9 +105,26 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         None
     };
 
+    // set up registry client
+    let registry = config.registry.into_client().await?;
+
     let mut checks = Vec::<Box<dyn HealthChecked>>::new();
 
-    let service = service::PostgresDeviceStateService::new(config.service_config)?;
+    // downstream sender
+
+    let sender = DownstreamSender::new(
+        KafkaSink::from_config(
+            config.kafka_downstream_config,
+            config.check_kafka_topic_ready,
+        )?,
+        config.instance,
+        config.endpoint_pool,
+    )?;
+
+    // service
+
+    let service =
+        service::PostgresDeviceStateService::new(config.service_config, sender, registry)?;
     checks.push(Box::new(service.clone()));
 
     let service: Arc<dyn DeviceStateService> = Arc::new(service);

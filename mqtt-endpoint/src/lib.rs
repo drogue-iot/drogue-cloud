@@ -59,6 +59,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     )?;
 
     // run
+
     if let Some(health) = config.health {
         metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
         // health server

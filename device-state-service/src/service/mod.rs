@@ -3,12 +3,19 @@ mod error;
 
 pub use self::config::*;
 pub use error::*;
+use std::sync::Arc;
 
+use crate::endpoints::delete;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use deadpool_postgres::{Pool, Transaction};
+use drogue_client::openid::TokenProvider;
+use drogue_client::registry;
 use drogue_cloud_database_common::{Client, DatabaseService};
+use drogue_cloud_endpoint_common::sender::{DownstreamSender, Publish, PublishId, Publisher};
+use drogue_cloud_endpoint_common::sink::Sink;
 use drogue_cloud_service_api::health::HealthChecked;
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio_postgres::NoTls;
 use uuid::Uuid;
@@ -64,22 +71,30 @@ pub struct PingResponse {
 #[derive(Clone)]
 pub struct PostgresDeviceStateService {
     pool: Pool,
+    sender: DownstreamSender,
+    registry: Arc<registry::v1::Client<dyn TokenProvider<Error = impl std::error::Error>>>,
     timeout: Duration,
 }
 
 impl PostgresDeviceStateService {
-    pub fn new(config: PostgresServiceConfiguration) -> anyhow::Result<Self> {
+    pub fn new(
+        config: PostgresServiceConfiguration,
+        sender: DownstreamSender,
+        registry: registry::v1::Client<impl TokenProvider>,
+    ) -> anyhow::Result<Self> {
         let pool = config.pg.create_pool(NoTls)?;
         Ok(Self {
             pool,
+            sender,
             timeout: Duration::seconds(10),
         })
     }
 
     #[doc(hidden)]
-    pub fn for_testing(pool: Pool) -> Self {
+    pub fn for_testing(pool: Pool, sender: DownstreamSender) -> Self {
         Self {
             pool,
+            sender,
             timeout: Duration::seconds(10),
         }
     }
@@ -126,7 +141,6 @@ INSERT INTO
 
         let r = c
             .query_opt(
-                // FIXME: only insert when active session is available
                 r#"
 INSERT INTO
     states
@@ -155,6 +169,7 @@ RETURNING
                     true => CreateResponse::Occupied,
                 })
             }
+            // FIXME: this is more of an internal error
             None => Err(ServiceError::NotInitialized),
         }
     }
@@ -278,7 +293,28 @@ FOR UPDATE SKIP LOCKED
     async fn prune_session(&self, t: Transaction<'_>, id: Uuid) -> Result<(), ServiceError> {
         log::info!("Pruning session: {id}");
 
-        // FIXME: implement sending out events
+        let deleted = t
+            .query_raw(
+                r#"
+DELETE FROM
+    states
+WHERE
+    SESSION = $1
+RETURNING
+    ID
+"#,
+                &[&id],
+            )
+            .await?;
+
+        let mut deleted = Box::pin(deleted);
+
+        while let Some(row) = deleted.next().await.transpose()? {
+            let id: String = row.try_get("ID")?;
+            log::info!("Destroying state: {}", id);
+            // FIXME: send event
+            self.send_event(&id).await?;
+        }
 
         t.execute(
             r#"
@@ -292,6 +328,28 @@ WHERE
         .await?;
 
         t.commit().await?;
+
+        Ok(())
+    }
+
+    async fn send_event(
+        &self,
+        id: &str,
+        application: &str,
+        device: &str,
+    ) -> Result<(), ServiceError> {
+        self.sender
+            .publish(
+                Publish {
+                    application: &Default::default(),
+                    device: PublishId {},
+                    sender: PublishId {},
+                    channel: "".to_string(),
+                    options: Default::default(),
+                },
+                vec![],
+            )
+            .await?;
 
         Ok(())
     }

@@ -5,7 +5,6 @@ use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
     error::EndpointError,
     sender::{DownstreamSender, Publish, PublishOutcome, Publisher},
-    sink::Sink,
 };
 use std::net::SocketAddr;
 
@@ -21,11 +20,7 @@ pub trait CoapCommandSender {
 }
 
 #[async_trait]
-impl<S> CoapCommandSender for DownstreamSender<S>
-where
-    S: Sink + Send + Sync,
-    <S as Sink>::Error: Send,
-{
+impl CoapCommandSender for DownstreamSender {
     async fn publish_and_await<'a>(
         &self,
         publish: Publish<'a>,

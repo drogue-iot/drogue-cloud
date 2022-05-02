@@ -11,19 +11,17 @@ pub struct HttpSink {
 
 #[async_trait]
 impl Sink for HttpSink {
-    type Error = reqwest::Error;
-
     #[allow(clippy::needless_lifetimes)]
     async fn publish<'a>(
         &self,
         _target: SinkTarget<'a>,
         event: Event,
-    ) -> Result<PublishOutcome, SinkError<Self::Error>> {
+    ) -> Result<PublishOutcome, SinkError> {
         let response =
             cloudevents::binding::reqwest::event_to_request(event, self.client.post(&self.sink))?
                 .send()
                 .await
-                .map_err(SinkError::Transport)?;
+                .map_err(|err| SinkError::Transport(Box::new(err)))?;
 
         log::debug!("Publish result: {:?}", response);
 

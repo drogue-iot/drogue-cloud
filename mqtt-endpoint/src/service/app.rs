@@ -5,7 +5,6 @@ use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
     sender::DownstreamSender,
-    sink::Sink,
     x509::{ClientCertificateChain, ClientCertificateRetriever},
 };
 use drogue_cloud_mqtt_common::{
@@ -17,20 +16,14 @@ use std::fmt::Debug;
 use tracing::instrument;
 
 #[derive(Clone, Debug)]
-pub struct App<S>
-where
-    S: Sink,
-{
+pub struct App {
     pub config: EndpointConfig,
-    pub downstream: DownstreamSender<S>,
+    pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
 }
 
-impl<S> App<S>
-where
-    S: Sink,
-{
+impl App {
     /// authenticate a client
     #[instrument]
     pub async fn authenticate(
@@ -63,15 +56,12 @@ where
 }
 
 #[async_trait(?Send)]
-impl<S> Service<Session<S>> for App<S>
-where
-    S: Sink,
-{
+impl Service<Session> for App {
     #[instrument]
     async fn connect<'a>(
         &'a self,
         mut connect: Connect<'a>,
-    ) -> Result<ConnectAck<Session<S>>, ServerError> {
+    ) -> Result<ConnectAck<Session>, ServerError> {
         log::info!("new connection: {:?}", connect);
 
         if !connect.clean_session() {
@@ -108,7 +98,7 @@ where
                     None => Default::default(),
                 };
 
-                let session = Session::<S>::new(
+                let session = Session::new(
                     &self.config,
                     self.authenticator.clone(),
                     self.downstream.clone(),

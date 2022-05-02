@@ -15,11 +15,7 @@ use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
     webapp::{self as actix_web, opentelemetry::RequestTracing, prom::PrometheusMetricsBuilder},
 };
-use drogue_cloud_service_common::{
-    defaults,
-    health::{HealthServer, HealthServerConfig},
-};
-use futures::TryFutureExt;
+use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -105,20 +101,19 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
             .service(
                 web::scope("/v1")
                     .service(
-                        web::resource("/{channel}")
-                            .route(web::post().to(telemetry::publish_plain::<KafkaSink>)),
+                        web::resource("/{channel}").route(web::post().to(telemetry::publish_plain)),
                     )
                     .service(
                         web::resource("/{channel}/{suffix:.*}")
-                            .route(web::post().to(telemetry::publish_tail::<KafkaSink>)),
+                            .route(web::post().to(telemetry::publish_tail)),
                     ),
             )
             // The Things Network variant
             .service(
                 web::scope("/ttn")
-                    .route("/", web::post().to(ttn::publish_v2::<KafkaSink>))
-                    .route("/v2", web::post().to(ttn::publish_v2::<KafkaSink>))
-                    .route("/v3", web::post().to(ttn::publish_v3::<KafkaSink>)),
+                    .route("/", web::post().to(ttn::publish_v2))
+                    .route("/v2", web::post().to(ttn::publish_v2))
+                    .route("/v3", web::post().to(ttn::publish_v3)),
             )
     })
     .on_connect(|con, ext| {
@@ -176,16 +171,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        let health = HealthServer::new(
-            health,
-            vec![Box::new(command_source)],
-            Some(prometheus::default_registry().clone()),
-        );
-        futures::try_join!(health.run(), http_server.err_into())?;
-    } else {
-        futures::try_join!(http_server)?;
-    }
+    run_main(http_server, config.health, vec![Box::new(command_source)]).await?;
+
+    // done
 
     Ok(())
 }

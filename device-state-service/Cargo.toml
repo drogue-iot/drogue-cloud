@@ -38,9 +38,9 @@ url = "2"
 uuid = "0.8"
 x509-parser = "0.9"
 
-drogue-cloud-access-token-service = { path = "../access-token-service" }
 drogue-cloud-admin-service = { path = "../admin-service" }
 drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-service-api = { path = "../service-api", features = ["actix"] }
 drogue-cloud-service-common = { path = "../service-common" }

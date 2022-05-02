@@ -4,7 +4,6 @@ use drogue_cloud_endpoint_common::{
     command::Commands,
     error::{EndpointError, HttpEndpointError},
     sender::{self, DownstreamSender, PublishIdPair},
-    sink::Sink,
     x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::{
@@ -34,8 +33,8 @@ pub struct PublishOptions {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn publish_plain<S>(
-    sender: web::Data<DownstreamSender<S>>,
+pub async fn publish_plain(
+    sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     channel: web::Path<String>,
@@ -43,10 +42,7 @@ pub async fn publish_plain<S>(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError>
-where
-    S: Sink,
-{
+) -> Result<HttpResponse, HttpEndpointError> {
     publish(
         sender,
         auth,
@@ -62,8 +58,8 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn publish_tail<S>(
-    sender: web::Data<DownstreamSender<S>>,
+pub async fn publish_tail(
+    sender: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     path: web::Path<(String, String)>,
@@ -71,10 +67,7 @@ pub async fn publish_tail<S>(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError>
-where
-    S: Sink,
-{
+) -> Result<HttpResponse, HttpEndpointError> {
     let (channel, suffix) = path.into_inner();
     publish(
         sender,
@@ -92,8 +85,8 @@ where
 
 #[allow(clippy::too_many_arguments)]
 #[instrument(skip(downstream, auth, commands, body))]
-pub async fn publish<S>(
-    downstream: web::Data<DownstreamSender<S>>,
+pub async fn publish(
+    downstream: web::Data<DownstreamSender>,
     auth: web::Data<DeviceAuthenticator>,
     commands: web::Data<Commands>,
     channel: String,
@@ -102,11 +95,7 @@ pub async fn publish<S>(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-) -> Result<HttpResponse, HttpEndpointError>
-where
-    S: Sink + Send,
-    <S as Sink>::Error: Send,
-{
+) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
     let (application, device, r#as) = match auth

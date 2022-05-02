@@ -12,11 +12,8 @@ use drogue_cloud_registry_events::{
 };
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
-    client::RegistryConfig,
-    defaults,
-    health::{HealthServer, HealthServerConfig},
+    app::run_main, client::RegistryConfig, defaults, health::HealthServerConfig,
 };
-use futures::{select, FutureExt};
 use rdkafka::ClientConfig;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -86,18 +83,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     log::info!("Running service ...");
-    if let Some(health) = config.health {
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        select! {
-            _ = health.run().fuse() => (),
-            _ = registry.fuse() => (),
-        }
-    } else {
-        futures::try_join!(registry,)?;
-    }
+    run_main(registry, config.health, vec![]).await?;
 
     // exiting
+
     log::info!("Exiting main!");
     Ok(())
 }

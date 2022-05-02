@@ -1,5 +1,5 @@
 use drogue_client::{openid::TokenProvider, registry};
-use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender, sink::Sink};
+use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
 use drogue_cloud_service_api::webapp::{http::header, web, HttpRequest, HttpResponse};
 use serde::Deserialize;
@@ -10,8 +10,8 @@ pub struct CommandQuery {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn command<S, TP>(
-    sender: web::Data<UpstreamSender<S>>,
+pub async fn command<TP>(
+    sender: web::Data<UpstreamSender>,
     client: web::Data<reqwest::Client>,
     path: web::Path<(String, String)>,
     web::Query(opts): web::Query<CommandQuery>,
@@ -20,7 +20,6 @@ pub async fn command<S, TP>(
     registry: web::Data<registry::v1::Client<TP>>,
 ) -> Result<HttpResponse, HttpEndpointError>
 where
-    S: Sink,
     TP: TokenProvider,
 {
     let (app_name, device_name) = path.into_inner();

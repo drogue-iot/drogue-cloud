@@ -8,7 +8,7 @@ use crate::{
 use async_trait::async_trait;
 use cloudevents::Data;
 use drogue_client::{openid::OpenIdTokenProvider, registry};
-use drogue_cloud_endpoint_common::{sender::UpstreamSender, sink::Sink as SenderSink};
+use drogue_cloud_endpoint_common::sender::UpstreamSender;
 use drogue_cloud_integration_common::{
     self,
     commands::CommandOptions,
@@ -33,7 +33,7 @@ use ntex_mqtt::{types::QoS, v5};
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use tokio::task::JoinHandle;
 
-pub struct Session<S: SenderSink> {
+pub struct Session {
     pub config: ServiceConfig,
     pub user_auth: Option<Arc<UserAuthClient>>,
 
@@ -43,17 +43,14 @@ pub struct Session<S: SenderSink> {
 
     streams: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
 
-    pub sender: UpstreamSender<S>,
+    pub sender: UpstreamSender,
     pub client: reqwest::Client,
     pub registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
 
     pub token: Option<String>,
 }
 
-impl<S> Session<S>
-where
-    S: SenderSink,
-{
+impl Session {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: ServiceConfig,
@@ -61,7 +58,7 @@ where
         sink: Sink,
         user: UserInformation,
         client_id: String,
-        sender: UpstreamSender<S>,
+        sender: UpstreamSender,
         client: reqwest::Client,
         registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
         token: Option<String>,
@@ -315,10 +312,7 @@ where
 }
 
 #[async_trait(?Send)]
-impl<S> mqtt::Session for Session<S>
-where
-    S: SenderSink,
-{
+impl mqtt::Session for Session {
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
         let topic = publish.topic().path().split('/').collect::<Vec<_>>();
 
@@ -461,10 +455,7 @@ where
     }
 }
 
-impl<S> Drop for Session<S>
-where
-    S: SenderSink,
-{
+impl Drop for Session {
     fn drop(&mut self) {
         log::debug!("Dropping session");
         let streams = self.streams.clone();

@@ -4,7 +4,6 @@ use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
     sender::{self, DownstreamSender, ToPublishId},
-    sink::Sink,
 };
 use drogue_cloud_service_api::auth::device::authn;
 use http::HeaderValue;
@@ -30,19 +29,15 @@ pub struct PublishOptions {
     pub ct: Option<u64>,
 }
 
-pub async fn publish_plain<S>(
-    sender: DownstreamSender<S>,
+pub async fn publish_plain(
+    sender: DownstreamSender,
     authenticator: DeviceAuthenticator,
     commands: Commands,
     channel: String,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     auth: &[u8],
-) -> Result<Option<CoapResponse>, CoapEndpointError>
-where
-    S: Sink + Send,
-    <S as Sink>::Error: Send,
-{
+) -> Result<Option<CoapResponse>, CoapEndpointError> {
     publish(
         sender,
         authenticator,
@@ -56,19 +51,15 @@ where
     .await
 }
 
-pub async fn publish_tail<S>(
-    sender: DownstreamSender<S>,
+pub async fn publish_tail(
+    sender: DownstreamSender,
     authenticator: DeviceAuthenticator,
     commands: Commands,
     path: (String, String),
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     auth: &[u8],
-) -> Result<Option<CoapResponse>, CoapEndpointError>
-where
-    S: Sink + Send,
-    <S as Sink>::Error: Send,
-{
+) -> Result<Option<CoapResponse>, CoapEndpointError> {
     let (channel, suffix) = path;
     publish(
         sender,
@@ -84,8 +75,8 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn publish<S>(
-    sender: DownstreamSender<S>,
+pub async fn publish(
+    sender: DownstreamSender,
     authenticator: DeviceAuthenticator,
     commands: Commands,
     channel: String,
@@ -93,11 +84,7 @@ pub async fn publish<S>(
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     auth: &[u8],
-) -> Result<Option<CoapResponse>, CoapEndpointError>
-where
-    S: Sink + Send,
-    <S as Sink>::Error: Send,
-{
+) -> Result<Option<CoapResponse>, CoapEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
     let (application, device, r#as) = match authenticator

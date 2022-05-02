@@ -113,7 +113,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .wrap(Cors::permissive())
                     .route(
                         "",
-                        web::post().to(v1alpha1::command::<KafkaSink, Option<OpenIdTokenProvider>>),
+                        web::post().to(v1alpha1::command::<Option<OpenIdTokenProvider>>),
                     ),
             )
     })

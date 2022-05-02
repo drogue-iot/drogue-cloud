@@ -6,18 +6,19 @@ mod wshandler;
 use crate::service::Service;
 use actix::Actor;
 use actix_web::{web, App, HttpServer};
-use drogue_cloud_service_api::webapp as actix_web;
-use drogue_cloud_service_api::{auth::user::authz::Permission, kafka::KafkaClientConfig};
+use drogue_cloud_service_api::{
+    auth::user::authz::Permission, kafka::KafkaClientConfig, webapp as actix_web,
+};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     actix_auth::authorization::AuthZ,
+    app::run_main,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
-    health::{HealthServer, HealthServerConfig},
+    health::HealthServerConfig,
     metrics,
     openid::AuthenticatorConfig,
 };
-use futures::TryFutureExt;
 use lazy_static::lazy_static;
 use prometheus::{IntGauge, Opts};
 use serde::Deserialize;
@@ -114,14 +115,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     };
 
     // run
-    if let Some(health) = config.health {
-        metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(health.run(), main.err_into())?;
-    } else {
-        futures::try_join!(main)?;
-    }
+
+    metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
+    run_main(main, config.health, vec![]).await?;
 
     // exiting
     Ok(())
