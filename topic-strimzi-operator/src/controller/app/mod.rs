@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use drogue_client::{
     core::v1::Conditions,
     meta::v1::CommonMetadataMut,
-    openid::TokenProvider,
     registry::{self, v1::KafkaAppStatus},
     Translator,
 };
@@ -34,9 +33,9 @@ const FINALIZER: &str = "kafka";
 const LABEL_KAFKA_CLUSTER: &str = "strimzi.io/cluster";
 pub const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
 
-pub struct ApplicationController<TP: TokenProvider> {
+pub struct ApplicationController {
     config: ControllerConfig,
-    registry: registry::v1::Client<TP>,
+    registry: registry::v1::Client,
 
     kafka_topic_resource: ApiResource,
     kafka_topics: Api<DynamicObject>,
@@ -45,10 +44,10 @@ pub struct ApplicationController<TP: TokenProvider> {
     secrets: Api<Secret>,
 }
 
-impl<TP: TokenProvider> ApplicationController<TP> {
+impl ApplicationController {
     pub fn new(
         config: ControllerConfig,
-        registry: registry::v1::Client<TP>,
+        registry: registry::v1::Client,
         kafka_topic_resource: ApiResource,
         kafka_topics: Api<DynamicObject>,
         kafka_user_resource: ApiResource,
@@ -68,9 +67,8 @@ impl<TP: TokenProvider> ApplicationController<TP> {
 }
 
 #[async_trait]
-impl<TP: TokenProvider>
-    ControllerOperation<String, registry::v1::Application, registry::v1::Application>
-    for ApplicationController<TP>
+impl ControllerOperation<String, registry::v1::Application, registry::v1::Application>
+    for ApplicationController
 {
     async fn process_resource(
         &self,
@@ -108,8 +106,8 @@ impl<TP: TokenProvider>
     }
 }
 
-impl<TP: TokenProvider> Deref for ApplicationController<TP> {
-    type Target = registry::v1::Client<TP>;
+impl Deref for ApplicationController {
+    type Target = registry::v1::Client;
 
     fn deref(&self) -> &Self::Target {
         &self.registry
@@ -129,9 +127,9 @@ pub struct DeconstructContext {
     pub status: Option<KafkaAppStatus>,
 }
 
-pub struct ApplicationReconciler<'a, TP: TokenProvider> {
+pub struct ApplicationReconciler<'a> {
     pub config: &'a ControllerConfig,
-    pub registry: &'a registry::v1::Client<TP>,
+    pub registry: &'a registry::v1::Client,
     pub kafka_topic_resource: &'a ApiResource,
     pub kafka_topics: &'a Api<DynamicObject>,
     pub kafka_user_resource: &'a ApiResource,
@@ -140,7 +138,7 @@ pub struct ApplicationReconciler<'a, TP: TokenProvider> {
 }
 
 #[async_trait]
-impl<'a, TP: TokenProvider> Reconciler for ApplicationReconciler<'a, TP> {
+impl<'a> Reconciler for ApplicationReconciler<'a> {
     type Input = registry::v1::Application;
     type Output = registry::v1::Application;
     type Construct = ConstructContext;

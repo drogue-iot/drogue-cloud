@@ -40,7 +40,7 @@ pub struct DeviceAuthenticator {
     pub client: ReqwestAuthenticatorClient,
 }
 
-pub type AuthResult<T> = Result<T, ClientError<reqwest::Error>>;
+pub type AuthResult<T> = Result<T, ClientError>;
 
 impl DeviceAuthenticator {
     /// Create a new authentication client using the provided configuration.

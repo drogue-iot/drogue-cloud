@@ -57,7 +57,21 @@ pub struct Publish<'a> {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PublishId {
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uid: Option<String>,
+}
+
+impl<N, U> From<(N, U)> for PublishId
+where
+    N: Into<String>,
+    U: Into<String>,
+{
+    fn from(value: (N, U)) -> Self {
+        PublishId {
+            name: value.0.into(),
+            uid: Some(value.1.into()),
+        }
+    }
 }
 
 pub struct PublishIdPair {
@@ -171,6 +185,7 @@ pub struct PublishOptions {
     pub data_schema: Option<String>,
     pub content_type: Option<String>,
     pub extensions: HashMap<String, String>,
+    pub r#type: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -340,7 +355,10 @@ pub trait Publisher {
 
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
-            .ty(DEFAULT_TYPE_EVENT)
+            .ty(publish
+                .options
+                .r#type
+                .unwrap_or_else(|| DEFAULT_TYPE_EVENT.to_string()))
             // we need an "absolute" URL for the moment: until 0.4 is released
             // see: https://github.com/cloudevents/sdk-rust/issues/106
             .source(format!("drogue://{}", source))

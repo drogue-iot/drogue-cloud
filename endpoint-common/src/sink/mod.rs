@@ -44,7 +44,7 @@ pub enum SinkError {
     #[error("Event error")]
     Event(#[from] cloudevents::message::Error),
     #[error("Transport error")]
-    Transport(#[source] Box<dyn std::error::Error + Send>),
+    Transport(#[source] Box<dyn std::error::Error + Send + Sync>),
     #[error("Target error")]
-    Target(#[source] Box<dyn std::error::Error + Send>),
+    Target(#[source] Box<dyn std::error::Error + Send + Sync>),
 }

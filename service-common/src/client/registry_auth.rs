@@ -1,5 +1,5 @@
 use crate::{defaults, openid::TokenConfig, reqwest::ClientFactory};
-use drogue_client::{openid::OpenIdTokenProvider, registry};
+use drogue_client::registry;
 use serde::Deserialize;
 use url::Url;
 
@@ -12,9 +12,7 @@ pub struct RegistryConfig {
 }
 
 impl RegistryConfig {
-    pub async fn into_client(
-        self,
-    ) -> anyhow::Result<registry::v1::Client<Option<OpenIdTokenProvider>>> {
+    pub async fn into_client(self) -> anyhow::Result<registry::v1::Client> {
         let token = if let Some(token) = self.token_config {
             Some(token.discover_from().await?)
         } else {

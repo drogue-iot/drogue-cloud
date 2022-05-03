@@ -61,7 +61,7 @@ impl UserAuthClient {
     pub async fn authenticate_access_token(
         &self,
         request: AuthenticationRequest,
-    ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
+    ) -> Result<AuthenticationResponse, ClientError> {
         let req = self
             .client
             .post(self.authn_url.clone())
@@ -71,7 +71,7 @@ impl UserAuthClient {
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
             log::warn!("Error while authenticating {:?}: {}", request, err);
-            Box::new(err)
+            ClientError::Client(Box::new(err))
         })?;
 
         match response.status() {
@@ -97,7 +97,7 @@ impl UserAuthClient {
     pub async fn authorize(
         &self,
         request: AuthorizationRequest,
-    ) -> Result<AuthorizationResponse, ClientError<reqwest::Error>> {
+    ) -> Result<AuthorizationResponse, ClientError> {
         let req = self
             .client
             .post(self.authz_url.clone())
@@ -107,7 +107,7 @@ impl UserAuthClient {
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
             log::warn!("Error while authorizing {:?}: {}", request, err);
-            Box::new(err)
+            ClientError::Client(Box::new(err))
         })?;
 
         match response.status() {

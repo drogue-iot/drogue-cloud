@@ -26,7 +26,7 @@ pub enum Error {
     #[error("failed to build URL: {0}")]
     Url(#[from] ParseError),
     #[error("failed to acquire access token: {0}")]
-    Token(ClientError<reqwest::Error>),
+    Token(ClientError),
     #[error("failed to execute request: {0}")]
     Request(#[from] reqwest::Error),
     #[error("response indicated error ({0})")]

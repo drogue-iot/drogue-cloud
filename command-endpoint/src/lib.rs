@@ -2,7 +2,6 @@ mod v1alpha1;
 
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
-use drogue_client::openid::OpenIdTokenProvider;
 use drogue_cloud_endpoint_common::{
     sender::{ExternalClientPoolConfig, UpstreamSender},
     sink::KafkaSink,
@@ -111,10 +110,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                         enable_access_token,
                     })
                     .wrap(Cors::permissive())
-                    .route(
-                        "",
-                        web::post().to(v1alpha1::command::<Option<OpenIdTokenProvider>>),
-                    ),
+                    .route("", web::post().to(v1alpha1::command)),
             )
     })
     .bind(config.bind_addr)?

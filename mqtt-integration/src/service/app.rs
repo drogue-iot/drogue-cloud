@@ -1,6 +1,6 @@
 use crate::service::{session::Session, ServiceConfig};
 use async_trait::async_trait;
-use drogue_client::{openid::OpenIdTokenProvider, registry};
+use drogue_client::registry;
 use drogue_cloud_endpoint_common::sender::UpstreamSender;
 use drogue_cloud_mqtt_common::{
     error::ServerError,
@@ -23,7 +23,7 @@ pub struct App {
     pub config: ServiceConfig,
     pub sender: UpstreamSender,
     pub client: reqwest::Client,
-    pub registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
+    pub registry: registry::v1::Client,
 }
 
 impl App {

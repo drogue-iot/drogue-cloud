@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use drogue_client::{
     core::v1::Conditions,
     meta::v1::{CommonMetadataExt, CommonMetadataMut},
-    openid::{AccessTokenProvider, OpenIdTokenProvider, TokenProvider},
+    openid::{AccessTokenProvider, OpenIdTokenProvider},
     registry, Translator,
 };
 use drogue_cloud_operator_common::controller::{
@@ -26,24 +26,18 @@ use tracing::instrument;
 
 const FINALIZER: &str = "ditto";
 
-pub struct DeviceController<TP>
-where
-    TP: TokenProvider,
-{
+pub struct DeviceController {
     config: ControllerConfig,
-    registry: registry::v1::Client<TP>,
+    registry: registry::v1::Client,
     ditto: DittoClient,
     devops_provider: Option<AccessTokenProvider>,
     admin_provider: OpenIdTokenProvider,
 }
 
-impl<TP> DeviceController<TP>
-where
-    TP: TokenProvider,
-{
+impl DeviceController {
     pub async fn new(
         mut config: ControllerConfig,
-        registry: registry::v1::Client<TP>,
+        registry: registry::v1::Client,
         client: reqwest::Client,
     ) -> Result<Self, anyhow::Error> {
         let ditto = config.ditto_devops.clone();
@@ -67,14 +61,12 @@ where
 }
 
 #[async_trait]
-impl<TP>
+impl
     ControllerOperation<
         (String, String),
         (registry::v1::Application, registry::v1::Device),
         registry::v1::Device,
-    > for DeviceController<TP>
-where
-    TP: TokenProvider,
+    > for DeviceController
 {
     #[instrument(skip(self), fields(application=%input.0.metadata.name, device=%input.1.metadata.name))]
     async fn process_resource(
@@ -115,11 +107,8 @@ where
     }
 }
 
-impl<TP> Deref for DeviceController<TP>
-where
-    TP: TokenProvider,
-{
-    type Target = registry::v1::Client<TP>;
+impl Deref for DeviceController {
+    type Target = registry::v1::Client;
 
     fn deref(&self) -> &Self::Target {
         &self.registry
@@ -137,22 +126,16 @@ pub struct DeconstructContext {
     pub status: Option<DittoDeviceStatus>,
 }
 
-pub struct DeviceReconciler<'a, TP>
-where
-    TP: TokenProvider,
-{
+pub struct DeviceReconciler<'a> {
     pub config: &'a ControllerConfig,
-    pub registry: &'a registry::v1::Client<TP>,
+    pub registry: &'a registry::v1::Client,
     pub ditto: &'a DittoClient,
     pub devops_provider: &'a Option<AccessTokenProvider>,
     pub admin_provider: &'a OpenIdTokenProvider,
 }
 
 #[async_trait]
-impl<'a, TP> Reconciler for DeviceReconciler<'a, TP>
-where
-    TP: TokenProvider,
-{
+impl<'a> Reconciler for DeviceReconciler<'a> {
     type Input = (registry::v1::Application, registry::v1::Device);
     type Output = registry::v1::Device;
     type Construct = ConstructContext;

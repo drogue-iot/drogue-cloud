@@ -15,7 +15,7 @@ use reqwest::Response;
 pub(crate) async fn default_error<T>(
     code: StatusCode,
     response: Response,
-) -> Result<T, ClientError<reqwest::Error>> {
+) -> Result<T, ClientError> {
     match response.json::<ErrorInformation>().await {
         Ok(result) => {
             log::debug!("Service reported error ({}): {}", code, result);

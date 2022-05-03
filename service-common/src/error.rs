@@ -23,11 +23,8 @@ pub enum ServiceError {
     Client(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
-impl<E> From<ClientError<E>> for ServiceError
-where
-    E: std::error::Error + Send + Sync + 'static,
-{
-    fn from(err: ClientError<E>) -> Self {
+impl From<ClientError> for ServiceError {
+    fn from(err: ClientError) -> Self {
         Self::Client(Box::new(err))
     }
 }

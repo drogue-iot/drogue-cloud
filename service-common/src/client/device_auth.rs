@@ -41,7 +41,7 @@ impl ReqwestAuthenticatorClient {
     pub async fn authenticate(
         &self,
         request: AuthenticationRequest,
-    ) -> Result<AuthenticationResponse, ClientError<reqwest::Error>> {
+    ) -> Result<AuthenticationResponse, ClientError> {
         self.request(self.auth_service_url.clone(), request).await
     }
 
@@ -49,11 +49,11 @@ impl ReqwestAuthenticatorClient {
     pub async fn authorize_as(
         &self,
         request: AuthorizeGatewayRequest,
-    ) -> Result<AuthorizeGatewayResponse, ClientError<reqwest::Error>> {
+    ) -> Result<AuthorizeGatewayResponse, ClientError> {
         self.request(self.auth_as_url.clone(), request).await
     }
 
-    async fn request<T, U>(&self, url: Url, request: T) -> Result<U, ClientError<reqwest::Error>>
+    async fn request<T, U>(&self, url: Url, request: T) -> Result<U, ClientError>
     where
         T: Debug + Serialize,
         for<'de> U: Debug + Deserialize<'de>,
@@ -67,7 +67,7 @@ impl ReqwestAuthenticatorClient {
 
         let response: Response = req.json(&request).send().await.map_err(|err| {
             log::warn!("Request error {:?}: {}", request, err);
-            Box::new(err)
+            ClientError::Client(Box::new(err))
         })?;
 
         match response.status() {
