@@ -92,12 +92,15 @@ INSERT INTO
     async fn create(
         &self,
         session: String,
-        id: String,
+        application: String,
+        device: String,
         state: DeviceState,
     ) -> Result<CreateResponse, ServiceError> {
         let mut c = self.pool.get().await?;
 
         let t = c.transaction().await?;
+
+        let now = Utc::now();
 
         let r = t
             .query_opt(
@@ -106,20 +109,24 @@ INSERT INTO
     states
 (
     SESSION,
-    ID,
+    APPLICATION,
+    DEVICE,
+    CREATED,
     DATA
 ) VALUES (
     $1::text::uuid,
     $2,
-    $3
+    $3,
+    $4,
+    $5
 )
-ON CONFLICT (ID)
+ON CONFLICT (APPLICATION, DEVICE)
     DO UPDATE
         SET lost = true
 RETURNING
     LOST
 "#,
-                &[&session, &id, &Json(&state)],
+                &[&session, &application, &device, &now, &Json(&state)],
             )
             .await?;
 
@@ -128,8 +135,15 @@ RETURNING
                 let lost: bool = row.try_get("LOST")?;
                 Ok(match lost {
                     false => {
-                        self.send_event(&state.application, state.device, true)
-                            .await?;
+                        self.send_event(
+                            &application,
+                            PublishId {
+                                name: device,
+                                uid: Some(state.device_uid),
+                            },
+                            true,
+                        )
+                        .await?;
                         t.commit().await?;
                         CreateResponse::Created
                     }
@@ -143,7 +157,12 @@ RETURNING
         }
     }
 
-    async fn delete(&self, session: String, id: String) -> Result<(), ServiceError> {
+    async fn delete(
+        &self,
+        session: String,
+        application: String,
+        device: String,
+    ) -> Result<(), ServiceError> {
         let mut c = self.pool.get().await?;
         let t = c.transaction().await?;
 
@@ -155,11 +174,13 @@ DELETE FROM
 WHERE
         SESSION = $1::text::uuid
     AND
-        ID = $2
+        APPLICATION = $2
+    AND
+        DEVICE = $3
 RETURNING
-    ID, DATA
+    APPLICATION, DEVICE, DATA
 "#,
-                &[&session, &id],
+                &[&session, &application, &device],
             )
             .await?;
 
@@ -203,7 +224,8 @@ WHERE
                 .query(
                     r#"
 SELECT
-    ID
+    APPLICATION,
+    DEVICE
 FROM
     states
 WHERE
@@ -215,10 +237,19 @@ WHERE
                 )
                 .await?;
 
-            let lost_ids = r
-                .into_iter()
-                .map(|row| row.try_get::<_, String>("ID"))
-                .collect::<Result<_, _>>()?;
+            // convert rows to response
+
+            let mut lost_ids = Vec::new();
+            for row in r {
+                let application = row.try_get("APPLICATION")?;
+                let device = row.try_get("DEVICE")?;
+                lost_ids.push(Id {
+                    application,
+                    device,
+                });
+            }
+
+            // return
 
             Ok(PingResponse { lost_ids })
         } else {
@@ -226,33 +257,49 @@ WHERE
         }
     }
 
-    async fn get(&self, id: String) -> Result<Option<DeviceState>, ServiceError> {
+    async fn get(
+        &self,
+        application: String,
+        device: String,
+    ) -> Result<Option<DeviceStateResponse>, ServiceError> {
         let c = self.pool.get().await?;
 
         let stmt = c
             .prepare_typed(
                 r#"
-SELECT DATA FROM
+SELECT CREATED, LOST, DATA FROM
     states
 WHERE
-    ID = $1::text::uuid
+        APPLICATION = $1
+    AND
+        DEVICE = $2
 "#,
-                &[Type::VARCHAR],
+                &[Type::VARCHAR, Type::VARCHAR],
             )
             .await?;
 
-        let row = c.query_opt(&stmt, &[&id]).await?;
+        let row = c.query_opt(&stmt, &[&application, &device]).await?;
 
         match row {
             None => Ok(None),
-            Some(row) => match row.try_get::<_, Option<Json<_>>>("DATA") {
-                Ok(Some(Json(state))) => Ok(Some(state)),
-                Ok(None) => Ok(None),
-                Err(err) => {
-                    log::warn!("Failed to decode data: {err}");
+            Some(row) => {
+                let lost: bool = row.try_get("LOST")?;
+
+                if !lost {
+                    let created = row.try_get("CREATED")?;
+                    match row.try_get::<_, Option<Json<DeviceState>>>("DATA") {
+                        Ok(Some(Json(state))) => Ok(Some(DeviceStateResponse { state, created })),
+                        Ok(None) => Ok(None),
+                        Err(err) => {
+                            log::warn!("Failed to decode data: {err}");
+                            Ok(None)
+                        }
+                    }
+                } else {
+                    // we found something, but marked as lost
                     Ok(None)
                 }
-            },
+            }
         }
     }
 }
@@ -309,7 +356,7 @@ DELETE FROM
 WHERE
     SESSION = $1
 RETURNING
-    ID, DATA
+    APPLICATION, DEVICE, DATA
 "#,
                 &[&id],
             )
@@ -338,23 +385,34 @@ WHERE
     }
 
     async fn send_event_from_row(&self, row: Row) -> Result<(), ServiceError> {
-        let id: String = row.try_get("ID")?;
+        let application: String = row.try_get("APPLICATION")?;
+        let device: String = row.try_get("DEVICE")?;
         let data: Option<Value> = row.try_get("DATA")?;
 
-        log::info!("Destroying state: {id}: {data:?}");
+        log::info!("Destroying state: {application}/{device}: {data:?}");
 
         // we are rather conservative here, as we need to delete the record in any case
-        if let Some(data) = data {
+        let state = if let Some(data) = data {
             match serde_json::from_value::<DeviceState>(data) {
-                Ok(data) => {
-                    self.send_event(&data.application, data.device, false)
-                        .await?;
-                }
+                Ok(data) => Some(data),
                 Err(err) => {
                     log::info!("Failed to extra data for sending event: {err}");
+                    None
                 }
             }
-        }
+        } else {
+            None
+        };
+
+        self.send_event(
+            &application,
+            PublishId {
+                name: device,
+                uid: state.map(|state| state.device_uid),
+            },
+            false,
+        )
+        .await?;
 
         Ok(())
     }

@@ -7,8 +7,8 @@ pub use self::config::*;
 pub use error::*;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use drogue_client::{error::ClientError, registry};
-use drogue_cloud_endpoint_common::sender::PublishId;
 use serde::{Deserialize, Serialize};
 
 pub const CONNECTION_TYPE_EVENT: &str = "io.drogue.connection.v1";
@@ -35,7 +35,8 @@ pub trait DeviceStateService: Send + Sync {
     async fn create(
         &self,
         instance: String,
-        id: String,
+        application: String,
+        device: String,
         state: DeviceState,
     ) -> Result<CreateResponse, ServiceError>;
 
@@ -43,7 +44,12 @@ pub trait DeviceStateService: Send + Sync {
     ///
     /// If the state was already deleted, or belongs to a different session now, this becomes
     /// a no-op.
-    async fn delete(&self, instance: String, id: String) -> Result<(), ServiceError>;
+    async fn delete(
+        &self,
+        instance: String,
+        application: String,
+        device: String,
+    ) -> Result<(), ServiceError>;
 
     /// Refresh the session timeout and retrieve lost items.
     ///
@@ -53,15 +59,32 @@ pub trait DeviceStateService: Send + Sync {
     async fn ping(&self, instance: String) -> Result<PingResponse, ServiceError>;
 
     /// Get the current state of a device.
-    async fn get(&self, id: String) -> Result<Option<DeviceState>, ServiceError>;
+    async fn get(
+        &self,
+        application: String,
+        device: String,
+    ) -> Result<Option<DeviceStateResponse>, ServiceError>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Id {
+    pub application: String,
+    pub device: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceState {
-    pub application: String,
-    pub device: PublishId,
+    pub device_uid: String,
     pub endpoint: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceStateResponse {
+    pub created: DateTime<Utc>,
+    pub state: DeviceState,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -83,7 +106,7 @@ pub enum CreateResponse {
 #[serde(rename_all = "camelCase")]
 pub struct PingResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub lost_ids: Vec<String>,
+    pub lost_ids: Vec<Id>,
 }
 
 #[async_trait]

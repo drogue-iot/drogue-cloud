@@ -8,13 +8,15 @@ CREATE TABLE sessions
 
 CREATE TABLE states
 (
-    ID      VARCHAR(255) NOT NULL,
-    SESSION UUID         NOT NULL,
+    APPLICATION VARCHAR(255)             NOT NULL,
+    DEVICE      VARCHAR(255)             NOT NULL,
+    SESSION     UUID                     NOT NULL,
 
-    LOST    BOOLEAN      NOT NULL DEFAULT false,
+    CREATED     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    LOST        BOOLEAN                  NOT NULL DEFAULT false,
 
-    DATA    JSONB,
+    DATA        JSONB,
 
-    PRIMARY KEY (ID),
+    PRIMARY KEY (APPLICATION, DEVICE),
     FOREIGN KEY (SESSION) REFERENCES sessions (ID)
 );

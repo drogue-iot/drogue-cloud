@@ -3,9 +3,8 @@ mod common;
 use drogue_client::registry;
 use drogue_cloud_device_state_service::{
     app,
-    service::{DeviceState, InitResponse, PingResponse},
+    service::{DeviceState, Id, InitResponse, PingResponse},
 };
-use drogue_cloud_endpoint_common::sender::PublishId;
 use drogue_cloud_service_api::webapp::test::{read_body_json, TestRequest};
 use drogue_cloud_test_common::call::{call_http, user};
 use http::StatusCode;
@@ -99,12 +98,12 @@ async fn test_create() -> anyhow::Result<()> {
         assert!(!response.session.is_empty());
         let session = response.session;
 
-        let id = "id1";
+        let application = "app1";
+        let device = "device1";
 
-        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
             .set_json(DeviceState{
-                application: "app1".into(),
-                device: PublishId::from(("device", "device_uid")),
+                device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
             })
         ).await;
@@ -127,22 +126,24 @@ async fn test_lost() -> anyhow::Result<()> {
         assert!(!response.session.is_empty());
         let session = response.session;
 
-        let id = "id1";
+        let application = "app1";
+        let device = "device1";
+        let id = Id {
+            application: application.into(), device: device.into(),
+        };
 
         // create -> must succeed
-        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
             .set_json(DeviceState{
-                application: "app1".into(),
-                device: PublishId::from(("device", "device_uid")),
+                device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
         // create -> must fail, but marked as lost
-        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
             .set_json(DeviceState{
-                application: "app1".into(),
-                device: PublishId::from(("device", "device_uid")),
+                device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
             })
         ).await;
@@ -152,13 +153,12 @@ async fn test_lost() -> anyhow::Result<()> {
         let resp = call_http(&app, &user("foo"), TestRequest::post().uri(&format!("/api/state/v1alpha1/sessions/{}", session))).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let response: PingResponse = read_body_json(resp).await;
-        assert_eq!(vec![id.to_string()], response.lost_ids);
+        assert_eq!(vec![id.clone()], response.lost_ids);
 
         // create -> must fail again, still marked as lost
-        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
             .set_json(DeviceState{
-                application: "app1".into(),
-                device: PublishId::from(("device", "device_uid")),
+                device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
             })
         ).await;
@@ -168,10 +168,10 @@ async fn test_lost() -> anyhow::Result<()> {
         let resp = call_http(&app, &user("foo"), TestRequest::post().uri(&format!("/api/state/v1alpha1/sessions/{}", session))).await;
         assert_eq!(resp.status(), StatusCode::OK);
         let response: PingResponse = read_body_json(resp).await;
-        assert_eq!(vec![id.to_string()], response.lost_ids);
+        assert_eq!(vec![id.clone()], response.lost_ids);
 
         // delete -> must succeed
-        let resp = call_http(&app, &user("foo"), TestRequest::delete().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))).await;
+        let resp = call_http(&app, &user("foo"), TestRequest::delete().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // ping -> must succeed, and contain no ids
@@ -181,10 +181,9 @@ async fn test_lost() -> anyhow::Result<()> {
         assert!(response.lost_ids.is_empty());
 
         // create -> must succeed again
-        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
             .set_json(DeviceState{
-                application: "app1".into(),
-                device: PublishId::from(("device", "device_uid")),
+                device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
             })
         ).await;
@@ -207,13 +206,13 @@ async fn test_timeout_lost() -> anyhow::Result<()> {
         assert!(!response.session.is_empty());
         let session = response.session;
 
-        let id = "id1";
+        let application = "app1";
+        let device = "device1";
 
         // create -> must succeed
-        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/{}", session, id))
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
             .set_json(DeviceState{
-                application: "app1".into(),
-                device: PublishId::from(("device", "device_uid")),
+                device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
             })
         ).await;
