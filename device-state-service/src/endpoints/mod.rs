@@ -1,4 +1,4 @@
-use crate::service::{CreateResponse, DeviceStateService};
+use crate::service::{CreateResponse, DeviceState, DeviceStateService};
 use drogue_cloud_service_api::webapp::{web, *};
 
 pub async fn init(service: web::Data<dyn DeviceStateService>) -> Result<HttpResponse, Error> {
@@ -9,9 +9,10 @@ pub async fn init(service: web::Data<dyn DeviceStateService>) -> Result<HttpResp
 pub async fn create(
     service: web::Data<dyn DeviceStateService>,
     path: web::Path<(String, String)>,
+    body: web::Json<DeviceState>,
 ) -> Result<HttpResponse, Error> {
     let (instance, id) = path.into_inner();
-    Ok(match service.create(instance, id).await? {
+    Ok(match service.create(instance, id, body.0).await? {
         CreateResponse::Created => HttpResponse::Created().finish(),
         CreateResponse::Occupied => HttpResponse::Conflict().finish(),
     })
@@ -24,6 +25,17 @@ pub async fn delete(
     let (instance, id) = path.into_inner();
     service.delete(instance, id).await?;
     Ok(HttpResponse::NoContent().finish())
+}
+
+pub async fn get(
+    service: web::Data<dyn DeviceStateService>,
+    path: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let id = path.into_inner();
+    Ok(match service.get(id).await? {
+        Some(state) => HttpResponse::Ok().json(state),
+        None => HttpResponse::NotFound().finish(),
+    })
 }
 
 pub async fn ping(

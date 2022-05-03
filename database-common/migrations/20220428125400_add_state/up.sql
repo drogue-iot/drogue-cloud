@@ -13,6 +13,8 @@ CREATE TABLE states
 
     LOST    BOOLEAN      NOT NULL DEFAULT false,
 
+    DATA    JSONB,
+
     PRIMARY KEY (ID),
-    FOREIGN KEY (SESSION) REFERENCES sessions(ID)
+    FOREIGN KEY (SESSION) REFERENCES sessions (ID)
 );

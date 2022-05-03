@@ -77,12 +77,13 @@ macro_rules! app {
             .service(
                 web::scope("/api/state/v1alpha1")
                     .wrap($auth)
-                    .service(web::resource("/states").route(web::put().to(endpoints::init)))
+                    .service(web::resource("/states/{id}").route(web::get().to(endpoints::get)))
+                    .service(web::resource("/sessions").route(web::put().to(endpoints::init)))
                     .service(
-                        web::resource("/states/{session}").route(web::post().to(endpoints::ping)),
+                        web::resource("/sessions/{session}").route(web::post().to(endpoints::ping)),
                     )
                     .service(
-                        web::resource("/states/{session}/{id}")
+                        web::resource("/sessions/{session}/{id}")
                             .route(web::put().to(endpoints::create))
                             .route(web::delete().to(endpoints::delete)),
                     ),
@@ -123,8 +124,11 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // service
 
-    let service =
-        service::PostgresDeviceStateService::new(config.service_config, sender, registry)?;
+    let service = service::postgres::PostgresDeviceStateService::new(
+        config.service_config,
+        sender,
+        registry,
+    )?;
     checks.push(Box::new(service.clone()));
 
     let service: Arc<dyn DeviceStateService> = Arc::new(service);

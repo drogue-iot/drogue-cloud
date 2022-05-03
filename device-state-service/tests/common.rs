@@ -9,17 +9,18 @@ pub fn init() {
 
 #[macro_export]
 macro_rules! test {
-    (($app:ident, $pool:ident) => $($code:tt)*) => {{
+    (($registry:expr => $app:ident, $service:ident, $pool:ident, $sink:ident) => $($code:tt)*) => {{
 
         use drogue_cloud_service_api::webapp::*;
         use drogue_cloud_device_state_service::service::{self, DeviceStateService};
         use std::sync::Arc;
+        use drogue_cloud_endpoint_common::sender::DownstreamSender;
 
         common::init();
 
         let cli = drogue_cloud_test_common::client();
 
-        let db = drogue_cloud_test_common::db(&cli, |pg| drogue_cloud_device_state_service::service::PostgresServiceConfiguration {
+        let db = drogue_cloud_test_common::db(&cli, |pg| service::PostgresServiceConfiguration {
             pg,
         })?;
 
@@ -27,12 +28,17 @@ macro_rules! test {
 
         let auth = drogue_cloud_service_common::mock_auth!();
 
-        let service = service::PostgresDeviceStateService::new(db.config.clone())?;
-        let service: Arc<dyn DeviceStateService> = Arc::new(service);
-        let service: web::Data<dyn DeviceStateService> = web::Data::from(service);
+        let $sink = drogue_cloud_test_common::sink::MockSink::new();
+        let sender = DownstreamSender::new($sink.clone(), "drogue".to_string(), Default::default()).unwrap();
+
+        let service = service::postgres::PostgresDeviceStateService::new(db.config.clone(), sender, $registry)?;
+        let $service = service.clone();
+
+        let s: Arc<dyn DeviceStateService> = Arc::new(service);
+        let s: web::Data<dyn DeviceStateService> = web::Data::from(s);
 
         let $app = drogue_cloud_service_api::webapp::test::init_service(
-            app!(service, 16 * 1024, auth, None)
+            app!(s, 16 * 1024, auth, None)
                 .wrap_fn(|req, srv|{
                     log::warn!("Running test-user middleware");
                     use drogue_cloud_service_api::webapp::dev::Service;
