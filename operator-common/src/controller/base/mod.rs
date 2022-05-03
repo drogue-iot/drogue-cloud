@@ -212,7 +212,7 @@ where
     RO: Clone + Send + Sync,
 {
     /// Get the resource.
-    async fn get(&self, key: &K) -> Result<Option<RI>, ClientError<reqwest::Error>>;
+    async fn get(&self, key: &K) -> Result<Option<RI>, ClientError>;
 
     /// Update the resource if it did change.
     async fn update_if(&self, original: &RO, current: RO) -> Result<(), ReconcileError>;

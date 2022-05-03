@@ -37,7 +37,7 @@ pub enum Error {
     #[error("Configuration error: {0}")]
     Config(String),
     #[error("Internal error: {0}")]
-    Internal(Box<dyn std::error::Error + Send>),
+    Internal(Box<dyn std::error::Error + Send + Sync>),
     #[error("External endpoint error: {0}")]
     ExternalEndpoint(#[from] ExternalError),
     #[error("External endpoint response: {0}")]

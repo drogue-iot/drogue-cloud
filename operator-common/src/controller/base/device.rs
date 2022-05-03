@@ -1,27 +1,23 @@
 use crate::controller::{base::ResourceOperations, reconciler::ReconcileError};
 use async_trait::async_trait;
-use drogue_client::{core, error::ClientError, openid::TokenProvider, registry, Translator};
+use drogue_client::{core, error::ClientError, registry, Translator};
 use futures::try_join;
 use std::ops::Deref;
 
 #[async_trait]
-impl<S, TP>
+impl<S>
     ResourceOperations<
         (String, String),
         (registry::v1::Application, registry::v1::Device),
         registry::v1::Device,
     > for S
 where
-    S: Deref<Target = registry::v1::Client<TP>> + Send + Sync,
-    TP: TokenProvider + Send + Sync,
+    S: Deref<Target = registry::v1::Client> + Send + Sync,
 {
     async fn get(
         &self,
         key: &(String, String),
-    ) -> Result<
-        Option<(registry::v1::Application, registry::v1::Device)>,
-        ClientError<reqwest::Error>,
-    > {
+    ) -> Result<Option<(registry::v1::Application, registry::v1::Device)>, ClientError> {
         Ok(
             match try_join!(self.get_app(&key.0,), self.get_device(&key.0, &key.1,),)? {
                 (Some(app), Some(device)) => Some((app, device)),

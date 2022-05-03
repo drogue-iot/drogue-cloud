@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use drogue_client::{
     core::v1::Conditions,
     meta::v1::{CommonMetadataExt, CommonMetadataMut},
-    openid::{AccessTokenProvider, OpenIdTokenProvider, TokenProvider},
+    openid::{AccessTokenProvider, OpenIdTokenProvider},
     registry, Translator,
 };
 use drogue_cloud_operator_common::controller::{
@@ -28,24 +28,18 @@ use tracing::instrument;
 
 const FINALIZER: &str = "ditto";
 
-pub struct ApplicationController<TP>
-where
-    TP: TokenProvider,
-{
+pub struct ApplicationController {
     config: ControllerConfig,
-    registry: registry::v1::Client<TP>,
+    registry: registry::v1::Client,
     ditto: DittoClient,
     devops_provider: Option<AccessTokenProvider>,
     admin_provider: OpenIdTokenProvider,
 }
 
-impl<TP> ApplicationController<TP>
-where
-    TP: TokenProvider,
-{
+impl ApplicationController {
     pub async fn new(
         mut config: ControllerConfig,
-        registry: registry::v1::Client<TP>,
+        registry: registry::v1::Client,
         client: reqwest::Client,
     ) -> Result<Self, anyhow::Error> {
         let ditto = config.ditto_devops.clone();
@@ -69,10 +63,8 @@ where
 }
 
 #[async_trait]
-impl<TP> ControllerOperation<String, registry::v1::Application, registry::v1::Application>
-    for ApplicationController<TP>
-where
-    TP: TokenProvider,
+impl ControllerOperation<String, registry::v1::Application, registry::v1::Application>
+    for ApplicationController
 {
     #[instrument(skip(self), fields(application=%application.metadata.name))]
     async fn process_resource(
@@ -110,11 +102,8 @@ where
     }
 }
 
-impl<TP> Deref for ApplicationController<TP>
-where
-    TP: TokenProvider,
-{
-    type Target = registry::v1::Client<TP>;
+impl Deref for ApplicationController {
+    type Target = registry::v1::Client;
 
     fn deref(&self) -> &Self::Target {
         &self.registry
@@ -130,22 +119,16 @@ pub struct DeconstructContext {
     pub status: Option<DittoAppStatus>,
 }
 
-pub struct ApplicationReconciler<'a, TP>
-where
-    TP: TokenProvider,
-{
+pub struct ApplicationReconciler<'a> {
     pub config: &'a ControllerConfig,
-    pub registry: &'a registry::v1::Client<TP>,
+    pub registry: &'a registry::v1::Client,
     pub ditto: &'a DittoClient,
     pub devops_provider: &'a Option<AccessTokenProvider>,
     pub admin_provider: &'a OpenIdTokenProvider,
 }
 
 #[async_trait]
-impl<'a, TP> Reconciler for ApplicationReconciler<'a, TP>
-where
-    TP: TokenProvider,
-{
+impl<'a> Reconciler for ApplicationReconciler<'a> {
     type Input = registry::v1::Application;
     type Output = registry::v1::Application;
     type Construct = ConstructContext;

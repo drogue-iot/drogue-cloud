@@ -1705,7 +1705,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-client"
 version = "0.10.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=f235c8519d529bb5b8ce59b57bc16b4c659c90a7#f235c8519d529bb5b8ce59b57bc16b4c659c90a7"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=aa891e27b8bd88e5bb79420b3c255735754749d8#aa891e27b8bd88e5bb79420b3c255735754749d8"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2061,6 +2061,7 @@ dependencies = [
  "hostname-validator",
  "http",
  "indexmap",
+ "lazy_static 1.4.0",
  "log",
  "maplit",
  "openid",
@@ -2618,14 +2619,20 @@ name = "drogue-cloud-test-common"
 version = "0.9.0"
 dependencies = [
  "anyhow",
+ "async-std",
+ "async-trait",
+ "cloudevents-sdk",
  "deadpool",
  "deadpool-postgres",
+ "drogue-client",
+ "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "log",
  "serde",
  "serde_json",
  "testcontainers",
+ "tokio 1.16.1",
  "walkdir",
 ]
 

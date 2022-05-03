@@ -7,7 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use cloudevents::Data;
-use drogue_client::{openid::OpenIdTokenProvider, registry};
+use drogue_client::registry;
 use drogue_cloud_endpoint_common::sender::UpstreamSender;
 use drogue_cloud_integration_common::{
     self,
@@ -45,7 +45,7 @@ pub struct Session {
 
     pub sender: UpstreamSender,
     pub client: reqwest::Client,
-    pub registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
+    pub registry: registry::v1::Client,
 
     pub token: Option<String>,
 }
@@ -60,7 +60,7 @@ impl Session {
         client_id: String,
         sender: UpstreamSender,
         client: reqwest::Client,
-        registry: registry::v1::Client<Option<OpenIdTokenProvider>>,
+        registry: registry::v1::Client,
         token: Option<String>,
     ) -> Self {
         CONNECTIONS_COUNTER.inc();

@@ -34,8 +34,8 @@ impl EndpointError {
     }
 }
 
-impl<E: std::error::Error + Sync + Send> From<ClientError<E>> for EndpointError {
-    fn from(err: ClientError<E>) -> Self {
+impl From<ClientError> for EndpointError {
+    fn from(err: ClientError) -> Self {
         Self::AuthenticationServiceError {
             source: Box::new(err),
         }

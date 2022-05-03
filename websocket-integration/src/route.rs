@@ -5,7 +5,6 @@ use actix_web::{
     Error, HttpRequest, HttpResponse,
 };
 use actix_web_actors::ws;
-use drogue_client::openid::OpenIdTokenProvider;
 use drogue_cloud_service_api::webapp as actix_web;
 use serde::Deserialize;
 
@@ -18,7 +17,7 @@ pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
     application: web::Path<String>,
-    service_addr: web::Data<Addr<Service<Option<OpenIdTokenProvider>>>>,
+    service_addr: web::Data<Addr<Service>>,
     web::Query(group_id): web::Query<GroupId>,
 ) -> Result<HttpResponse, Error> {
     let application = application.into_inner();
