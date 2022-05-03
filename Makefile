@@ -51,6 +51,7 @@ ALL_IMAGES=\
 	console-frontend \
 	database-migration \
 	device-management-service \
+	device-state-service \
 	ditto-registry-operator \
 	http-endpoint \
 	knative-operator \
