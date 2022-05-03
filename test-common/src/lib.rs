@@ -1,5 +1,7 @@
 #[cfg(feature = "actix")]
 pub mod call;
+#[cfg(feature = "drogue-cloud-endpoint-common")]
+pub mod sink;
 
 use anyhow::Context;
 use deadpool::managed::{PoolConfig, Timeouts};
