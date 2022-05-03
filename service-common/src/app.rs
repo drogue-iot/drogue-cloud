@@ -15,6 +15,8 @@ macro_rules! app {
 macro_rules! main {
     ($run:expr) => {{
 
+        use std::io::Write;
+
         const VERSION: &str = env!("CARGO_PKG_VERSION");
         const NAME: &str = env!("CARGO_PKG_NAME");
         const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
@@ -30,6 +32,8 @@ macro_rules! main {
 |___/  \_| \_| \___/  \____/ \___/ \____/   \___/  \___/   \_/  
 Drogue IoT {} - {} {} ({})
 "#, drogue_cloud_service_api::version::VERSION, NAME, VERSION, DESCRIPTION);
+
+        std::io::stdout().flush().ok();
 
         $crate::app::init_tracing(NAME);
 
