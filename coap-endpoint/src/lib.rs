@@ -15,8 +15,10 @@ use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
+use drogue_cloud_service_api::health::BoxedHealthChecked;
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
+use futures::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
@@ -245,9 +247,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     )?;
 
     run_main(
-        device_to_endpoint,
+        [device_to_endpoint.err_into().boxed_local()],
         config.health,
-        vec![Box::new(command_source)],
+        [command_source.boxed()],
     )
     .await?;
 

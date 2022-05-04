@@ -1,5 +1,8 @@
-use crate::service::{CreateResponse, DeviceState, DeviceStateService};
-use drogue_cloud_service_api::webapp::{web, *};
+use crate::service::DeviceStateService;
+use drogue_cloud_service_api::{
+    services::device_state::*,
+    webapp::{web, *},
+};
 
 pub async fn init(service: web::Data<dyn DeviceStateService>) -> Result<HttpResponse, Error> {
     let response = service.init().await?;

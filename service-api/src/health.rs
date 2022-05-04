@@ -33,6 +33,15 @@ pub trait HealthChecked: Send + Sync {
     }
 }
 
-pub trait AsHealthChecked {
-    fn into_health_check(self) -> Box<dyn HealthChecked>;
+pub trait BoxedHealthChecked {
+    fn boxed(self) -> Box<dyn HealthChecked>;
+}
+
+impl<T> BoxedHealthChecked for T
+where
+    T: HealthChecked + 'static,
+{
+    fn boxed(self) -> Box<dyn HealthChecked> {
+        Box::new(self)
+    }
 }

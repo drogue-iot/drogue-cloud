@@ -11,8 +11,8 @@ use crate::error::ServiceError;
 use drogue_cloud_service_api::webapp::extractors::basic::BasicAuth;
 use drogue_cloud_service_api::webapp::extractors::bearer::BearerAuth;
 use drogue_cloud_service_api::webapp::extractors::AuthExtractor;
-use futures_util::future;
-use futures_util::future::LocalBoxFuture;
+use futures::future;
+use futures::future::LocalBoxFuture;
 use serde::Deserialize;
 use std::rc::Rc;
 

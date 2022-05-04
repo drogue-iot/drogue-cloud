@@ -1,10 +1,12 @@
 //! Clients for services.
 
 mod device_auth;
+mod device_state;
 mod registry_auth;
 mod user_auth;
 
 pub use device_auth::*;
+pub use device_state::*;
 pub use registry_auth::*;
 pub use user_auth::*;
 

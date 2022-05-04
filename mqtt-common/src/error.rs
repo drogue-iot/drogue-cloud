@@ -28,6 +28,8 @@ pub enum ServerError {
     NotAuthorized,
     PublishError(PublishError),
     Configuration(String),
+    /// Failed to acquire state
+    StateError(String),
 }
 
 impl From<PublishError> for ServerError {
@@ -36,7 +38,7 @@ impl From<PublishError> for ServerError {
     }
 }
 
-impl std::convert::TryFrom<ServerError> for v5::PublishAck {
+impl TryFrom<ServerError> for v5::PublishAck {
     type Error = ServerError;
 
     fn try_from(err: ServerError) -> Result<Self, Self::Error> {

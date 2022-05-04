@@ -1,4 +1,5 @@
 use reqwest::Certificate;
+use serde::Deserialize;
 use std::{
     fs::File,
     io::Read,
@@ -74,6 +75,14 @@ fn make_insecure(client: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
         .danger_accept_invalid_hostnames(true)
 }
 
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct ClientConfig {
+    #[serde(default)]
+    pub tls_insecure: bool,
+    #[serde(default)]
+    pub ca_certificates: Vec<String>,
+}
+
 /// Allows us to create clients.
 ///
 /// `reqwest` already has a `ClientBuilder`, however it is unable to be cloned. Also it is not
@@ -83,6 +92,20 @@ fn make_insecure(client: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
 pub struct ClientFactory {
     pub insecure: bool,
     pub ca_certs: Vec<PathBuf>,
+}
+
+impl From<ClientConfig> for ClientFactory {
+    fn from(config: ClientConfig) -> Self {
+        let mut factory = ClientFactory::new();
+
+        if config.tls_insecure {
+            factory = factory.make_insecure();
+        }
+
+        factory = factory.add_ca_certs(&config.ca_certificates);
+
+        factory
+    }
 }
 
 impl ClientFactory {

@@ -19,6 +19,7 @@ use drogue_cloud_service_common::{
     metrics,
     openid::AuthenticatorConfig,
 };
+use futures::{FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
 use prometheus::{IntGauge, Opts};
 use serde::Deserialize;
@@ -87,7 +88,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
-    let main = HttpServer::new(move || {
+    let mut main = HttpServer::new(move || {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .app_data(service_addr.clone())
@@ -108,16 +109,16 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     })
     .bind(config.bind_addr)?;
 
-    let main = if let Some(workers) = config.workers {
-        main.workers(workers).run()
-    } else {
-        main.run()
-    };
+    if let Some(workers) = config.workers {
+        main = main.workers(workers)
+    }
+
+    let main = main.run().err_into().boxed_local();
 
     // run
 
     metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
-    run_main(main, config.health, vec![]).await?;
+    run_main([main], config.health, vec![]).await?;
 
     // exiting
     Ok(())

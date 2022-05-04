@@ -1,11 +1,11 @@
 mod common;
 
 use drogue_client::registry;
-use drogue_cloud_device_state_service::{
-    app,
-    service::{DeviceState, Id, InitResponse, PingResponse},
+use drogue_cloud_device_state_service::app;
+use drogue_cloud_service_api::{
+    services::device_state::*,
+    webapp::test::{read_body_json, TestRequest},
 };
-use drogue_cloud_service_api::webapp::test::{read_body_json, TestRequest};
 use drogue_cloud_test_common::call::{call_http, user};
 use http::StatusCode;
 use lazy_static::lazy_static;

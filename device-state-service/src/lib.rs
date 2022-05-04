@@ -1,7 +1,7 @@
 pub mod endpoints;
 pub mod service;
 
-use crate::service::{DeviceStateService, PostgresServiceConfiguration};
+use crate::service::{postgres::PostgresServiceConfiguration, DeviceStateService};
 use actix_web::{web, App, HttpServer};
 use anyhow::Context;
 use drogue_cloud_endpoint_common::{
@@ -21,6 +21,7 @@ use drogue_cloud_service_common::{
     health::HealthServerConfig,
     openid::AuthenticatorConfig,
 };
+use futures::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -40,8 +41,7 @@ pub struct Config {
 
     pub oauth: AuthenticatorConfig,
 
-    #[serde(flatten)]
-    pub service_config: PostgresServiceConfiguration,
+    pub service: PostgresServiceConfiguration,
 
     pub instance: String,
     #[serde(default = "defaults::check_kafka_topic_ready")]
@@ -127,11 +127,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // service
 
-    let service = service::postgres::PostgresDeviceStateService::new(
-        config.service_config,
-        sender,
-        registry,
-    )?;
+    let service =
+        service::postgres::PostgresDeviceStateService::new(config.service, sender, registry)?;
     checks.push(Box::new(service.clone()));
 
     let service: Arc<dyn DeviceStateService> = Arc::new(service);
@@ -147,7 +144,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // main server
 
     let max_json_payload_size = config.max_json_payload_size;
-    let main = HttpServer::new(move || {
+    let mut main = HttpServer::new(move || {
         let auth = AuthN {
             openid: authenticator.as_ref().cloned(),
             token: user_auth.clone(),
@@ -164,15 +161,14 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     .bind(config.bind_addr)
     .context("error starting server")?;
 
-    let main = if let Some(workers) = config.workers {
-        main.workers(workers).run()
-    } else {
-        main.run()
-    };
+    if let Some(workers) = config.workers {
+        main = main.workers(workers)
+    }
 
     // run
 
-    run_main(main, config.health, checks).await?;
+    let main = main.run().err_into().boxed_local();
+    run_main([main], config.health, checks).await?;
 
     // exiting
 

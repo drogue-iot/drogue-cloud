@@ -132,7 +132,7 @@ impl HealthServer {
         use actix_web::web::Data;
         health_endpoint!(actix_web);
 
-        let checker = web::Data::new(self.checker);
+        let checker = Data::new(self.checker);
 
         let prometheus = match self.registry {
             Some(metrics) => PrometheusMetricsBuilder::new("health")

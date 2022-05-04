@@ -13,6 +13,7 @@ use drogue_cloud_registry_events::{
 use drogue_cloud_service_common::{
     app::run_main, config::ConfigFromEnv, defaults, health::HealthServerConfig,
 };
+use futures::FutureExt;
 use serde::Deserialize;
 use std::{sync::Arc, time::Duration};
 
@@ -87,7 +88,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main(source, config.health, vec![]).await?;
+    run_main([source.boxed_local()], config.health, vec![]).await?;
 
     // exiting
 

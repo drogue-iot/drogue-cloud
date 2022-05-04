@@ -7,6 +7,7 @@ mod id;
 pub mod kafka;
 pub mod labels;
 pub mod serde;
+pub mod services;
 pub mod token;
 pub mod version;
 

@@ -17,6 +17,7 @@ use drogue_cloud_service_common::{
     app::run_main, client::RegistryConfig, defaults, endpoints::create_endpoint_source,
     health::HealthServerConfig,
 };
+use futures::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use std::sync::Arc;
 use url::Url;
@@ -115,7 +116,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     log::info!("Running service ...");
-    run_main(source, config.health, vec![]).await?;
+    let main = source.err_into().boxed_local();
+    run_main([main], config.health, vec![]).await?;
 
     // exiting
 

@@ -1,8 +1,7 @@
 use crate::health::{HealthServer, HealthServerConfig};
 use drogue_cloud_service_api::health::HealthChecked;
-use futures::FutureExt;
-use futures_util::select;
-use std::future::Future;
+use futures::future::LocalBoxFuture;
+use futures::{stream::FuturesUnordered, StreamExt};
 
 #[macro_export]
 macro_rules! app {
@@ -96,22 +95,30 @@ fn init_no_tracing() {
 }
 
 /// Run a standard main loop.
-pub async fn run_main(
-    main: impl Future<Output = Result<(), impl Into<anyhow::Error> + Send + Sync + 'static>>,
+pub async fn run_main<'m, M, I>(
+    main: M,
     health: Option<HealthServerConfig>,
-    checks: Vec<Box<dyn HealthChecked>>,
-) -> anyhow::Result<()> {
+    checks: I,
+) -> anyhow::Result<()>
+where
+    M: IntoIterator<Item = LocalBoxFuture<'m, Result<(), anyhow::Error>>>,
+    I: IntoIterator<Item = Box<dyn HealthChecked>>,
+{
+    let mut futures = FuturesUnordered::<LocalBoxFuture<Result<(), anyhow::Error>>>::new();
+    futures.extend(main);
+
     if let Some(health) = health {
+        let checks = checks.into_iter().collect();
         let health =
             HealthServer::new(health, checks, Some(prometheus::default_registry().clone()));
 
-        select! {
-            _ = health.run().fuse() => (),
-            _ = main.fuse() => (),
-        }
-    } else {
-        main.await.map_err(|err| err.into())?;
+        futures.push(Box::pin(health.run()));
     }
+
+    let result = futures.next().await;
+
+    log::info!("One of the main runners returned: {result:?}");
+    log::info!("Exiting application...");
 
     Ok(())
 }

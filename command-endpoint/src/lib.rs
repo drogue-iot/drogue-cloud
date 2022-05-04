@@ -17,6 +17,7 @@ use drogue_cloud_service_common::{
     openid::AuthenticatorConfig,
 };
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
+use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use serde_json::json;
 use std::str;
@@ -118,7 +119,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main(main, config.health, vec![]).await?;
+    run_main([main.err_into().boxed_local()], config.health, vec![]).await?;
 
     // exiting
 

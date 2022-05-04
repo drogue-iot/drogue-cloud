@@ -21,6 +21,7 @@ use drogue_cloud_service_common::{
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{AuthenticatorConfig, TokenConfig},
 };
+use futures::{FutureExt, TryFutureExt};
 use info::DemoFetcher;
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
@@ -169,7 +170,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
     // main server
 
     #[allow(clippy::let_and_return)]
-    let main =
+    let mut main =
         HttpServer::new(move || {
             let auth = AuthN {
                 openid: authenticator.as_ref().cloned(),
@@ -246,15 +247,14 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         })
         .bind(bind_addr)?;
 
-    let main = if let Some(workers) = config.workers {
-        main.workers(workers).run()
-    } else {
-        main.run()
-    };
+    if let Some(workers) = config.workers {
+        main = main.workers(workers)
+    }
 
     // run
 
-    run_main(main, config.health, vec![]).await?;
+    let main = main.run().err_into().boxed_local();
+    run_main([main], config.health, vec![]).await?;
 
     // done
 

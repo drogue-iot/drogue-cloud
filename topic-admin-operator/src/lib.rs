@@ -14,6 +14,7 @@ use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     app::run_main, client::RegistryConfig, defaults, health::HealthServerConfig,
 };
+use futures::{FutureExt, TryFutureExt};
 use rdkafka::ClientConfig;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -83,7 +84,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     log::info!("Running service ...");
-    run_main(registry, config.health, vec![]).await?;
+    let main = registry.err_into().boxed_local();
+    run_main([main], config.health, vec![]).await?;
 
     // exiting
 

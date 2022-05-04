@@ -1,6 +1,9 @@
 use crate::{auth::DeviceAuthenticator, config::EndpointConfig, service::session::Session};
 use async_trait::async_trait;
-use drogue_client::{registry::v1::MqttSpec, Translator};
+use drogue_client::{
+    registry::v1::{Application, Device, MqttSpec},
+    Translator,
+};
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
@@ -9,10 +12,13 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::{
     error::ServerError,
-    mqtt::{AckOptions, Connect, ConnectAck, Service},
+    mqtt::{AckOptions, Connect, ConnectAck, Service, Sink},
 };
-use drogue_cloud_service_api::auth::device::authn::Outcome as AuthOutcome;
-use std::fmt::Debug;
+use drogue_cloud_service_api::{
+    auth::device::authn::Outcome as AuthOutcome, services::device_state::CreateResponse,
+};
+use drogue_cloud_service_common::state::{StateController, StateStream};
+use std::{fmt::Debug, time::Duration};
 use tracing::instrument;
 
 #[derive(Clone, Debug)]
@@ -21,6 +27,7 @@ pub struct App {
     pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
+    pub states: StateController,
 }
 
 impl App {
@@ -52,6 +59,71 @@ impl App {
                 }
             })?
             .outcome)
+    }
+
+    async fn create_session(
+        &self,
+        application: Application,
+        device: Device,
+        sink: Sink,
+    ) -> Result<Session, ServerError> {
+        // eval dialect
+        let dialect = match device
+            .section::<MqttSpec>()
+            .or_else(|| application.section())
+        {
+            Some(Ok(mqtt)) => mqtt.dialect,
+            Some(Err(err)) => {
+                let msg = format!(
+                    "Unable to parse MQTT spec section. Rejecting connection. Reason: {err}"
+                );
+                log::warn!("{msg}");
+                return Err(ServerError::Configuration(msg));
+            }
+            None => Default::default(),
+        };
+
+        // acquire session
+
+        // FIXME: make configurable
+        let mut attempts = 5;
+        loop {
+            match self
+                .states
+                .create(&application, &device)
+                .await
+                .map_err(|err| {
+                    ServerError::StateError(format!("Failed to contact state service: {err}"))
+                })? {
+                CreateResponse::Created => break,
+                CreateResponse::Occupied => {
+                    attempts -= 1;
+                    log::debug!(
+                        "Device state is still occupied (attempts left: {})",
+                        attempts
+                    );
+                    if attempts > 0 {
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    } else {
+                        return Err(ServerError::StateError("State still occupied".to_string()));
+                    }
+                }
+            }
+        }
+
+        // return
+
+        Ok(Session::new(
+            &self.config,
+            self.authenticator.clone(),
+            self.downstream.clone(),
+            sink,
+            application,
+            dialect,
+            device,
+            self.commands.clone(),
+            self.states.clone(),
+        ))
     }
 }
 
@@ -85,29 +157,9 @@ impl Service<Session> for App {
                 device,
                 r#as: _,
             }) => {
-                let dialect = match device
-                    .section::<MqttSpec>()
-                    .or_else(|| application.section())
-                {
-                    Some(Ok(mqtt)) => mqtt.dialect,
-                    Some(Err(err)) => {
-                        let msg = format!("Unable to parse MQTT spec section. Rejecting connection. Reason: {err}");
-                        log::warn!("{msg}");
-                        return Err(ServerError::Configuration(msg));
-                    }
-                    None => Default::default(),
-                };
-
-                let session = Session::new(
-                    &self.config,
-                    self.authenticator.clone(),
-                    self.downstream.clone(),
-                    connect.sink(),
-                    application,
-                    dialect,
-                    device,
-                    self.commands.clone(),
-                );
+                let session = self
+                    .create_session(application, device, connect.sink())
+                    .await?;
 
                 Ok(ConnectAck {
                     session,
