@@ -22,7 +22,7 @@ security:
 
 tags:
   - name: Access Token
-    description: Manage personal access tokens to authenticate with drogue cloud.
+    description: Manage personal access tokens to authenticate with Drogue Cloud.
   - name: Registry
     description: Manage application and devices in the registry.
   - name: Application administration
@@ -176,9 +176,9 @@ paths:
         409:
           description: If the application id is already used.
 
-  /api/registry/v1alpha1/apps/{appId}:
+  /api/registry/v1alpha1/apps/{application}:
     parameters:
-      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/ApplicationName'
     get:
       tags:
         - Registry
@@ -252,9 +252,9 @@ paths:
   # ### Devices
   #
 
-  /api/registry/v1alpha1/apps/{appId}/devices:
+  /api/registry/v1alpha1/apps/{application}/devices:
     parameters:
-      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/ApplicationName'
     get:
       tags:
         - Registry
@@ -284,10 +284,10 @@ paths:
         409:
           description: If the device id is already used.
 
-  /api/registry/v1alpha1/apps/{appId}/devices/{deviceId}:
+  /api/registry/v1alpha1/apps/{application}/devices/{device}:
     parameters:
-      - $ref: '#/components/parameters/AppId'
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: '#/components/parameters/ApplicationName'
+      - $ref: '#/components/parameters/DeviceName'
     get:
       tags:
         - Registry
@@ -384,9 +384,9 @@ paths:
         403:
           description: In case the user is not logged in.
 
-  /api/admin/v1alpha1/apps/{appId}/transfer-ownership:
+  /api/admin/v1alpha1/apps/{application}/transfer-ownership:
     parameters:
-      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/ApplicationName'
     put:
       tags:
         - Application administration
@@ -440,9 +440,9 @@ paths:
 
             This is also the case, when the transfer was already completed successfully.
 
-  /api/admin/v1alpha1/apps/{appId}/accept-ownership:
+  /api/admin/v1alpha1/apps/{application}/accept-ownership:
     parameters:
-      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/ApplicationName'
     put:
       tags:
         - Application administration
@@ -453,9 +453,9 @@ paths:
         404:
           description: If the requested application does not exist or if the user has no access to it.
 
-  /api/admin/v1alpha1/apps/{appId}/members:
+  /api/admin/v1alpha1/apps/{application}/members:
     parameters:
-      - $ref: '#/components/parameters/AppId'
+      - $ref: '#/components/parameters/ApplicationName'
     get:
       tags:
         - Application administration
@@ -497,10 +497,10 @@ paths:
   # ## Command & control
   #
 
-  /api/command/v1alpha1/apps/{appId}/devices/{deviceId}:
+  /api/command/v1alpha1/apps/{application}/devices/{device}:
     parameters:
-      - $ref: '#/components/parameters/AppId'
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: '#/components/parameters/ApplicationName'
+      - $ref: '#/components/parameters/DeviceName'
     post:
       tags:
         - Command & Control
@@ -533,10 +533,10 @@ paths:
         406:
           description: Device is not found or disabled.
 
-  /api/command/v1alpha1/inbox/apps/{appId}/devices/{deviceId}:
+  /api/command/v1alpha1/inbox/apps/{application}/devices/{device}:
     parameters:
-      - $ref: '#/components/parameters/AppId'
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: '#/components/parameters/ApplicationName'
+      - $ref: '#/components/parameters/DeviceName'
     get:
       tags:
         - Command & Control
@@ -568,10 +568,10 @@ paths:
         404:
           description: No command available.
 
-  /api/command/v1alpha1/outbox/apps/{appId}/devices/{deviceId}:
+  /api/command/v1alpha1/outbox/apps/{application}/devices/{device}:
     parameters:
-      - $ref: '#/components/parameters/AppId'
-      - $ref: '#/components/parameters/DeviceId'
+      - $ref: '#/components/parameters/ApplicationName'
+      - $ref: '#/components/parameters/DeviceName'
     post:
       tags:
         - Command & Control
@@ -604,19 +604,19 @@ paths:
 components:
 
   parameters:
-    AppId:
-      name: appId
+    ApplicationName:
+      name: application
       in: path
       required: true
-      description: The Application ID.
+      description: The name of the application.
       schema:
         type: string
         description: Must be DNS labels as defined by RFC1123
-    DeviceId:
-      name: deviceId
+    DeviceName:
+      name: device
       in: path
       required: true
-      description: The device ID.
+      description: The name of the device.
       schema:
         type: string
         maxLength: 255
