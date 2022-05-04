@@ -12,10 +12,12 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_service_api::{
+    health::BoxedHealthChecked,
     kafka::KafkaClientConfig,
     webapp::{self as actix_web, opentelemetry::RequestTracing, prom::PrometheusMetricsBuilder},
 };
 use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
+use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -125,7 +127,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         }
     });
 
-    let http_server = match (config.disable_tls, config.key_file, config.cert_bundle_file) {
+    let mut http_server = match (config.disable_tls, config.key_file, config.cert_bundle_file) {
         (false, Some(key), Some(cert)) => {
             if cfg!(feature = "openssl") {
                 use open_ssl::ssl;
@@ -157,11 +159,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         }
     };
 
-    let http_server = if let Some(workers) = config.workers {
-        http_server.workers(workers).run()
-    } else {
-        http_server.run()
-    };
+    if let Some(workers) = config.workers {
+        http_server = http_server.workers(workers)
+    }
 
     let command_source = KafkaCommandSource::new(
         commands,
@@ -171,7 +171,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main(http_server, config.health, vec![Box::new(command_source)]).await?;
+    let main = http_server.run().err_into().boxed_local();
+    run_main([main], config.health, [command_source.boxed()]).await?;
 
     // done
 

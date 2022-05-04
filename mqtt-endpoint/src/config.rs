@@ -3,6 +3,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::state::StateControllerConfiguration;
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig};
 use serde::Deserialize;
 use std::time::Duration;
@@ -69,6 +70,8 @@ pub struct Config {
 
     #[serde(default)]
     pub endpoint_pool: ExternalClientPoolConfig,
+
+    pub state: StateControllerConfiguration,
 }
 
 impl TlsConfig for Config {

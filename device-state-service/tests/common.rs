@@ -20,8 +20,9 @@ macro_rules! test {
 
         let cli = drogue_cloud_test_common::client();
 
-        let db = drogue_cloud_test_common::db(&cli, |pg| service::PostgresServiceConfiguration {
+        let db = drogue_cloud_test_common::db(&cli, |pg| service::postgres::PostgresServiceConfiguration {
             pg,
+            session_timeout: std::time::Duration::from_secs(10),
         })?;
 
         let $pool = db.config.pg.create_pool(tokio_postgres::NoTls)?;

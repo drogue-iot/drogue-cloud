@@ -11,8 +11,9 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_mqtt_common::server::build;
-use drogue_cloud_service_common::{health::HealthServer, metrics};
-use futures::TryFutureExt;
+use drogue_cloud_service_api::health::BoxedHealthChecked;
+use drogue_cloud_service_common::{app::run_main, metrics, state::StateController};
+use futures_util::{FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
 use prometheus::{IntGauge, Opts};
 
@@ -27,6 +28,10 @@ lazy_static! {
 
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let commands = Commands::new();
+
+    // state service
+
+    let (states, runner, state_stream) = StateController::new(config.state.clone()).await?;
 
     let app = App {
         config: config.endpoint.clone(),
@@ -44,6 +49,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                 .await?,
         ),
         commands: commands.clone(),
+
+        states,
     };
 
     let srv = build(config.mqtt.clone(), app, &config)?.run();
@@ -60,18 +67,14 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    if let Some(health) = config.health {
-        metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
-        // health server
-        let health = HealthServer::new(
-            health,
-            vec![Box::new(command_source)],
-            Some(prometheus::default_registry().clone()),
-        );
-        futures::try_join!(health.run_ntex(), srv.err_into(),)?;
-    } else {
-        futures::try_join!(srv)?;
-    }
+    metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
+    let srv = srv.err_into().boxed_local();
+    run_main(
+        [srv, runner.run().boxed_local()],
+        config.health,
+        [command_source.boxed()],
+    )
+    .await?;
 
     // exiting
 

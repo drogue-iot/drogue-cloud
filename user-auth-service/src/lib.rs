@@ -5,17 +5,16 @@ use actix_web::{web, App, HttpServer};
 use drogue_cloud_access_token_service::{
     endpoints::WebData as KeycloakWebData, service::KeycloakAccessTokenService,
 };
-use drogue_cloud_service_api::webapp as actix_web;
+use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
 use drogue_cloud_service_common::{
     app::run_main,
     defaults,
     health::HealthServerConfig,
-    keycloak::client::KeycloakAdminClient,
-    keycloak::KeycloakAdminClientConfig,
-    keycloak::KeycloakClient,
+    keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
+use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use service::AuthorizationServiceConfig;
 
@@ -93,7 +92,7 @@ where
 
     // main server
 
-    let main = HttpServer::new(move || {
+    let mut main = HttpServer::new(move || {
         let auth = openid_auth!(req -> {
             req
             .app_data::<web::Data<WebData<service::PostgresAuthorizationService>>>()
@@ -112,13 +111,12 @@ where
     .bind(config.bind_addr)?;
 
     // run
-    let main = if let Some(workers) = config.workers {
-        main.workers(workers).run()
-    } else {
-        main.run()
-    };
+    if let Some(workers) = config.workers {
+        main = main.workers(workers)
+    }
 
-    run_main(main, config.health, vec![Box::new(data_service)]).await?;
+    let main = main.run().err_into().boxed_local();
+    run_main([main], config.health, [data_service.boxed()]).await?;
 
     // exiting
 

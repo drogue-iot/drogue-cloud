@@ -1,23 +1,13 @@
-mod config;
 mod error;
 
 pub mod postgres;
 
-pub use self::config::*;
 pub use error::*;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use drogue_client::{error::ClientError, registry};
-use serde::{Deserialize, Serialize};
-
-pub const CONNECTION_TYPE_EVENT: &str = "io.drogue.connection.v1";
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConnectionEvent {
-    pub connected: bool,
-}
+use drogue_cloud_service_api::services::device_state::*;
+use serde::Deserialize;
 
 #[async_trait]
 pub trait DeviceStateService: Send + Sync {
@@ -64,49 +54,6 @@ pub trait DeviceStateService: Send + Sync {
         application: String,
         device: String,
     ) -> Result<Option<DeviceStateResponse>, ServiceError>;
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Id {
-    pub application: String,
-    pub device: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeviceState {
-    pub device_uid: String,
-    pub endpoint: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeviceStateResponse {
-    pub created: DateTime<Utc>,
-    pub state: DeviceState,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InitResponse {
-    pub session: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum CreateResponse {
-    // State was created.
-    Created,
-    // Device state is still occupied.
-    Occupied,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PingResponse {
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub lost_ids: Vec<Id>,
 }
 
 #[async_trait]

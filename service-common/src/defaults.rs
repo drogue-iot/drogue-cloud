@@ -76,6 +76,11 @@ pub fn keycloak_url() -> Url {
 }
 
 #[inline]
+pub fn device_state_url() -> Url {
+    Url::parse("http://device-state-service").unwrap()
+}
+
+#[inline]
 pub fn mqtts_port() -> u16 {
     8883
 }

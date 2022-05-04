@@ -1,7 +1,7 @@
 use super::*;
 
 use async_trait::async_trait;
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_cloud_database_common::{Client, DatabaseService};
 use drogue_cloud_endpoint_common::sender::{
@@ -11,16 +11,28 @@ use drogue_cloud_service_api::health::HealthChecked;
 use futures::StreamExt;
 use serde_json::Value;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio_postgres::types::Type;
 use tokio_postgres::{types::Json, NoTls, Row};
 use uuid::Uuid;
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct PostgresServiceConfiguration {
+    #[serde(with = "humantime_serde", default = "default_session_timeout")]
+    pub session_timeout: Duration,
+    pub pg: deadpool_postgres::Config,
+}
+
+const fn default_session_timeout() -> Duration {
+    Duration::from_secs(10)
+}
 
 #[derive(Clone)]
 pub struct PostgresDeviceStateService {
     pool: Pool,
     sender: DownstreamSender,
     registry: Arc<dyn ApplicationLookup>,
-    timeout: Duration,
+    timeout: chrono::Duration,
 }
 
 impl PostgresDeviceStateService {
@@ -30,26 +42,15 @@ impl PostgresDeviceStateService {
         registry: impl ApplicationLookup + 'static,
     ) -> anyhow::Result<Self> {
         let pool = config.pg.create_pool(NoTls)?;
+
+        let timeout = chrono::Duration::from_std(config.session_timeout)?;
+
         Ok(Self {
             pool,
             sender,
             registry: Arc::new(registry),
-            timeout: Duration::seconds(10),
+            timeout,
         })
-    }
-
-    #[doc(hidden)]
-    pub fn for_testing(
-        pool: Pool,
-        sender: DownstreamSender,
-        registry: impl ApplicationLookup + 'static,
-    ) -> Self {
-        Self {
-            pool,
-            sender,
-            registry: Arc::new(registry),
-            timeout: Duration::seconds(10),
-        }
     }
 }
 
@@ -86,6 +87,7 @@ INSERT INTO
 
         Ok(InitResponse {
             session: session.to_string(),
+            expires: now + self.timeout,
         })
     }
 
@@ -251,7 +253,10 @@ WHERE
 
             // return
 
-            Ok(PingResponse { lost_ids })
+            Ok(PingResponse {
+                expires: now + self.timeout,
+                lost_ids,
+            })
         } else {
             Err(ServiceError::NotInitialized)
         }

@@ -10,13 +10,14 @@ use drogue_cloud_service_api::{
     endpoints::*,
     kafka::{KafkaClientConfig, KafkaConfig},
 };
+use drogue_cloud_service_common::client::DeviceStateClientConfig;
 use drogue_cloud_service_common::{
-    client::RegistryConfig,
-    client::UserAuthClientConfig,
+    client::{RegistryConfig, UserAuthClientConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
     openid::{
         AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
     },
+    state::StateControllerConfiguration,
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use futures::future::{select, Either};
@@ -57,6 +58,7 @@ struct ServerConfig {
     pub registry: Endpoint,
     pub device_auth: Endpoint,
     pub user_auth: Endpoint,
+    pub device_state: Endpoint,
     pub database: Database,
     pub keycloak: Keycloak,
     pub kafka: KafkaClientConfig,
@@ -205,8 +207,12 @@ impl ServerConfig {
                 port: 10005,
             },
             user_auth: Endpoint {
-                host: iface,
+                host: iface.to_string(),
                 port: 10006,
+            },
+            device_state: Endpoint {
+                host: iface,
+                port: 10007,
             },
         }
     }
@@ -706,6 +712,18 @@ fn main() {
             .unwrap(),
         });
 
+        let state = StateControllerConfiguration {
+            client: DeviceStateClientConfig {
+                url: Url::parse(&format!(
+                    "http://{}:{}",
+                    server.device_state.host, server.device_state.port
+                ))
+                .unwrap(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
         let mut threads = Vec::new();
 
         // Spawn actix runtime
@@ -942,6 +960,7 @@ fn main() {
                         kafka_command_config: kafka,
                         check_kafka_topic_ready: false,
                         endpoint_pool: Default::default(),
+                        state: state.clone(),
                     };
 
                     handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config.clone())));

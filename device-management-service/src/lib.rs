@@ -8,7 +8,7 @@ use actix_web::{web, App, HttpServer};
 use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
-use drogue_cloud_service_api::webapp as actix_web;
+use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
 use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     app::run_main,
@@ -18,6 +18,7 @@ use drogue_cloud_service_common::{
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{Authenticator, AuthenticatorConfig},
 };
+use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;
 
@@ -203,7 +204,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let max_json_payload_size = config.max_json_payload_size;
     let db_service = service.clone();
-    let main = HttpServer::new(move || {
+    let mut main = HttpServer::new(move || {
         let auth = AuthN {
             openid: authenticator.as_ref().cloned(),
             token: user_auth.clone(),
@@ -225,15 +226,14 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     .bind(config.bind_addr)
     .context("error starting server")?;
 
-    let main = if let Some(workers) = config.workers {
-        main.workers(workers).run()
-    } else {
-        main.run()
-    };
+    if let Some(workers) = config.workers {
+        main = main.workers(workers)
+    }
 
     // run
 
-    run_main(main, config.health, vec![Box::new(service)]).await?;
+    let main = main.run().err_into().boxed_local();
+    run_main([main], config.health, [service.boxed()]).await?;
 
     // exiting
 

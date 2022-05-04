@@ -8,6 +8,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use cache::DeviceCache;
+use drogue_client::meta::v1::CommonMetadata;
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
@@ -21,7 +22,7 @@ use drogue_cloud_mqtt_common::{
     mqtt::{self, *},
 };
 use drogue_cloud_service_api::auth::device::authn::GatewayOutcome;
-use drogue_cloud_service_common::Id;
+use drogue_cloud_service_common::{state::StateController, Id};
 use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
 use ntex_mqtt::{types::QoS, v5};
@@ -39,10 +40,11 @@ pub struct Session {
     dialect: registry::v1::MqttDialect,
     commands: Commands,
     auth: DeviceAuthenticator,
-    sink: mqtt::Sink,
+    sink: Sink,
     inbox_reader: Arc<Mutex<HashMap<String, InboxSubscription>>>,
     device_cache: DeviceCache<registry::v1::Device>,
     id: Id,
+    states: StateController,
 }
 
 impl Session {
@@ -50,11 +52,12 @@ impl Session {
         config: &EndpointConfig,
         auth: DeviceAuthenticator,
         sender: DownstreamSender,
-        sink: mqtt::Sink,
+        sink: Sink,
         application: registry::v1::Application,
         dialect: registry::v1::MqttDialect,
         device: registry::v1::Device,
         commands: Commands,
+        states: StateController,
     ) -> Self {
         let id = Id::new(
             application.metadata.name.clone(),
@@ -73,6 +76,7 @@ impl Session {
             inbox_reader: Default::default(),
             device_cache,
             id,
+            states,
         }
     }
 
@@ -280,16 +284,29 @@ impl mqtt::Session for Session {
         Ok(())
     }
 
-    #[instrument(skip(self),fields(self.id = ?self.id))]
+    #[instrument(
+        skip(self),
+        fields(self.id = ?self.id),
+        err(Debug)
+    )]
     async fn closed(
         &self,
         reason: CloseReason,
     ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
         log::info!("Connection closed ({:?}): {:?}", self.id, reason);
+        CONNECTIONS_COUNTER.dec();
+
+        self.states
+            .delete(
+                self.application.metadata.name(),
+                self.device.metadata.name(),
+            )
+            .await;
+
         for (_, v) in self.inbox_reader.lock().await.drain() {
             v.close().await;
         }
-        CONNECTIONS_COUNTER.dec();
+
         Ok(())
     }
 }
