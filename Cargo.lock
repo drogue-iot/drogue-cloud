@@ -75,9 +75,55 @@ version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5885cb81a0d4d0d322864bea1bb6c2a8144626b4fdc625d4c51eba197e7797a"
 dependencies = [
- "actix-codec",
- "actix-rt",
- "actix-service",
+ "actix-codec 0.3.0",
+ "actix-connect",
+ "actix-rt 1.1.1",
+ "actix-service 1.0.6",
+ "actix-threadpool",
+ "actix-utils 2.0.0",
+ "base64 0.13.0",
+ "bitflags",
+ "brotli",
+ "bytes 0.5.6",
+ "cookie 0.14.4",
+ "copyless",
+ "derive_more",
+ "either",
+ "encoding_rs",
+ "flate2",
+ "futures-channel",
+ "futures-core",
+ "futures-util",
+ "fxhash",
+ "h2 0.2.7",
+ "http",
+ "httparse",
+ "indexmap",
+ "itoa 0.4.8",
+ "language-tags 0.2.2",
+ "lazy_static 1.4.0",
+ "log",
+ "mime",
+ "percent-encoding",
+ "pin-project 1.0.10",
+ "rand 0.7.3",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sha-1 0.9.8",
+ "slab",
+ "time 0.2.27",
+]
+
+[[package]]
+name = "actix-http"
+version = "3.0.4"
+source = "git+https://github.com/lulf/actix-web?rev=936839319e18da302209f56ef1288ce29c956858#936839319e18da302209f56ef1288ce29c956858"
+dependencies = [
+ "actix-codec 0.5.0",
+ "actix-rt 2.6.0",
+ "actix-service 2.0.2",
  "actix-tls",
  "actix-utils",
  "ahash 0.7.6",
@@ -97,13 +143,13 @@ dependencies = [
  "itoa 1.0.1",
  "language-tags",
  "local-channel",
- "log",
  "mime",
  "percent-encoding",
  "pin-project-lite",
  "rand 0.8.5",
  "sha-1 0.10.0",
  "smallvec",
+ "tracing",
  "zstd",
 ]
 
@@ -205,12 +251,11 @@ dependencies = [
 [[package]]
 name = "actix-web"
 version = "4.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4e5ebffd51d50df56a3ae0de0e59487340ca456f05dd0b90c0a7a6dd6a74d31"
+source = "git+https://github.com/lulf/actix-web?rev=936839319e18da302209f56ef1288ce29c956858#936839319e18da302209f56ef1288ce29c956858"
 dependencies = [
- "actix-codec",
- "actix-http",
- "actix-macros",
+ "actix-codec 0.5.0",
+ "actix-http 3.0.4",
+ "actix-macros 0.2.3",
  "actix-router",
  "actix-rt",
  "actix-server",
@@ -250,8 +295,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31efe7896f3933ce03dd4710be560254272334bb321a18fd8ff62b1a557d9d19"
 dependencies = [
  "actix",
- "actix-codec",
- "actix-http",
+ "actix-codec 0.5.0",
+ "actix-http 3.0.4",
  "actix-web",
  "bytes 1.1.0",
  "bytestring",
@@ -305,7 +350,7 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "503ff1136a085f39fc9fd96818a5e9c7ab58ccd36682f3cfc32a001d01cc3a50"
 dependencies = [
- "actix-http",
+ "actix-http 3.0.4",
  "actix-web",
  "futures-util",
  "opentelemetry",
@@ -830,7 +875,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38c036aa864420e0e684386a979f1847e8e170d3bfa8375b0675132bc8ab46b4"
 dependencies = [
- "actix-http",
+ "actix-http 3.0.4",
  "actix-web",
  "async-trait",
  "base64 0.12.3",
@@ -1640,8 +1685,8 @@ name = "drogue-cloud-device-management-service"
 version = "0.10.0"
 dependencies = [
  "actix-cors",
- "actix-http",
- "actix-rt",
+ "actix-http 3.0.4",
+ "actix-rt 2.6.0",
  "anyhow",
  "async-trait",
  "base64 0.13.0",
@@ -6382,18 +6427,18 @@ checksum = "94693807d016b2f2d2e14420eb3bfcca689311ff775dcf113d74ea624b7cdf07"
 
 [[package]]
 name = "zstd"
-version = "0.10.0+zstd.1.5.2"
+version = "0.11.1+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b1365becbe415f3f0fcd024e2f7b45bacfb5bdd055f0dc113571394114e7bdd"
+checksum = "77a16b8414fde0414e90c612eba70985577451c4c504b99885ebed24762cb81a"
 dependencies = [
  "zstd-safe",
 ]
 
 [[package]]
 name = "zstd-safe"
-version = "4.1.4+zstd.1.5.2"
+version = "5.0.1+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f7cd17c9af1a4d6c24beb1cc54b17e2ef7b593dc92f19e9d9acad8b182bbaee"
+checksum = "7c12659121420dd6365c5c3de4901f97145b79651fb1d25814020ed2ed0585ae"
 dependencies = [
  "libc",
  "zstd-sys",
@@ -6401,9 +6446,9 @@ dependencies = [
 
 [[package]]
 name = "zstd-sys"
-version = "1.6.3+zstd.1.5.2"
+version = "2.0.1+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc49afa5c8d634e75761feda8c592051e7eeb4683ba827211eb0d731d3402ea8"
+checksum = "9fd07cbbc53846d9145dbffdf6dd09a7a0aa52be46741825f5c97bdd4f73f12b"
 dependencies = [
  "cc",
  "libc",
