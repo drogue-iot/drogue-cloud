@@ -2512,6 +2512,7 @@ dependencies = [
  "drogue-cloud-command-endpoint",
  "drogue-cloud-console-backend",
  "drogue-cloud-device-management-service",
+ "drogue-cloud-device-state-service",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-event-common",
  "drogue-cloud-http-endpoint",

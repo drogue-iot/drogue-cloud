@@ -3,6 +3,7 @@ use core::str::FromStr;
 use diesel_migrations::embed_migrations;
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
+use drogue_cloud_device_state_service::service::postgres::PostgresServiceConfiguration;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
 use drogue_cloud_mqtt_common::server::MqttServerOptions;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
@@ -467,6 +468,11 @@ fn main() {
                         .help("enable device management service"),
                 )
                 .arg(
+                    Arg::with_name("enable-device-state")
+                        .long("--enable-device-state")
+                        .help("enable device state service"),
+                )
+                .arg(
                     Arg::with_name("enable-user-authentication-service")
                         .long("--enable-user-authentication-service")
                         .help("enable user authentication service"),
@@ -722,6 +728,7 @@ fn main() {
                 .unwrap(),
                 ..Default::default()
             },
+            init_delay: Some(Duration::from_secs(2)),
             ..Default::default()
         };
 
@@ -773,6 +780,32 @@ fn main() {
                     handles.push(Box::pin(drogue_cloud_device_management_service::run(
                         config,
                     )));
+                }
+
+                if matches.is_present("enable-device-state") || matches.is_present("enable-all") {
+                    log::info!("Enabling device state service");
+
+                    let kafka = server.kafka.clone();
+                    let config = drogue_cloud_device_state_service::Config {
+                        workers: Some(1),
+                        max_json_payload_size: 65536,
+                        enable_access_token: true,
+                        user_auth: user_auth.clone(),
+                        oauth: oauth.clone(),
+                        service: PostgresServiceConfiguration {
+                            session_timeout: Duration::from_secs(10),
+                            pg: pg.clone(),
+                        },
+                        instance: "drogue".to_string(),
+                        check_kafka_topic_ready: false,
+                        kafka_downstream_config: kafka.clone(),
+                        health: None,
+                        bind_addr: server.device_state.clone().into(),
+                        endpoint_pool: Default::default(),
+                        registry: registry.clone(),
+                    };
+
+                    handles.push(Box::pin(drogue_cloud_device_state_service::run(config)));
                 }
 
                 if matches.is_present("enable-user-authentication-service")
@@ -1128,7 +1161,7 @@ fn main() {
         println!();
 
         println!("Publishing data to the HTTP endpoint:");
-        println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if tls { "-k https" } else {"http"}, server.http.host, server.http.port);
+        println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/telemetry", if tls { "-k https" } else {"http"}, server.http.host, server.http.port);
         println!();
 
         let now = Instant::now();
