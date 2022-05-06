@@ -146,7 +146,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     true
                 });
 
-                http_server.bind_openssl(config.bind_addr, builder)?
+                http_server
+                    .bind_openssl(config.bind_addr, builder)?
+                    .tls_handshake_timeout(std::time::Duration::from_secs(10))
             } else {
                 panic!("TLS is required, but no TLS implementation enabled")
             }
