@@ -1,68 +1,46 @@
-use crate::client::{DeviceStateClient, DeviceStateClientConfig};
-use anyhow::Context;
+mod config;
+mod mux;
+
+pub use self::config::*;
+pub use mux::*;
+
+use crate::client::DeviceStateClient;
+use async_std::sync::Mutex;
 use chrono::{DateTime, Utc};
 use drogue_client::{
     error::{ClientError, ErrorInformation},
     registry,
 };
 use drogue_cloud_service_api::services::device_state::{
-    CreateResponse, DeviceState, Id, InitResponse,
+    self, DeleteOptions, DeviceState, Id, InitResponse, LastWillTestament,
 };
-use futures::{
-    channel::mpsc::{UnboundedReceiver, UnboundedSender},
-    stream::FusedStream,
-    SinkExt,
-};
-use serde::Deserialize;
+use futures::{channel::mpsc::UnboundedReceiver, stream::FusedStream};
 use std::{
     ops::{Deref, DerefMut},
+    sync::Arc,
     time::Duration,
 };
 use tokio::time::{sleep, Instant};
+use uuid::Uuid;
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct StateControllerConfiguration {
-    #[serde(default)]
-    pub client: DeviceStateClientConfig,
-    pub endpoint: String,
-    /// The amount of time to ping again before the session expiration.
-    #[serde(with = "humantime_serde", default = "default_delay_buffer")]
-    pub delay_buffer: Duration,
-    /// The minimum delay time to wait before another ping.
-    #[serde(with = "humantime_serde", default = "default_min_delay")]
-    pub min_delay: Duration,
-}
-
-impl Default for StateControllerConfiguration {
-    fn default() -> Self {
-        Self {
-            client: Default::default(),
-            endpoint: "default".to_string(),
-            delay_buffer: default_delay_buffer(),
-            min_delay: default_min_delay(),
-        }
-    }
-}
-
-const fn default_delay_buffer() -> Duration {
-    Duration::from_secs(5)
-}
-
-const fn default_min_delay() -> Duration {
-    Duration::from_secs(1)
+#[derive(Clone, Debug, Default)]
+pub struct CreateOptions {
+    pub lwt: Option<LastWillTestament>,
 }
 
 #[derive(Clone, Debug)]
 pub struct StateController {
+    mux: Arc<Mutex<Mux>>,
     client: DeviceStateClient,
     session: String,
     endpoint: String,
+    retry_deletes: usize,
 }
 
 pub struct StateRunner {
     client: DeviceStateClient,
     session: String,
-    sender: UnboundedSender<Id>,
+    mux: Arc<Mutex<Mux>>,
     expires: DateTime<Utc>,
     delay_buffer: chrono::Duration,
     min_delay_ms: i64,
@@ -86,31 +64,36 @@ impl DerefMut for StateStream {
     }
 }
 
+pub enum CreationOutcome {
+    Created(State),
+    Occupied,
+    Failed,
+}
+
 impl StateController {
-    pub async fn new(
-        config: StateControllerConfiguration,
-    ) -> anyhow::Result<(Self, StateRunner, StateStream)> {
+    pub async fn new(config: StateControllerConfiguration) -> anyhow::Result<(Self, StateRunner)> {
         let client = DeviceStateClient::from_config(config.client).await?;
 
         let InitResponse { session, expires } = client.init().await?;
 
-        let (tx, rx) = futures::channel::mpsc::unbounded::<Id>();
+        let mux = Arc::new(Mutex::new(Mux::new()));
 
         Ok((
             Self {
+                mux: mux.clone(),
                 client: client.clone(),
                 session: session.clone(),
                 endpoint: config.endpoint,
+                retry_deletes: config.retry_deletes,
             },
             StateRunner {
                 client,
                 session,
                 expires,
-                sender: tx,
+                mux,
                 delay_buffer: chrono::Duration::from_std(config.delay_buffer)?,
                 min_delay_ms: config.min_delay.as_millis() as _,
             },
-            StateStream { stream: rx },
         ))
     }
 
@@ -118,31 +101,97 @@ impl StateController {
         &self,
         application: &registry::v1::Application,
         device: &registry::v1::Device,
-    ) -> Result<CreateResponse, ClientError> {
+        max_attempts: usize,
+        opts: CreateOptions,
+    ) -> CreationOutcome {
         let state = DeviceState {
             device_uid: device.metadata.uid.clone(),
             endpoint: self.endpoint.clone(),
+            lwt: opts.lwt,
         };
 
-        self.client
-            .create(
-                &self.session,
-                &application.metadata.name,
-                &device.metadata.name,
-                state,
-            )
-            .await
+        let token = Uuid::new_v4().to_string();
+        let mut attempts = max_attempts;
+
+        loop {
+            match self
+                .client
+                .create(
+                    &self.session,
+                    &application.metadata.name,
+                    &device.metadata.name,
+                    &token,
+                    state.clone(),
+                )
+                .await
+            {
+                Ok(device_state::CreateResponse::Created) => {
+                    let id = Id {
+                        application: application.metadata.name.to_string(),
+                        device: device.metadata.name.to_string(),
+                    };
+                    return CreationOutcome::Created(State {
+                        handle: StateHandle {
+                            mux: self.mux.clone(),
+                            deleted: false,
+                            application: application.metadata.name.clone(),
+                            device: device.metadata.name.clone(),
+                            token: token.clone(),
+                            state: self.clone(),
+                        },
+                        watcher: self.mux.lock().await.added(id, token),
+                    });
+                }
+                Ok(device_state::CreateResponse::Occupied) => {
+                    if attempts > 0 {
+                        log::debug!(
+                            "Device state is still occupied (attempts left: {})",
+                            attempts
+                        );
+
+                        attempts -= 1;
+
+                        sleep(Duration::from_secs(1)).await;
+                    } else {
+                        log::info!(
+                            "Device state still occupied after {} attempts",
+                            max_attempts
+                        );
+                        return CreationOutcome::Occupied;
+                    }
+                }
+                Err(err) => {
+                    // we cannot be sure if the state was created or not. So we try to delete
+                    // with our token. If that call is successful, it will clean up the mess.
+                    // If that call isn't successful, then we panic, and the (pod) session timeout
+                    // will clean up for us.
+                    log::info!("Failed to create state: {err}. Trying to recover...");
+                    self.delete(
+                        &application.metadata.name,
+                        &device.metadata.name,
+                        &token,
+                        Default::default(),
+                    )
+                    .await;
+                    return CreationOutcome::Failed;
+                }
+            }
+        }
     }
 
     /// Delete device state.
     ///
-    /// This function might **panic** in case the state service cannot be contacted, even re-trying.
-    pub async fn delete(&self, application: &str, device: &str) {
-        let mut attempts = 10;
+    /// This function will **panic** in the case that state service cannot be contacted, even after re-trying.
+    pub async fn delete(&self, application: &str, device: &str, token: &str, opts: DeleteOptions) {
+        let mut attempts = self.retry_deletes;
         let delay = Duration::from_millis(250);
 
         loop {
-            match self.client.delete(&self.session, application, device).await {
+            match self
+                .client
+                .delete(&self.session, application, device, token, &opts)
+                .await
+            {
                 Ok(_) => break,
                 Err(err) => {
                     attempts -= 1;
@@ -223,12 +272,9 @@ impl StateRunner {
     }
 
     pub async fn handle_lost(&self, lost_ids: Vec<Id>) -> anyhow::Result<()> {
-        let mut sender = &self.sender;
-
         for id in lost_ids {
-            sender.feed(id).await.context("Feeding lost ID to stream")?;
+            self.mux.lock().await.handle_lost(id).await;
         }
-        sender.flush().await.context("Flushing lost ID stream")?;
 
         Ok(())
     }

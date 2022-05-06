@@ -15,10 +15,10 @@ use drogue_cloud_mqtt_common::{
     mqtt::{AckOptions, Connect, ConnectAck, Service, Sink},
 };
 use drogue_cloud_service_api::{
-    auth::device::authn::Outcome as AuthOutcome, services::device_state::CreateResponse,
+    auth::device::authn::Outcome as AuthOutcome, services::device_state::LastWillTestament,
 };
-use drogue_cloud_service_common::state::{StateController, StateStream};
-use std::{fmt::Debug, time::Duration};
+use drogue_cloud_service_common::state::{CreateOptions, CreationOutcome, StateController};
+use std::fmt::Debug;
 use tracing::instrument;
 
 #[derive(Clone, Debug)]
@@ -61,11 +61,21 @@ impl App {
             .outcome)
     }
 
+    #[instrument(
+        skip_all,
+        fields(
+            application = %application.metadata.name,
+            device = %device.metadata.name,
+            lwt = ?lwt,
+        ),
+        err(Debug)
+    )]
     async fn create_session(
         &self,
         application: Application,
         device: Device,
         sink: Sink,
+        lwt: Option<LastWillTestament>,
     ) -> Result<Session, ServerError> {
         // eval dialect
         let dialect = match device
@@ -85,31 +95,23 @@ impl App {
 
         // acquire session
 
-        // FIXME: make configurable
-        let mut attempts = 5;
-        loop {
-            match self
-                .states
-                .create(&application, &device)
-                .await
-                .map_err(|err| {
-                    ServerError::StateError(format!("Failed to contact state service: {err}"))
-                })? {
-                CreateResponse::Created => break,
-                CreateResponse::Occupied => {
-                    attempts -= 1;
-                    log::debug!(
-                        "Device state is still occupied (attempts left: {})",
-                        attempts
-                    );
-                    if attempts > 0 {
-                        tokio::time::sleep(Duration::from_secs(1)).await;
-                    } else {
-                        return Err(ServerError::StateError("State still occupied".to_string()));
-                    }
-                }
+        let opts = CreateOptions { lwt };
+
+        let state = match self
+            .states
+            .create(&application, &device, self.config.state_attempts, opts)
+            .await
+        {
+            CreationOutcome::Created(handle) => handle,
+            CreationOutcome::Occupied => {
+                return Err(ServerError::StateError("State still occupied".to_string()));
             }
-        }
+            CreationOutcome::Failed => {
+                return Err(ServerError::InternalError(
+                    "Failed to contact state service".to_string(),
+                ));
+            }
+        };
 
         // return
 
@@ -122,8 +124,29 @@ impl App {
             dialect,
             device,
             self.commands.clone(),
-            self.states.clone(),
+            state,
         ))
+    }
+
+    fn make_lwt(connect: &Connect<'_>) -> Option<LastWillTestament> {
+        match connect {
+            Connect::V3(handshake) => match &handshake.packet().last_will {
+                Some(lwt) => Some(LastWillTestament {
+                    channel: lwt.topic.as_ref().to_string(),
+                    payload: lwt.message.to_vec(),
+                    content_type: None,
+                }),
+                None => None,
+            },
+            Connect::V5(handshake) => match &handshake.packet().last_will {
+                Some(lwt) => Some(LastWillTestament {
+                    channel: lwt.topic.as_ref().to_string(),
+                    payload: lwt.message.to_vec(),
+                    content_type: lwt.content_type.as_ref().map(|s| s.as_ref().to_string()),
+                }),
+                None => None,
+            },
+        }
     }
 }
 
@@ -158,7 +181,12 @@ impl Service<Session> for App {
                 r#as: _,
             }) => {
                 let session = self
-                    .create_session(application, device, connect.sink())
+                    .create_session(
+                        application,
+                        device,
+                        connect.sink(),
+                        Self::make_lwt(&connect),
+                    )
                     .await?;
 
                 Ok(ConnectAck {

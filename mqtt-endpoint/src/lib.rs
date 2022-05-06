@@ -31,7 +31,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // state service
 
-    let (states, runner, state_stream) = StateController::new(config.state.clone()).await?;
+    let (states, runner) = StateController::new(config.state.clone()).await?;
 
     let app = App {
         config: config.endpoint.clone(),

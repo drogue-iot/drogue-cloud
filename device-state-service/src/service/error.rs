@@ -6,6 +6,8 @@ use drogue_cloud_service_api::webapp::{HttpResponse, ResponseError};
 pub enum ServiceError {
     #[error("not initialized")]
     NotInitialized,
+    #[error("application not found")]
+    ApplicationNotFound,
     #[error("internal error: {0}")]
     Internal(String),
     #[error("connection pool error: {0}")]
@@ -25,6 +27,10 @@ impl ResponseError for ServiceError {
         match self {
             Self::NotInitialized => HttpResponse::PreconditionFailed().json(ErrorInformation {
                 error: "NotInitialized".into(),
+                message: self.to_string(),
+            }),
+            Self::ApplicationNotFound => HttpResponse::BadRequest().json(ErrorInformation {
+                error: "ApplicationNotFound".into(),
                 message: self.to_string(),
             }),
             Self::Internal(_) => HttpResponse::InternalServerError().json(ErrorInformation {

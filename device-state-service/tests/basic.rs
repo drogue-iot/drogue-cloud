@@ -105,6 +105,7 @@ async fn test_create() -> anyhow::Result<()> {
             .set_json(DeviceState{
                 device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
+                lwt: None,
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -137,6 +138,7 @@ async fn test_lost() -> anyhow::Result<()> {
             .set_json(DeviceState{
                 device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
+                lwt: None,
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -145,6 +147,7 @@ async fn test_lost() -> anyhow::Result<()> {
             .set_json(DeviceState{
                 device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
+                lwt: None,
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
@@ -160,6 +163,7 @@ async fn test_lost() -> anyhow::Result<()> {
             .set_json(DeviceState{
                 device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
+                lwt: None,
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
@@ -185,6 +189,7 @@ async fn test_lost() -> anyhow::Result<()> {
             .set_json(DeviceState{
                 device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
+                lwt: None,
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -214,6 +219,7 @@ async fn test_timeout_lost() -> anyhow::Result<()> {
             .set_json(DeviceState{
                 device_uid: "device_uid".into(),
                 endpoint: "pod1".into(),
+                lwt: None,
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
