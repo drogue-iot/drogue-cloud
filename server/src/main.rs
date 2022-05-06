@@ -1153,15 +1153,23 @@ fn main() {
         println!();
 
         println!("Creating a device:");
-        println!("\tdrg create device --app example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
+        println!("\tdrg create device --application example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
         println!();
 
         println!("Streaming telemetry data for an application:");
-        println!("\tdrg stream example-app");
+        println!("\tdrg stream -a example-app");
         println!();
 
         println!("Publishing data to the HTTP endpoint:");
         println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/telemetry", if tls { "-k https" } else {"http"}, server.http.host, server.http.port);
+        println!();
+
+        println!("Publishing data to the MQTT endpoint:");
+        println!("\tmqtt pub -v -h {host} -p {port} -u 'device1@example-app' -pw 'hey-rodney' {tls} -t temp -m '{{\"temp\":42}}'",
+            host = server.mqtt.host,
+            port = server.mqtt.port,
+            tls = if tls { "-s" } else { "" },
+        );
         println!();
 
         let now = Instant::now();
