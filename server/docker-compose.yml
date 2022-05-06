@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   postgres:
-    image: docker.io/bitnami/postgresql:13
+    image: docker.io/bitnami/postgresql:14
     environment:
       - POSTGRESQL_USERNAME=admin
       - POSTGRESQL_PASSWORD=admin123456
@@ -15,7 +15,7 @@ services:
     environment:
       - KRAFT_CONTAINER_HOST_NAME=localhost
   keycloak:
-    image: docker.io/jboss/keycloak:13.0.1
+    image: quay.io/keycloak/keycloak:17.0.1-legacy
     environment:
       - KEYCLOAK_USER=admin
       - KEYCLOAK_PASSWORD=admin123456
