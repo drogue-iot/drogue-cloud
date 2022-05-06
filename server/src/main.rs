@@ -22,6 +22,7 @@ use drogue_cloud_service_common::{
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use futures::future::{select, Either};
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 use url::Url;
 
 #[macro_use]
@@ -1130,14 +1131,17 @@ fn main() {
         println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/foo", if tls { "-k https" } else {"http"}, server.http.host, server.http.port);
         println!();
 
-        if threads.is_empty() {
-            log::warn!("No services selected to start up. Process will exit. Enable some services using --enable-* or enable all using --enable-all.")
-        }
+        let now = Instant::now();
 
         for t in threads.drain(..) {
             t.join().unwrap();
         }
+
         log::info!("All services stopped");
+
+        if now.elapsed() < Duration::from_secs(2) {
+            log::warn!("Server exited quickly. Maybe no services had been enabled. You can enable services using --enable-* or enable all using --enable-all.");
+        }
     } else {
         log::error!("No subcommand specified");
         app.print_long_help().unwrap();
