@@ -53,7 +53,7 @@ pub struct Config {
     #[serde(default)]
     pub workers: Option<usize>,
 
-    #[serde(default)]
+    #[serde(default = "defaults::max_json_payload_size")]
     pub max_json_payload_size: usize,
 
     pub registry: RegistryConfig,
@@ -131,6 +131,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         service::postgres::PostgresDeviceStateService::new(config.service, sender, registry)?;
     checks.push(Box::new(service.clone()));
 
+    let pruner = service::postgres::run_pruner(service.clone()).boxed_local();
+
     let service: Arc<dyn DeviceStateService> = Arc::new(service);
     let service: web::Data<dyn DeviceStateService> = web::Data::from(service);
 
@@ -168,7 +170,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     let main = main.run().err_into().boxed_local();
-    run_main([main], config.health, checks).await?;
+    run_main([main, pruner], config.health, checks).await?;
 
     // exiting
 

@@ -15,10 +15,17 @@ pub struct EndpointConfig {
     #[serde(default = "default_cache_duration")]
     #[serde(with = "humantime_serde")]
     pub cache_duration: Duration,
+    #[serde(default = "default_state_attempts")]
+    /// Number of attempts to claim the device state
+    pub state_attempts: usize,
 }
 
 const fn default_cache_size() -> usize {
     128
+}
+
+const fn default_state_attempts() -> usize {
+    10
 }
 
 const fn default_cache_duration() -> Duration {
@@ -30,6 +37,7 @@ impl Default for EndpointConfig {
         Self {
             cache_duration: default_cache_duration(),
             cache_size: default_cache_size(),
+            state_attempts: default_state_attempts(),
         }
     }
 }

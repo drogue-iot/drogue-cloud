@@ -8,9 +8,10 @@ CREATE TABLE sessions
 
 CREATE TABLE states
 (
-    APPLICATION VARCHAR(255)             NOT NULL,
+    APPLICATION VARCHAR(64)              NOT NULL,
     DEVICE      VARCHAR(255)             NOT NULL,
     SESSION     UUID                     NOT NULL,
+    TOKEN       VARCHAR(64)              NOT NULL,
 
     CREATED     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     LOST        BOOLEAN                  NOT NULL DEFAULT false,

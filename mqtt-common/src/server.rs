@@ -1,7 +1,4 @@
-use crate::{
-    error::ServerError,
-    mqtt::{self, *},
-};
+use crate::{error::ServerError, mqtt::*};
 use futures::future::ok;
 use ntex::{
     fn_service,
@@ -60,7 +57,7 @@ fn create_server<F, Svc, S>(
 ) -> impl ServiceFactory<Io<F>, Response = (), InitError = (), Error = MqttError<ServerError>>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
     F: Filter,
 {
     let transport = opts.transport;
@@ -80,7 +77,7 @@ fn create_server_mqtt<F, Svc, S>(
 ) -> impl ServiceFactory<Io<F>, Response = (), InitError = (), Error = MqttError<ServerError>>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
     F: Filter,
 {
     let app3 = app.clone();
@@ -122,7 +119,7 @@ pub fn create_server_ws<F, Svc, S>(
 ) -> impl ServiceFactory<Io<F>, Response = (), InitError = (), Error = MqttError<ServerError>>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
     F: Filter,
 {
     HttpService::build()
@@ -212,7 +209,7 @@ pub fn build_server<Svc, S, F, R>(
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
     F: Fn(&MqttServerOptions, Svc) -> R + Send + Clone + 'static,
     R: ServiceFactory<Io>,
 {
@@ -240,7 +237,7 @@ where
 pub fn build_nontls<Svc, S>(opts: MqttServerOptions, app: Svc) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
 {
     build_server(opts, false, app, move |opts, app| create_server(opts, app))
 }
@@ -253,7 +250,7 @@ pub fn build_rustls<Svc, S>(
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
 {
     log::info!("TLS based on rustls");
 
@@ -277,7 +274,7 @@ pub fn build_openssl<Svc, S>(
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
 {
     log::info!("TLS based on openssl");
     build_server(opts, true, app, move |opts, app| {
@@ -297,7 +294,7 @@ pub fn build<Svc, S>(
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
-    S: mqtt::Session + 'static,
+    S: Session + 'static,
 {
     log::info!("MQTT transport: {:?}", opts.transport);
 

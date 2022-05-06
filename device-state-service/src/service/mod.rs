@@ -27,6 +27,7 @@ pub trait DeviceStateService: Send + Sync {
         instance: String,
         application: String,
         device: String,
+        token: String,
         state: DeviceState,
     ) -> Result<CreateResponse, ServiceError>;
 
@@ -39,6 +40,8 @@ pub trait DeviceStateService: Send + Sync {
         instance: String,
         application: String,
         device: String,
+        token: String,
+        opts: DeleteOptions,
     ) -> Result<(), ServiceError>;
 
     /// Refresh the session timeout and retrieve lost items.

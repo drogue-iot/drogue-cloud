@@ -3,6 +3,7 @@ use super::*;
 use async_trait::async_trait;
 use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
+use drogue_client::registry::v1::Application;
 use drogue_cloud_database_common::{Client, DatabaseService};
 use drogue_cloud_endpoint_common::sender::{
     DownstreamSender, Publish, PublishId, PublishOptions, PublishOutcome, Publisher,
@@ -10,10 +11,12 @@ use drogue_cloud_endpoint_common::sender::{
 use drogue_cloud_service_api::health::HealthChecked;
 use futures::StreamExt;
 use serde_json::Value;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio_postgres::types::Type;
-use tokio_postgres::{types::Json, NoTls, Row};
+use std::{sync::Arc, time::Duration};
+use tokio::time::sleep;
+use tokio_postgres::{
+    types::{Json, Type},
+    NoTls, Row,
+};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -96,8 +99,17 @@ INSERT INTO
         session: String,
         application: String,
         device: String,
+        token: String,
         state: DeviceState,
     ) -> Result<CreateResponse, ServiceError> {
+        let app = match self.registry.lookup(&application).await? {
+            Some(app) => app,
+            None => {
+                log::info!("Application not found: {application}");
+                return Err(ServiceError::ApplicationNotFound);
+            }
+        };
+
         let mut c = self.pool.get().await?;
 
         let t = c.transaction().await?;
@@ -113,6 +125,7 @@ INSERT INTO
     SESSION,
     APPLICATION,
     DEVICE,
+    TOKEN,
     CREATED,
     DATA
 ) VALUES (
@@ -120,7 +133,8 @@ INSERT INTO
     $2,
     $3,
     $4,
-    $5
+    $5,
+    $6
 )
 ON CONFLICT (APPLICATION, DEVICE)
     DO UPDATE
@@ -128,7 +142,7 @@ ON CONFLICT (APPLICATION, DEVICE)
 RETURNING
     LOST
 "#,
-                &[&session, &application, &device, &now, &Json(&state)],
+                &[&session, &application, &device, &token, &now, &Json(&state)],
             )
             .await?;
 
@@ -137,8 +151,8 @@ RETURNING
                 let lost: bool = row.try_get("LOST")?;
                 Ok(match lost {
                     false => {
-                        self.send_event(
-                            &application,
+                        self.send_connection_event(
+                            &app,
                             PublishId {
                                 name: device,
                                 uid: Some(state.device_uid),
@@ -164,6 +178,8 @@ RETURNING
         session: String,
         application: String,
         device: String,
+        token: String,
+        opts: DeleteOptions,
     ) -> Result<(), ServiceError> {
         let mut c = self.pool.get().await?;
         let t = c.transaction().await?;
@@ -179,15 +195,17 @@ WHERE
         APPLICATION = $2
     AND
         DEVICE = $3
+    AND
+        TOKEN = $4
 RETURNING
     APPLICATION, DEVICE, DATA
 "#,
-                &[&session, &application, &device],
+                &[&session, &application, &device, &token],
             )
             .await?;
 
         if let Some(row) = row {
-            self.send_event_from_row(row).await?;
+            self.send_disconnect_from_delete(row, opts).await?;
         }
 
         t.commit().await?;
@@ -370,7 +388,8 @@ RETURNING
         let mut deleted = Box::pin(deleted);
 
         while let Some(row) = deleted.next().await.transpose()? {
-            self.send_event_from_row(row).await?;
+            self.send_disconnect_from_delete(row, DeleteOptions { skip_lwt: false })
+                .await?;
         }
 
         t.execute(
@@ -389,7 +408,14 @@ WHERE
         Ok(())
     }
 
-    async fn send_event_from_row(&self, row: Row) -> Result<(), ServiceError> {
+    /// Send a disconnected event, from a delete operation.
+    ///
+    /// The provided row must contain the following fields: APPLICATION, DEVICE, DATA.
+    async fn send_disconnect_from_delete(
+        &self,
+        row: Row,
+        opts: DeleteOptions,
+    ) -> Result<(), ServiceError> {
         let application: String = row.try_get("APPLICATION")?;
         let device: String = row.try_get("DEVICE")?;
         let data: Option<Value> = row.try_get("DATA")?;
@@ -409,26 +435,7 @@ WHERE
             None
         };
 
-        self.send_event(
-            &application,
-            PublishId {
-                name: device,
-                uid: state.map(|state| state.device_uid),
-            },
-            false,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    async fn send_event(
-        &self,
-        application: &str,
-        device: PublishId,
-        connected: bool,
-    ) -> Result<(), ServiceError> {
-        let app = match self.registry.lookup(application).await? {
+        let application = match self.registry.lookup(&application).await? {
             Some(app) => app,
             None => {
                 log::info!("Application no longer found: {application}");
@@ -436,23 +443,80 @@ WHERE
             }
         };
 
-        let outcome = self
-            .sender
-            .publish(
-                Publish {
-                    application: &app,
-                    device: device.clone(),
-                    sender: device,
-                    channel: "connection".to_string(),
-                    options: PublishOptions {
-                        r#type: Some(CONNECTION_TYPE_EVENT.to_string()),
-                        content_type: Some("application/json".to_string()),
-                        ..Default::default()
-                    },
-                },
-                serde_json::to_vec(&ConnectionEvent { connected })?,
-            )
+        let device = PublishId {
+            name: device,
+            uid: state.as_ref().map(|state| state.device_uid.clone()),
+        };
+
+        if !opts.skip_lwt {
+            // send LWT event, if we have some
+            if let Some(lwt) = state.as_ref().and_then(|s| s.lwt.as_ref()) {
+                self.send_lwt_event(&application, device.clone(), lwt)
+                    .await?;
+            }
+        }
+
+        // send connection event
+
+        self.send_connection_event(&application, device, false)
             .await?;
+
+        // done
+
+        Ok(())
+    }
+
+    async fn send_lwt_event(
+        &self,
+        application: &Application,
+        device: PublishId,
+        lwt: &LastWillTestament,
+    ) -> Result<(), ServiceError> {
+        self.send_event(
+            Publish {
+                application,
+                device: device.clone(),
+                sender: device,
+                channel: lwt.channel.clone(),
+                options: PublishOptions {
+                    content_type: lwt.content_type.clone(),
+                    ..Default::default()
+                },
+            },
+            &lwt.payload,
+        )
+        .await
+    }
+
+    async fn send_connection_event(
+        &self,
+        application: &Application,
+        device: PublishId,
+        connected: bool,
+    ) -> Result<(), ServiceError> {
+        self.send_event(
+            Publish {
+                application,
+                device: device.clone(),
+                sender: device,
+                channel: "connection".to_string(),
+                options: PublishOptions {
+                    r#type: Some(CONNECTION_TYPE_EVENT.to_string()),
+                    content_type: Some("application/json".to_string()),
+                    ..Default::default()
+                },
+            },
+            serde_json::to_vec(&ConnectionEvent { connected })?,
+        )
+        .await
+    }
+
+    /// send a single event downstream.
+    async fn send_event<B>(&self, publish: Publish<'_>, body: B) -> Result<(), ServiceError>
+    where
+        B: AsRef<[u8]> + Send + Sync,
+    {
+        let outcome = self.sender.publish(publish, body).await?;
 
         log::debug!("Publish outcome: {outcome:?}");
 
@@ -462,5 +526,14 @@ WHERE
                 format!("Unable to send event: {outcome:?}"),
             )),
         }
+    }
+}
+
+pub async fn run_pruner(service: PostgresDeviceStateService) -> anyhow::Result<()> {
+    let period = service.timeout.to_std()?;
+
+    loop {
+        sleep(period).await;
+        service.prune().await?;
     }
 }

@@ -33,6 +33,7 @@ rust-crypto = "0.2"
 serde = "1"
 serde_json = "1"
 thiserror = "1"
+tokio = "1"
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
 tracing = "0.1"
 url = "2"

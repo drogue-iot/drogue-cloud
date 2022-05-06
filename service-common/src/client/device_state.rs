@@ -6,7 +6,8 @@ use drogue_client::{
     openid::{OpenIdTokenProvider, TokenInjector},
 };
 use drogue_cloud_service_api::services::device_state::{
-    CreateResponse, DeviceState, InitResponse, PingResponse,
+    CreateRequest, CreateResponse, DeleteOptions, DeleteRequest, DeviceState, InitResponse,
+    PingResponse,
 };
 use k8s_openapi::percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use reqwest::{Response, StatusCode};
@@ -92,7 +93,7 @@ impl DeviceStateClient {
         handle_response(response, StatusCode::CREATED).await
     }
 
-    #[instrument(err)]
+    #[instrument(level = "debug", err)]
     pub async fn ping(&self, session: &str) -> Result<PingResponse, ClientError> {
         let url = self.url.join(&format!(
             "/api/state/v1alpha1/sessions/{}",
@@ -120,6 +121,7 @@ impl DeviceStateClient {
         session: &str,
         application: &str,
         device: &str,
+        token: &str,
         state: DeviceState,
     ) -> Result<CreateResponse, ClientError> {
         let url = self.state_url(session, application, device)?;
@@ -130,7 +132,10 @@ impl DeviceStateClient {
             .propagate_current_context()
             .inject_token(&self.token_provider)
             .await?
-            .json(&state);
+            .json(&CreateRequest {
+                token: token.to_string(),
+                state,
+            });
 
         let response: Response = req
             .send()
@@ -150,6 +155,8 @@ impl DeviceStateClient {
         session: &str,
         application: &str,
         device: &str,
+        token: &str,
+        opts: &DeleteOptions,
     ) -> Result<(), ClientError> {
         let url = self.state_url(session, application, device)?;
 
@@ -158,7 +165,11 @@ impl DeviceStateClient {
             .delete(url)
             .propagate_current_context()
             .inject_token(&self.token_provider)
-            .await?;
+            .await?
+            .json(&DeleteRequest {
+                token: token.to_string(),
+                options: opts.clone(),
+            });
 
         let response: Response = req
             .send()

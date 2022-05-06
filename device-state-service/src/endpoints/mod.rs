@@ -12,26 +12,28 @@ pub async fn init(service: web::Data<dyn DeviceStateService>) -> Result<HttpResp
 pub async fn create(
     service: web::Data<dyn DeviceStateService>,
     path: web::Path<(String, String, String)>,
-    body: web::Json<DeviceState>,
+    body: web::Json<CreateRequest>,
 ) -> Result<HttpResponse, Error> {
     let (instance, application, device) = path.into_inner();
-    Ok(
-        match service
-            .create(instance, application, device, body.0)
-            .await?
-        {
-            CreateResponse::Created => HttpResponse::Created().finish(),
-            CreateResponse::Occupied => HttpResponse::Conflict().finish(),
-        },
-    )
+    let response = service
+        .create(instance, application, device, body.0.token, body.0.state)
+        .await?;
+
+    Ok(match response {
+        CreateResponse::Created => HttpResponse::Created().finish(),
+        CreateResponse::Occupied => HttpResponse::Conflict().finish(),
+    })
 }
 
 pub async fn delete(
     service: web::Data<dyn DeviceStateService>,
     path: web::Path<(String, String, String)>,
+    body: web::Json<DeleteRequest>,
 ) -> Result<HttpResponse, Error> {
     let (instance, application, device) = path.into_inner();
-    service.delete(instance, application, device).await?;
+    service
+        .delete(instance, application, device, body.0.token, body.0.options)
+        .await?;
     Ok(HttpResponse::NoContent().finish())
 }
 

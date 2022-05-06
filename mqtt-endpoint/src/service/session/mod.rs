@@ -8,7 +8,6 @@ use crate::{
 };
 use async_trait::async_trait;
 use cache::DeviceCache;
-use drogue_client::meta::v1::CommonMetadata;
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     command::{CommandFilter, Commands},
@@ -18,21 +17,35 @@ use drogue_cloud_endpoint_common::{
     },
 };
 use drogue_cloud_mqtt_common::{
-    error::PublishError,
+    error::{PublishError, ServerError},
     mqtt::{self, *},
 };
-use drogue_cloud_service_api::auth::device::authn::GatewayOutcome;
-use drogue_cloud_service_common::{state::StateController, Id};
+use drogue_cloud_service_api::{
+    auth::device::authn::GatewayOutcome, services::device_state::DeleteOptions,
+};
+use drogue_cloud_service_common::{
+    state::{State, StateHandle},
+    Id,
+};
 use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
-use ntex_mqtt::{types::QoS, v5};
+use ntex_mqtt::{
+    types::QoS,
+    v5::{
+        self,
+        codec::{self, DisconnectReasonCode},
+    },
+};
 use std::{
+    cell::Cell,
     collections::{hash_map::Entry, HashMap},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 use tracing::instrument;
 
-#[derive(Clone)]
 pub struct Session {
     sender: DownstreamSender,
     application: registry::v1::Application,
@@ -44,7 +57,8 @@ pub struct Session {
     inbox_reader: Arc<Mutex<HashMap<String, InboxSubscription>>>,
     device_cache: DeviceCache<registry::v1::Device>,
     id: Id,
-    states: StateController,
+    handle: Cell<Option<StateHandle>>,
+    skip_lwt: Arc<AtomicBool>,
 }
 
 impl Session {
@@ -57,14 +71,38 @@ impl Session {
         dialect: registry::v1::MqttDialect,
         device: registry::v1::Device,
         commands: Commands,
-        states: StateController,
+        state: State,
     ) -> Self {
         let id = Id::new(
             application.metadata.name.clone(),
             device.metadata.name.clone(),
         );
-        let device_cache = cache::DeviceCache::new(config.cache_size, config.cache_duration);
+        let device_cache = DeviceCache::new(config.cache_size, config.cache_duration);
         CONNECTIONS_COUNTER.inc();
+
+        let (handle, watcher) = state.split();
+
+        {
+            let sink = Arc::new(sink.clone());
+            let id = id.clone();
+            let watcher = async move {
+                watcher.lost().await;
+                log::info!("Lost device state: {id:?}");
+                match sink.as_ref() {
+                    Sink::V3(sink) => sink.force_close(),
+                    Sink::V5(sink) => sink.close_with_reason(codec::Disconnect {
+                        reason_code: DisconnectReasonCode::SessionTakenOver,
+                        session_expiry_interval_secs: None,
+                        server_reference: None,
+                        reason_string: None,
+                        user_properties: vec![],
+                    }),
+                }
+            };
+
+            ntex_rt::spawn(watcher);
+        }
+
         Self {
             auth,
             sender,
@@ -76,7 +114,8 @@ impl Session {
             inbox_reader: Default::default(),
             device_cache,
             id,
-            states,
+            handle: Cell::new(Some(handle)),
+            skip_lwt: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -203,10 +242,7 @@ impl mqtt::Session for Session {
     }
 
     #[instrument(skip(self),fields(self.id = ?self.id))]
-    async fn subscribe(
-        &self,
-        sub: Subscribe<'_>,
-    ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+    async fn subscribe(&self, sub: Subscribe<'_>) -> Result<(), ServerError> {
         if sub.id().is_some() {
             log::info!("Rejecting request with subscription IDs");
             for mut sub in sub {
@@ -259,10 +295,7 @@ impl mqtt::Session for Session {
     }
 
     #[instrument(skip(self),fields(self.id = ?self.id))]
-    async fn unsubscribe(
-        &self,
-        unsubscribe: Unsubscribe<'_>,
-    ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+    async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError> {
         let mut subscriptions = self.inbox_reader.lock().await;
 
         for mut unsub in unsubscribe {
@@ -289,19 +322,34 @@ impl mqtt::Session for Session {
         fields(self.id = ?self.id),
         err(Debug)
     )]
-    async fn closed(
-        &self,
-        reason: CloseReason,
-    ) -> Result<(), drogue_cloud_mqtt_common::error::ServerError> {
+    async fn disconnect(&self, disconnect: Disconnect<'_>) -> Result<(), ServerError> {
+        match disconnect.reason_code() {
+            DisconnectReasonCode::NormalDisconnection => {
+                log::debug!("Normal disconnect, skipping LWT");
+                self.skip_lwt.store(true, Ordering::Release);
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    #[instrument(
+        skip(self),
+        fields(self.id = ?self.id),
+        err(Debug)
+    )]
+    async fn closed(&self, reason: CloseReason) -> Result<(), ServerError> {
         log::info!("Connection closed ({:?}): {:?}", self.id, reason);
+
         CONNECTIONS_COUNTER.dec();
 
-        self.states
-            .delete(
-                self.application.metadata.name(),
-                self.device.metadata.name(),
-            )
-            .await;
+        // check if we need to skip the LWT
+        let skip_lwt = self.skip_lwt.load(Ordering::Acquire);
+
+        if let Some(mut handle) = self.handle.take() {
+            handle.delete(DeleteOptions { skip_lwt }).await;
+        }
 
         for (_, v) in self.inbox_reader.lock().await.drain() {
             v.close().await;

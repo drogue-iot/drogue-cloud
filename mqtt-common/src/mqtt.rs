@@ -38,6 +38,9 @@ pub trait Session {
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError>;
     async fn subscribe(&self, subscribe: Subscribe<'_>) -> Result<(), ServerError>;
     async fn unsubscribe(&self, unsubscribe: Unsubscribe<'_>) -> Result<(), ServerError>;
+    async fn disconnect(&self, _disconnect: Disconnect<'_>) -> Result<(), ServerError> {
+        Ok(())
+    }
     async fn closed(&self, reason: CloseReason) -> Result<(), ServerError>;
 }
 
@@ -45,6 +48,15 @@ pub trait Session {
 pub enum CloseReason {
     Closed { was_error: bool },
     PeerGone(Option<io::Error>),
+}
+
+impl CloseReason {
+    pub fn was_error(&self) -> bool {
+        match self {
+            Self::Closed { was_error } => *was_error,
+            Self::PeerGone(_) => true,
+        }
+    }
 }
 
 pub async fn connect_v3<A, S>(
@@ -110,7 +122,10 @@ where
         v3::ControlMessage::Error(err) => Ok(err.ack()),
         v3::ControlMessage::ProtocolError(err) => Ok(err.ack()),
         v3::ControlMessage::Ping(p) => Ok(p.ack()),
-        v3::ControlMessage::Disconnect(d) => Ok(d.ack()),
+        v3::ControlMessage::Disconnect(d) => {
+            session.disconnect(Disconnect::V3(&d)).await?;
+            Ok(d.ack())
+        }
         v3::ControlMessage::PeerGone(mut g) => {
             session.closed(CloseReason::PeerGone(g.take())).await?;
             Ok(g.ack())
@@ -151,7 +166,10 @@ where
         v5::ControlMessage::Error(e) => Ok(e.ack(DisconnectReasonCode::UnspecifiedError)),
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
-        v5::ControlMessage::Disconnect(d) => Ok(d.ack()),
+        v5::ControlMessage::Disconnect(d) => {
+            session.disconnect(Disconnect::V5(&d)).await?;
+            Ok(d.ack())
+        }
         v5::ControlMessage::PeerGone(mut g) => {
             session.closed(CloseReason::PeerGone(g.take())).await?;
             Ok(g.ack())
@@ -441,6 +459,21 @@ impl<'a> Unsubscription<'a> {
         match self {
             Self::V3(_) => {}
             Self::V5(unsub) => unsub.fail(reason),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Disconnect<'a> {
+    V3(&'a v3::control::Disconnect),
+    V5(&'a v5::control::Disconnect),
+}
+
+impl<'a> Disconnect<'a> {
+    pub fn reason_code(&self) -> DisconnectReasonCode {
+        match self {
+            Self::V3(_) => DisconnectReasonCode::NormalDisconnection,
+            Self::V5(disc) => disc.packet().reason_code,
         }
     }
 }
