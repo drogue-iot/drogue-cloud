@@ -102,10 +102,13 @@ async fn test_create() -> anyhow::Result<()> {
         let device = "device1";
 
         let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
-            .set_json(DeviceState{
-                device_uid: "device_uid".into(),
-                endpoint: "pod1".into(),
-                lwt: None,
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -135,19 +138,25 @@ async fn test_lost() -> anyhow::Result<()> {
 
         // create -> must succeed
         let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
-            .set_json(DeviceState{
-                device_uid: "device_uid".into(),
-                endpoint: "pod1".into(),
-                lwt: None,
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
         // create -> must fail, but marked as lost
         let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
-            .set_json(DeviceState{
-                device_uid: "device_uid".into(),
-                endpoint: "pod1".into(),
-                lwt: None,
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
@@ -160,10 +169,13 @@ async fn test_lost() -> anyhow::Result<()> {
 
         // create -> must fail again, still marked as lost
         let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
-            .set_json(DeviceState{
-                device_uid: "device_uid".into(),
-                endpoint: "pod1".into(),
-                lwt: None,
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CONFLICT);
@@ -175,7 +187,12 @@ async fn test_lost() -> anyhow::Result<()> {
         assert_eq!(vec![id.clone()], response.lost_ids);
 
         // delete -> must succeed
-        let resp = call_http(&app, &user("foo"), TestRequest::delete().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))).await;
+        let resp = call_http(&app, &user("foo"), TestRequest::delete().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
+            .set_json(DeleteRequest{
+                token: "token".into(),
+                options: Default::default(),
+            })
+        ).await;
         assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
         // ping -> must succeed, and contain no ids
@@ -186,10 +203,13 @@ async fn test_lost() -> anyhow::Result<()> {
 
         // create -> must succeed again
         let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
-            .set_json(DeviceState{
-                device_uid: "device_uid".into(),
-                endpoint: "pod1".into(),
-                lwt: None,
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
@@ -216,10 +236,13 @@ async fn test_timeout_lost() -> anyhow::Result<()> {
 
         // create -> must succeed
         let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
-            .set_json(DeviceState{
-                device_uid: "device_uid".into(),
-                endpoint: "pod1".into(),
-                lwt: None,
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
             })
         ).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
