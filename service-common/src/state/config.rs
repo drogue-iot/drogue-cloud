@@ -16,6 +16,10 @@ pub struct StateControllerConfiguration {
     /// Number of retries when deleting.
     #[serde(default = "default_retry_deletes")]
     pub retry_deletes: usize,
+    #[serde(default = "default_retry_init")]
+    pub retry_init: usize,
+    #[serde(with = "humantime_serde", default)]
+    pub init_delay: Option<Duration>,
 }
 
 impl Default for StateControllerConfiguration {
@@ -26,6 +30,8 @@ impl Default for StateControllerConfiguration {
             delay_buffer: default_delay_buffer(),
             min_delay: default_min_delay(),
             retry_deletes: default_retry_deletes(),
+            retry_init: default_retry_init(),
+            init_delay: None,
         }
     }
 }
@@ -39,5 +45,9 @@ const fn default_min_delay() -> Duration {
 }
 
 const fn default_retry_deletes() -> usize {
+    10
+}
+
+const fn default_retry_init() -> usize {
     10
 }

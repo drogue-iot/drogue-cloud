@@ -117,8 +117,8 @@ where
 
     let result = futures.next().await;
 
-    log::info!("One of the main runners returned: {result:?}");
-    log::info!("Exiting application...");
+    log::warn!("One of the main runners returned: {result:?}");
+    log::warn!("Exiting application...");
 
     Ok(())
 }

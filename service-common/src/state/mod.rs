@@ -74,7 +74,35 @@ impl StateController {
     pub async fn new(config: StateControllerConfiguration) -> anyhow::Result<(Self, StateRunner)> {
         let client = DeviceStateClient::from_config(config.client).await?;
 
-        let InitResponse { session, expires } = client.init().await?;
+        if let Some(init_delay) = config.init_delay {
+            log::info!(
+                "Delaying initialization by: {}",
+                humantime::Duration::from(init_delay)
+            );
+            sleep(init_delay).await;
+        }
+
+        let InitResponse { session, expires } = {
+            let mut attempts = config.retry_init;
+            loop {
+                match client.init().await {
+                    Ok(response) => break response,
+                    Err(err) => {
+                        if attempts > 0 {
+                            log::warn!(
+                                "Failed to initialize. Will re-try {attempts} more times: {err}"
+                            );
+                            attempts -= 1;
+                            sleep(Duration::from_secs(1)).await;
+                        } else {
+                            anyhow::bail!("Failed it create state service session.");
+                        }
+                    }
+                }
+            }
+        };
+
+        log::info!("Acquired new session: {session}");
 
         let mux = Arc::new(Mutex::new(Mux::new()));
 
