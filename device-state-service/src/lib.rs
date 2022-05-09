@@ -14,12 +14,12 @@ use drogue_cloud_service_api::{
     webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
 };
 use drogue_cloud_service_common::{
-    actix_auth::authentication::AuthN,
     app::run_main,
-    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    client::RegistryConfig,
     defaults,
     health::HealthServerConfig,
-    openid::AuthenticatorConfig,
+    openid::{Authenticator, AuthenticatorConfig},
+    openid_auth,
 };
 use futures::{FutureExt, TryFutureExt};
 use serde::Deserialize;
@@ -35,9 +35,6 @@ pub struct Config {
 
     #[serde(default = "defaults::enable_access_token")]
     pub enable_access_token: bool,
-
-    #[serde(default)]
-    pub user_auth: Option<UserAuthClientConfig>,
 
     pub oauth: AuthenticatorConfig,
 
@@ -97,17 +94,11 @@ macro_rules! app {
 pub async fn run(config: Config) -> anyhow::Result<()> {
     log::info!("Running device state service!");
 
-    let enable_access_token = config.enable_access_token;
-
     // set up authentication
 
     let authenticator = config.oauth.into_client().await?;
-    let user_auth = if let Some(user_auth) = config.user_auth {
-        let user_auth = UserAuthClient::from_config(user_auth).await?;
-        Some(user_auth)
-    } else {
-        None
-    };
+    log::info!("Authenticator: {authenticator:?}");
+    let authenticator = authenticator.map(|a| web::Data::new(a));
 
     // set up registry client
     let registry = config.registry.into_client().await?;
@@ -147,17 +138,21 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let max_json_payload_size = config.max_json_payload_size;
     let mut main = HttpServer::new(move || {
-        let auth = AuthN {
-            openid: authenticator.as_ref().cloned(),
-            token: user_auth.clone(),
-            enable_access_token,
-        };
-        let app = app!(
+        let auth = openid_auth!(req -> {
+            req
+                .app_data::<web::Data<Authenticator>>().as_ref().map(|s|s.get_ref())
+        });
+        let mut app = app!(
             service,
             max_json_payload_size,
             auth,
             Some(prometheus.clone())
         );
+
+        if let Some(auth) = &authenticator {
+            app = app.app_data(auth.clone())
+        }
+
         app.app_data(service.clone())
     })
     .bind(config.bind_addr)
