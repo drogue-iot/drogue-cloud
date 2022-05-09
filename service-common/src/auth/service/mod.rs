@@ -22,9 +22,11 @@ where
     let token = auth.token().to_string();
 
     let authenticator = extract(&req);
-    log::debug!("Authenticator: {:?}", &authenticator);
-    let authenticator = authenticator
-        .ok_or_else(|| ServiceError::InternalError("Missing authenticator instance".into()))?;
+    log::debug!("Authenticator: {:?}", authenticator);
+    let authenticator = authenticator.ok_or_else(|| {
+        log::warn!("OAuth authentication is enabled, but we are missing the authenticator");
+        ServiceError::InternalError("Missing authenticator instance".into())
+    })?;
 
     match authenticator.validate_token(token).await {
         Ok(payload) => {

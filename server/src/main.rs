@@ -790,7 +790,6 @@ fn main() {
                         workers: Some(1),
                         max_json_payload_size: 65536,
                         enable_access_token: true,
-                        user_auth: user_auth.clone(),
                         oauth: oauth.clone(),
                         service: PostgresServiceConfiguration {
                             session_timeout: Duration::from_secs(10),
