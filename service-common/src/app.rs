@@ -90,7 +90,7 @@ fn init_tracing(_: &str) {
 
 #[allow(unused)]
 fn init_no_tracing() {
-    env_logger::init();
+    env_logger::builder().format_timestamp_millis().init();
     log::info!("Tracing is not enabled");
 }
 
