@@ -1015,6 +1015,6 @@ components:
       description: Log in using your Drogue Cloud account
       flows:
         implicit:
-          authorizationUrl: "https://keycloak-drogue-dev.apps.wonderful.iot-playground.org/auth/realms/drogue/protocol/openid-connect/auth"
+          authorizationUrl: "https://keycloak-drogue-dev.apps.wonderful.iot-playground.org/realms/drogue/protocol/openid-connect/auth"
           scopes:
             openid: OpenID Connect
