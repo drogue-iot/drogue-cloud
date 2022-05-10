@@ -151,9 +151,9 @@ where
     }
 }
 
-pub async fn control_v5<E: Debug, S>(
+pub async fn control_v5<S>(
     session: v5::Session<S>,
-    control: v5::ControlMessage<E>,
+    control: v5::ControlMessage<ServerError>,
 ) -> Result<v5::ControlResult, ServerError>
 where
     S: Session,
@@ -163,7 +163,10 @@ where
             // we don't do extended authentication (yet?)
             Ok(a.ack(Auth::default()))
         }
-        v5::ControlMessage::Error(e) => Ok(e.ack(DisconnectReasonCode::UnspecifiedError)),
+        v5::ControlMessage::Error(e) => match e.get_ref() {
+            ServerError::ProtocolError => Ok(e.ack(DisconnectReasonCode::ProtocolError)),
+            _ => Ok(e.ack(DisconnectReasonCode::UnspecifiedError)),
+        },
         v5::ControlMessage::ProtocolError(pe) => Ok(pe.ack()),
         v5::ControlMessage::Ping(p) => Ok(p.ack()),
         v5::ControlMessage::Disconnect(d) => {

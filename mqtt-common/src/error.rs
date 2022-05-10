@@ -18,11 +18,14 @@ pub enum PublishError {
     UnspecifiedError,
     #[error("topic name invalid")]
     TopicNameInvalid,
+    #[error("protocol error")]
+    ProtocolError,
 }
 
 #[derive(Debug)]
 pub enum ServerError {
     InternalError(String),
+    ProtocolError,
     UnsupportedOperation,
     AuthenticationFailed,
     NotAuthorized,
@@ -74,6 +77,9 @@ impl MqttResponse<v5::PublishAck, v5::PublishAck> for PublishError {
             Self::TopicNameInvalid => ack
                 .reason(ByteString::from_static("Topic name is invalid"))
                 .reason_code(v5::codec::PublishAckReason::TopicNameInvalid),
+            Self::ProtocolError => ack
+                .reason(ByteString::from_static("Protocol error"))
+                .reason_code(v5::codec::PublishAckReason::UnspecifiedError),
         }
     }
 }
