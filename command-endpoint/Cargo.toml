@@ -1,49 +1,37 @@
 [package]
 name = "drogue-cloud-command-endpoint"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Dejan Bosanac <dbosanac@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-
-anyhow = "1"
-thiserror = "1"
-
 actix-cors = "0.6"
-
-prometheus = { version = "^0.13", default-features = false }
-
+anyhow = "1"
 async-trait = "0.1"
+base64 = "0.13"
+cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest"] }
+config = "0.12"
+dotenv = "0.15.0"
+drogue-client = "0.10"
+env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
-
-dotenv = "0.15.0"
-config = "0.12"
-
+jsonwebtokens = "1.0.0-alpha.13"
+log = "0.4"
+prometheus = { version = "^0.13", default-features = false }
 reqwest = "0.11"
-url = "2"
-
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
+thiserror = "1"
+url = "2"
 uuid = { version = "0.8", features = ["v4"] }
-
-env_logger = "0.9"
-log = "0.4"
-
-cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest"] }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-integration-common = { path = "../integration-common" }
-drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-service-api = { path = "../service-api" }
-
-drogue-client = "0.10"
-
-jsonwebtokens = "1.0.0-alpha.13"
-base64 = "0.13"
+drogue-cloud-service-common = { path = "../service-common" }
 
 [features]
 default = ["jaeger"]

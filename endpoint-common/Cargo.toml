@@ -1,12 +1,11 @@
 [package]
 name = "drogue-cloud-endpoint-common"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-
 actix-broker = "0.4.0"
 actix-tls = { version = "^3.0.0", optional = true }
 anyhow = "1"
@@ -16,6 +15,7 @@ base64 = "0.13"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest", "rdkafka"] }
 config = "0.12"
+drogue-client = "0.10"
 env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
@@ -24,6 +24,7 @@ headers = "0.3"
 http = "0.2"
 lazy_static = "1.4.0"
 log = "0.4"
+lru = "0.7"
 mime = "0.3"
 openid = "0.9"
 percent-encoding = "2"
@@ -39,7 +40,6 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 uuid = { version = "0.8", features = ["v4"] }
 x509-parser = "0.9"
-lru = "0.7"
 
 ntex = { version = "0.5", optional = true }
 tokio-openssl = { version = "0.6", optional = true }
@@ -48,7 +48,6 @@ tokio-rustls = { version = "0.22", optional = true }
 drogue-cloud-service-api = { path = "../service-api", features = ["rdkafka"] }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-event-common = { path = "../event-common" }
-drogue-client = "0.10"
 
 [dependencies.open-ssl]
 version = "0.10"

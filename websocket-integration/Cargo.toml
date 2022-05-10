@@ -1,39 +1,33 @@
 [package]
 name = "drogue-cloud-websocket-integration"
 description = "Websocket integration"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jb Trystram <jbtrystram@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1"
-
 actix = { version = "0.12.0"}
 actix-web-actors = "4"
-prometheus = { version = "^0.13", default-features = false }
-
-dotenv = "0.15"
-
+anyhow = "1"
 awc = "2"
-log = "0.4"
+bytes = "0.5.3"
+dotenv = "0.15"
+drogue-client = "0.10"
 env_logger = "0.9"
 futures = "0.3.1"
-bytes = "0.5.3"
 lazy_static = "1.4.0"
-
-uuid = { version = "0.8", features = ["v4", "serde"] }
+log = "0.4"
+prometheus = { version = "^0.13", default-features = false }
 reqwest = "0.11"
-
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
 url = "2"
+uuid = { version = "0.8", features = ["v4", "serde"] }
 
-drogue-client = "0.10"
-drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-integration-common = { path = "../integration-common" }
 drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
 
 [features]
 default = ["jaeger"]

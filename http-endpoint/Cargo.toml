@@ -1,13 +1,12 @@
 [package]
 name = "drogue-cloud-http-endpoint"
 description = "HTTP endpoint"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>", "Dejan Bosanac <dbosanac@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-
 actix-rt = "2"
 actix-tls = "^3.0.0"
 anyhow = "1"
@@ -16,6 +15,8 @@ chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["actix"] }
 config = "0.12"
 dotenv = "0.15.0"
+drogue-client = "0.10"
+drogue-ttn = "0.5"
 env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
@@ -37,9 +38,6 @@ uuid = { version = "0.8", features = ["v4"] }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-
-drogue-client = "0.10"
-drogue-ttn = "0.5"
 
 [dependencies.rust-tls]
 version = "0.20"

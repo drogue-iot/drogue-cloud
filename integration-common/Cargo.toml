@@ -1,36 +1,29 @@
 [package]
 name = "drogue-cloud-integration-common"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-
 async-trait = "0.1"
-log = "0.4"
-thiserror = "1"
-
-futures = "0.3"
+base64 = "0.13"
 bytes = "1.0.1"
-
-tokio-stream = { version = "0.1", features = ["time"] }
-
 cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
-
+drogue-client = "0.10"
+futures = "0.3"
+log = "0.4"
+reqwest = "0.11"
 serde = "1"
 serde_json = { version = "1" }
-
-reqwest = "0.11"
+thiserror = "1"
+tokio-stream = { version = "0.1", features = ["time"] }
 url = "2"
-base64 = "0.13"
 
-drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-event-common = { path = "../event-common" }
-
-drogue-client = "0.10"
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
 
 [dependencies.rdkafka]
 version = "0.28"

@@ -1,19 +1,19 @@
 [package]
 name = "drogue-cloud-knative-operator"
 description = "KNative exporter operator"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-
 actix = "0.12"
 anyhow = "1"
 async-std = "1"
 async-trait = "0.1"
 config = "0.12"
 dotenv = "0.15"
+drogue-client = "0.10"
 env_logger = "0.9"
 futures = "0.3"
 humantime = "2"
@@ -37,8 +37,6 @@ drogue-cloud-operator-common = { path = "../operator-common", features = ["with_
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-
-drogue-client = "0.10"
 
 [features]
 default = ["jaeger"]

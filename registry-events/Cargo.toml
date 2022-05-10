@@ -1,34 +1,27 @@
 [package]
 name = "drogue-cloud-registry-events"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 
 [dependencies]
-
+anyhow = "1"
+async-trait = "0.1"
+chrono = "0.4"
+cloudevents-sdk = "0.5"
+futures = "0.3"
+humantime-serde = "1"
 log = "0.4"
-tracing = "0.1"
-
+mime = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-humantime-serde = "1"
-
-anyhow = "1"
 thiserror = "1"
-async-trait = "0.1"
-futures = "0.3"
 tokio = { version = "1", features = ["full"] }
-
-chrono = "0.4"
-
-reqwest = { version = "0.11", optional = true }
-
-cloudevents-sdk = "0.5"
-
+tracing = "0.1"
 uuid = { version = "0.8", features = ["v4"] }
-mime = "0.3"
 
 rdkafka = { version = "0.28", features = ["ssl", "sasl"], optional = true }
+reqwest = { version = "0.11", optional = true }
 
 drogue-cloud-database-common = { path = "../database-common", optional = true }
 drogue-cloud-event-common = { path = "../event-common" }

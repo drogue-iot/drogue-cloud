@@ -1,7 +1,7 @@
 [package]
 name = "drogue-cloud-user-auth-service"
 description = "User auth service"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -9,50 +9,41 @@ license = "Apache-2.0"
 [lib]
 
 [dependencies]
-
 anyhow = "1"
-
-prometheus = { version = "^0.13", default-features = false }
-
-tokio = { version = "1", features = ["full"] }
-
 async-trait = "0.1"
+chrono = "0.4"
+config = "0.12"
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+dotenv = "0.15"
+env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
-
-chrono = "0.4"
-
+log = "0.4"
+native-tls = "0.2"
+prometheus = { version = "^0.13", default-features = false }
+rustls = { version = "0.20" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-env_logger = "0.9"
-log = "0.4"
-
-native-tls = "0.2"
 sha2 = "0.9"
-rustls = { version = "0.20" }
-
-dotenv = "0.15"
-config = "0.12"
-
 thiserror = "1"
-deadpool = "0.7"
-deadpool-postgres = { version = "0.7", features = ["config"] }
+tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
 
+drogue-cloud-access-token-service = { path = "../access-token-service" }
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-cloud-registry-events = { path = "../registry-events" }
-drogue-cloud-access-token-service = { path = "../access-token-service" }
 
 [dev-dependencies]
 actix-rt = "2"
 actix-service = "2"
-testcontainers = "0.12"
 serial_test = "0.5"
+testcontainers = "0.12"
+
 drogue-cloud-test-common = { path = "../test-common" }
 
 [features]

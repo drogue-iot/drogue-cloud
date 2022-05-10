@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-console-frontend"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 description = "Console Frontend"

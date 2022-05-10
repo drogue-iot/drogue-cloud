@@ -1,58 +1,50 @@
 [package]
 name = "drogue-cloud-device-management-service"
 description = "Device management service"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1"
-
-async-trait = "0.1"
-
 actix-cors = "0.6"
-prometheus = { version = "^0.13", default-features = false }
-
-http = "0.2"
-url = "2"
-
-dotenv = "0.15"
-config = "0.12"
-env_logger = "0.9"
-log = "0.4"
-thiserror = "1"
-tracing = "0.1"
-
-serde = "1"
-serde_json = "1"
-indexmap = { version = "1", features = ["serde"] }
-futures = "0.3"
-futures-util = "0.3"
-pin-project = "1"
-rust-crypto = "0.2"
-rand = "0.8"
-uuid = "0.8"
+anyhow = "1"
+async-trait = "0.1"
 bytes = "1"
-hostname-validator = "1.1.0"
-
 chrono = { version = "0.4", features = ["serde"] }
-pem = "1"
-x509-parser = "0.9"
-reqwest = "0.11"
-
-drogue-cloud-database-common = { path = "../database-common" }
-drogue-cloud-service-common = { path = "../service-common" }
-drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-registry-events = { path = "../registry-events" }
-drogue-cloud-admin-service = { path = "../admin-service" }
-drogue-cloud-access-token-service = { path = "../access-token-service" }
-
-drogue-client = "0.10"
-
+config = "0.12"
 deadpool = "0.7"
 deadpool-postgres = { version = "0.7", features = ["config"] }
+dotenv = "0.15"
+drogue-client = "0.10"
+env_logger = "0.9"
+futures = "0.3"
+futures-util = "0.3"
+hostname-validator = "1.1.0"
+http = "0.2"
+indexmap = { version = "1", features = ["serde"] }
+log = "0.4"
+pem = "1"
+pin-project = "1"
+prometheus = { version = "^0.13", default-features = false }
+rand = "0.8"
+reqwest = "0.11"
+rust-crypto = "0.2"
+serde = "1"
+serde_json = "1"
+thiserror = "1"
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+tracing = "0.1"
+url = "2"
+uuid = "0.8"
+x509-parser = "0.9"
+
+drogue-cloud-access-token-service = { path = "../access-token-service" }
+drogue-cloud-admin-service = { path = "../admin-service" }
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
 
 [dev-dependencies]
 actix-http = "3"
