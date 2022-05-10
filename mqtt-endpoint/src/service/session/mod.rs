@@ -1,7 +1,9 @@
 mod cache;
 mod dialect;
+mod disconnect;
 mod inbox;
 
+use self::disconnect::*;
 use crate::{
     auth::DeviceAuthenticator, config::EndpointConfig,
     service::session::dialect::DefaultTopicParser, CONNECTIONS_COUNTER,
@@ -39,10 +41,7 @@ use ntex_mqtt::{
 use std::{
     cell::Cell,
     collections::{hash_map::Entry, HashMap},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+    sync::Arc,
 };
 use tracing::instrument;
 
@@ -58,7 +57,7 @@ pub struct Session {
     device_cache: DeviceCache<registry::v1::Device>,
     id: Id,
     handle: Cell<Option<StateHandle>>,
-    skip_lwt: Arc<AtomicBool>,
+    disconnect: DisconnectHandle,
 }
 
 impl Session {
@@ -86,8 +85,8 @@ impl Session {
             let sink = Arc::new(sink.clone());
             let id = id.clone();
             let watcher = async move {
-                watcher.lost().await;
-                log::info!("Lost device state: {id:?}");
+                let cause = watcher.lost().await;
+                log::info!("Lost device state: {id:?} - cause: {cause:?}");
                 match sink.as_ref() {
                     Sink::V3(sink) => sink.force_close(),
                     Sink::V5(sink) => sink.close_with_reason(codec::Disconnect {
@@ -115,7 +114,7 @@ impl Session {
             device_cache,
             id,
             handle: Cell::new(Some(handle)),
-            skip_lwt: Arc::new(AtomicBool::new(false)),
+            disconnect: DisconnectHandle::new(),
         }
     }
 
@@ -182,6 +181,8 @@ impl Session {
 impl mqtt::Session for Session {
     #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
+        let _lock = self.disconnect.ensure().await?;
+
         let content_type = publish
             .properties()
             .and_then(|p| p.content_type.as_ref())
@@ -323,13 +324,7 @@ impl mqtt::Session for Session {
         err(Debug)
     )]
     async fn disconnect(&self, disconnect: Disconnect<'_>) -> Result<(), ServerError> {
-        match disconnect.reason_code() {
-            DisconnectReasonCode::NormalDisconnection => {
-                log::debug!("Normal disconnect, skipping LWT");
-                self.skip_lwt.store(true, Ordering::Release);
-            }
-            _ => {}
-        }
+        self.disconnect.disconnected(disconnect).await?;
 
         Ok(())
     }
@@ -342,10 +337,10 @@ impl mqtt::Session for Session {
     async fn closed(&self, reason: CloseReason) -> Result<(), ServerError> {
         log::info!("Connection closed ({:?}): {:?}", self.id, reason);
 
-        CONNECTIONS_COUNTER.dec();
+        // lock and check lwt flag
+        let skip_lwt = self.disconnect.close().await;
 
-        // check if we need to skip the LWT
-        let skip_lwt = self.skip_lwt.load(Ordering::Acquire);
+        CONNECTIONS_COUNTER.dec();
 
         if let Some(mut handle) = self.handle.take() {
             handle.delete(DeleteOptions { skip_lwt }).await;

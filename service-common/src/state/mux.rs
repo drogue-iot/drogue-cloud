@@ -10,7 +10,7 @@ use std::{
 
 struct MuxEntry {
     token: String,
-    tx: Sender<()>,
+    tx: Sender<LostCause>,
 }
 
 pub struct Mux {
@@ -35,7 +35,7 @@ impl Mux {
     /// Handle a lost Id.
     pub(crate) async fn handle_lost(&mut self, id: Id) {
         if let Some(entry) = self.handles.remove(&id) {
-            entry.tx.send(()).ok();
+            entry.tx.send(LostCause::Reported).ok();
         }
     }
 
@@ -44,7 +44,7 @@ impl Mux {
         let (tx, rx) = channel();
 
         if let Some(old) = self.handles.insert(id, MuxEntry { token, tx }) {
-            old.tx.send(()).ok();
+            old.tx.send(LostCause::NewRegistration).ok();
         }
 
         StateWatcher { rx }
@@ -54,7 +54,7 @@ impl Mux {
     async fn deleted(&mut self, id: Id, token: &str) {
         if let Entry::Occupied(entry) = self.handles.entry(id) {
             if entry.get().token == token {
-                entry.remove().tx.send(()).ok();
+                entry.remove().tx.send(LostCause::Deleted).ok();
             }
         }
     }
@@ -66,12 +66,19 @@ pub struct State {
 }
 
 pub struct StateWatcher {
-    rx: Receiver<()>,
+    rx: Receiver<LostCause>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LostCause {
+    NewRegistration,
+    Reported,
+    Deleted,
 }
 
 impl StateWatcher {
-    pub async fn lost(self) {
-        self.rx.await.ok();
+    pub async fn lost(self) -> Option<LostCause> {
+        self.rx.await.ok()
     }
 }
 
