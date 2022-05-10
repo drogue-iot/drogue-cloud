@@ -88,7 +88,7 @@ impl KafkaSink {
             Ok(fut) => match fut.await {
                 // received outcome & outcome ok
                 Ok(Ok((partition, offset))) => {
-                    tracing::info!(partition, offset, "Publish accepted");
+                    tracing::debug!(partition, offset, "Publish accepted");
                     Ok(PublishOutcome::Accepted)
                 }
                 // received outcome & outcome failed
