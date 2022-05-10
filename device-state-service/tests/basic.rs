@@ -121,6 +121,63 @@ async fn test_create() -> anyhow::Result<()> {
 
 #[actix_rt::test]
 #[serial]
+async fn test_create_and_delete() -> anyhow::Result<()> {
+    test!((REGISTRY.clone() => app, service, _pool, sink) => {
+        // init -> must succeed
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri("/api/state/v1alpha1/sessions")).await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let response: InitResponse = read_body_json(resp).await;
+        assert!(!response.session.is_empty());
+        let session = response.session;
+
+        let application = "app1";
+        let device = "device1";
+
+        // create -> must succeed
+        let resp = call_http(&app, &user("foo"), TestRequest::put().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
+            .set_json(CreateRequest{
+                token: "token".into(),
+                state: DeviceState{
+                    device_uid: "device_uid".into(),
+                    endpoint: "pod1".into(),
+                    lwt: None,
+                }
+            })
+        ).await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        // delete -> must succeed
+        let resp = call_http(&app, &user("foo"), TestRequest::delete().uri(&format!("/api/state/v1alpha1/sessions/{}/states/{}/{}", session, application, device))
+            .set_json(DeleteRequest{
+                token: "token".to_string(),
+                options: Default::default(),
+            })
+        ).await;
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // ping -> must not return any IDs
+        let resp = call_http(&app, &user("foo"), TestRequest::post().uri(&format!("/api/state/v1alpha1/sessions/{}", session))).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response: PingResponse = read_body_json(resp).await;
+        assert!(response.lost_ids.is_empty());
+
+        // prune
+        service.prune().await?;
+
+        // ping -> must not return any IDs, again
+        let resp = call_http(&app, &user("foo"), TestRequest::post().uri(&format!("/api/state/v1alpha1/sessions/{}", session))).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let response: PingResponse = read_body_json(resp).await;
+        assert!(response.lost_ids.is_empty());
+
+        // check events
+        let events = sink.events().await;
+        assert_eq!(events.len(), 2);
+    })
+}
+
+#[actix_rt::test]
+#[serial]
 async fn test_lost() -> anyhow::Result<()> {
     test!((REGISTRY.clone() => app, _service, _pool, sink) => {
         // init -> must succeed
