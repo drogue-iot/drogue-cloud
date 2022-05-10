@@ -8,7 +8,6 @@ edition = "2021"
 actix = { version = "0.13.0", default-features = false }
 actix-service = "2"
 anyhow = "1"
-async-std = "1.9"
 async-trait = "0.1"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["reqwest"] }

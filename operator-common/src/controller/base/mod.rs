@@ -16,16 +16,17 @@ use crate::controller::{
     reconciler::ReconcileError,
 };
 use anyhow::Context;
-use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use drogue_client::error::ClientError;
-use std::fmt::Formatter;
 use std::{
     fmt::Debug,
+    fmt::Formatter,
     marker::PhantomData,
     ops::{Deref, DerefMut},
+    sync::Arc,
     time::Duration,
 };
+use tokio::sync::Mutex;
 use tokio_postgres::NoTls;
 use tracing::instrument;
 

@@ -1,4 +1,3 @@
-use async_std::sync::Mutex;
 use cloudevents::{
     binding::reqwest::{RequestBuilderExt, RequestSerializer},
     message::StructuredDeserializer,
@@ -14,6 +13,7 @@ use reqwest::{Certificate, Url};
 use serde::Deserialize;
 use std::{sync::Arc, time::Duration};
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
 

@@ -7,7 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1"
-async-std = "1.9.0"
 async-trait = "0.1"
 chrono = "0.4"
 deadpool = "0.7"

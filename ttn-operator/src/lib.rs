@@ -5,7 +5,6 @@ mod utils;
 
 use crate::controller::{app::ApplicationController, device::DeviceController};
 use anyhow::anyhow;
-use async_std::sync::Mutex;
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
 };
@@ -20,6 +19,7 @@ use drogue_cloud_service_common::{
 use futures::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]

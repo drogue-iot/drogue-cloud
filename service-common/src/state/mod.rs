@@ -5,7 +5,6 @@ pub use self::config::*;
 pub use mux::*;
 
 use crate::client::DeviceStateClient;
-use async_std::sync::Mutex;
 use chrono::{DateTime, Utc};
 use drogue_client::{
     error::{ClientError, ErrorInformation},
@@ -20,7 +19,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tokio::time::{sleep, Instant};
+use tokio::{
+    sync::Mutex,
+    time::{sleep, Instant},
+};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Default)]

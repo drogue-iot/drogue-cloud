@@ -5,11 +5,9 @@ use crate::controller::{
     ControllerConfig,
 };
 use anyhow::{anyhow, Context};
-use async_std::sync::{Arc, Mutex};
-use drogue_cloud_operator_common::controller::base::NameSource;
 use drogue_cloud_operator_common::{
     controller::base::{
-        queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
+        queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor, NameSource,
         ResourceProcessor,
     },
     watcher::RunStream,
@@ -27,7 +25,8 @@ use k8s_openapi::api::core::v1::Secret;
 use kube::{api::ListParams, core::DynamicObject, discovery, Api};
 use kube_runtime::watcher;
 use serde::Deserialize;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
+use tokio::sync::Mutex;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {

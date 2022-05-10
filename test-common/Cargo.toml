@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-async-std = "1"
 async-trait = "0.1"
 cloudevents-sdk = "0.5"
 deadpool = "0.7"

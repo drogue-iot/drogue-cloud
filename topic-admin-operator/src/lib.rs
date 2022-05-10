@@ -2,7 +2,6 @@ mod controller;
 mod kafka;
 
 use crate::controller::{app::ApplicationController, ControllerConfig};
-use async_std::sync::{Arc, Mutex};
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
 };
@@ -18,6 +17,8 @@ use futures::{FutureExt, TryFutureExt};
 use rdkafka::ClientConfig;
 use serde::Deserialize;
 use std::fmt::Debug;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {

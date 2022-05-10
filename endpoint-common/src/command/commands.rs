@@ -1,5 +1,4 @@
 use crate::command::{Command, CommandAddress, CommandDispatcher};
-use async_std::sync::Mutex;
 use async_trait::async_trait;
 use drogue_cloud_service_common::Id;
 use std::{
@@ -9,6 +8,7 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::Mutex;
 
 /// A filter for commands
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]

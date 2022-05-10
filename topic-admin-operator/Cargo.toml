@@ -9,7 +9,6 @@ license = "Apache-2.0"
 [dependencies]
 actix = "0.13"
 anyhow = "1"
-async-std = "1"
 async-trait = "0.1"
 config = "0.12"
 dotenv = "0.15"

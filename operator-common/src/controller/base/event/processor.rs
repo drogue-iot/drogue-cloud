@@ -1,8 +1,8 @@
 use crate::controller::base::{BaseController, ControllerOperation, Key};
-use async_std::sync::Mutex;
 use async_trait::async_trait;
 use kube::Resource;
 use std::{boxed::Box, sync::Arc};
+use tokio::sync::Mutex;
 use tracing::instrument;
 
 #[async_trait]

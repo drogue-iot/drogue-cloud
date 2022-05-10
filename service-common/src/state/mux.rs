@@ -1,5 +1,4 @@
 use crate::state::StateController;
-use async_std::sync::Mutex;
 use drogue_cloud_service_api::services::device_state::{DeleteOptions, Id};
 use futures::channel::oneshot::{channel, Receiver, Sender};
 use std::{
@@ -7,6 +6,7 @@ use std::{
     fmt::{Debug, Formatter},
     sync::Arc,
 };
+use tokio::sync::Mutex;
 
 struct MuxEntry {
     token: String,

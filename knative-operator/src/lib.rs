@@ -2,7 +2,6 @@ mod controller;
 
 use crate::controller::{app::ApplicationController, ControllerConfig};
 use anyhow::Context;
-use async_std::sync::{Arc, Mutex};
 use drogue_cloud_operator_common::{
     controller::base::{
         queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor, NameSource,
@@ -23,7 +22,8 @@ use futures::{select, FutureExt};
 use kube::{api::ListParams, Api};
 use kube_runtime::watcher;
 use serde::Deserialize;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
+use tokio::sync::Mutex;
 
 pub const LABEL_APP_MARKER: &str = "drogue.io/application";
 /// We need an annotation to store the actual Drogue Cloud application name, which is not a valid

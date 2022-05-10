@@ -1,8 +1,7 @@
-use async_std::sync::RwLock;
 use async_trait::async_trait;
 use drogue_cloud_endpoint_common::sender::PublishOutcome;
 use drogue_cloud_endpoint_common::sink::{Sink, SinkError, SinkTarget};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Debug)]
 pub struct MockSink {
@@ -19,11 +18,11 @@ impl MockSink {
     }
 
     pub async fn commands(&self) -> Vec<cloudevents::event::Event> {
-        self.commands.read().await.clone()
+        self.commands.read().unwrap().clone()
     }
 
     pub async fn events(&self) -> Vec<cloudevents::event::Event> {
-        self.events.read().await.clone()
+        self.events.read().unwrap().clone()
     }
 }
 
@@ -37,10 +36,10 @@ impl Sink for MockSink {
     ) -> Result<PublishOutcome, SinkError> {
         match target {
             SinkTarget::Events(_) => {
-                self.events.write().await.push(event);
+                self.events.write().unwrap().push(event);
             }
             SinkTarget::Commands(_) => {
-                self.commands.write().await.push(event);
+                self.commands.write().unwrap().push(event);
             }
         }
 
