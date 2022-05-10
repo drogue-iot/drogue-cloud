@@ -2220,7 +2220,7 @@ dependencies = [
  "drogue-cloud-user-auth-service",
  "drogue-cloud-websocket-integration",
  "futures",
- "keycloak",
+ "keycloak 17.0.2",
  "log",
  "ntex",
  "ntex-rt",
@@ -2286,7 +2286,7 @@ dependencies = [
  "humantime",
  "humantime-serde",
  "k8s-openapi",
- "keycloak",
+ "keycloak 14.0.0",
  "kube",
  "log",
  "ntex",
@@ -3197,6 +3197,19 @@ name = "keycloak"
 version = "14.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e97a645a7f06ca33ee570e2d274bcd584b4d651f2a1723935b9c94ab96ceac5a"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_with",
+]
+
+[[package]]
+name = "keycloak"
+version = "17.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57f22d74c59e1e97c2913c295c17b101ed07dce6ce4bab23e3f4d191df65ce9e"
 dependencies = [
  "async-trait",
  "reqwest",
