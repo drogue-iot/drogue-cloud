@@ -2,5 +2,5 @@
 
 drogueCloudCore:
   keycloak:
-    useServiceCA: true
-    insecureExternal: true
+    tls:
+      enabled: false
