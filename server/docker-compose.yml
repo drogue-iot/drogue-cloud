@@ -15,10 +15,10 @@ services:
     environment:
       - KRAFT_CONTAINER_HOST_NAME=localhost
   keycloak:
-    image: quay.io/keycloak/keycloak:17.0.1-legacy
+    image: quay.io/keycloak/keycloak:18.0.1
     environment:
-      - KEYCLOAK_USER=admin
-      - KEYCLOAK_PASSWORD=admin123456
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin123456
       - DB_VENDOR=h2
     ports:
       - "8080:8080"

@@ -1254,7 +1254,7 @@ fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
         }),
         sso: Some(config.keycloak.url.clone()),
         issuer_url: Some(format!(
-            "{}/auth/realms/{}",
+            "{}/realms/{}",
             config.keycloak.url, config.keycloak.realm
         )),
         redirect_url: Some(format!(
