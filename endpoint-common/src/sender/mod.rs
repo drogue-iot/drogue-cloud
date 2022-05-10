@@ -350,8 +350,10 @@ pub trait Publisher {
         let app_id = publish.application.metadata.name.clone();
         let app_enc = utf8_percent_encode(&app_id, NON_ALPHANUMERIC);
         let device_enc = utf8_percent_encode(&publish.device.name, NON_ALPHANUMERIC);
+        let sender_enc = utf8_percent_encode(&publish.sender.name, NON_ALPHANUMERIC);
 
         let source = format!("{}/{}", app_enc, device_enc);
+        let key = format!("{}/{}", app_enc, sender_enc);
 
         let mut event = EventBuilderV10::new()
             .id(uuid::Uuid::new_v4().to_string())
@@ -378,7 +380,7 @@ pub trait Publisher {
             event = event.extension(EXT_SENDER_UID, uid);
         }
 
-        event = event.extension(EXT_PARTITIONKEY, source);
+        event = event.extension(EXT_PARTITIONKEY, key);
         event = event.extension(EXT_INSTANCE, self.instance());
         event = event.extension(EXT_SENDER, publish.sender.name);
 
