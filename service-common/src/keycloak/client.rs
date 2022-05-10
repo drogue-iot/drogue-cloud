@@ -70,6 +70,7 @@ impl KeycloakClient for KeycloakAdminClient {
                 None,
                 None,
                 None,
+                None,
                 Some(username.to_string()),
             )
             .await?

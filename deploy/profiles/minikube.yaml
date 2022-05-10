@@ -52,6 +52,6 @@ drogueCloudCore:
         annotations:
           nginx.ingress.kubernetes.io/backend-protocol: HTTPS
           nginx.ingress.kubernetes.io/server-snippet: |2-
-                              location ~* "^/auth/realms/master/metrics" {
-                                  return 301 /auth/realms/master;
+                              location ~* "^/realms/master/metrics" {
+                                  return 301 /realms/master;
                               }
