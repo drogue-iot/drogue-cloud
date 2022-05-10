@@ -41,6 +41,10 @@ drogueCloudCore:
     tls:
       insecure: true
 
+  keycloak:
+    tls:
+      enabled: false
+
   services:
     sso:
       ingress:

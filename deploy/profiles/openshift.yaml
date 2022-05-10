@@ -28,5 +28,7 @@ drogueCloudCore:
         port: 443
 
   keycloak:
-    useServiceCA: true
-    insecureExternal: false
+    tls:
+      enabled: true
+      useServiceCA: true
+
