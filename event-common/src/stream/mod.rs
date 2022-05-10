@@ -15,7 +15,7 @@ use rdkafka::{
     error::KafkaResult,
     message::BorrowedMessage,
     util::Timeout,
-    TopicPartitionList,
+    Message, TopicPartitionList,
 };
 use std::{
     fmt::{Debug, Formatter},
@@ -348,6 +348,11 @@ impl<'s> Stream for EventStream<'s, AutoAck> {
                 None => Poll::Ready(None),
                 Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
                 Some(Ok(msg)) => {
+                    log::debug!(
+                        "Message - partition: {}, offset: {}",
+                        msg.partition(),
+                        msg.offset()
+                    );
                     self.do_ack(&msg)?;
 
                     let event = msg.to_event()?;
@@ -372,6 +377,11 @@ impl<'s> Stream for EventStream<'s, CustomAck> {
                 None => Poll::Ready(None),
                 Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
                 Some(Ok(msg)) => {
+                    log::debug!(
+                        "Message - partition: {}, offset: {}",
+                        msg.partition(),
+                        msg.offset()
+                    );
                     let event = msg.to_event()?;
                     let event = Self::fixup_data_type(event);
 
