@@ -14,7 +14,7 @@ use drogue_cloud_database_common::{
         app::{ApplicationAccessor, PostgresApplicationAccessor},
         device::{DeviceAccessor, PostgresDeviceAccessor},
         diff::diff_paths,
-        Generation, Lock,
+        Advance, Lock,
     },
 };
 use drogue_cloud_registry_events::{Event, EventSender, SendEvent};
@@ -37,11 +37,13 @@ pub trait ManagementService: Clone {
         identity: &UserInformation,
         data: registry::v1::Application,
     ) -> Result<(), Self::Error>;
+
     async fn get_app(
         &self,
         identity: &UserInformation,
         name: &str,
     ) -> Result<Option<registry::v1::Application>, Self::Error>;
+
     async fn list_apps(
         &self,
         identity: UserInformation,
@@ -52,11 +54,13 @@ pub trait ManagementService: Clone {
         Pin<Box<dyn Stream<Item = Result<registry::v1::Application, Self::Error>> + Send>>,
         Self::Error,
     >;
+
     async fn update_app(
         &self,
         identity: &UserInformation,
         data: registry::v1::Application,
     ) -> Result<(), Self::Error>;
+
     async fn delete_app(
         &self,
         identity: &UserInformation,
@@ -69,12 +73,14 @@ pub trait ManagementService: Clone {
         identity: &UserInformation,
         device: registry::v1::Device,
     ) -> Result<(), Self::Error>;
+
     async fn get_device(
         &self,
         identity: &UserInformation,
         app: &str,
         name: &str,
     ) -> Result<Option<registry::v1::Device>, Self::Error>;
+
     async fn list_devices(
         &self,
         identity: UserInformation,
@@ -86,11 +92,13 @@ pub trait ManagementService: Clone {
         Pin<Box<dyn Stream<Item = Result<registry::v1::Device, Self::Error>> + Send>>,
         Self::Error,
     >;
+
     async fn update_device(
         &self,
         identity: &UserInformation,
         device: registry::v1::Device,
     ) -> Result<(), Self::Error>;
+
     async fn delete_device(
         &self,
         identity: &UserInformation,
@@ -286,7 +294,7 @@ where
         }
 
         // next generation
-        let generation = current.increment_generation()?;
+        let revision = current.advance_revision()?;
         let uid = current.uid;
 
         // if there are no finalizers ...
@@ -312,7 +320,7 @@ where
 
         // create events
 
-        let events = Event::new_app(self.instance.clone(), id, uid, generation, paths);
+        let events = Event::new_app(self.instance.clone(), id, uid, revision, paths);
 
         // send events to outbox
 
@@ -519,7 +527,7 @@ where
                 return Ok(());
             }
 
-            let generation = device.set_incremented_generation(&current)?;
+            let revision = device.advance_from(&paths, &current)?;
             let uid = current.uid;
 
             accessor
@@ -539,7 +547,7 @@ where
                 application,
                 name,
                 uid,
-                generation,
+                revision,
                 paths,
             );
 
@@ -602,7 +610,7 @@ where
         // there is no need to use the provided constraints, we as locked the entry "for update"
 
         // next generation
-        let generation = current.increment_generation()?;
+        let revision = current.advance_revision()?;
         let uid = current.uid;
 
         // if there are no finalizers ...
@@ -631,7 +639,7 @@ where
             application,
             device,
             uid,
-            generation,
+            revision,
             path,
         );
 

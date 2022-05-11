@@ -8,6 +8,7 @@ INSERT INTO APPLICATIONS (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     OWNER,
     MEMBERS,
     DATA
@@ -16,6 +17,7 @@ INSERT INTO APPLICATIONS (
     'a54d393c-bd6f-11eb-ad45-d45d6455d2cc',
     '2020-01-01 00:00:00',
     'ab2cefd2-bd6f-11eb-9487-d45d6455d2cc',
+    0,
     0,
     'foo',
     '{

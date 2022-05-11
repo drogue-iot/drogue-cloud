@@ -10,8 +10,10 @@ use drogue_cloud_database_common::{
     },
 };
 use drogue_cloud_registry_events::EventSender;
-use drogue_cloud_service_api::admin::{MemberEntry, Members, TransferOwnership};
-use drogue_cloud_service_api::auth::user::{authz::Permission, UserInformation};
+use drogue_cloud_service_api::{
+    admin::{MemberEntry, Members, TransferOwnership},
+    auth::user::{authz::Permission, UserInformation},
+};
 use drogue_cloud_service_common::keycloak::KeycloakClient;
 use indexmap::map::IndexMap;
 use tracing::instrument;

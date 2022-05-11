@@ -8,7 +8,7 @@ use crate::{
         sql::{slice_iter, SelectBuilder},
         Lock, TypedAlias,
     },
-    update_aliases, Client,
+    revision, update_aliases, Client,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -35,8 +35,12 @@ pub struct Application {
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub creation_timestamp: DateTime<Utc>,
+    /// Updated with each change
     pub resource_version: Uuid,
+    /// Incremented with each change to the .spec section
     pub generation: u64,
+    /// Incremented with each change
+    pub revision: u64,
     pub deletion_timestamp: Option<DateTime<Utc>>,
     pub finalizers: Vec<String>,
 
@@ -53,6 +57,7 @@ pub struct Application {
 
 diffable!(Application);
 generation!(Application => generation);
+revision!(Application => revision);
 default_resource!(Application);
 
 impl Resource for Application {
@@ -193,6 +198,7 @@ impl<'c, C: Client> PostgresApplicationAccessor<'c, C> {
 
             creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
+            revision: row.try_get::<_, i64>("REVISION")? as u64,
             resource_version: row.try_get("RESOURCE_VERSION")?,
             labels: super::row_to_map(&row, "LABELS")?,
             annotations: super::row_to_map(&row, "ANNOTATIONS")?,
@@ -250,6 +256,7 @@ SELECT
     A2.LABELS,
     A2.CREATION_TIMESTAMP,
     A2.GENERATION,
+    A2.REVISION,
     A2.RESOURCE_VERSION,
     A2.ANNOTATIONS,
     A2.DELETION_TIMESTAMP,
@@ -301,6 +308,7 @@ SELECT
     ANNOTATIONS,
     CREATION_TIMESTAMP,
     GENERATION,
+    REVISION,
     RESOURCE_VERSION,
     DELETION_TIMESTAMP,
     FINALIZERS,
@@ -359,6 +367,7 @@ INSERT INTO APPLICATIONS (
     ANNOTATIONS,
     CREATION_TIMESTAMP,
     GENERATION,
+    REVISION,
     RESOURCE_VERSION,
     FINALIZERS,
     OWNER,
@@ -373,7 +382,8 @@ INSERT INTO APPLICATIONS (
     $7,
     $8,
     $9,
-    $10
+    $10,
+    $11
 )"#,
                 &[
                     &name,
@@ -382,6 +392,7 @@ INSERT INTO APPLICATIONS (
                     &Json(annotations),
                     &Utc::now(),
                     &(application.generation as i64),
+                    &(application.revision as i64),
                     &Uuid::new_v4(),
                     &application.finalizers,
                     &application.owner,
@@ -415,10 +426,11 @@ SET
     LABELS = $2,
     ANNOTATIONS = $3,
     GENERATION = $4,
-    RESOURCE_VERSION = $5,
-    DELETION_TIMESTAMP = $6,
-    FINALIZERS = $7,
-    DATA = $8
+    REVISION = $5,
+    RESOURCE_VERSION = $6,
+    DELETION_TIMESTAMP = $7,
+    FINALIZERS = $8,
+    DATA = $9
 WHERE
     NAME = $1
 "#,
@@ -427,6 +439,7 @@ WHERE
                     &Json(labels),
                     &Json(annotations),
                     &(application.generation as i64),
+                    &(application.revision as i64),
                     &Uuid::new_v4(),
                     &application.deletion_timestamp,
                     &application.finalizers,

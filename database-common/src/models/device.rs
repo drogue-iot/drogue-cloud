@@ -6,7 +6,7 @@ use crate::{
         sql::{slice_iter, SelectBuilder},
         Lock, TypedAlias,
     },
-    update_aliases, Client,
+    revision, update_aliases, Client,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -33,8 +33,12 @@ pub struct Device {
     pub labels: HashMap<String, String>,
     pub annotations: HashMap<String, String>,
     pub creation_timestamp: DateTime<Utc>,
+    /// Updated with each change
     pub resource_version: Uuid,
+    /// Incremented with each change to the .spec section
     pub generation: u64,
+    /// Incremented with each change
+    pub revision: u64,
     pub deletion_timestamp: Option<DateTime<Utc>>,
     pub finalizers: Vec<String>,
 
@@ -43,6 +47,7 @@ pub struct Device {
 
 diffable!(Device);
 generation!(Device => generation);
+revision!(Device => revision);
 default_resource!(Device);
 
 impl From<Device> for registry::v1::Device {
@@ -148,6 +153,7 @@ impl<'c, C: Client> PostgresDeviceAccessor<'c, C> {
 
             creation_timestamp: row.try_get("CREATION_TIMESTAMP")?,
             generation: row.try_get::<_, i64>("GENERATION")? as u64,
+            revision: row.try_get::<_, i64>("REVISION")? as u64,
             resource_version: row.try_get("RESOURCE_VERSION")?,
             labels: super::row_to_map(&row, "LABELS")?,
             annotations: super::row_to_map(&row, "ANNOTATIONS")?,
@@ -198,6 +204,7 @@ SELECT
     D.LABELS,
     D.CREATION_TIMESTAMP,
     D.GENERATION,
+    D.REVISION,
     D.RESOURCE_VERSION,
     D.ANNOTATIONS,
     D.DELETION_TIMESTAMP,
@@ -264,6 +271,7 @@ SELECT
     ANNOTATIONS,
     CREATION_TIMESTAMP,
     GENERATION,
+    REVISION,
     RESOURCE_VERSION,
     DELETION_TIMESTAMP,
     FINALIZERS,
@@ -319,6 +327,7 @@ INSERT INTO DEVICES (
     ANNOTATIONS,
     CREATION_TIMESTAMP,
     GENERATION,
+    REVISION,
     RESOURCE_VERSION,
     FINALIZERS,
     DATA
@@ -331,7 +340,8 @@ INSERT INTO DEVICES (
     $6,
     $7,
     $8,
-    $9
+    $9,
+    $10
 )"#,
                 &[
                     &device.application,
@@ -340,6 +350,7 @@ INSERT INTO DEVICES (
                     &Json(&device.annotations),
                     &Utc::now(),
                     &(device.generation as i64),
+                    &(device.revision as i64),
                     &Uuid::new_v4(),
                     &device.finalizers,
                     &Json(&device.data),
@@ -369,10 +380,11 @@ SET
     LABELS = $3,
     ANNOTATIONS = $4,
     GENERATION = $5,
-    RESOURCE_VERSION = $6,
-    DELETION_TIMESTAMP = $7,
-    FINALIZERS = $8,
-    DATA = $9
+    REVISION = $6,
+    RESOURCE_VERSION = $7,
+    DELETION_TIMESTAMP = $8,
+    FINALIZERS = $9,
+    DATA = $10
 WHERE
     APP = $1 AND NAME = $2
 "#,
@@ -382,6 +394,7 @@ WHERE
                     &Json(device.labels),
                     &Json(device.annotations),
                     &(device.generation as i64),
+                    &(device.revision as i64),
                     &Uuid::new_v4(),
                     &device.deletion_timestamp,
                     &device.finalizers,

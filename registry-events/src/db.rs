@@ -13,14 +13,14 @@ impl From<Event> for OutboxEntry {
                 application,
                 uid,
                 path,
-                generation,
+                revision,
             } => OutboxEntry {
                 instance,
                 app: application,
                 device: None,
                 uid,
                 path,
-                generation,
+                revision,
             },
             Event::Device {
                 instance,
@@ -28,14 +28,14 @@ impl From<Event> for OutboxEntry {
                 device,
                 uid,
                 path,
-                generation,
+                revision,
             } => OutboxEntry {
                 instance,
                 app: application,
                 device: Some(device),
                 uid,
                 path,
-                generation,
+                revision,
             },
         }
     }
@@ -49,7 +49,7 @@ impl From<OutboxEntry> for Event {
                 application: entry.app,
                 device,
                 path: entry.path,
-                generation: entry.generation,
+                revision: entry.revision,
                 uid: entry.uid,
             }
         } else {
@@ -57,7 +57,7 @@ impl From<OutboxEntry> for Event {
                 instance: entry.instance,
                 application: entry.app,
                 path: entry.path,
-                generation: entry.generation,
+                revision: entry.revision,
                 uid: entry.uid,
             }
         }

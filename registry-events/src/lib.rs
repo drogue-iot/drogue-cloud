@@ -29,7 +29,7 @@ pub enum Event {
         application: String,
         uid: String,
         path: String,
-        generation: u64,
+        revision: u64,
     },
     Device {
         instance: String,
@@ -37,13 +37,13 @@ pub enum Event {
         device: String,
         uid: String,
         path: String,
-        generation: u64,
+        revision: u64,
     },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct EventData {
-    pub generation: u64,
+    pub revision: u64,
     pub uid: String,
 }
 
@@ -93,7 +93,7 @@ impl Event {
                 .subject()
                 .ok_or_else(|| missing_field("subject"))?
                 .to_string(),
-            generation: data.generation,
+            revision: data.revision,
             uid: data.uid,
         })
     }
@@ -117,7 +117,7 @@ impl Event {
                 .subject()
                 .ok_or_else(|| missing_field("subject"))?
                 .to_string(),
-            generation: data.generation,
+            revision: data.revision,
             uid: data.uid,
         })
     }
@@ -139,7 +139,7 @@ impl Event {
         instance: I,
         app: A,
         uid: U,
-        generation: u64,
+        revision: u64,
         paths: Vec<String>,
     ) -> Vec<Event>
     where
@@ -152,7 +152,7 @@ impl Event {
             application: app.to_string(),
             uid: uid.to_string(),
             path,
-            generation,
+            revision,
         })
     }
 
@@ -162,7 +162,7 @@ impl Event {
         app_id: A,
         device_id: D,
         uid: U,
-        generation: u64,
+        revision: u64,
         paths: Vec<String>,
     ) -> Vec<Event>
     where
@@ -177,7 +177,7 @@ impl Event {
             device: device_id.to_string(),
             uid: uid.to_string(),
             path,
-            generation,
+            revision,
         })
     }
 }
@@ -232,7 +232,7 @@ impl TryFrom<Event> for cloudevents::Event {
                 instance,
                 application,
                 uid,
-                generation,
+                revision,
                 path,
             } => builder
                 .ty(EVENT_TYPE_APPLICATION)
@@ -244,7 +244,7 @@ impl TryFrom<Event> for cloudevents::Event {
                 .data(
                     mime::APPLICATION_JSON.to_string(),
                     Data::Json(
-                        serde_json::to_value(&EventData { generation, uid })
+                        serde_json::to_value(&EventData { revision, uid })
                             .map_err(EventError::PayloadEncoder)?,
                     ),
                 ),
@@ -253,7 +253,7 @@ impl TryFrom<Event> for cloudevents::Event {
                 application,
                 device,
                 uid,
-                generation,
+                revision,
                 path,
             } => builder
                 .ty(EVENT_TYPE_DEVICE)
@@ -269,7 +269,7 @@ impl TryFrom<Event> for cloudevents::Event {
                 .data(
                     mime::APPLICATION_JSON.to_string(),
                     Data::Json(
-                        serde_json::to_value(&EventData { generation, uid })
+                        serde_json::to_value(&EventData { revision, uid })
                             .map_err(EventError::PayloadEncoder)?,
                     ),
                 ),
@@ -307,7 +307,7 @@ mod test {
             application: "application".to_string(),
             uid: "uid".to_string(),
             path: ".spec.core".to_string(),
-            generation: 123,
+            revision: 123,
         }
         .try_into()?;
 
@@ -324,7 +324,7 @@ mod test {
                 .extension(EXT_APPLICATION, "application")
                 .data(
                     "application/json",
-                    Data::Json(json!({"generation": 123, "uid": "uid"}))
+                    Data::Json(json!({"revision": 123, "uid": "uid"}))
                 )
                 .build()?
         );
@@ -345,7 +345,7 @@ mod test {
             .extension(EXT_DEVICE, "device")
             .data(
                 "application/json",
-                Data::Json(json!({"generation": 321, "uid": "uid"})),
+                Data::Json(json!({"revision": 321, "uid": "uid"})),
             )
             .build()
             .context("Failed to build CloudEvent")?;
@@ -358,7 +358,7 @@ mod test {
                 application: "application".to_string(),
                 uid: "uid".to_string(),
                 path: ".spec.credentials".to_string(),
-                generation: 321,
+                revision: 321,
             },
             event
         );

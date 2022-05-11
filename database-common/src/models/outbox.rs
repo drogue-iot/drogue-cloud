@@ -16,7 +16,7 @@ pub struct OutboxEntry {
     pub device: Option<String>,
     pub path: String,
 
-    pub generation: u64,
+    pub revision: u64,
     pub uid: String,
 }
 
@@ -36,7 +36,7 @@ impl TryFrom<Row> for OutboxEntry {
                 }
             },
             path: row.try_get("PATH")?,
-            generation: row.try_get::<_, i64>("GENERATION")? as u64,
+            revision: row.try_get::<_, i64>("REVISION")? as u64,
             uid: row.try_get("UID")?,
         })
     }
@@ -78,7 +78,7 @@ INSERT INTO outbox (
     DEVICE,
     UID,
     PATH,
-    GENERATION,
+    REVISION,
     TS
 ) VALUES (
     $1,
@@ -92,11 +92,11 @@ INSERT INTO outbox (
 ON CONFLICT (APP, DEVICE, PATH) 
 DO
     UPDATE SET
-        GENERATION = EXCLUDED.GENERATION,
+        REVISION = EXCLUDED.REVISION,
         UID = EXCLUDED.UID,
         TS = EXCLUDED.TS
     WHERE
-            outbox.GENERATION < EXCLUDED.GENERATION
+            outbox.REVISION < EXCLUDED.REVISION
         OR
             outbox.UID != EXCLUDED.UID
 "#;
@@ -126,7 +126,7 @@ DO
                     &entry.device.unwrap_or_default(),
                     &entry.uid,
                     &entry.path,
-                    &(entry.generation as i64),
+                    &(entry.revision as i64),
                 ],
             )
             .await?;
@@ -150,7 +150,7 @@ WHERE
     AND
         PATH = $3
     AND
-        GENERATION <= $4
+        REVISION <= $4
     AND
         UID = $5
 "#;
@@ -177,7 +177,7 @@ WHERE
                     &entry.app,
                     &entry.device.unwrap_or_default(),
                     &entry.path,
-                    &(entry.generation as i64),
+                    &(entry.revision as i64),
                     &entry.uid,
                 ],
             )
@@ -196,7 +196,7 @@ WHERE
 
         let sql = r#"
 SELECT
-    INSTANCE, APP, DEVICE, PATH, GENERATION, UID
+    INSTANCE, APP, DEVICE, PATH, REVISION, UID
 FROM
     outbox
 WHERE

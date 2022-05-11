@@ -51,7 +51,7 @@ async fn test_create_device() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         let resp = TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
@@ -79,7 +79,7 @@ async fn test_create_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
     })
@@ -176,7 +176,7 @@ async fn test_create_duplicate_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         let resp = TestRequest::post().uri("/api/registry/v1alpha1/apps/app1/devices").set_json(&json!({
@@ -246,7 +246,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist now
@@ -306,7 +306,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".spec.alias".into(),
-            generation: 0,
+            revision: 0,
         },
         Event::Device {
             instance: "drogue-instance".into(),
@@ -314,7 +314,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".spec.credentials".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must have changed
@@ -362,7 +362,7 @@ async fn test_crud_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must no longer not exist
@@ -420,7 +420,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // create device
@@ -440,7 +440,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // delete application, must succeed
@@ -454,7 +454,7 @@ async fn test_delete_app_deletes_device() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read device, must no longer not exist
@@ -484,7 +484,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // create device
@@ -505,7 +505,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // delete application, must succeed
@@ -518,7 +518,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".metadata".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // the application must still exist
@@ -584,7 +584,7 @@ async fn test_delete_app_finalizer_device() -> anyhow::Result<()> {
             device: "device1".into(),
             uid: "".into(),
             path: ".metadata".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read device, must still exist

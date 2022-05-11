@@ -193,7 +193,7 @@ ON CONFLICT (INSTANCE, TYPE, KEY)
 DO
     UPDATE SET
         TS = EXCLUDED.TS,
-        GEN = WORKQUEUE.GEN + 1
+        REV = WORKQUEUE.REV + 1
     WHERE
             WORKQUEUE.TS > EXCLUDED.TS
         OR
@@ -235,7 +235,7 @@ DO
 pub struct Entry<K: Key> {
     pub key: K,
     pub timestamp: DateTime<Utc>,
-    pub gen: u64,
+    pub rev: u64,
 }
 
 struct InnerReader<K> {
@@ -281,7 +281,7 @@ where
 SELECT
     KEY,
     TS,
-    GEN
+    REV
 FROM
     WORKQUEUE
 WHERE
@@ -301,19 +301,19 @@ LIMIT 1
             if let Some(row) = c.query_opt(&stmt, &[&self.instance, &self.r#type]).await? {
                 let key: String = row.try_get("KEY")?;
                 let timestamp = row.try_get("TS")?;
-                let gen = row.try_get::<_, i64>("GEN")? as u64;
+                let rev = row.try_get::<_, i64>("REV")? as u64;
 
                 match K::from_string(key.clone()) {
                     Ok(key) => {
                         return Ok(Some(Entry {
                             key,
                             timestamp,
-                            gen,
+                            rev,
                         }))
                     }
                     Err(_) => {
                         log::info!("Failed to read next entry");
-                        if let Err(err) = self.do_ack(key, timestamp, gen).await {
+                        if let Err(err) = self.do_ack(key, timestamp, rev).await {
                             // FIXME: circuit breaker
                             log::warn!("Failed to ack invalid entry: {}", err);
                         }
@@ -328,7 +328,7 @@ LIMIT 1
     #[instrument(skip(self), ret)]
     async fn ack(&self, entry: Entry<K>) {
         if let Err(err) = self
-            .do_ack(entry.key.to_string(), entry.timestamp, entry.gen)
+            .do_ack(entry.key.to_string(), entry.timestamp, entry.rev)
             .await
         {
             // FIXME: need circuit breaker
@@ -337,7 +337,7 @@ LIMIT 1
     }
 
     #[instrument(skip(self), ret)]
-    async fn do_ack(&self, key: String, ts: DateTime<Utc>, gen: u64) -> Result<(), anyhow::Error> {
+    async fn do_ack(&self, key: String, ts: DateTime<Utc>, rev: u64) -> Result<(), anyhow::Error> {
         let c = self.pool.get().await?;
 
         let sql = r#"
@@ -346,7 +346,7 @@ DELETE FROM WORKQUEUE WHERE
     TYPE = $2 AND
     KEY = $3 AND
     TS <= $4 AND
-    GEN = $5
+    REV = $5
 "#;
         let stmt = c
             .prepare_typed(
@@ -364,7 +364,7 @@ DELETE FROM WORKQUEUE WHERE
         let r = c
             .execute(
                 &stmt,
-                &[&self.instance, &self.r#type, &key, &ts, &(gen as i64)],
+                &[&self.instance, &self.r#type, &key, &ts, &(rev as i64)],
             )
             .await;
 

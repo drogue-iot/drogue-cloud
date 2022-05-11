@@ -97,7 +97,7 @@ mod test {
         assert!(Event::Application {
             instance: "instance1".into(),
             application: "app1".into(),
-            generation: 123,
+            revision: 123,
             uid: "a".into(),
             path: "spec/core".into()
         }
@@ -112,7 +112,7 @@ mod test {
             vec![Event::Application {
                 instance: "instance1".into(),
                 application: "app1".into(),
-                generation: 123,
+                revision: 123,
                 uid: "a".into(),
                 path: "spec/core".into()
             }]
@@ -128,7 +128,7 @@ mod test {
             vec![Event::Application {
                 instance: "instance1".into(),
                 application: "app1".into(),
-                generation: 123,
+                revision: 123,
                 uid: "a".into(),
                 path: "spec/core".into()
             }]
