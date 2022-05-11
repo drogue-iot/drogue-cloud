@@ -14,7 +14,6 @@ cloudevents-sdk = { version = "0.5", features = ["reqwest"] }
 config = "0.12"
 drogue-client = "0.10"
 env_logger = "0.9"
-failure = "0.1" # required for converting error away from failure
 futures = "0.3"
 http = "0.2"
 humantime = "2"

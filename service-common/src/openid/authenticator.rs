@@ -5,7 +5,6 @@ use crate::{
 };
 use anyhow::Context;
 use core::fmt::{Debug, Formatter};
-use failure::Fail;
 use futures::{stream, StreamExt, TryStreamExt};
 use openid::{
     biscuit::jws::Compact, Claims, Client, CompactJson, Configurable, Discovered, Empty, Jws,
@@ -286,15 +285,14 @@ pub async fn create_client<C: ClientConfig, P: CompactJson + Claims>(
         client = client.add_ca_cert(ca);
     }
 
-    let client = openid::Client::<Discovered, P>::discover_with_client(
+    let client = Client::<Discovered, P>::discover_with_client(
         client.build()?,
         config.client_id(),
         config.client_secret(),
         config.redirect_url(),
         config.issuer_url()?,
     )
-    .await
-    .map_err(|err| anyhow::Error::from(err.compat()))?;
+    .await?;
 
     log::info!("Discovered OpenID: {:#?}", client.config());
 
