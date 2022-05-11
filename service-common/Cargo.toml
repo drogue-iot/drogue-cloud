@@ -20,7 +20,7 @@ http = "0.2"
 humantime = "2"
 humantime-serde = "1"
 k8s-openapi = { version = "0.14.0", features = ["v1_19"] }
-keycloak = "14"
+keycloak = "18"
 kube = { version = "0.68" }
 log = "0.4"
 ntex = { version = "0.5", features = ["tokio"] }

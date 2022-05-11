@@ -3236,9 +3236,9 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 
 [[package]]
 name = "keycloak"
-version = "14.0.0"
+version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e97a645a7f06ca33ee570e2d274bcd584b4d651f2a1723935b9c94ab96ceac5a"
+checksum = "4cba8f6d8914eb6a51411dae2b18861c02b78b0d63056d1e52abc2a3f59debea"
 dependencies = [
  "async-trait",
  "reqwest",
