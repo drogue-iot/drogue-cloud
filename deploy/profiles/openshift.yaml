@@ -1,3 +1,10 @@
+global:
+  drogueCloud:
+    keycloak:
+      tls:
+        enabled: true
+        useServiceCA: true
+
 drogueCloudCore:
   endpoints:
     coap:
@@ -26,9 +33,3 @@ drogueCloudCore:
     mqttWs:
       ingress:
         port: 443
-
-  keycloak:
-    tls:
-      enabled: true
-      useServiceCA: true
-

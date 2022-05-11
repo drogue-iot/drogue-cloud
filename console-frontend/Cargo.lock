@@ -2931,8 +2931,8 @@ dependencies = [
 
 [[package]]
 name = "yew-oauth2"
-version = "0.2.0"
-source = "git+https://github.com/ctron/yew-oauth2?rev=0045e462ef11890365b458d85bbe0574d054b4fc#0045e462ef11890365b458d85bbe0574d054b4fc"
+version = "0.3.0"
+source = "git+https://github.com/ctron/yew-oauth2?rev=cfefe1ac441d955050ded7ae0ed0c2b392382733#cfefe1ac441d955050ded7ae0ed0c2b392382733"
 dependencies = [
  "async-trait",
  "gloo-storage",

@@ -1,6 +1,7 @@
 # use in combination with the openshift.yaml file
 
-drogueCloudCore:
-  keycloak:
-    tls:
-      enabled: false
+global:
+  drogueCloud:
+    keycloak:
+      tls:
+        enabled: false

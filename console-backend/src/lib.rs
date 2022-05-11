@@ -61,6 +61,7 @@ pub struct Config {
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
+    /// External OpenID configuration, required to discover external OpenID endpoints
     #[serde(rename = "ui", default)]
     pub console_token_config: Option<TokenConfig>,
 
@@ -133,7 +134,7 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             }),
         };
 
-        log::debug!("Account URL: {:?}", account_url);
+        log::info!("Account URL: {:?}", account_url);
 
         (
             Some(OpenIdClient {
