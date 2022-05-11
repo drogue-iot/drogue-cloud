@@ -41,7 +41,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms1,
+            revision: ms1,
         })
         .await?;
 
@@ -63,7 +63,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms1,
+            revision: ms1,
         }]
     );
 
@@ -78,7 +78,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms2,
+            revision: ms2,
         })
         .await?;
 
@@ -100,7 +100,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms2,
+            revision: ms2,
         }]
     );
 
@@ -113,7 +113,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms1,
+            revision: ms1,
         })
         .await?;
 
@@ -135,7 +135,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms2,
+            revision: ms2,
         }]
     );
 
@@ -148,7 +148,7 @@ async fn test_outbox() -> anyhow::Result<()> {
             device: None,
             uid: "a".to_string(),
             path: ".path".to_string(),
-            generation: ms2,
+            revision: ms2,
         })
         .await?;
 
@@ -171,16 +171,16 @@ struct CreateApp {
     app: String,
     uid: String,
     path: String,
-    generation: u64,
+    revision: u64,
 }
 
 impl CreateApp {
-    fn new(app: &str, uid: &str, path: &str, generation: u64) -> Self {
+    fn new(app: &str, uid: &str, path: &str, revision: u64) -> Self {
         Self {
             app: app.to_string(),
             uid: uid.to_string(),
             path: path.to_string(),
-            generation,
+            revision,
         }
     }
 
@@ -192,7 +192,7 @@ impl CreateApp {
                 device: None,
                 uid: self.uid,
                 path: self.path,
-                generation: self.generation,
+                revision: self.revision,
             })
             .await?;
 
@@ -245,7 +245,7 @@ async fn test_recreate_resource() -> anyhow::Result<()> {
             device: None,
             uid: "b".to_string(),
             path: ".path".to_string(),
-            generation: 2,
+            revision: 2,
         }]
     );
 

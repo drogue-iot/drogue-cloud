@@ -8,8 +8,8 @@ use drogue_cloud_service_api::{
     health::HealthChecked,
     webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
 };
-use drogue_cloud_service_common::app::run_main;
 use drogue_cloud_service_common::{
+    app::run_main,
     defaults,
     health::HealthServerConfig,
     openid::{Authenticator, AuthenticatorConfig},

@@ -1,4 +1,4 @@
-use crate::models::GenerationError;
+use crate::models::AdvanceError;
 use deadpool_postgres::PoolError;
 use drogue_cloud_service_api::webapp::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
@@ -27,8 +27,8 @@ pub enum ServiceError {
     OptimisticLockFailed,
 }
 
-impl From<GenerationError> for ServiceError {
-    fn from(err: GenerationError) -> Self {
+impl From<AdvanceError> for ServiceError {
+    fn from(err: AdvanceError) -> Self {
         ServiceError::Internal(err.to_string())
     }
 }

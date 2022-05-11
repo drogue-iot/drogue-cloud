@@ -8,12 +8,14 @@ INSERT INTO APPLICATIONS (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     DATA
 ) VALUES (
     'app3',
     '4cf9607e-c7ad-11eb-8d69-d45d6455d2cc',
     '2021-01-01 00:00:00',
     '547531d4-c7ad-11eb-abee-d45d6455d2cc',
+    0,
     0,
     '{}'::JSONB
 );
@@ -39,6 +41,7 @@ INSERT INTO DEVICES (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     DATA
 ) VALUES (
     'app3',
@@ -46,6 +49,7 @@ INSERT INTO DEVICES (
     '4e185ea6-7c26-11eb-a319-d45d6455d211',
     '2020-01-01 00:00:00',
     'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
+    0,
     0,
     '{
       "spec": {
@@ -82,6 +86,7 @@ INSERT INTO DEVICES (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     DATA
 ) VALUES (
     'app3',
@@ -89,6 +94,7 @@ INSERT INTO DEVICES (
     '8bcfeb78-c7ae-11eb-9535-d45d6455d2cc',
     '2020-01-01 00:00:00',
     'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
+    0,
     0,
     '{
     "spec": {
@@ -125,6 +131,7 @@ INSERT INTO DEVICES (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     DATA
 ) VALUES (
     'app3',
@@ -132,6 +139,7 @@ INSERT INTO DEVICES (
     '91023af6-c7ae-11eb-9902-d45d6455d2cc',
     '2020-01-01 00:00:00',
     'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
+    0,
     0,
     '{
     "spec": {

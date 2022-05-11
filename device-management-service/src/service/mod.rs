@@ -16,7 +16,7 @@ use drogue_cloud_database_common::{
         device::{DeviceAccessor, PostgresDeviceAccessor},
         diff::diff_paths,
         outbox::PostgresOutboxAccessor,
-        Generation, Lock, TypedAlias,
+        Advance, Lock, TypedAlias,
     },
     Client, DatabaseService,
 };
@@ -131,6 +131,7 @@ where
             labels: app.metadata.labels,
             annotations: app.metadata.annotations,
             generation: 0,                 // will be set internally
+            revision: 0,                   // will be set internally
             creation_timestamp: epoch(),   // will be set internally
             resource_version: Uuid::nil(), // will be set internally
             deletion_timestamp: None,      // will be set internally
@@ -193,6 +194,7 @@ where
             annotations: device.metadata.annotations,
             creation_timestamp: epoch(),   // will be set internally
             generation: 0,                 // will be set internally
+            revision: 0,                   // will be set internally
             resource_version: Uuid::nil(), // will be set internally
             deletion_timestamp: None,      // will be set internally
             finalizers: device.metadata.finalizers,
@@ -252,8 +254,8 @@ where
                 return Ok(vec![]);
             }
 
-            // next generation
-            let generation = app.set_incremented_generation(&current)?;
+            // advance generation and revision
+            let revision = app.advance_from(&paths, &current)?;
 
             let name = app.name.clone();
             let uid = app.uid;
@@ -276,7 +278,7 @@ where
                 self.instance.clone(),
                 name,
                 uid,
-                generation,
+                revision,
                 paths,
             ))
         }

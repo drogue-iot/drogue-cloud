@@ -8,12 +8,14 @@ INSERT INTO APPLICATIONS (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     DATA
 ) VALUES (
     'app2',
     '4e185ea6-7c26-11eb-a319-d45d6455d220',
     '2020-01-01 00:00:00',
     'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
+    0,
     0,
     '{
       "spec": {
@@ -69,6 +71,7 @@ INSERT INTO DEVICES (
     CREATION_TIMESTAMP,
     RESOURCE_VERSION,
     GENERATION,
+    REVISION,
     DATA
 ) VALUES (
     'app2',
@@ -76,6 +79,7 @@ INSERT INTO DEVICES (
     '4e185ea6-7c26-11eb-a319-d45d6455d221',
     '2020-01-01 00:00:00',
     'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
+    0,
     0,
     '{
       "spec": {

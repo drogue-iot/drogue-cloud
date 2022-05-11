@@ -97,28 +97,28 @@ pub fn assert_events(actual: Vec<Vec<Event>>, mut expected: Vec<Event>) {
         for i in actual.iter().zip(expected.iter_mut()) {
             // this if could be reworked when we have: https://github.com/rust-lang/rust/issues/54883
             if let Event::Application {
-                generation: actual_generation,
+                revision: actual_revision,
                 uid: actual_uid,
                 ..
             }
             | Event::Device {
-                generation: actual_generation,
+                revision: actual_revision,
                 uid: actual_uid,
                 ..
             } = i.0
             {
                 if let Event::Application {
-                    generation: expected_generation,
+                    revision: expected_revision,
                     uid: expected_uid,
                     ..
                 }
                 | Event::Device {
-                    generation: expected_generation,
+                    revision: expected_revision,
                     uid: expected_uid,
                     ..
                 } = i.1
                 {
-                    *expected_generation = *actual_generation;
+                    *expected_revision = *actual_revision;
                     *expected_uid = actual_uid.clone();
                 }
             }
@@ -248,14 +248,14 @@ mod test {
             instance: "instance".to_string(),
             application: "app".to_string(),
             path: ".".to_string(),
-            generation: 0,
+            revision: 0,
             uid: "a".to_string(),
         }];
         let actual = vec![Event::Application {
             instance: "instance".to_string(),
             application: "app".to_string(),
             path: ".".to_string(),
-            generation: 12345,
+            revision: 12345,
             uid: "b".to_string(),
         }];
         assert_events(vec![actual], expected);

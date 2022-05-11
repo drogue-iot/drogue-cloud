@@ -48,7 +48,7 @@ async fn test_create_app() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
     })
 }
@@ -110,7 +110,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist
@@ -153,7 +153,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".spec.core".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist
@@ -194,7 +194,7 @@ async fn test_crud_app() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // try read, must not exist
@@ -238,7 +238,7 @@ async fn test_app_labels() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist
@@ -289,14 +289,14 @@ async fn test_app_labels() -> anyhow::Result<()> {
                 application: "app1".into(),
                 uid: "".into(),
                 path: ".metadata".into(),
-                generation: 0,
+                revision: 0,
             },
             Event::Application {
                 instance: "drogue-instance".into(),
                 application: "app1".into(),
                 uid: "".into(),
                 path: ".spec.core".into(),
-                generation: 0,
+                revision: 0,
             }
         ]);
 
@@ -355,7 +355,7 @@ async fn test_create_duplicate_app() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
 
@@ -400,7 +400,7 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist, with cert
@@ -459,13 +459,13 @@ async fn test_app_trust_anchor() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".spec.trustAnchors".into(),
-            generation: 0,
+            revision: 0,
         }, Event::Application {
             instance: "drogue-instance".into(),
             application: "app1".into(),
             uid: "".into(),
             path: ".status.trustAnchors".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist, but no cert
@@ -514,7 +514,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         let resp = TestRequest::delete().uri("/api/registry/v1alpha1/apps/app1").send_request(&app).await;
@@ -527,7 +527,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
             application: "app1".into(),
             uid: "".into(),
             path: ".metadata".into(),
-            generation: 0,
+            revision: 0,
         }]);
 
         // read, must exist
@@ -567,7 +567,7 @@ async fn test_delete_finalizer() -> anyhow::Result<()> {
                 application: "app1".into(),
                 uid: "".into(),
                 path: ".metadata".into(),
-                generation: 0,
+                revision: 0,
             },
         ]);
 

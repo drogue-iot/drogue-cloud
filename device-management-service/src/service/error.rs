@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
 use drogue_client::error::ErrorInformation;
-use drogue_cloud_database_common::{error::ServiceError, models::GenerationError};
+use drogue_cloud_database_common::{error::ServiceError, models::AdvanceError};
 use drogue_cloud_registry_events::EventSenderError;
 use drogue_cloud_service_api::webapp as actix_web;
 use thiserror::Error;
@@ -34,11 +34,11 @@ where
     }
 }
 
-impl<E> From<GenerationError> for PostgresManagementServiceError<E>
+impl<E> From<AdvanceError> for PostgresManagementServiceError<E>
 where
     E: std::error::Error + std::fmt::Debug + 'static,
 {
-    fn from(err: GenerationError) -> Self {
+    fn from(err: AdvanceError) -> Self {
         PostgresManagementServiceError::Service(err.into())
     }
 }
