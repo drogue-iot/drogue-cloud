@@ -82,6 +82,7 @@ where
     H: RequestHandler<U>,
     M: FnOnce(T) -> U,
 {
+    #[allow(dead_code)]
     pub fn new(handler: H, mapper: M) -> Self {
         Self {
             handler,

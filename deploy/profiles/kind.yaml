@@ -1,6 +1,12 @@
 
 # Ports might seem a bit off, but they must be in the range of 30000-32767
 
+global:
+  drogueCloud:
+    keycloak:
+      tls:
+        enabled: false
+
 drogueCloudCore:
   endpoints:
     coap:
@@ -40,10 +46,6 @@ drogueCloudCore:
   oauth2:
     tls:
       insecure: true
-
-  keycloak:
-    tls:
-      enabled: false
 
   services:
     sso:
