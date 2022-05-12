@@ -17,10 +17,9 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
-    client::RegistryConfig,
-    defaults,
-    health::{HealthServer, HealthServerConfig},
+    app::run_main, client::RegistryConfig, defaults, health::HealthServerConfig,
 };
+use futures::FutureExt;
 use k8s_openapi::api::core::v1::Secret;
 use kube::{api::ListParams, core::DynamicObject, discovery, Api};
 use kube_runtime::watcher;
@@ -148,20 +147,17 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    log::info!("Running service ...");
-    if let Some(health) = config.health {
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(
-            health.run(),
-            registry,
-            watcher_topics,
-            watcher_users,
-            watcher_secret
-        )?;
-    } else {
-        futures::try_join!(registry, watcher_topics, watcher_users, watcher_secret)?;
-    }
+    run_main(
+        [
+            registry.boxed_local(),
+            watcher_topics.boxed_local(),
+            watcher_users.boxed_local(),
+            watcher_secret.boxed_local(),
+        ],
+        config.health,
+        vec![],
+    )
+    .await?;
 
     // exiting
 
