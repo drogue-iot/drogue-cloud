@@ -50,6 +50,7 @@ ALL_IMAGES=\
 	console-backend \
 	console-frontend \
 	database-migration \
+	device-management-controller \
 	device-management-service \
 	device-state-service \
 	ditto-registry-operator \

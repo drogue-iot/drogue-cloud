@@ -1,9 +1,11 @@
 use crate::controller::base::{BaseController, ControllerOperation, Key};
 use async_trait::async_trait;
-use kube::Resource;
 use std::{boxed::Box, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::instrument;
+
+#[cfg(feature = "with_kube")]
+use kube::Resource;
 
 #[async_trait]
 pub trait EventProcessor<E>: Send + Sync {
@@ -50,6 +52,7 @@ where
     RO: Clone + Send + Sync + 'static,
     O: ControllerOperation<K, RI, RO> + Send + Sync + 'static,
 {
+    #[instrument(skip_all, level = "debug", ret)]
     async fn handle(&self, event: &E) -> Result<bool, ()> {
         if let Some(key) = (self.f)(event) {
             self.base_controller.lock().await.process(key).await?;
@@ -60,6 +63,7 @@ where
     }
 }
 
+#[cfg(feature = "with_kube")]
 #[derive(Clone, Debug)]
 pub enum NameSource {
     Name,
@@ -67,6 +71,7 @@ pub enum NameSource {
     Label(String),
 }
 
+#[cfg(feature = "with_kube")]
 pub struct ResourceProcessor<K, RI, RO, O>
 where
     K: Key,
@@ -79,6 +84,7 @@ where
     source: NameSource,
 }
 
+#[cfg(feature = "with_kube")]
 impl<RI, RO, O> ResourceProcessor<String, RI, RO, O>
 where
     RI: Clone + Send + Sync + 'static,
@@ -109,6 +115,7 @@ where
     }
 }
 
+#[cfg(feature = "with_kube")]
 #[async_trait]
 impl<R, RI, RO, O> EventProcessor<R> for ResourceProcessor<String, RI, RO, O>
 where
@@ -117,7 +124,7 @@ where
     RO: Clone + Send + Sync + 'static,
     O: ControllerOperation<String, RI, RO> + Send + Sync + 'static,
 {
-    #[instrument(skip_all, fields(meta=?event.meta()))]
+    #[instrument(skip_all, fields(meta=?event.meta()), ret)]
     async fn handle(&self, event: &R) -> Result<bool, ()> {
         let key = self.extract(event);
         log::debug!("Extracted key from event: {:?}", key);

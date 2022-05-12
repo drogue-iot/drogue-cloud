@@ -1,0 +1,1 @@
+-- no need to decrease the size, Postgres can manage it, and we don't have any constraints in the code so far

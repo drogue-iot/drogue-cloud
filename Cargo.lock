@@ -1634,6 +1634,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-device-management-controller"
+version = "0.10.0"
+dependencies = [
+ "actix",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "config 0.12.0",
+ "deadpool",
+ "deadpool-postgres",
+ "dotenv",
+ "drogue-client",
+ "drogue-cloud-database-common",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-operator-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "drogue-cloud-test-common",
+ "env_logger 0.9.0",
+ "futures",
+ "humantime",
+ "humantime-serde",
+ "indexmap",
+ "log",
+ "prometheus",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "drogue-cloud-device-management-service"
 version = "0.10.0"
 dependencies = [
