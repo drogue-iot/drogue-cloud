@@ -9,6 +9,7 @@ members = [
     "console-backend",
     "console-common",
     "database-common",
+    "device-management-controller",
     "device-management-service",
     "device-state-service",
     "ditto-registry-operator",

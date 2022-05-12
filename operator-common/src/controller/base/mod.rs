@@ -1,14 +1,12 @@
 mod app;
 mod conditions;
 mod device;
-#[cfg(feature = "with_kube")]
 mod event;
 pub mod queue;
 
 pub use app::*;
 pub use conditions::*;
 pub use device::*;
-#[cfg(feature = "with_kube")]
 pub use event::*;
 
 use crate::controller::{
@@ -205,6 +203,7 @@ impl OperationOutcome {
     }
 }
 
+/// The resource operations are used to load and store the resource by its key.
 #[async_trait]
 pub trait ResourceOperations<K, RI, RO>
 where
@@ -212,10 +211,12 @@ where
     RI: Clone + Send + Sync,
     RO: Clone + Send + Sync,
 {
-    /// Get the resource.
+    /// Get the resource from the store.
+    ///
+    /// Returning [`None`] here will not trigger, but skip the operation.
     async fn get(&self, key: &K) -> Result<Option<RI>, ClientError>;
 
-    /// Update the resource if it did change.
+    /// Update the resource in the store, if it did change.
     async fn update_if(&self, original: &RO, current: RO) -> Result<(), ReconcileError>;
 
     fn ref_output(input: &RI) -> &RO;
@@ -228,8 +229,7 @@ where
     RI: Clone + Send + Sync,
     RO: Clone + Send + Sync,
 {
-    async fn process_resource(&self, application: RI)
-        -> Result<ProcessOutcome<RO>, ReconcileError>;
+    async fn process_resource(&self, resource: RI) -> Result<ProcessOutcome<RO>, ReconcileError>;
 
     #[instrument(skip(self), ret)]
     /// Process the key, any permanent error returned is a fatal error,

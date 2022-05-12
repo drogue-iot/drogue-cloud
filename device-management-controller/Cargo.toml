@@ -1,0 +1,45 @@
+[package]
+name = "drogue-cloud-device-management-controller"
+description = "Device management controller"
+version = "0.10.0"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+actix = "0.13"
+anyhow = "1"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+config = "0.12"
+deadpool = "0.7"
+deadpool-postgres = { version = "0.7", features = ["config"] }
+dotenv = "0.15"
+drogue-client = "0.10"
+env_logger = "0.9"
+futures = "0.3"
+humantime = "2"
+humantime-serde = "1"
+indexmap = { version = "1", features = ["serde"] }
+log = "0.4"
+prometheus = { version = "^0.13", default-features = false }
+reqwest = "0.11"
+serde = "1"
+serde_json = "1"
+thiserror = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-operator-common = { path = "../operator-common" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-service-api = { path = "../service-api" }
+drogue-cloud-service-common = { path = "../service-common" }
+
+[dev-dependencies]
+drogue-cloud-test-common = { path = "../test-common", features = ["actix"] }
+
+[features]
+default = ["jaeger"]
+jaeger = ["drogue-cloud-service-common/jaeger"]

@@ -150,7 +150,7 @@ impl WorkQueueWriter {
         }
     }
 
-    #[instrument]
+    #[instrument(err(Debug))]
     pub async fn add<K>(&self, key: K, after: Duration) -> Result<(), ()>
     where
         K: Key,
@@ -158,7 +158,7 @@ impl WorkQueueWriter {
         Ok(self.insert(key, after).await.map_err(|_| ())?)
     }
 
-    #[instrument(ret)]
+    #[instrument(err)]
     async fn insert<K>(&self, key: K, after: Duration) -> Result<(), PoolError>
     where
         K: Key,
@@ -251,7 +251,7 @@ impl<K> InnerReader<K>
 where
     K: Key,
 {
-    #[instrument(skip(self), ret)]
+    #[instrument(skip(self), level = "debug", ret)]
     async fn next(&self) -> Option<Entry<K>> {
         while self.running.load(Ordering::Relaxed) {
             match self.fetch().await {
@@ -273,7 +273,7 @@ where
         None
     }
 
-    #[instrument(skip(self), ret)]
+    #[instrument(skip(self), level = "debug", ret, err)]
     async fn fetch(&self) -> Result<Option<Entry<K>>, anyhow::Error> {
         let c = self.pool.get().await?;
 
@@ -325,7 +325,7 @@ LIMIT 1
         }
     }
 
-    #[instrument(skip(self), ret)]
+    #[instrument(skip(self))]
     async fn ack(&self, entry: Entry<K>) {
         if let Err(err) = self
             .do_ack(entry.key.to_string(), entry.timestamp, entry.rev)
@@ -336,7 +336,7 @@ LIMIT 1
         }
     }
 
-    #[instrument(skip(self), ret)]
+    #[instrument(skip(self), ret, err)]
     async fn do_ack(&self, key: String, ts: DateTime<Utc>, rev: u64) -> Result<(), anyhow::Error> {
         let c = self.pool.get().await?;
 
