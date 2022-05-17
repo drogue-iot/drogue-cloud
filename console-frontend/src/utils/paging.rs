@@ -34,7 +34,8 @@ impl PagingOptions {
             limit: self.limit,
         }
     }
-
+    #[allow(dead_code)]
+    // this is not used right now as drogue API don't return the total number of entries
     pub fn last(self, max: i32) -> Self {
         PagingOptions {
             offset: max - self.limit,
