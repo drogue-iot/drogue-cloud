@@ -251,3 +251,4 @@ trunk serve
 #### Running with a cloud backend
 
 You can also run the frontend with a backend in the cloud (or local cluster, e.g. minikube).
+To do so, you can create a `console-frontend/dev/endpoints/backend.local.json` file and populate it with the API and SSO urls of your drogue instance.
