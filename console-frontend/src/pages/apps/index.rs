@@ -8,7 +8,7 @@ use crate::{
         apps::{CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
-    utils::url_encode,
+    utils::{url_encode, PagingOptions},
 };
 use drogue_client::registry::v1::Application;
 use http::{Method, StatusCode};
@@ -65,12 +65,16 @@ pub enum Msg {
     Delete(String),
 
     TriggerModal,
+
+    Navigate(patternfly_yew::Navigation),
+    SetLimit(i32),
 }
 
 pub struct Index {
     entries: Vec<ApplicationEntry>,
 
     fetch_task: Option<RequestHandle>,
+    paging_options: PagingOptions,
 }
 
 impl Component for Index {
@@ -82,6 +86,7 @@ impl Component for Index {
         Self {
             entries: Vec::new(),
             fetch_task: None,
+            paging_options: PagingOptions::default(),
         }
     }
 
@@ -116,11 +121,31 @@ impl Component for Index {
                         />
                 }),
             }),
+            Msg::SetLimit(limit) => {
+                self.paging_options.limit = limit;
+                ctx.link().send_message(Msg::Load);
+            }
+            Msg::Navigate(opts) => {
+                self.paging_options = match opts {
+                    Navigation::First => self.paging_options.first(),
+                    Navigation::Previous => self.paging_options.previous(),
+                    Navigation::Next => self.paging_options.next(),
+                    //fixme the registry must returns the total number of device for that
+                    Navigation::Last => self.paging_options.next(),
+                    Navigation::Page(page) => self.paging_options.page(page),
+                };
+                ctx.link().send_message(Msg::Load);
+            }
         };
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        let link = ctx.link().clone();
+        //pagination and set_limit callbacks
+        let nav = link.callback(move |nav| Msg::Navigate(nav));
+        let set_limit = link.callback(move |limit| Msg::SetLimit(limit));
+
         html! {
             <>
                 <PageSection variant={PageSectionVariant::Light}>
@@ -140,6 +165,18 @@ impl Component for Index {
                     </Content>
                 </PageSection>
                 <PageSection>
+                    <Toolbar>
+                        <ToolbarGroup modifiers={[ToolbarElementModifier::Right.all()]}>
+                            <ToolbarItem>
+                                <Pagination
+                                    offset= {self.paging_options.offset}
+                                    selected_choice={self.paging_options.limit}
+                                    navigation_callback={nav}
+                                    limit_callback={set_limit}
+                                />
+                            </ToolbarItem>
+                        </ToolbarGroup>
+                    </Toolbar>
                     <Table<SharedTableModel<ApplicationEntry>>
                         entries={SharedTableModel::from(self.entries.clone())}
                         header={{html_nested!{
@@ -164,7 +201,10 @@ impl Index {
         Ok(ctx.props().backend.request(
             Method::GET,
             "/api/registry/v1alpha1/apps",
-            vec![],
+            vec![
+                ("limit", &self.paging_options.limit.to_string()),
+                ("offset", &self.paging_options.offset.to_string()),
+            ],
             Nothing,
             vec![],
             ctx.callback_api::<Json<Vec<Application>>, _>(move |response| match response {
