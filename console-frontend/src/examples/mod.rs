@@ -138,6 +138,7 @@ impl ExamplePage {
         Ok(ctx.props().backend.request(
             Method::GET,
             "/api/console/v1alpha1/info",
+            vec![],
             Nothing,
             vec![],
             ctx.callback_api::<Json<Endpoints>, _>(|response| match response {

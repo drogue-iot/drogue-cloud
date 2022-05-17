@@ -41,4 +41,11 @@ impl PagingOptions {
             limit: self.limit,
         }
     }
+
+    pub fn page(self, page: i32) -> Self {
+        PagingOptions {
+            offset: self.limit * page - self.limit,
+            limit: self.limit,
+        }
+    }
 }

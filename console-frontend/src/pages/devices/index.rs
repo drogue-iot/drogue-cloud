@@ -120,6 +120,7 @@ impl Component for Index {
                     Navigation::Next => self.paging_options.next(),
                     //fixme the registry must returns the total number of device for that
                     Navigation::Last => self.paging_options.next(),
+                    Navigation::Page(page) => self.paging_options.page(page),
                 };
                 ctx.link().send_message(Msg::Load);
             }
@@ -243,8 +244,8 @@ impl Component for Index {
             }} else { html!{
                 <PageSection>
                 <Toolbar>
-                    <ToolbarGroup>
-                        <ToolbarItem modifiers={[ToolbarElementModifier::Right.all()]}>
+                    <ToolbarGroup modifiers={[ToolbarElementModifier::Right.all()]}>
+                        <ToolbarItem>
                             <Pagination
                                 offset= {self.paging_options.offset}
                                 selected_choice={self.paging_options.limit}
