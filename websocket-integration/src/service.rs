@@ -169,8 +169,8 @@ impl Service {
 
             // Convert the event to a JSON string
             let event = serde_json::to_string(&event?)?;
-            // Send the event as an Actor message. We don't really care if it fails
-            let _ = recipient.do_send(WsEvent(event.to_string()));
+            // Send the event as an Actor message
+            recipient.send(WsEvent(event.to_string())).await?;
 
             log::debug!("Sent message - go back to sleep");
         }
