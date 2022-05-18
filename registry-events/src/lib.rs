@@ -43,6 +43,7 @@ pub enum Event {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct EventData {
+    #[serde(alias = "generation")]
     pub revision: u64,
     pub uid: String,
 }
