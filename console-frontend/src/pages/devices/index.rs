@@ -61,7 +61,7 @@ pub enum Msg {
     LoadApps,
     Load,
     Navigate(patternfly_yew::Navigation),
-    SetLimit(i32),
+    SetLimit(u32),
     SetData(Vec<DeviceEntry>),
     SetApps(Vec<String>),
     SetApp(String),

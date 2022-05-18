@@ -1,7 +1,7 @@
 #[derive(Clone, Copy)]
 pub struct PagingOptions {
-    pub offset: i32,
-    pub limit: i32,
+    pub offset: u32,
+    pub limit: u32,
 }
 
 impl Default for PagingOptions {
@@ -36,14 +36,14 @@ impl PagingOptions {
     }
     #[allow(dead_code)]
     // this is not used right now as drogue API don't return the total number of entries
-    pub fn last(self, max: i32) -> Self {
+    pub fn last(self, max: u32) -> Self {
         PagingOptions {
             offset: max - self.limit,
             limit: self.limit,
         }
     }
 
-    pub fn page(self, page: i32) -> Self {
+    pub fn page(self, page: u32) -> Self {
         PagingOptions {
             offset: self.limit * page - self.limit,
             limit: self.limit,

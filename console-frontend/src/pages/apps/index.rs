@@ -67,7 +67,7 @@ pub enum Msg {
     TriggerModal,
 
     Navigate(patternfly_yew::Navigation),
-    SetLimit(i32),
+    SetLimit(u32),
 }
 
 pub struct Index {
