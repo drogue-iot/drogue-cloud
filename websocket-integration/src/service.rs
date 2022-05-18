@@ -167,7 +167,7 @@ impl Service {
         while let Some(event) = stream.next().await {
             log::debug!("Topic: {} - Event: {:?}", application, event);
 
-            // Covert the event to a JSON string
+            // Convert the event to a JSON string
             let event = serde_json::to_string(&event?)?;
             // Send the event as an Actor message. We don't really care if it fails
             let _ = recipient.do_send(WsEvent(event.to_string()));
