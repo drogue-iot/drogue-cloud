@@ -320,6 +320,16 @@ impl<'s, T> Handle<'s, T> {
             msg: self.msg,
         }
     }
+
+    pub fn try_map<U, F, E>(self, f: F) -> Result<Handle<'s, U>, E>
+    where
+        F: Fn(T) -> Result<U, E>,
+    {
+        Ok(Handle {
+            value: f(self.value)?,
+            msg: self.msg,
+        })
+    }
 }
 
 impl<T> Deref for Handle<'_, T> {

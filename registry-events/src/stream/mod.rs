@@ -107,9 +107,7 @@ impl<'s> Stream for KafkaEventStream<'s> {
                 None => Poll::Ready(None),
                 Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
                 Some(Ok(handle)) => {
-                    let event: Event = handle.deref().clone().try_into()?;
-
-                    Poll::Ready(Some(Ok(handle.replace(event))))
+                    Poll::Ready(Some(Ok(handle.try_map(|event| event.try_into())?)))
                 }
             },
         }
