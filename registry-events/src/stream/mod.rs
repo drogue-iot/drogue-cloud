@@ -103,13 +103,11 @@ impl<'s> Stream for KafkaEventStream<'s> {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.0.poll_next_unpin(cx) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(next) => match next {
-                None => Poll::Ready(None),
-                Some(Err(e)) => Poll::Ready(Some(Err(e.into()))),
-                Some(Ok(handle)) => {
-                    Poll::Ready(Some(Ok(handle.try_map(|event| event.try_into())?)))
-                }
-            },
+            Poll::Ready(next) => Poll::Ready(match next {
+                None => None,
+                Some(Err(e)) => Some(Err(e.into())),
+                Some(Ok(handle)) => Some(Ok(handle.try_map(|event| event.try_into())?)),
+            }),
         }
     }
 }
