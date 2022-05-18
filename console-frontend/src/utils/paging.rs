@@ -16,7 +16,7 @@ impl Default for PagingOptions {
 impl PagingOptions {
     pub fn previous(self) -> Self {
         PagingOptions {
-            offset: self.offset - self.limit,
+            offset: self.offset.checked_sub(self.limit).unwrap_or(0),
             limit: self.limit,
         }
     }
@@ -38,14 +38,14 @@ impl PagingOptions {
     // this is not used right now as drogue API don't return the total number of entries
     pub fn last(self, max: u32) -> Self {
         PagingOptions {
-            offset: max - self.limit,
+            offset: max.checked_sub(self.limit).unwrap_or(0),
             limit: self.limit,
         }
     }
 
     pub fn page(self, page: u32) -> Self {
         PagingOptions {
-            offset: self.limit * page - self.limit,
+            offset: (self.limit * page).checked_sub(self.limit).unwrap_or(0),
             limit: self.limit,
         }
     }
