@@ -4,10 +4,8 @@ mod actix;
 #[cfg(feature = "with_actix")]
 pub use self::actix::*;
 
-use cloudevents::Event;
-use drogue_cloud_event_common::stream::{self, EventStreamError};
+use drogue_cloud_event_common::stream::{self, AckMode, AutoAck, EventStreamError};
 use drogue_cloud_service_api::kafka::KafkaConfig;
-use futures::Stream;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug)]
@@ -17,11 +15,17 @@ pub struct EventStreamConfig {
 }
 
 #[derive(Debug)]
-pub struct EventStream<'s> {
-    stream: stream::EventStream<'s>,
+pub struct EventStream<'s, Ack = AutoAck>
+where
+    Ack: AckMode,
+{
+    stream: stream::EventStream<'s, Ack>,
 }
 
-impl<'s> EventStream<'s> {
+impl<'s, Ack> EventStream<'s, Ack>
+where
+    Ack: AckMode,
+{
     pub fn new(cfg: EventStreamConfig) -> Result<Self, EventStreamError> {
         let stream = stream::EventStream::new(stream::EventStreamConfig {
             kafka: cfg.kafka,
@@ -32,21 +36,24 @@ impl<'s> EventStream<'s> {
     }
 }
 
-impl<'s> From<EventStream<'s>> for stream::EventStream<'s> {
-    fn from(s: EventStream<'s>) -> Self {
+impl<'s, Ack> From<EventStream<'s, Ack>> for stream::EventStream<'s, Ack>
+where
+    Ack: AckMode,
+{
+    fn from(s: EventStream<'s, Ack>) -> Self {
         s.stream
     }
 }
 
-impl<'s> Deref for EventStream<'s> {
-    type Target = dyn Stream<Item = Result<Event, EventStreamError>> + Unpin + 's;
+impl<'s, Ack: AckMode> Deref for EventStream<'s, Ack> {
+    type Target = stream::EventStream<'s, Ack>;
 
     fn deref(&self) -> &Self::Target {
         &self.stream
     }
 }
 
-impl DerefMut for EventStream<'_> {
+impl<'s, Ack: AckMode> DerefMut for EventStream<'s, Ack> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.stream
     }

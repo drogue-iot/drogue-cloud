@@ -1,14 +1,14 @@
 use crate::{
     service::{
-        stream::{ContentMode, Stream},
+        stream::{self, ContentMode, Stream},
         ServiceConfig,
     },
     CONNECTIONS_COUNTER,
 };
 use async_trait::async_trait;
-use cloudevents::Data;
 use drogue_client::registry;
 use drogue_cloud_endpoint_common::sender::UpstreamSender;
+use drogue_cloud_event_common::stream::CustomAck;
 use drogue_cloud_integration_common::{
     self,
     commands::CommandOptions,
@@ -27,8 +27,6 @@ use drogue_cloud_service_api::{
 };
 use drogue_cloud_service_common::client::UserAuthClient;
 use futures::lock::Mutex;
-use futures::StreamExt;
-use ntex::util::Bytes;
 use ntex_mqtt::{types::QoS, v5};
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use tokio::task::JoinHandle;
@@ -113,6 +111,7 @@ impl Session {
         &self,
         id: Option<NonZeroU32>,
         original_topic: String,
+        qos: QoS,
         content_mode: ContentMode,
     ) -> Result<QoS, v5::codec::SubscribeAckReason> {
         // split topic into path segments
@@ -120,8 +119,21 @@ impl Session {
 
         // extract the shared named, which we use as kafka consumer group id
         let (group_id, topic) = match topic.as_slice() {
-            ["$shared", group_id, topic @ ..] => (Some(group_id), topic),
-            other => (None, other),
+            ["$shared", group_id, topic @ ..] => (Some(*group_id), topic),
+            other => {
+                let group_id = if self.client_id.is_empty() {
+                    None
+                } else {
+                    Some(self.client_id.as_str())
+                };
+                (group_id, other)
+            }
+        };
+
+        // check QoS
+        let qos = match qos {
+            QoS::AtMostOnce => stream::QoS::AtMostOnce,
+            QoS::AtLeastOnce | QoS::ExactlyOnce => stream::QoS::AtLeastOnce,
         };
 
         // check for wildcard subscriptions
@@ -170,14 +182,14 @@ impl Session {
 
         // create stream
 
-        let event_stream = EventStream::new(EventStreamConfig {
+        let stream_config = EventStreamConfig {
             kafka: app_res
                 .kafka_target(KafkaEventType::Events, &self.config.kafka)
                 .map(|target| target.into())
                 .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
             consumer_group: group_id.map(|s| s.to_string()),
-        })
-        .map_err(|err| {
+        };
+        let event_stream = EventStream::<CustomAck>::new(stream_config).map_err(|err| {
             log::info!("Failed to subscribe to Kafka topic: {}", err);
             v5::codec::SubscribeAckReason::UnspecifiedError
         })?;
@@ -186,108 +198,37 @@ impl Session {
 
         let stream = Stream {
             topic: original_topic.into(),
+            qos,
             id,
             event_stream,
             content_mode,
         };
 
-        self.attach_app(stream).await;
+        self.attach_stream(stream).await;
 
         // done
 
-        Ok(QoS::AtMostOnce)
+        Ok(match qos {
+            stream::QoS::AtMostOnce => QoS::AtMostOnce,
+            stream::QoS::AtLeastOnce => QoS::AtLeastOnce,
+        })
     }
 
-    async fn run_stream(mut stream: Stream<'_>, sink: &mut Sink) -> Result<(), anyhow::Error> {
-        let content_mode = stream.content_mode;
-        let sub_id = stream.id.map(|id| vec![id]);
-
-        log::debug!(
-            "Running stream - content-mode: {:?}, subscription-ids: {:?}",
-            content_mode,
-            sub_id
-        );
-
-        // run event stream
-        while let Some(event) = stream.event_stream.next().await {
-            log::debug!("Event: {:?}", event);
-
-            let mut event = event?;
-            let topic = stream.topic.clone();
-
-            match (&mut *sink, content_mode) {
-                // MQTT v3.1
-                (Sink::V3(sink), _) => {
-                    let event = serde_json::to_vec(&event)?;
-                    sink.publish(topic.clone(), event.into())
-                        .send_at_most_once()
-                }
-
-                // MQTT v5 in structured mode
-                (Sink::V5(sink), ContentMode::Structured) => {
-                    let event = serde_json::to_vec(&event)?;
-                    sink.publish(topic.clone(), event.into())
-                        .properties(|p| {
-                            p.content_type =
-                                Some("application/cloudevents+json; charset=utf-8".into());
-                            p.is_utf8_payload = Some(true);
-                            p.subscription_ids = sub_id.clone();
-                        })
-                        .send_at_most_once()
-                }
-
-                // MQTT v5 in binary mode
-                (Sink::V5(sink), ContentMode::Binary) => {
-                    let (content_type, _, data) = event.take_data();
-                    let builder = match data {
-                        Some(Data::Binary(data)) => sink.publish(topic.clone(), data.into()),
-                        Some(Data::String(data)) => sink.publish(topic.clone(), data.into()),
-                        Some(Data::Json(data)) => {
-                            sink.publish(topic.clone(), serde_json::to_vec(&data)?.into())
-                        }
-                        None => sink.publish(topic.clone(), Bytes::new()),
-                    };
-
-                    // convert attributes and extensions ...
-
-                    builder
-                        .properties(|p| {
-                            for (k, v) in event.iter() {
-                                p.user_properties.push((k.into(), v.to_string().into()));
-                            }
-                            p.content_type = content_type.map(Into::into);
-                            p.subscription_ids = sub_id.clone();
-                        })
-                        // ... and send
-                        .send_at_most_once()
-                }
-            }
-            .map_err(|err| anyhow::anyhow!("Failed to send event: {}", err))?;
-
-            log::debug!("Sent message - go back to sleep");
-        }
-
-        Ok(())
-    }
-
-    async fn attach_app(&self, stream: Stream<'static>) {
+    async fn attach_stream(&self, stream: Stream<'static>) {
         let topic = stream.topic.to_string();
 
         log::debug!("Attaching: {}", topic);
 
-        let mut sink = self.sink.clone();
-
+        let sink = self.sink.clone();
         let f = async move {
-            match Self::run_stream(stream, &mut sink).await {
-                Ok(()) => log::debug!("Stream processor finished"),
-                Err(err) => {
-                    log::info!("Stream processor failed: {}", err);
-                    sink.close();
-                }
-            }
+            stream.run(sink).await;
         };
 
+        // spawn task
+
         let handle = ntex_rt::spawn(f);
+
+        // remember it
 
         self.streams.lock().await.insert(topic, handle);
     }
@@ -407,7 +348,7 @@ impl mqtt::Session for Session {
 
         for mut sub in subscribe {
             let res = self
-                .subscribe_to(id, sub.topic().to_string(), content_mode)
+                .subscribe_to(id, sub.topic().to_string(), sub.qos(), content_mode)
                 .await;
             log::debug!("Subscribing to: {:?} -> {:?}", sub.topic(), res);
             match res {

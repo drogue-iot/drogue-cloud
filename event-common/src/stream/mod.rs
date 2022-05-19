@@ -11,7 +11,7 @@ use futures::{
 use owning_ref::OwningHandle;
 use rdkafka::{
     config::{ClientConfig, RDKafkaLogLevel},
-    consumer::{stream_consumer::StreamConsumer, CommitMode, Consumer, DefaultConsumerContext},
+    consumer::{stream_consumer::StreamConsumer, Consumer, DefaultConsumerContext},
     error::KafkaResult,
     message::BorrowedMessage,
     util::Timeout,
@@ -63,13 +63,15 @@ pub struct CustomAck;
 
 impl AckMode for AutoAck {
     fn configure(config: &mut ClientConfig) {
-        config.set("enable.auto.commit", "true");
+        // automatically update offsets
+        config.set("enable.auto.offset.store", "true");
     }
 }
 
 impl AckMode for CustomAck {
     fn configure(config: &mut ClientConfig) {
-        config.set("enable.auto.commit", "false");
+        // manually update offsets
+        config.set("enable.auto.offset.store", "false");
     }
 }
 
@@ -124,6 +126,10 @@ where
             .set("bootstrap.servers", &cfg.kafka.client.bootstrap_servers)
             .set("enable.partition.eof", "false")
             .set("session.timeout.ms", "6000")
+            // automatically commit, the offsets
+            .set("auto.commit.interval.ms", "5000")
+            .set("enable.auto.commit", "true")
+            // set logging
             .set_log_level(RDKafkaLogLevel::Info);
 
         // add custom properties
@@ -213,78 +219,75 @@ where
     }
 
     fn do_ack(&self, msg: &BorrowedMessage) -> KafkaResult<()> {
-        self.upstream
-            .as_owner()
-            .commit_message(msg, CommitMode::Async)
+        self.upstream.as_owner().store_offset_from_message(msg)
     }
+}
 
-    /// Try to ensure that the data section is JSON encoded when the content type
-    /// indicated a JSON payload.
-    ///
-    /// This is necessary as e.g. reading from Kafka, the payload will always be binary.
-    fn fixup_data_type(mut event: Event) -> Event {
-        // Pre-flight check if we need to convert
-        let converter = match (
-            DeclaredContentType::detect(event.datacontenttype()),
-            event.data(),
-        ) {
-            (DeclaredContentType::String, Some(Data::String(_))) => {
-                return event;
-            }
-            (DeclaredContentType::Json, Some(Data::Json(_))) => {
-                return event;
-            }
-            (DeclaredContentType::Other, _) => {
-                return event;
-            }
-            (_, None) => {
-                return event;
-            }
-            (DeclaredContentType::Json, Some(_)) => Self::make_json,
-            (DeclaredContentType::String, Some(_)) => Self::make_string,
-        };
-
-        // we know now that the content is indicated as something different -> do the conversion
-
-        let (content_type, schema_type, data) = match event.take_data() {
-            (Some(content_type), schema_type, Some(data)) => {
-                (Some(content_type), schema_type, Some(converter(data)))
-            }
-            data => data,
-        };
-
-        // set the data, content type, and schema type again
-
-        if let Some(data) = data {
-            event.set_data_unchecked(data);
+/// Try to ensure that the data section is JSON encoded when the content type
+/// indicated a JSON payload.
+///
+/// This is necessary as e.g. reading from Kafka, the payload will always be binary.
+fn fixup_data_type(mut event: Event) -> Event {
+    // Pre-flight check if we need to convert
+    let converter = match (
+        DeclaredContentType::detect(event.datacontenttype()),
+        event.data(),
+    ) {
+        (DeclaredContentType::String, Some(Data::String(_))) => {
+            return event;
         }
-        event.set_datacontenttype(content_type);
-        event.set_dataschema(schema_type);
+        (DeclaredContentType::Json, Some(Data::Json(_))) => {
+            return event;
+        }
+        (DeclaredContentType::Other, _) => {
+            return event;
+        }
+        (_, None) => {
+            return event;
+        }
+        (DeclaredContentType::Json, Some(_)) => make_json,
+        (DeclaredContentType::String, Some(_)) => make_string,
+    };
 
-        // done
+    // we know now that the content is indicated as something different -> do the conversion
 
-        event
+    let (content_type, schema_type, data) = match event.take_data() {
+        (Some(content_type), schema_type, Some(data)) => {
+            (Some(content_type), schema_type, Some(converter(data)))
+        }
+        data => data,
+    };
+
+    // set the data, content type, and schema type again
+
+    if let Some(data) = data {
+        event.set_data_unchecked(data);
     }
+    event.set_datacontenttype(content_type);
+    event.set_dataschema(schema_type);
 
-    /// Get JSON from the data section, ignore error, don't do checks if we don't need to.
-    fn make_json(data: Data) -> Data {
-        match data {
-            Data::String(ref str) => serde_json::from_str(str).map_or_else(|_| data, Data::Json),
-            Data::Binary(ref slice) => {
-                serde_json::from_slice(slice).map_or_else(|_| data, Data::Json)
-            }
-            json => json,
-        }
+    // done
+
+    event
+}
+
+/// Get JSON from the data section, ignore error, don't do checks if we don't need to.
+fn make_json(data: Data) -> Data {
+    match data {
+        Data::String(ref str) => serde_json::from_str(str).map_or_else(|_| data, Data::Json),
+        Data::Binary(ref slice) => serde_json::from_slice(slice).map_or_else(|_| data, Data::Json),
+        json => json,
     }
+}
 
-    /// Get string data from the data section, ignore error, don't do checks if we really need to.
-    fn make_string(data: Data) -> Data {
-        match data {
-            Data::Json(json) => Data::String(json.to_string()),
-            Data::Binary(slice) => String::from_utf8(slice)
-                .map_or_else(|err| Data::Binary(err.into_bytes()), Data::String),
-            string => string,
+/// Get string data from the data section, ignore error, don't do checks if we really need to.
+fn make_string(data: Data) -> Data {
+    match data {
+        Data::Json(json) => Data::String(json.to_string()),
+        Data::Binary(slice) => {
+            String::from_utf8(slice).map_or_else(|err| Data::Binary(err.into_bytes()), Data::String)
         }
+        string => string,
     }
 }
 
@@ -299,14 +302,14 @@ where
 
 #[derive(Debug)]
 pub struct Handle<'s, T> {
-    value: T,
+    event: T,
     msg: BorrowedMessage<'s>,
 }
 
 impl<'s, T> Handle<'s, T> {
-    pub fn replace<U>(self, value: U) -> Handle<'s, U> {
+    pub fn replace<U>(self, event: U) -> Handle<'s, U> {
         Handle {
-            value,
+            event,
             msg: self.msg,
         }
     }
@@ -316,7 +319,7 @@ impl<'s, T> Handle<'s, T> {
         F: Fn(T) -> U,
     {
         Handle {
-            value: f(self.value),
+            event: f(self.event),
             msg: self.msg,
         }
     }
@@ -326,7 +329,7 @@ impl<'s, T> Handle<'s, T> {
         F: Fn(T) -> Result<U, E>,
     {
         Ok(Handle {
-            value: f(self.value)?,
+            event: f(self.event)?,
             msg: self.msg,
         })
     }
@@ -336,17 +339,17 @@ impl<T> Deref for Handle<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.event
     }
 }
 
 impl<T> DerefMut for Handle<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
+        &mut self.event
     }
 }
 
-impl<'s> Stream for EventStream<'s, AutoAck> {
+impl Stream for EventStream<'_, AutoAck> {
     type Item = Result<Event, EventStreamError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -363,10 +366,9 @@ impl<'s> Stream for EventStream<'s, AutoAck> {
                         msg.partition(),
                         msg.offset()
                     );
-                    self.do_ack(&msg)?;
 
                     let event = msg.to_event()?;
-                    let event = Self::fixup_data_type(event);
+                    let event = fixup_data_type(event);
 
                     Poll::Ready(Some(Ok(event)))
                 }
@@ -393,9 +395,9 @@ impl<'s> Stream for EventStream<'s, CustomAck> {
                         msg.offset()
                     );
                     let event = msg.to_event()?;
-                    let event = Self::fixup_data_type(event);
+                    let event = fixup_data_type(event);
 
-                    let event = Handle { value: event, msg };
+                    let event = Handle { event, msg };
                     Poll::Ready(Some(Ok(event)))
                 }
             },
@@ -471,7 +473,7 @@ mod test {
             ),
         ] {
             let event = event(content_type, input);
-            let (ct, st, data) = EventStream::<AutoAck>::fixup_data_type(event).take_data();
+            let (ct, st, data) = fixup_data_type(event).take_data();
 
             assert_eq!(ct.as_deref(), content_type);
             assert_eq!(st.as_ref().map(Url::as_str), Some("https://foo.bar/"));
