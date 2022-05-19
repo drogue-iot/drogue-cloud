@@ -203,6 +203,7 @@ pub enum Sink {
 }
 
 impl Sink {
+    /// close the MQTT connection
     pub fn close(&self) {
         match self {
             Self::V3(sink) => sink.close(),
