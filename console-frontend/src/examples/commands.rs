@@ -71,7 +71,7 @@ impl Component for CommandAndControl {
                 <Content>
                 <p>
                     {r#"Command & control, also known as "cloud-to-device messaging", is used to send messages back to a device. In order to test this,
-                    you will need simulate a device, connecting to the cloud, and at the same time, a cloud side application, which sends data to a device"#}
+                    you will need to simulate a device, connecting to the cloud, and at the same time, a cloud side application, which sends data to a device."#}
                 </p>
 
                 <p>
