@@ -119,6 +119,8 @@ impl Session {
 
         // extract the shared named, which we use as kafka consumer group id
         let (group_id, topic) = match topic.as_slice() {
+            ["$share", group_id, topic @ ..] => (Some(*group_id), topic),
+            // keep incorrect topic prefix for a bit, to not break existing stuff
             ["$shared", group_id, topic @ ..] => (Some(*group_id), topic),
             other => {
                 let group_id = if self.client_id.is_empty() {
