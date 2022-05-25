@@ -199,7 +199,7 @@ impl Session {
         // we started the stream, now hold on to it ...
 
         let stream = Stream {
-            topic: original_topic.into(),
+            topic: topic.join("/").into(),
             qos,
             id,
             event_stream,
