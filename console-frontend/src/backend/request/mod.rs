@@ -9,7 +9,7 @@ pub use json::*;
 pub use payload::*;
 
 use anyhow::anyhow;
-use drogue_cloud_service_api::error::ErrorResponse;
+use drogue_client::error::ErrorInformation;
 use http::{Method, StatusCode};
 use js_sys::Uint8Array;
 use serde::{Deserialize, Serialize};

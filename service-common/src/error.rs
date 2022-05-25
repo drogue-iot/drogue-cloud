@@ -1,5 +1,4 @@
-use drogue_client::error::ClientError;
-use drogue_cloud_service_api::error::ErrorResponse;
+use drogue_client::error::{ClientError, ErrorInformation};
 use drogue_cloud_service_api::webapp::{HttpResponse, ResponseError};
 use thiserror::Error;
 
@@ -32,46 +31,50 @@ impl From<ClientError> for ServiceError {
 impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
         match self {
-            ServiceError::TokenError => HttpResponse::InternalServerError().json(ErrorResponse {
-                error: "TokenError".into(),
-                message: "Failed to decode token".into(),
-            }),
+            ServiceError::TokenError => {
+                HttpResponse::InternalServerError().json(ErrorInformation {
+                    error: "TokenError".into(),
+                    message: "Failed to decode token".into(),
+                })
+            }
             ServiceError::InternalError(message) => {
-                HttpResponse::InternalServerError().json(ErrorResponse {
+                HttpResponse::InternalServerError().json(ErrorInformation {
                     error: "InternalError".into(),
                     message: message.clone(),
                 })
             }
-            ServiceError::AuthenticationError => HttpResponse::Forbidden().json(ErrorResponse {
+            ServiceError::AuthenticationError => HttpResponse::Forbidden().json(ErrorInformation {
                 error: "AuthenticationError".into(),
                 message: "Not authorized".into(),
             }),
             ServiceError::ServiceUnavailable(message) => {
-                HttpResponse::ServiceUnavailable().json(ErrorResponse {
+                HttpResponse::ServiceUnavailable().json(ErrorInformation {
                     error: "ServiceUnavailable".into(),
                     message: message.clone(),
                 })
             }
             ServiceError::InvalidRequest(message) => {
-                HttpResponse::BadRequest().json(ErrorResponse {
+                HttpResponse::BadRequest().json(ErrorInformation {
                     error: "InvalidRequest".into(),
                     message: message.clone(),
                 })
             }
             ServiceError::Serializer(err) => {
-                HttpResponse::InternalServerError().json(ErrorResponse {
+                HttpResponse::InternalServerError().json(ErrorInformation {
                     error: "Serializer".into(),
                     message: err.to_string(),
                 })
             }
-            ServiceError::NotFound(t, name) => HttpResponse::NotFound().json(ErrorResponse {
+            ServiceError::NotFound(t, name) => HttpResponse::NotFound().json(ErrorInformation {
                 error: "NotFound".into(),
                 message: format!("Not found {0} / {1}", t, name),
             }),
-            ServiceError::Client(err) => HttpResponse::ServiceUnavailable().json(ErrorResponse {
-                error: "ClientError".into(),
-                message: err.to_string(),
-            }),
+            ServiceError::Client(err) => {
+                HttpResponse::ServiceUnavailable().json(ErrorInformation {
+                    error: "ClientError".into(),
+                    message: err.to_string(),
+                })
+            }
         }
     }
 }
