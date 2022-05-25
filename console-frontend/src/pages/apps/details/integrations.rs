@@ -187,7 +187,7 @@ impl IntegrationDetails<'_> {
                             <Clipboard readonly=true value={format!("app/{}", self.application.metadata.name)} />
                         </Tab>
                         <Tab label="Shared group">
-                            <Clipboard readonly=true value={format!("$shared/<group>/app/{}", self.application.metadata.name)} />
+                            <Clipboard readonly=true value={format!("$share/<group>/app/{}", self.application.metadata.name)} />
                         </Tab>
                     </Tabs>
                 </DescriptionGroup>

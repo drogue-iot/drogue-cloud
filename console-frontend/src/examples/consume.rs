@@ -95,7 +95,7 @@ impl Component for ConsumeData {
                 None => format!("app/{app}", app = ctx.props().data.app_id),
                 Some(ref group) => {
                     format!(
-                        "$shared/{group}/app/{app}",
+                        "$share/{group}/app/{app}",
                         group = group,
                         app = ctx.props().data.app_id
                     )
