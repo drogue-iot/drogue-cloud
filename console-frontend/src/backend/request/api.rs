@@ -37,7 +37,7 @@ where
 
             match response {
                 Err(err) => ApiResponse::Failure(ApiError::Internal(err)),
-                Ok(response) => match convert_json::<T, Json<ErrorResponse>>(
+                Ok(response) => match convert_json::<T, Json<ErrorInformation>>(
                     response.response.status(),
                     response.data,
                 ) {
@@ -63,7 +63,7 @@ pub enum ApiResponse<T> {
 
 #[derive(Debug)]
 pub enum ApiError {
-    Response(ErrorResponse, StatusCode),
+    Response(ErrorInformation, StatusCode),
     Unknown(Rc<Vec<u8>>, StatusCode),
     Internal(anyhow::Error),
 }

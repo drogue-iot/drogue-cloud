@@ -1,4 +1,4 @@
-use drogue_cloud_service_api::error::ErrorResponse;
+use drogue_client::error::ErrorInformation;
 use drogue_cloud_service_api::webapp::{http::StatusCode, HttpResponse, ResponseError};
 use keycloak::KeycloakError;
 use thiserror::Error;
@@ -21,7 +21,7 @@ pub enum Error {
 
 impl Error {
     fn transport_error(err: &reqwest::Error) -> HttpResponse {
-        HttpResponse::BadGateway().json(ErrorResponse {
+        HttpResponse::BadGateway().json(ErrorInformation {
             error: "GatewayError".into(),
             message: err.to_string(),
         })
@@ -31,7 +31,7 @@ impl Error {
 impl ResponseError for Error {
     fn error_response(&self) -> HttpResponse {
         match self {
-            Self::Internal(message) => HttpResponse::InternalServerError().json(ErrorResponse {
+            Self::Internal(message) => HttpResponse::InternalServerError().json(ErrorInformation {
                 error: "InternalError".into(),
                 message: message.clone(),
             }),
@@ -50,18 +50,20 @@ impl ResponseError for Error {
                         .as_ref()
                         .and_then(|b| b.error_message.clone())
                         .unwrap_or_else(|| text.into());
-                    resp.json(ErrorResponse { error, message })
+                    resp.json(ErrorInformation { error, message })
                 }
             },
-            Self::NotAuthorized => HttpResponse::Forbidden().json(ErrorResponse {
+            Self::NotAuthorized => HttpResponse::Forbidden().json(ErrorInformation {
                 error: "NotAuthorized".into(),
                 message: "Not authorized".into(),
             }),
-            Self::Serialization(err) => HttpResponse::InternalServerError().json(ErrorResponse {
-                error: "InternalError".into(),
-                message: err.to_string(),
-            }),
-            Self::NotFound => HttpResponse::NotFound().json(ErrorResponse {
+            Self::Serialization(err) => {
+                HttpResponse::InternalServerError().json(ErrorInformation {
+                    error: "InternalError".into(),
+                    message: err.to_string(),
+                })
+            }
+            Self::NotFound => HttpResponse::NotFound().json(ErrorInformation {
                 error: "NotFound".into(),
                 message: "User not found".into(),
             }),
