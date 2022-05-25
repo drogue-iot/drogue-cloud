@@ -352,7 +352,6 @@ pub trait Publisher {
         let device_enc = utf8_percent_encode(&publish.device.name, NON_ALPHANUMERIC);
         let sender_enc = utf8_percent_encode(&publish.sender.name, NON_ALPHANUMERIC);
 
-        let source = format!("{}/{}", app_enc, device_enc);
         let key = format!("{}/{}", app_enc, sender_enc);
 
         let mut event = EventBuilderV10::new()
@@ -363,7 +362,8 @@ pub trait Publisher {
                 .unwrap_or_else(|| DEFAULT_TYPE_EVENT.to_string()))
             // we need an "absolute" URL for the moment: until 0.4 is released
             // see: https://github.com/cloudevents/sdk-rust/issues/106
-            .source(format!("drogue://{}", source))
+            // also, go has in issue with percent encoded segments in the start
+            .source(format!("drogue://{app_id}/{device_enc}"))
             .inject(Id::new(app_id, publish.device.name))
             .subject(&publish.channel)
             .time(Utc::now());
