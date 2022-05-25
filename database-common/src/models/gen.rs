@@ -82,11 +82,16 @@ where
     {
         let result = self.set_revision(current.revision() + 1);
 
+        let mut changed = false;
         for path in paths {
             if path.starts_with(".spec") {
                 self.set_generation(current.generation() + 1)?;
+                changed = true;
                 break;
             }
+        }
+        if !changed {
+            self.set_generation(current.generation())?;
         }
 
         result
