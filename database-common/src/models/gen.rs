@@ -14,7 +14,8 @@ macro_rules! generation {
                 generation: u64,
             ) -> Result<u64, $crate::models::gen::AdvanceError> {
                 let current = self.generation();
-                if current < generation {
+                // the generation may stay the same, but not decrease
+                if current <= generation {
                     self.$f = generation;
                     Ok(generation)
                 } else {
@@ -42,6 +43,7 @@ macro_rules! revision {
                 revision: u64,
             ) -> Result<u64, $crate::models::gen::AdvanceError> {
                 let current = self.revision();
+                // the revision must always increment
                 if current < revision {
                     self.$f = revision;
                     Ok(revision)
