@@ -160,13 +160,6 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let registry = config.registry.into_client().await?;
 
-    // upstream API url
-    #[cfg(feature = "forward")]
-    let forward_url = std::env::var("UPSTREAM_API_URL")
-        .ok()
-        .and_then(|url| url::Url::parse(&url).ok())
-        .expect("Missing 'UPSTREAM_API_URL");
-
     // main server
 
     #[allow(clippy::let_and_return)]
