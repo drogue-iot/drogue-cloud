@@ -34,7 +34,7 @@ serde_yaml = "0.8"
 thiserror = "1"
 tokio-stream = { version = "0.1", features = ["time"] }
 url = "2"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "1", features = ["v4"] }
 
 drogue-cloud-access-token-service = { path = "../access-token-service" }
 drogue-cloud-console-common = { path = "../console-common" }

@@ -37,7 +37,7 @@ tokio = "1"
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
 tracing = "0.1"
 url = "2"
-uuid = "0.8"
+uuid = "1"
 x509-parser = "0.9"
 
 drogue-cloud-admin-service = { path = "../admin-service" }
