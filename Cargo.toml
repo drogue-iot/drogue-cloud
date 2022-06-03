@@ -52,5 +52,5 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "3a
 
 #pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
 
-actix-web = { git = "https://github.com/lulf/actix-web", rev = "936839319e18da302209f56ef1288ce29c956858"}
-actix-http = { git = "https://github.com/lulf/actix-web", rev = "936839319e18da302209f56ef1288ce29c956858"}
+actix-web = { git = "https://github.com/ctron/actix-web", rev = "fcba8a385805405d2733ddb56391e187604dcc34"}
+actix-http = { git = "https://github.com/ctron/actix-web", rev = "fcba8a385805405d2733ddb56391e187604dcc34"}

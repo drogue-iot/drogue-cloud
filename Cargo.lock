@@ -72,7 +72,7 @@ dependencies = [
 [[package]]
 name = "actix-http"
 version = "3.0.4"
-source = "git+https://github.com/lulf/actix-web?rev=936839319e18da302209f56ef1288ce29c956858#936839319e18da302209f56ef1288ce29c956858"
+source = "git+https://github.com/ctron/actix-web?rev=fcba8a385805405d2733ddb56391e187604dcc34#fcba8a385805405d2733ddb56391e187604dcc34"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -204,7 +204,7 @@ dependencies = [
 [[package]]
 name = "actix-web"
 version = "4.0.1"
-source = "git+https://github.com/lulf/actix-web?rev=936839319e18da302209f56ef1288ce29c956858#936839319e18da302209f56ef1288ce29c956858"
+source = "git+https://github.com/ctron/actix-web?rev=fcba8a385805405d2733ddb56391e187604dcc34#fcba8a385805405d2733ddb56391e187604dcc34"
 dependencies = [
  "actix-codec",
  "actix-http",
