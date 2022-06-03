@@ -39,7 +39,7 @@ serde_yaml = "0.8"
 thiserror = "1"
 unicode-segmentation = "1"
 url = "2"
-uuid = { version = "0.8", features = ["wasm-bindgen", "v4"] }
+uuid = { version = "1", features = ["wasm-bindgen", "v4"] }
 wasm-logger = "0.2"
 yew = "0.19"
 yew-agent = "0.1"

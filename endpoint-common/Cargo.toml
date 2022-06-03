@@ -37,7 +37,7 @@ snafu = "0.6"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "1", features = ["v4"] }
 x509-parser = "0.9"
 
 ntex = { version = "0.5", optional = true }

@@ -33,7 +33,7 @@ serde_json = "1"
 snafu = "0.6"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
-uuid = { version = "0.8", features = ["v4"] }
+uuid = { version = "1", features = ["v4"] }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
