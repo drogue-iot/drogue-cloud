@@ -22,5 +22,5 @@ version = "0.28"
 features = ["ssl", "sasl"]
 
 [dev-dependencies]
-config = "0.12"
+config = "0.13"
 url = "2"

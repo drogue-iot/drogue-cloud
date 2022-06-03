@@ -25,7 +25,7 @@ macro_rules! test {
             session_timeout: std::time::Duration::from_secs(10),
         })?;
 
-        let $pool = db.config.pg.create_pool(tokio_postgres::NoTls)?;
+        let $pool = db.config.pg.create_pool(Some(deadpool::Runtime::Tokio1), tokio_postgres::NoTls)?;
 
         let auth = drogue_cloud_service_common::mock_auth!();
 

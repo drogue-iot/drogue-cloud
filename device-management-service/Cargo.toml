@@ -12,9 +12,9 @@ anyhow = "1"
 async-trait = "0.1"
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
-config = "0.12"
-deadpool = "0.7"
-deadpool-postgres = { version = "0.7", features = ["config"] }
+config = "0.13"
+deadpool = "0.9"
+deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 dotenv = "0.15"
 drogue-client = "0.10"
 env_logger = "0.9"
@@ -29,7 +29,6 @@ pin-project = "1"
 prometheus = { version = "^0.13", default-features = false }
 rand = "0.8"
 reqwest = "0.11"
-rust-crypto = "0.2"
 serde = "1"
 serde_json = "1"
 thiserror = "1"

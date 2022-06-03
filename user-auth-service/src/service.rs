@@ -1,5 +1,6 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
+use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     auth::authorize,
@@ -51,7 +52,7 @@ pub struct PostgresAuthorizationService {
 impl PostgresAuthorizationService {
     pub fn new(config: AuthorizationServiceConfig) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(NoTls)?,
+            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
         })
     }
 }

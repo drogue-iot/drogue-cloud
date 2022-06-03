@@ -8,8 +8,8 @@ license = "Apache-2.0"
 [dependencies]
 async-trait = "0.1"
 chrono = "0.4"
-deadpool = "0.7"
-deadpool-postgres = { version = "0.7", features = ["config"] }
+deadpool = "0.9"
+deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 drogue-client = "0.10"
 futures = "0.3"
 indexmap = { version = "1.6", features = ["serde-1"] }
@@ -27,8 +27,8 @@ drogue-cloud-service-common = { path = "../service-common" }
 [dev-dependencies]
 anyhow = "1"
 criterion = { version = "0.3" } # , features = ["real_blackbox"]
-env_logger = "0.8"
-serial_test = "0.5"
+env_logger = "0.9"
+serial_test = "0.6"
 tokio = { version = "1", features = ["full"] }
 
 drogue-cloud-test-common = { path = "../test-common" }

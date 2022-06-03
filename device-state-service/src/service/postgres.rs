@@ -2,6 +2,7 @@ use super::*;
 
 use async_trait::async_trait;
 use chrono::Utc;
+use deadpool::Runtime;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::registry::v1::Application;
 use drogue_cloud_database_common::{Client, DatabaseService};
@@ -44,7 +45,7 @@ impl PostgresDeviceStateService {
         sender: DownstreamSender,
         registry: impl ApplicationLookup + 'static,
     ) -> anyhow::Result<Self> {
-        let pool = config.pg.create_pool(NoTls)?;
+        let pool = config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?;
 
         let timeout = chrono::Duration::from_std(config.session_timeout)?;
 

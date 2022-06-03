@@ -15,6 +15,7 @@ use crate::controller::{
 };
 use anyhow::Context;
 use async_trait::async_trait;
+use deadpool::Runtime;
 use drogue_client::error::ClientError;
 use std::{
     fmt::Debug,
@@ -91,7 +92,7 @@ where
 
         let pool = config
             .pg
-            .create_pool(NoTls)
+            .create_pool(Some(Runtime::Tokio1), NoTls)
             .context("Failed to create database pool")?;
 
         let instance = config.instance;

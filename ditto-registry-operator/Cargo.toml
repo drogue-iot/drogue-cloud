@@ -10,25 +10,21 @@ license = "Apache-2.0"
 actix = "0.13"
 anyhow = "1"
 async-trait = "0.1"
-bcrypt = "0.9"
 chrono = { version = "0.4", features = ["serde"] }
-config = "0.12"
+config = "0.13"
 dotenv = "0.15"
 drogue-client = "0.10"
 env_logger = "0.9"
 futures = "0.3"
-headers = "0.3"
 http = "0.2"
 humantime = "2"
 humantime-serde = "1"
 indexmap = { version = "1", features = ["serde"] }
 lazy_static = "1"
 log = "0.4"
-maplit = "1"
 prometheus = { version = "^0.13", default-features = false }
-rand = "0.7"
+rand = "0.8"
 reqwest = "0.11"
-rust-crypto = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_repr = "0.1"
@@ -38,7 +34,6 @@ thiserror = "1"
 tokio = "1"
 tracing = "0.1"
 url = "2"
-x509-parser = "0.9"
 
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-operator-common = { path = "../operator-common", features = ["with_kube"] }

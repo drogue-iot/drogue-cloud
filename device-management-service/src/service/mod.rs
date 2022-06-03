@@ -5,6 +5,7 @@ mod utils;
 mod x509;
 
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
+use deadpool::Runtime;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::{registry, Translator};
 use drogue_cloud_database_common::{
@@ -85,7 +86,7 @@ where
         keycloak: K,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(NoTls)?,
+            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
             instance: config.instance,
             sender,
             keycloak,

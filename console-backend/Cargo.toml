@@ -14,7 +14,6 @@ async-trait = "0.1"
 biscuit = "0.5"
 cached = "0.25"
 chrono = { version = "0.4", features = ["serde"] }
-chrono-tz = "0.5"
 cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
 dotenv = "0.15"
 drogue-client = "0.10"

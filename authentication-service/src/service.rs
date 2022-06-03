@@ -1,6 +1,7 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_client::{
     registry::{self, v1::Password},
@@ -80,7 +81,7 @@ pub struct PostgresAuthenticationService {
 impl PostgresAuthenticationService {
     pub fn new(config: AuthenticationServiceConfig) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(NoTls)?,
+            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
         })
     }
 
