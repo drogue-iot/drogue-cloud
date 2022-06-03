@@ -1,6 +1,7 @@
 mod common;
 
 use async_trait::async_trait;
+use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_cloud_operator_common::controller::base::queue::{
     WorkQueueHandler, WorkQueueReader, WorkQueueReaderOptions, WorkQueueWriter,
@@ -46,7 +47,7 @@ where
     let cli = client();
     let db = db(&cli, |pg| pg).unwrap();
 
-    let pool: Pool = db.config.create_pool(NoTls).unwrap();
+    let pool: Pool = db.config.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
 
     let handler = MockHandler::new();
 

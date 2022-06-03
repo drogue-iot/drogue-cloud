@@ -12,9 +12,8 @@ anyhow = "1"
 async-trait = "0.1"
 base62 = "1"
 chrono = "0.4"
-config = "0.12"
+config = "0.13"
 crc = "1"
-dotenv = "0.15"
 env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
@@ -26,22 +25,18 @@ reqwest = "0.11"
 rustls = "0.20"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sha2 = "0.9"
-sha3 = "0.9"
+sha3 = "0.10"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 url = "2"
 
-drogue-cloud-database-common = { path = "../database-common" }
-drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common", features = ["rustls", "jaeger"] }
-drogue-cloud-registry-events = { path = "../registry-events" }
 
 [dev-dependencies]
 actix-rt = "2"
 actix-service = "2"
-serial_test = "0.5"
+serial_test = "0.6"
 testcontainers = "0.12"
 
 drogue-cloud-test-common = { path = "../test-common" }

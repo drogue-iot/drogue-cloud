@@ -34,7 +34,7 @@ rdkafka = { version = "*", optional = true }
 drogue-cloud-macros = { path = "../macros" }
 
 [dev-dependencies]
-config = "0.12"
+config = "0.13"
 
 [features]
 default = ["nom", "actix"]

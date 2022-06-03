@@ -1,4 +1,5 @@
 use chrono::Duration;
+use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::error::ServiceError;
 use drogue_cloud_database_common::models::outbox::{
@@ -41,7 +42,7 @@ impl HealthChecked for OutboxService {
 impl OutboxService {
     pub fn new(config: OutboxServiceConfig) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(NoTls)?,
+            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
         })
     }
 

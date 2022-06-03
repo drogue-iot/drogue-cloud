@@ -35,7 +35,7 @@ thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = { version = "0.1", features = ["log-always"] }
 uuid = { version = "1", features = ["v4"] }
-webpki = "0.21"
+webpki = "0.22"
 
 drogue-cloud-mqtt-common = { path = "../mqtt-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common", features = ["ntex"] }
@@ -60,5 +60,5 @@ features = ["dangerous_configuration"]
 [features]
 default = ["openssl", "jaeger"]
 openssl = ["open-ssl", "ntex/openssl"]
-rustls = ["rust-tls", "ntex/rustls"]
+rustls = ["rust-tls", "ntex/rustls", "drogue-cloud-mqtt-common/rustls"]
 jaeger = ["drogue-cloud-service-common/jaeger"]

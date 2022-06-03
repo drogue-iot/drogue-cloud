@@ -8,13 +8,8 @@ license = "Apache-2.0"
 [lib]
 
 [dependencies]
-
-anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
-config = "0.12"
-dotenv = "0.15"
-env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
@@ -25,8 +20,4 @@ serde_json = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 
-drogue-cloud-database-common = { path = "../database-common" }
-drogue-cloud-endpoint-common = { path = "../endpoint-common" }
-drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common", features = ["rustls"] }

@@ -6,20 +6,18 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-actix-broker = "0.4.0"
 actix-tls = { version = "^3.0.0", optional = true }
 anyhow = "1"
 async-trait = "0.1"
 base64 = "0.13"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest", "rdkafka"] }
-config = "0.12"
+config = "0.13"
 drogue-client = "0.10"
 env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
-headers = "0.3"
 http = "0.2"
 lazy_static = "1.4.0"
 log = "0.4"
@@ -42,7 +40,7 @@ x509-parser = "0.9"
 
 ntex = { version = "0.5", optional = true }
 tokio-openssl = { version = "0.6", optional = true }
-tokio-rustls = { version = "0.22", optional = true }
+tokio-rustls = { version = "0.23", optional = true }
 
 drogue-cloud-service-api = { path = "../service-api", features = ["rdkafka"] }
 drogue-cloud-service-common = { path = "../service-common" }

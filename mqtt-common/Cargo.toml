@@ -18,7 +18,7 @@ pem = "1"
 serde = "1"
 thiserror = "1"
 
-rustls-pemfile = { version = "0.2", optional = true }
+rustls-pemfile = { version = "0.3", optional = true }
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 

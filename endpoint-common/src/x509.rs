@@ -1,7 +1,6 @@
 use actix_web::{dev::Payload, error, FromRequest, HttpMessage, HttpRequest};
 use drogue_cloud_service_api::webapp as actix_web;
 use futures_util::future::{ready, Ready};
-use tokio_rustls::rustls::Session;
 
 #[derive(Clone, Debug)]
 pub struct ClientCertificateChain(pub Vec<Vec<u8>>);
@@ -29,7 +28,7 @@ impl<T> ClientCertificateRetriever for tokio_rustls::server::TlsStream<T> {
         log::debug!("Try extracting client cert: using rustls");
         self.get_ref()
             .1
-            .get_peer_certificates()
+            .peer_certificates()
             .map(|certs| certs.iter().map(|cert| cert.0.clone()).collect())
             .map(ClientCertificateChain)
     }

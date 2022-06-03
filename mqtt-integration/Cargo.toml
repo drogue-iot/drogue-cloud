@@ -35,7 +35,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 url = "2"
 uuid = { version = "1", features = ["v4"] }
-webpki = "0.21"
+webpki = "0.22"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }
 drogue-cloud-event-common = { path = "../event-common" }

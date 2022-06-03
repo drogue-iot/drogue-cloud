@@ -376,7 +376,7 @@ dependencies = [
  "serde_json",
  "snafu",
  "url",
- "uuid",
+ "uuid 0.8.2",
  "web-sys",
 ]
 
@@ -583,7 +583,6 @@ dependencies = [
 name = "drogue-cloud-console-common"
 version = "0.10.0"
 dependencies = [
- "anyhow",
  "drogue-cloud-service-api",
  "serde",
 ]
@@ -629,7 +628,7 @@ dependencies = [
  "thiserror",
  "unicode-segmentation",
  "url",
- "uuid",
+ "uuid 1.1.1",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-logger",
@@ -1793,7 +1792,7 @@ dependencies = [
  "serde_json",
  "strum",
  "strum_macros",
- "uuid",
+ "uuid 0.8.2",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -2643,6 +2642,15 @@ name = "uuid"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom",
+]
+
+[[package]]
+name = "uuid"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6d5d669b51467dcf7b2f1a796ce0f955f05f01cafda6c19d6e95f730df29238"
 dependencies = [
  "getrandom",
 ]

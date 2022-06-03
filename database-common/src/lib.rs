@@ -5,7 +5,6 @@ pub mod utils;
 
 use crate::error::ServiceError;
 use async_trait::async_trait;
-use deadpool::managed::Object;
 use deadpool_postgres::{ClientWrapper, Pool};
 use std::ops::Deref;
 use tokio_postgres::{
@@ -40,7 +39,7 @@ pub trait Client: Sync {
 }
 
 #[async_trait]
-impl Client for Object<ClientWrapper, Error> {
+impl Client for deadpool_postgres::Client {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
         self.deref().prepare(query).await
     }
