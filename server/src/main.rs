@@ -726,6 +726,7 @@ fn main() {
                     server.device_state.host, server.device_state.port
                 ))
                 .unwrap(),
+                token_config: Some(token_config.clone()),
                 ..Default::default()
             },
             init_delay: Some(Duration::from_secs(2)),
