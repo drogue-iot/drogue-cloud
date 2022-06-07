@@ -742,6 +742,7 @@ fn main() {
             let auth = auth.clone();
             let registry = registry.clone();
             let matches = matches.clone();
+            let user_auth = user_auth.clone();
 
             threads.push(std::thread::spawn(move || {
                 let runner = actix_rt::System::with_tokio_rt(|| {
@@ -1018,6 +1019,7 @@ fn main() {
                     let key_file: Option<String> =
                         matches.value_of("server-key").map(|s| s.to_string());
                     let registry = registry.clone();
+                    let user_auth = user_auth.clone();
                     let config = drogue_cloud_mqtt_integration::Config {
                         mqtt: MqttServerOptions {
                             workers: Some(1),
@@ -1037,7 +1039,7 @@ fn main() {
                             disable_api_keys: false,
                         },
                         check_kafka_topic_ready: false,
-                        user_auth: None,
+                        user_auth,
                         instance: "drogue".to_string(),
                         command_kafka_sink: kafka,
                         endpoint_pool: Default::default(),
