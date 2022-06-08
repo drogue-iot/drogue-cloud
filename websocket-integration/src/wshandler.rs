@@ -8,9 +8,10 @@ use actix::{
     Handler, Running, WrapFuture,
 };
 use actix_web_actors::ws::{self, Message::Text};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
+const AUTH_CHECK_INTERVAL: Duration = Duration::from_secs(90);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -24,10 +25,18 @@ pub struct WsHandler {
     heartbeat: Instant,
     service_addr: Addr<Service>,
     id: Uuid,
+    // When the JWT expires, represented as the number of seconds from epoch
+    // It's optional, as some clients will use an access token, which are valid indefinitely
+    auth_expiration: Option<i64>,
 }
 
 impl WsHandler {
-    pub fn new(app: String, group_id: Option<String>, service_addr: Addr<Service>) -> WsHandler {
+    pub fn new(
+        app: String,
+        group_id: Option<String>,
+        service_addr: Addr<Service>,
+        auth_expiration: Option<i64>,
+    ) -> WsHandler {
         CONNECTIONS_COUNTER.inc();
         WsHandler {
             application: app,
@@ -35,8 +44,10 @@ impl WsHandler {
             heartbeat: Instant::now(),
             service_addr,
             id: Uuid::new_v4(),
+            auth_expiration,
         }
     }
+
     fn heartbeat(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             if Instant::now().duration_since(act.heartbeat) > CLIENT_TIMEOUT {
@@ -47,6 +58,26 @@ impl WsHandler {
 
             ctx.ping(b"PING");
         });
+    }
+
+    fn check_token_expiration(&self, ctx: &mut ws::WebsocketContext<Self>) {
+        if let Some(expiration) = self.auth_expiration {
+            ctx.run_interval(
+                AUTH_CHECK_INTERVAL,
+                move |_act, ctx| match SystemTime::now().duration_since(UNIX_EPOCH) {
+                    Ok(n) => {
+                        if n.as_secs() > expiration as u64 {
+                            log::warn!("Disconnecting client : JWT token expired");
+                            ctx.stop();
+                        }
+                    }
+                    Err(_) => {
+                        log::error!("Error getting system time");
+                        ctx.stop();
+                    }
+                },
+            );
+        }
     }
 }
 
@@ -63,6 +94,7 @@ impl Actor for WsHandler {
     fn started(&mut self, ctx: &mut Self::Context) {
         log::info!("Starting WS handler");
         self.heartbeat(ctx);
+        self.check_token_expiration(ctx);
 
         // Address of self, the WSHandler actor
         let addr: Recipient<WsEvent> = ctx.address().recipient();
