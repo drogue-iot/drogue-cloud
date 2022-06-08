@@ -1,0 +1,56 @@
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: postgresql
+spec:
+  containers:
+    - name: postgresql
+      image: docker.io/bitnami/postgresql:14
+      env:
+        - name: POSTGRESQL_USERNAME
+          value: admin
+        - name: POSTGRESQL_PASSWORD
+          value: admin123456
+        - name: POSTGRESQL_DATABASE
+          value: drogue
+      ports:
+        - containerPort: 5432
+          hostPort: 5432
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: kafka
+spec:
+  containers:
+    - name: kafka
+      image: docker.io/moeenz/docker-kafka-kraft:latest
+      env:
+        - name: KRAFT_CONTAINER_HOST_NAME
+          value: localhost
+      ports:
+        - containerPort: 9092
+          hostPort: 9092
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: keycloak
+spec:
+  containers:
+    - name: keycloak
+      image: quay.io/keycloak/keycloak:17.0.1-legacy
+      env:
+        - name: KEYCLOAK_USER
+          value: admin
+        - name: KEYCLOAK_PASSWORD
+          value: admin123456
+        - name: DB_VENDOR
+          value: h2
+      args:
+        - "-Djboss.bind.address.private=127.0.0.1"
+        - "-Djboss.bind.address=0.0.0.0"
+      ports:
+        - containerPort: 8080
+          hostPort: 8080
