@@ -5,8 +5,10 @@ use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, Outcome},
     UserInformation,
 };
+use openid::{Claims, CustomClaims};
 
 mod middleware;
+pub use middleware::AuthenticatedUntil;
 
 // Credentials can either be
 //  - username + Access Token
@@ -51,7 +53,7 @@ impl AuthN {
     async fn authenticate(
         &self,
         credentials: Credentials,
-    ) -> Result<UserInformation, ServiceError> {
+    ) -> Result<(UserInformation, Option<i64>), ServiceError> {
         if let (Some(openid), Some(token)) = (&self.openid, &self.token) {
             match credentials {
                 Credentials::AccessToken(creds) => {
@@ -70,7 +72,9 @@ impl AuthN {
                             .await
                             .map_err(|e| ServiceError::InternalError(e.to_string()))?;
                         match auth_response.outcome {
-                            Outcome::Known(details) => Ok(UserInformation::Authenticated(details)),
+                            Outcome::Known(details) => {
+                                Ok((UserInformation::Authenticated(details), None))
+                            }
                             Outcome::Unknown => {
                                 log::debug!("Unknown access token");
                                 Err(ServiceError::AuthenticationError)
@@ -84,17 +88,20 @@ impl AuthN {
                     }
                 }
                 Credentials::OpenIDToken(token) => match openid.validate_token(&token).await {
-                    Ok(token) => Ok(UserInformation::Authenticated(token.into())),
+                    Ok(token) => Ok((
+                        UserInformation::Authenticated(token.clone().into()),
+                        Some(token.standard_claims().exp()),
+                    )),
                     Err(err) => {
                         log::debug!("Authentication error: {err}");
                         Err(ServiceError::AuthenticationError)
                     }
                 },
-                Credentials::Anonymous => Ok(UserInformation::Anonymous),
+                Credentials::Anonymous => Ok((UserInformation::Anonymous, None)),
             }
         } else {
             //authentication disabled
-            Ok(UserInformation::Anonymous)
+            Ok((UserInformation::Anonymous, None))
         }
     }
 }

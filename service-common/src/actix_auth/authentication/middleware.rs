@@ -45,6 +45,9 @@ where
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct AuthenticatedUntil(pub i64);
+
 #[derive(Deserialize, Debug)]
 struct Token {
     token: String,
@@ -140,10 +143,13 @@ where
             };
 
             match auth_result {
-                Ok(u) => {
-                    log::debug!("Authenticated: {u:?}");
-                    // insert the UserInformation in the request
-                    req.extensions_mut().insert(u);
+                Ok((user, time)) => {
+                    log::debug!("Authenticated: {user:?}");
+                    // insert the UserInformation and the expiration time of the token in the request
+                    req.extensions_mut().insert(user);
+                    if let Some(exp) = time {
+                        req.extensions_mut().insert(AuthenticatedUntil(exp));
+                    }
                     // then forward it to the next service
                     srv.call(req).await
                 }
