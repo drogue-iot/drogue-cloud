@@ -1,6 +1,7 @@
 use crate::client::UserAuthClient;
 use crate::error::ServiceError;
 use crate::openid::Authenticator;
+use chrono::{DateTime, TimeZone, Utc};
 use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, Outcome},
     UserInformation,
@@ -53,7 +54,7 @@ impl AuthN {
     async fn authenticate(
         &self,
         credentials: Credentials,
-    ) -> Result<(UserInformation, Option<i64>), ServiceError> {
+    ) -> Result<(UserInformation, Option<DateTime<Utc>>), ServiceError> {
         if let (Some(openid), Some(token)) = (&self.openid, &self.token) {
             match credentials {
                 Credentials::AccessToken(creds) => {
@@ -90,7 +91,7 @@ impl AuthN {
                 Credentials::OpenIDToken(token) => match openid.validate_token(&token).await {
                     Ok(token) => Ok((
                         UserInformation::Authenticated(token.clone().into()),
-                        Some(token.standard_claims().exp()),
+                        Some(Utc.timestamp(token.standard_claims().exp(), 0)),
                     )),
                     Err(err) => {
                         log::debug!("Authentication error: {err}");
