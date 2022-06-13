@@ -8,9 +8,8 @@ use actix_web::{
     web, App,
 };
 use drogue_cloud_admin_service::apps;
-use drogue_cloud_device_management_service::crud;
 use drogue_cloud_device_management_service::{
-    app, endpoints,
+    app, crud, endpoints,
     service::{self},
     WebData,
 };

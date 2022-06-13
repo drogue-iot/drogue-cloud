@@ -158,11 +158,11 @@ impl<'a> Client for Transaction<'a> {
 #[async_trait]
 impl<'a> Client for deadpool_postgres::Transaction<'a> {
     async fn prepare(&self, query: &str) -> Result<Statement, Error> {
-        deadpool_postgres::Transaction::prepare(self, query).await
+        self.deref().prepare(query).await
     }
 
     async fn prepare_typed(&self, query: &str, types: &[Type]) -> Result<Statement, Error> {
-        deadpool_postgres::Transaction::prepare_typed(self, query, types).await
+        self.deref().prepare_typed(query, types).await
     }
 
     async fn execute<T>(&self, statement: &T, params: &[&(dyn ToSql + Sync)]) -> Result<u64, Error>
