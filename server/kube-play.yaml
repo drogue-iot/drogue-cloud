@@ -40,17 +40,16 @@ metadata:
 spec:
   containers:
     - name: keycloak
-      image: quay.io/keycloak/keycloak:17.0.1-legacy
-      env:
-        - name: KEYCLOAK_USER
-          value: admin
-        - name: KEYCLOAK_PASSWORD
-          value: admin123456
-        - name: DB_VENDOR
-          value: h2
+      image: quay.io/keycloak/keycloak:18.0.0
       args:
-        - "-Djboss.bind.address.private=127.0.0.1"
-        - "-Djboss.bind.address=0.0.0.0"
+        - start-dev
+      env:
+        - name: KEYCLOAK_ADMIN
+          value: admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: admin123456
+        - name: KEYCLOAK_DB
+          value: dev-file
       ports:
         - containerPort: 8080
           hostPort: 8080

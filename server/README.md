@@ -34,16 +34,38 @@ On Mac OS X, the following command to make libraries known to Rust has been test
 RUSTFLAGS='-L /opt/homebrew/opt/libpq/lib' PKG_CONFIG_PATH=/opt/homebrew/opt/libpq/lib/pkgconfig:/opt/homebrew/opt/openssl/lib/pkgconfig:/opt/homebrew/opt/cyrus-sasl/lib/pkgconfig:/opt/homebrew/opt/librdkafka/lib/pkgconfig cargo build --release
 ```
 
-## Running
+## Dependencies
 
-### Dependencies
+To run drogue server, you need to have running instances of PostgreSQL, Kafka and Keycloak.
 
-To run drogue server, you need to have running instances of PostgreSQL, Kafka and Keycloak. If
-you're on a host with docker-compose or podman-compose, you can simply run the following command in
+### Podman/Docker compose
+
+If you're on a host with docker-compose or podman-compose, you can simply run the following command in
 this folder:
 
-```
+```shell
 podman-compose up
+```
+
+### Podman play
+
+Using podman, you can also start some Kubernetes pods locally, with `podman play` and without an actual Kubernetes
+installation:
+
+```shell
+podman play kube kube-play.yaml
+```
+
+Stop the containers using:
+
+```shell
+podman play kube kube-play.yaml --down
+```
+
+Update existing:
+
+```shell
+podman play kube kube-play.yaml --replace
 ```
 
 ## Running the server
@@ -51,11 +73,14 @@ podman-compose up
 You can run the server with `--help` to discover how to run the server, but the simplest way is to
 run:
 
-```
+```shell
 ./target/release/drogue-cloud-server run --enable-all
 ```
 
 This start the drogue services and print some useful information on how to connect.
 
-You can also use `cargo run -- run --enable-all` to run the server from this folder.
+You can also use `cargo` to compile and run the server from this folder:
 
+```shell
+cargo run -- run --enable-all
+```
