@@ -8,7 +8,8 @@ use actix::{
     Handler, Running, WrapFuture,
 };
 use actix_web_actors::ws::{self, Message::Text};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use chrono::{DateTime, Utc};
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 const AUTH_CHECK_INTERVAL: Duration = Duration::from_secs(90);
@@ -27,7 +28,7 @@ pub struct WsHandler {
     id: Uuid,
     // When the JWT expires, represented as the number of seconds from epoch
     // It's optional, as some clients will use an access token, which are valid indefinitely
-    auth_expiration: Option<i64>,
+    auth_expiration: Option<DateTime<Utc>>,
 }
 
 impl WsHandler {
@@ -35,7 +36,7 @@ impl WsHandler {
         app: String,
         group_id: Option<String>,
         service_addr: Addr<Service>,
-        auth_expiration: Option<i64>,
+        auth_expiration: Option<DateTime<Utc>>,
     ) -> WsHandler {
         CONNECTIONS_COUNTER.inc();
         WsHandler {
@@ -62,21 +63,12 @@ impl WsHandler {
 
     fn check_token_expiration(&self, ctx: &mut ws::WebsocketContext<Self>) {
         if let Some(expiration) = self.auth_expiration {
-            ctx.run_interval(
-                AUTH_CHECK_INTERVAL,
-                move |_act, ctx| match SystemTime::now().duration_since(UNIX_EPOCH) {
-                    Ok(n) => {
-                        if n.as_secs() > expiration as u64 {
-                            log::warn!("Disconnecting client : JWT token expired");
-                            ctx.stop();
-                        }
-                    }
-                    Err(_) => {
-                        log::error!("Error getting system time");
-                        ctx.stop();
-                    }
-                },
-            );
+            ctx.run_interval(AUTH_CHECK_INTERVAL, move |_act, ctx| {
+                if Utc::now() > expiration {
+                    log::warn!("Disconnecting client : JWT token expired");
+                    ctx.stop();
+                }
+            });
         }
     }
 }

@@ -1,16 +1,16 @@
+use crate::actix_auth::authentication::{AuthN, Credentials, UsernameAndToken};
+use crate::error::ServiceError;
 use actix_service::{Service, Transform};
+
+use chrono::{DateTime, Utc};
 use drogue_cloud_service_api::webapp::{
     dev::{ServiceRequest, ServiceResponse},
+    extractors::basic::BasicAuth,
+    extractors::bearer::BearerAuth,
+    extractors::AuthExtractor,
     web::Query,
     Error, HttpMessage,
 };
-
-use crate::actix_auth::authentication::{AuthN, Credentials, UsernameAndToken};
-use crate::error::ServiceError;
-
-use drogue_cloud_service_api::webapp::extractors::basic::BasicAuth;
-use drogue_cloud_service_api::webapp::extractors::bearer::BearerAuth;
-use drogue_cloud_service_api::webapp::extractors::AuthExtractor;
 use futures::future;
 use futures::future::LocalBoxFuture;
 use serde::Deserialize;
@@ -46,7 +46,7 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AuthenticatedUntil(pub i64);
+pub struct AuthenticatedUntil(pub DateTime<Utc>);
 
 #[derive(Deserialize, Debug)]
 struct Token {
