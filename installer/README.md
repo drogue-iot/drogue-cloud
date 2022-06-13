@@ -37,3 +37,13 @@ minikube tunnel # in a separate terminal, as it keeps running
 kind create cluster --config=deploy/kind/cluster-config.yaml
 ./scripts/drgadm deploy
 ~~~
+
+### Code Ready Containers
+
+* Install `crc` - https://developers.redhat.com/products/openshift-local/overview
+* Run `crc setup` at least once after the installation
+
+~~~shell
+crc start --cpus 8 --memory 32768
+./scripts/drgadm deploy
+~~~
