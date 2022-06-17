@@ -4,8 +4,7 @@
 global:
   drogueCloud:
     keycloak:
-      tls:
-        enabled: false
+      insecure: true
 
 drogueCloudCore:
   endpoints:
@@ -36,23 +35,14 @@ drogueCloudCore:
       ingress:
         port: 30008
     websocket:
-      insecure: true
       ingress:
         port: 30004
 
   console:
     localCertificates: true
 
-  oauth2:
-    tls:
-      insecure: true
+drogueCloudExamples:
 
-  services:
-    sso:
-      ingress:
-        annotations:
-          nginx.ingress.kubernetes.io/backend-protocol: HTTPS
-          nginx.ingress.kubernetes.io/server-snippet: |2-
-                              location ~* "^/realms/master/metrics" {
-                                  return 301 /realms/master;
-                              }
+  grafana:
+    ingress:
+      insecure: true

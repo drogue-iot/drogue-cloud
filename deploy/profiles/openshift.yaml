@@ -1,9 +1,6 @@
 global:
   drogueCloud:
-    keycloak:
-      tls:
-        enabled: true
-        useServiceCA: true
+    useServiceCa: true
 
 drogueCloudCore:
   endpoints:

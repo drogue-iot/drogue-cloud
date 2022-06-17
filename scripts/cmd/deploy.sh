@@ -152,6 +152,10 @@ if ! kubectl get ns "$DROGUE_NS" >/dev/null 2>&1; then
     progress "done!"
 fi
 
+# domain
+
+domain=$(detect_domain)
+
 # install pre-reqs
 
 if [[ "$INSTALL_NGINX_INGRESS" == true ]]; then
@@ -191,8 +195,6 @@ if [[ -f $BASEDIR/../deploy/profiles/${CLUSTER}.yaml ]]; then
 fi
 
 # gather Helm arguments
-
-domain=$(detect_domain)
 
 HELM_ARGS="$HELM_ARGS --timeout=${HELM_TIMEOUT}"
 HELM_ARGS="$HELM_ARGS --set global.cluster=$CLUSTER"
