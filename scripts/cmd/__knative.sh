@@ -35,6 +35,10 @@ minikube)
     kubectl apply -f https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml
     INGRESS_COMMAND="kubectl -n kourier-system get service kourier -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
     ;;
+openshift)
+    kubectl apply -f https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml
+    INGRESS_COMMAND="echo ok"
+    ;;
 *)
     kubectl apply -f https://github.com/knative/net-kourier/releases/download/v$KOURIER_VERSION/kourier.yaml
     INGRESS_COMMAND="kubectl -n kourier-system get service kourier -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
@@ -89,6 +93,11 @@ kind)
     ;;
 minikube)
     KNATIVE_DOMAIN=$INGRESS_HOST.nip.io
+    echo "The KNATIVE_DOMAIN $KNATIVE_DOMAIN"
+    kubectl patch configmap -n knative-serving config-domain -p "{\"data\": {\"$KNATIVE_DOMAIN\": \"\"}}"
+    ;;
+openshift)
+    KNATIVE_DOMAIN="${domain}"
     echo "The KNATIVE_DOMAIN $KNATIVE_DOMAIN"
     kubectl patch configmap -n knative-serving config-domain -p "{\"data\": {\"$KNATIVE_DOMAIN\": \"\"}}"
     ;;

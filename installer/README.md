@@ -45,5 +45,5 @@ kind create cluster --config=deploy/kind/cluster-config.yaml
 
 ~~~shell
 crc start --cpus 8 --memory 32768
-./scripts/drgadm deploy
+env CLUSTER=openshift ./scripts/drgadm deploy -p crc
 ~~~
