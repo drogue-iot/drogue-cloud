@@ -41,8 +41,27 @@ drogueCloudCore:
   console:
     localCertificates: true
 
+  services:
+    console:
+      ingress:
+        insecure: true
+        port: 80
+
+    api:
+      ingress:
+        insecure: true
+        port: 80
+
+    sso:
+      ingress:
+        insecure: true
+        port: 80
+
+
 drogueCloudExamples:
 
   grafana:
     ingress:
       insecure: true
+      port: 80
+

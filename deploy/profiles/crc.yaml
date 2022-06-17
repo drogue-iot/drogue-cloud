@@ -31,3 +31,4 @@ drogueCloudExamples:
   grafana:
     ingress:
       insecure: true
+      port: 80
