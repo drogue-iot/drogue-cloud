@@ -109,7 +109,11 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
     let app_config = config.clone();
     let enable_access_token = config.enable_access_token;
 
-    let authenticator = config.oauth.into_client().await?;
+    let authenticator = config
+        .oauth
+        .into_client()
+        .await
+        .context("Creating authenticator")?;
 
     let (openid_client, user_auth) = if let Some(user_auth) = config.user_auth {
         let console_token_config = config
@@ -117,7 +121,8 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
             .context("unable to find console token config")?;
         let ui_client = console_token_config
             .into_client(endpoints.redirect_url.clone())
-            .await?;
+            .await
+            .context("Creating UI client")?;
 
         let user_auth = UserAuthClient::from_config(user_auth).await?;
 
@@ -152,14 +157,19 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let bind_addr = config.bind_addr.clone();
 
-    let keycloak_admin_client = KeycloakAdminClient::new(config.keycloak)?;
+    let keycloak_admin_client =
+        KeycloakAdminClient::new(config.keycloak).context("Creating keycloak admin client")?;
     let keycloak_service = web::Data::new(keys::WebData {
         service: KeycloakAccessTokenService {
             client: keycloak_admin_client,
         },
     });
 
-    let registry = config.registry.into_client().await?;
+    let registry = config
+        .registry
+        .into_client()
+        .await
+        .context("Creating registry client")?;
 
     // main server
 
