@@ -1,14 +1,10 @@
-FROM registry.access.redhat.com/ubi8-minimal
+FROM ghcr.io/ctron/kubectl:1.21
 
 LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-cloud"
 
 VOLUME /etc/drogue-certs
 
 RUN microdnf install -y make openssl
-
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-RUN chmod +x ./kubectl
-RUN mv ./kubectl /usr/local/bin
 
 RUN mkdir -p /usr/src
 

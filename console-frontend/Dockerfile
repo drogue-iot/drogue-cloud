@@ -1,4 +1,4 @@
-FROM ghcr.io/drogue-iot/frontend-base:0.1.0
+FROM ghcr.io/drogue-iot/frontend-base:0.2.0
 
 LABEL org.opencontainers.image.source="https://github.com/drogue-iot/drogue-cloud"
 
