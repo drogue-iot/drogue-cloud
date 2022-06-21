@@ -1,3 +1,8 @@
+#
+# The main makefile.
+#
+# Be sure to read some details in the bottom of the file.
+#
 
 #
 # By default, build and push artifacts and containers.
@@ -123,7 +128,11 @@ check: host-check
 # Build artifacts and containers.
 #
 .PHONY: build
+ifeq ($(SKIP_BUILD), true)
+build:
+else
 build: host-build
+endif
 
 
 #
@@ -288,7 +297,7 @@ cargo-test:
 # Run the frontend build.
 #
 .PHONY: frontend-build
-frontend-build: cargo-build
+frontend-build:
 	cd console-frontend && npm install
 	cd console-frontend && trunk build $(CARGO_PROFILE)
 
@@ -373,7 +382,9 @@ quick: build build-images tag-images
 #
 .PHONY: frontend
 frontend:
-	make -C console-frontend images
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) frontend-build \
+		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
+	$(MAKE) -C console-frontend images SKIP_BUILD=true
 
 
 #
@@ -410,3 +421,14 @@ helm-lint:
 		helm lint --with-subcharts deploy/helm/charts/drogue-cloud-$$i; \
 	done
 
+#
+# Implementation details:
+#
+# Container builds: The makefile is being run in two environment. On the host machine, and then inside a container, to
+#   ensure that there is a sane build environment. The is covered by the same Makefile, and container targets can also
+#   be called on the host machine, when necessary.
+#
+# Phony targets and order only: Some dependencies are declared "order only", however that doesn't work as we are using
+#   mostly phony targets. This is a bug in GNU make, and turns phony order-only targets into regular phony targets. So
+#   in some cases, when it is e.g. necessary to skip a build, an explicit SKIP_TARGET variable was added.
+#
