@@ -1,10 +1,12 @@
-use crate::defaults;
-use crate::reqwest::ClientFactory;
+use crate::{defaults, reqwest::ClientFactory};
+use anyhow::Context;
 use core::fmt::Debug;
 use drogue_client::openid::OpenIdTokenProvider;
 use serde::Deserialize;
-use std::ops::{Deref, DerefMut};
-use std::time::Duration;
+use std::{
+    ops::{Deref, DerefMut},
+    time::Duration,
+};
 use url::Url;
 
 /// All required configuration when authentication is enabled.
@@ -99,7 +101,8 @@ impl TokenConfig {
             redirect,
             issuer,
         )
-        .await?)
+        .await
+        .context("Discovering endpoint")?)
     }
 
     /// Create a new provider by discovering the OAuth2 client from the configuration
