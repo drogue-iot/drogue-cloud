@@ -389,13 +389,14 @@ impl mqtt::Session for Session {
 
     async fn closed(&self, reason: CloseReason) -> Result<(), ServerError> {
         log::info!("Connection closed: {:?}", reason);
-        CONNECTIONS_COUNTER.dec();
         Ok(())
     }
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
+        CONNECTIONS_COUNTER.dec();
+
         log::debug!("Dropping session");
         let streams = self.streams.clone();
         ntex_rt::spawn(async move {

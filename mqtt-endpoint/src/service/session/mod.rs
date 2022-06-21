@@ -340,8 +340,6 @@ impl mqtt::Session for Session {
         // lock and check lwt flag
         let skip_lwt = self.disconnect.close().await;
 
-        CONNECTIONS_COUNTER.dec();
-
         if let Some(mut handle) = self.handle.take() {
             handle.delete(DeleteOptions { skip_lwt }).await;
         }
@@ -351,5 +349,11 @@ impl mqtt::Session for Session {
         }
 
         Ok(())
+    }
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        CONNECTIONS_COUNTER.dec();
     }
 }
