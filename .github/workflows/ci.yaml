@@ -97,6 +97,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
+        env:
+          RUST_BACKTRACE: "1"
         run: |
           make test
 
