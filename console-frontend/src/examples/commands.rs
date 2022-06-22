@@ -8,7 +8,6 @@ use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
-use serde_json::json;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -257,9 +256,16 @@ impl Component for CommandAndControl {
                 </Card>
             });
             if let Some(mqtt) = &ctx.props().endpoints.mqtt_integration {
-                let payload = json!({"name": "switch_lights_on", "switch": true});
+                let payload = match ctx.props().data.cmd_empty_message {
+                true => "".into(),
+                false => format!(
+                    "echo {payload} | ",
+                    payload = shell_single_quote(&ctx.props().data.payload)
+                ),
+            };
+                let command = &ctx.props().data.cmd_name;
                 let topic = match ctx.props().data.consumer_group {
-                    None => format!("command/{app}/device/my_command", app = ctx.props().data.app_id),
+                    None => format!("command/{app}/device/", app = ctx.props().data.app_id),
                     Some(ref group) => {
                         format!(
                             "$share/{group}/app/{app}",
@@ -273,11 +279,13 @@ impl Component for CommandAndControl {
                     false => format!("\"{}\"", ctx.props().auth.access_token),
                 };
                 let command_mqtt_cmd = format!(
-                    r#"mqtt pub -h {host} -p {port} -s {certs} -pw {token} -t '{topic}' -m {payload}"#,
+                    r#"mqtt pub -h {host} -p {port} -s {certs} -pw {token} -t '{topic}/{command}' -m {payload}"#,
                     host = mqtt.host,
                     port = mqtt.port,
+                    command = command,
                     token = token,
                     topic = topic,
+                    payload = payload,
                     certs = local_certs
                         .then(|| "--cafile build/certs/endpoints/root-cert.pem ")
                         .unwrap_or("")
