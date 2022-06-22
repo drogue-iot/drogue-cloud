@@ -229,10 +229,6 @@ SILENT=true source "${BASEDIR}/cmd/__endpoints.sh"
 
 kubectl -n "$DROGUE_NS" set env deployment/console-backend "DEMOS=Grafana Dashboard=$DASHBOARD_URL"
 
-if [ "$CLUSTER" != "openshift" ]; then
-    kubectl -n "$DROGUE_NS" annotate ingress/sso-ingress --overwrite 'nginx.ingress.kubernetes.io/proxy-buffer-size=16k'
-fi
-
 # wait for other Knative services
 
 if [[ "$INSTALL_KNATIVE" == true ]]; then
