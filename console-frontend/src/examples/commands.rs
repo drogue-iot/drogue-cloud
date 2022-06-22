@@ -8,6 +8,7 @@ use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
+use serde_json::json;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -255,6 +256,52 @@ impl Component for CommandAndControl {
                     <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={send_command_cmd} />
                 </Card>
             });
+            if let Some(mqtt) = &ctx.props().endpoints.mqtt_integration {
+                let payload = json!({"name": "switch_lights_on", "switch": true});
+                let topic = match ctx.props().data.consumer_group {
+                    None => format!("command/{app}/device/my_command", app = ctx.props().data.app_id),
+                    Some(ref group) => {
+                        format!(
+                            "$share/{group}/app/{app}",
+                            group = group,
+                            app = ctx.props().data.app_id
+                        )
+                    }
+                };
+                let token = match ctx.props().data.drg_token {
+                    true => "\"$(drg whoami -t)\"".into(),
+                    false => format!("\"{}\"", ctx.props().auth.access_token),
+                };
+                let command_mqtt_cmd = format!(
+                    r#"mqtt pub -h {host} -p {port} -s {certs} -pw {token} -t '{topic}' -m {payload}"#,
+                    host = mqtt.host,
+                    port = mqtt.port,
+                    token = token,
+                    topic = topic,
+                    certs = local_certs
+                        .then(|| "--cafile build/certs/endpoints/root-cert.pem ")
+                        .unwrap_or("")
+                );
+                cards.push(html! {
+                <Card title={html_prop!({"Send Command to device data using MQTT"})}>
+                    <div>
+                        {"The data, published by devices, can also be consumed using MQTT."}
+                    </div>
+                    <div>
+                        <Switch
+                            checked={ctx.props().data.drg_token}
+                            label="Use 'drg' to get the access token" label_off="Show current token in example"
+                            on_change={ctx.link().callback(Msg::DrgToken)}
+                            />
+                    </div>
+                    <div>
+                        {"Run the following command in a new terminal window:"}
+                    </div>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={command_mqtt_cmd} />
+                    // {note_local_certs(local_certs)}
+                </Card>
+            });
+            }
         }
 
         cards
