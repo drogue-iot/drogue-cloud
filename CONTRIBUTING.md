@@ -243,6 +243,20 @@ npm install -g sass@1.52.3
 You can also run the frontend with a backend in the cloud (or local cluster, e.g. minikube).
 To do so, you can create a `console-frontend/dev/endpoints/backend.local.json` file and populate it with the API and SSO urls of your drogue instance.
 
+For example (devbox):
+
+```json
+{
+  "url": "https://api-drogue-dev.apps.wonderful.iot-playground.org/",
+  "openid": {
+    "client_id": "drogue",
+    "issuer_url": "https://sso-drogue-dev.apps.wonderful.iot-playground.org/realms/drogue"
+  }
+}
+```
+
+NOTE: This model doesn't work if your frontend will use newer backend APIs, which are not yet deployed in the cloud.
+
 #### Running with a local server
 
 The simplest way to run the `console-backend` is to use [`drogue-cloud-server`](https://github.com/drogue-iot/drogue-cloud/tree/main/server). Once you have it running (bound to localhost which is the default), you can start the `console-frontend` in the development mode:
