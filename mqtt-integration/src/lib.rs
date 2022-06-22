@@ -12,13 +12,12 @@ use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::{HealthServer, HealthServerConfig},
-    metrics,
     openid::AuthenticatorConfig,
     reqwest::ClientFactory,
 };
 use futures::TryFutureExt;
 use lazy_static::lazy_static;
-use prometheus::{IntGauge, Opts};
+use prometheus::{labels, opts, register_int_gauge, IntGauge};
 use serde::Deserialize;
 use std::{
     fmt::{Debug, Formatter},
@@ -26,11 +25,14 @@ use std::{
 };
 
 lazy_static! {
-    pub static ref CONNECTIONS_COUNTER: IntGauge = IntGauge::with_opts(
-        Opts::new("drogue_connections", "Connections")
-            .const_label("protocol", "mqtt")
-            .const_label("type", "integration")
-    )
+    pub static ref CONNECTIONS_COUNTER: IntGauge = register_int_gauge!(opts!(
+        "drogue_connections",
+        "Connections",
+        labels! {
+            "protocol" => "mqtt",
+            "type" => "integration",
+        }
+    ))
     .unwrap();
 }
 
@@ -156,7 +158,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // run
 
     if let Some(health) = config.health {
-        metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
         // health server
         let health =
             HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));

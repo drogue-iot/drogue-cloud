@@ -1,3 +1,4 @@
+use crate::client::metrics::PassFailErrorExt;
 use drogue_client::{
     core::PropagateCurrentContext,
     error::{ClientError, ErrorInformation},
@@ -7,11 +8,28 @@ use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
     AuthorizeGatewayResponse,
 };
+use lazy_static::lazy_static;
+use prometheus::{register_int_gauge_vec, IntGaugeVec};
 use reqwest::{Client, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use tracing::instrument;
 use url::Url;
+
+lazy_static! {
+    pub static ref AUTHENTICATION: IntGaugeVec = register_int_gauge_vec!(
+        "drogue_client_device_authentication",
+        "Device authentication operations",
+        &["outcome"]
+    )
+    .unwrap();
+    pub static ref AUTHORIZATION_AS: IntGaugeVec = register_int_gauge_vec!(
+        "drogue_client_device_authorization_as",
+        "Device authorization as operations",
+        &["outcome"]
+    )
+    .unwrap();
+}
 
 /// An authentication client backed by reqwest.
 #[derive(Clone, Debug)]
@@ -42,7 +60,9 @@ impl ReqwestAuthenticatorClient {
         &self,
         request: AuthenticationRequest,
     ) -> Result<AuthenticationResponse, ClientError> {
-        self.request(self.auth_service_url.clone(), request).await
+        self.request(self.auth_service_url.clone(), request)
+            .await
+            .record_outcome(&AUTHENTICATION)
     }
 
     #[instrument]
@@ -50,7 +70,9 @@ impl ReqwestAuthenticatorClient {
         &self,
         request: AuthorizeGatewayRequest,
     ) -> Result<AuthorizeGatewayResponse, ClientError> {
-        self.request(self.auth_as_url.clone(), request).await
+        self.request(self.auth_as_url.clone(), request)
+            .await
+            .record_outcome(&AUTHORIZATION_AS)
     }
 
     async fn request<T, U>(&self, url: Url, request: T) -> Result<U, ClientError>

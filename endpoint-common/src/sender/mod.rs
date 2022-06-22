@@ -18,11 +18,11 @@ use drogue_cloud_service_api::{
     webapp::HttpResponse, EXT_APPLICATION_UID, EXT_DEVICE_UID, EXT_INSTANCE, EXT_SENDER,
     EXT_SENDER_UID,
 };
-use drogue_cloud_service_common::{metrics, Id, IdInjector};
+use drogue_cloud_service_common::{Id, IdInjector};
 use lazy_static::lazy_static;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use process::Processor;
-use prometheus::{CounterVec, Opts};
+use prometheus::{register_int_counter_vec, IntCounterVec};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -31,9 +31,10 @@ use thiserror::Error;
 use tracing::instrument;
 
 lazy_static! {
-    pub static ref DOWNSTREAM_EVENTS_COUNTER: CounterVec = CounterVec::new(
-        Opts::new("drogue_downstream_events", "Downstream events"),
-        &["endpoint", "outcome"]
+    pub static ref DOWNSTREAM_EVENTS_COUNTER: IntCounterVec = register_int_counter_vec!(
+        "drogue_downstream_events",
+        "Downstream events",
+        &["endpoint", "outcome"],
     )
     .unwrap();
 }
@@ -242,7 +243,6 @@ impl DownstreamSender {
         instance: String,
         config: ExternalClientPoolConfig,
     ) -> anyhow::Result<Self> {
-        metrics::register(Box::new(DOWNSTREAM_EVENTS_COUNTER.clone()))?;
         Ok(Self {
             sink: Arc::new(sink),
             instance,

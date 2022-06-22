@@ -1,11 +1,11 @@
 use chrono::Duration;
 use deadpool::Runtime;
 use deadpool_postgres::Pool;
-use drogue_cloud_database_common::error::ServiceError;
-use drogue_cloud_database_common::models::outbox::{
-    OutboxAccessor, OutboxEntry, PostgresOutboxAccessor,
+use drogue_cloud_database_common::{
+    error::ServiceError,
+    models::outbox::{OutboxAccessor, OutboxEntry, PostgresOutboxAccessor},
+    DatabaseService,
 };
-use drogue_cloud_database_common::DatabaseService;
 use drogue_cloud_registry_events::Event;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use futures::Stream;

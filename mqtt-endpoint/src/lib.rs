@@ -12,17 +12,20 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::server::build;
 use drogue_cloud_service_api::health::BoxedHealthChecked;
-use drogue_cloud_service_common::{app::run_main, metrics, state::StateController};
+use drogue_cloud_service_common::{app::run_main, state::StateController};
 use futures_util::{FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
-use prometheus::{IntGauge, Opts};
+use prometheus::{labels, opts, register_int_gauge, IntGauge};
 
 lazy_static! {
-    pub static ref CONNECTIONS_COUNTER: IntGauge = IntGauge::with_opts(
-        Opts::new("drogue_connections", "Connections")
-            .const_label("protocol", "mqtt")
-            .const_label("type", "endpoint")
-    )
+    pub static ref CONNECTIONS_COUNTER: IntGauge = register_int_gauge!(opts!(
+        "drogue_connections",
+        "Connections",
+        labels! {
+            "protocol" => "mqtt",
+            "type" => "endpoint"
+        }
+    ))
     .unwrap();
 }
 
@@ -67,7 +70,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
     let srv = srv.err_into().boxed_local();
     run_main(
         [srv, runner.run().boxed_local()],

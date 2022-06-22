@@ -1,3 +1,4 @@
+use crate::metrics::{AsPassFail, PassFail};
 use core::fmt::{self, Formatter};
 use drogue_client::registry;
 use serde::{Deserialize, Serialize};
@@ -79,6 +80,15 @@ pub struct AuthenticationResponse {
     pub outcome: Outcome,
 }
 
+impl AsPassFail for AuthenticationResponse {
+    fn as_pass_fail(&self) -> PassFail {
+        match &self.outcome {
+            Outcome::Pass { .. } => PassFail::Pass,
+            Outcome::Fail => PassFail::Fail,
+        }
+    }
+}
+
 impl AuthenticationResponse {
     pub fn failed() -> Self {
         Self {
@@ -104,6 +114,15 @@ pub enum GatewayOutcome {
 pub struct AuthorizeGatewayResponse {
     /// The outcome, of the request.
     pub outcome: GatewayOutcome,
+}
+
+impl AsPassFail for AuthorizeGatewayResponse {
+    fn as_pass_fail(&self) -> PassFail {
+        match self.outcome {
+            GatewayOutcome::Pass { .. } => PassFail::Pass,
+            GatewayOutcome::Fail => PassFail::Fail,
+        }
+    }
 }
 
 #[cfg(test)]

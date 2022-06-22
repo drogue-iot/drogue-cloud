@@ -1,12 +1,20 @@
 use crate::service::OutboxService;
 use actix::prelude::*;
-use drogue_cloud_database_common::error::ServiceError;
-use drogue_cloud_database_common::models::outbox::OutboxEntry;
+use drogue_cloud_database_common::{error::ServiceError, models::outbox::OutboxEntry};
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError};
 use futures::TryStreamExt;
-use std::convert::Infallible;
-use std::sync::Arc;
-use std::time::Duration;
+use lazy_static::lazy_static;
+use prometheus::{register_int_counter_vec, IntCounterVec};
+use std::{convert::Infallible, sync::Arc, time::Duration};
+
+lazy_static! {
+    static ref RESENT_EVENTS: IntCounterVec = register_int_counter_vec!(
+        "drogue_registry_events_resent",
+        "Events which have been resent",
+        &["result"]
+    )
+    .unwrap();
+}
 
 #[derive(Message)]
 #[rtype(result = "Result<(), Infallible>")]
@@ -102,8 +110,16 @@ where
         ctx: &ResendContext<S>,
     ) -> Result<(), EventSenderError<S::Error>> {
         let event: Event = entry.into();
-        ctx.sender.notify(Some(event)).await?;
-        Ok(())
+        match ctx.sender.notify(Some(event)).await {
+            Ok(result) => {
+                RESENT_EVENTS.with_label_values(&["ok"]).inc();
+                Ok(result)
+            }
+            Err(err) => {
+                RESENT_EVENTS.with_label_values(&["err"]).inc();
+                Err(err)
+            }
+        }
     }
 }
 

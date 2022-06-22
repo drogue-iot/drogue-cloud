@@ -16,21 +16,23 @@ use drogue_cloud_service_common::{
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
     defaults,
     health::HealthServerConfig,
-    metrics,
     openid::AuthenticatorConfig,
 };
 use futures::{FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
-use prometheus::{IntGauge, Opts};
+use prometheus::{labels, opts, register_int_gauge, IntGauge};
 use serde::Deserialize;
 use std::collections::HashMap;
 
 lazy_static! {
-    pub static ref CONNECTIONS_COUNTER: IntGauge = IntGauge::with_opts(
-        Opts::new("drogue_connections", "Connections")
-            .const_label("protocol", "ws")
-            .const_label("type", "integration")
-    )
+    pub static ref CONNECTIONS_COUNTER: IntGauge = register_int_gauge!(opts!(
+        "drogue_connections",
+        "Connections",
+        labels! {
+                "protocol" => "ws",
+                "type" => "integration"
+        }
+    ))
     .unwrap();
 }
 
@@ -117,7 +119,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    metrics::register(Box::new(CONNECTIONS_COUNTER.clone()))?;
     run_main([main], config.health, vec![]).await?;
 
     // exiting

@@ -5,6 +5,8 @@ mod device_state;
 mod registry_auth;
 mod user_auth;
 
+pub mod metrics;
+
 pub use device_auth::*;
 pub use device_state::*;
 pub use registry_auth::*;

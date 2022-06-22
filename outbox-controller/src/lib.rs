@@ -14,8 +14,18 @@ use drogue_cloud_service_common::{
     app::run_main, config::ConfigFromEnv, defaults, health::HealthServerConfig,
 };
 use futures::FutureExt;
+use lazy_static::lazy_static;
+use prometheus::{register_int_counter, IntCounter};
 use serde::Deserialize;
 use std::{sync::Arc, time::Duration};
+
+lazy_static! {
+    static ref MARK_SEEN: IntCounter = register_int_counter!(
+        "drogue_registry_events_mark_seen",
+        "Events which have been mark as seen",
+    )
+    .unwrap();
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -56,6 +66,7 @@ impl EventHandler for OutboxHandler {
 
     async fn handle(&self, event: &Self::Event) -> Result<(), anyhow::Error> {
         log::debug!("Outbox event: {:?}", event);
+        MARK_SEEN.inc();
         self.0.mark_seen(event.clone()).await?;
         Ok(())
     }

@@ -1,5 +1,5 @@
-use crate::reqwest::ClientFactory;
-use crate::{defaults, openid::TokenConfig};
+use crate::client::metrics::PassFailErrorExt;
+use crate::{defaults, openid::TokenConfig, reqwest::ClientFactory};
 use drogue_client::{
     core::PropagateCurrentContext,
     error::ClientError,
@@ -9,10 +9,27 @@ use drogue_cloud_service_api::auth::user::{
     authn::{AuthenticationRequest, AuthenticationResponse},
     authz::{AuthorizationRequest, AuthorizationResponse},
 };
+use lazy_static::lazy_static;
+use prometheus::{register_int_gauge_vec, IntGaugeVec};
 use reqwest::{Response, StatusCode};
 use serde::Deserialize;
 use tracing::instrument;
 use url::Url;
+
+lazy_static! {
+    pub static ref AUTHENTICATION: IntGaugeVec = register_int_gauge_vec!(
+        "drogue_client_user_authentication_access_token",
+        "User access token authentication operations",
+        &["outcome"]
+    )
+    .unwrap();
+    pub static ref AUTHORIZATION: IntGaugeVec = register_int_gauge_vec!(
+        "drogue_client_user_authorization",
+        "User access authorization",
+        &["outcome"]
+    )
+    .unwrap();
+}
 
 /// A client for authorizing user requests.
 #[derive(Clone, Debug)]
@@ -91,6 +108,7 @@ impl UserAuthClient {
             },
             code => super::default_error(code, response).await,
         }
+        .record_outcome(&AUTHENTICATION)
     }
 
     #[instrument]
@@ -127,5 +145,6 @@ impl UserAuthClient {
             },
             code => super::default_error(code, response).await,
         }
+        .record_outcome(&AUTHORIZATION)
     }
 }
