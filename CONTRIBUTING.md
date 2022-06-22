@@ -224,27 +224,24 @@ There are bonus points for adding your own tests ;-)
 
 ### … work on the frontend
 
-Due to a bug in `trunk`, it is currently necessary to manually install `dart` using:
-
-```
-npm install -g sass@1.49.7
-```
-
-NOTE: the version must align with the actual version in the Trunk.toml file!
-
-#### Additional dependencies
-
 You will need to have `trunk`, `npm` and `sass` installed, as it will drive parts of the build.
 
-For `sass`, you will need the exact version as specified in the `Trunk.toml` file. Currently,
-this is `1.50.0 compiled with dart2js 2.16.2`. Unfortunately, this can currently not be overridden from the command
-line. So either you install this version exactly, or change/remove the setting in the `Trunk.toml` file.
+`trunk` can be installed using `cargo`:
+
+```shell
+cargo install trunk
+```
 
 Installing `sass` can be done using the following command:
 
 ```shell
-npm install -g sass@1.50.0
+npm install -g sass@1.52.3
 ```
+
+#### Running with a cloud backend
+
+You can also run the frontend with a backend in the cloud (or local cluster, e.g. minikube).
+To do so, you can create a `console-frontend/dev/endpoints/backend.local.json` file and populate it with the API and SSO urls of your drogue instance.
 
 #### Running with a local server
 
@@ -254,8 +251,3 @@ The simplest way to run the `console-backend` is to use [`drogue-cloud-server`](
 cd console-frontend
 trunk serve
 ~~~
-
-#### Running with a cloud backend
-
-You can also run the frontend with a backend in the cloud (or local cluster, e.g. minikube).
-To do so, you can create a `console-frontend/dev/endpoints/backend.local.json` file and populate it with the API and SSO urls of your drogue instance.
