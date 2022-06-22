@@ -13,7 +13,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.2.0
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.2.1
 
 # Control if the server binary is skipped. The server binary increases build times a lot.
 SKIP_SERVER ?= false
