@@ -80,7 +80,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
 
         log::info!("Running: {:?}", cmd);
 
-        let mut child = cmd.spawn()?;
+        let mut child = cmd.spawn().context("Spawning psql")?;
 
         // 'psql' is running, now pipe in commands
 
@@ -99,7 +99,7 @@ impl<'c, C: 'c + Docker, SC> PostgresRunner<'c, C, SC> {
 
         // now wait to the command to end
 
-        let out = child.wait_with_output()?;
+        let out = child.wait_with_output().context("Waiting for psql")?;
 
         log::info!("Out: {:?}", String::from_utf8(out.stdout));
         log::info!("Err: {:?}", String::from_utf8(out.stderr));
