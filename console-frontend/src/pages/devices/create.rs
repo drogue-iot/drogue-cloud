@@ -1,7 +1,9 @@
-use crate::backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle};
-use crate::error::{error, ErrorNotification, ErrorNotifier};
-use crate::pages::devices::{AppRoute, ApplicationContext, DetailsSection, Pages};
-use crate::utils::{success, url_encode};
+use crate::{
+    backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle},
+    error::{error, ErrorNotification, ErrorNotifier},
+    pages::devices::{AppRoute, ApplicationContext, DetailsSection, Pages},
+    utils::{success, url_encode},
+};
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use serde_json::json;
@@ -76,33 +78,31 @@ impl Component for CreateDialog {
         };
 
         html! (
-            <>
             <Bullseye plain=true>
                 <Modal
                     title = "Create a new device"
-                    variant= {ModalVariant::Small}
+                    variant = {ModalVariant::Small}
                     footer = {html!(
-                                <>
-                                    <button class="pf-c-button pf-m-primary"
-                                        disabled={!is_valid || self.fetch_task.is_some()}
-                                        type="button"
-                                        onclick={ctx.link().callback(|_|Msg::Create)}
-                                    >
-                                        {"Create"}</button>
-                                </>)
-                                }
-                    >
+                        <button class="pf-c-button pf-m-primary"
+                            disabled={!is_valid || self.fetch_task.is_some()}
+                            type="button"
+                            onclick={ctx.link().callback(|_|Msg::Create)}
+                        >
+                            {"Create"}
+                        </button>
+                    )}
+                >
                     <Form>
-                           <FormGroup>
-                                <TextInput
-                                    validator={Validator::from(v)}
-                                    onchange={ctx.link().callback(Msg::NewDeviceName)}
-                                    placeholder="Device ID" />
-                            </FormGroup>
+                        <FormGroup>
+                            <TextInput
+                                autofocus=true
+                                validator={Validator::from(v)}
+                                onchange={ctx.link().callback(Msg::NewDeviceName)}
+                                placeholder="Device ID" />
+                        </FormGroup>
                     </Form>
                 </Modal>
             </Bullseye>
-            </>
         )
     }
 }

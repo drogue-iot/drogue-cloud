@@ -66,7 +66,7 @@ pub enum Msg {
 
     TriggerModal,
 
-    Navigate(patternfly_yew::Navigation),
+    Navigate(Navigation),
     SetLimit(u32),
 }
 

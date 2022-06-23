@@ -75,34 +75,33 @@ impl Component for CreateDialog {
                 true => InputState::Default,
             };
 
-        return html! {
-            <>
+        html! (
             <Bullseye plain=true>
-            <Modal
-                title={"Create an application"}
-                variant={ModalVariant::Small}
-                footer={{html!{<>
-                                <button class="pf-c-button pf-m-primary"
-                                    disabled={!is_valid || self.fetch_task.is_some()}
-                                    type="button"
-                                    onclick={ctx.link().callback(|_|Msg::Create)}
-                                >
-                                    {"Create"}</button>
-                                </>}
-                }}
-            >
-                <Form>
+                <Modal
+                    title={"Create an application"}
+                    variant={ModalVariant::Small}
+                    footer={html!(
+                        <button class="pf-c-button pf-m-primary"
+                            disabled={!is_valid || self.fetch_task.is_some()}
+                            type="button"
+                            onclick={ctx.link().callback(|_|Msg::Create)}
+                        >
+                            {"Create"}
+                        </button>
+                    )}
+                >
+                    <Form>
                        <FormGroup>
                             <TextInput
+                                autofocus=true
                                 validator={Validator::from(v)}
                                 onchange={ctx.link().callback(Msg::NewAppName)}
                                 placeholder="Application ID"/>
                         </FormGroup>
-                </Form>
-            </Modal>
+                    </Form>
+                </Modal>
             </Bullseye>
-            </>
-        };
+        )
     }
 }
 
