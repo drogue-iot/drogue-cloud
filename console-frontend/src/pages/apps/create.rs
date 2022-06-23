@@ -81,16 +81,18 @@ impl Component for CreateDialog {
                     title={"Create an application"}
                     variant={ModalVariant::Small}
                     footer={html!(
-                        <button class="pf-c-button pf-m-primary"
+                        <Button
+                            variant={Variant::Primary}
                             disabled={!is_valid || self.fetch_task.is_some()}
-                            type="button"
+                            r#type="submit"
                             onclick={ctx.link().callback(|_|Msg::Create)}
+                            form="create-form"
                         >
                             {"Create"}
-                        </button>
+                        </Button>
                     )}
                 >
-                    <Form>
+                    <Form id="create-form" method="dialog">
                        <FormGroup>
                             <TextInput
                                 autofocus=true

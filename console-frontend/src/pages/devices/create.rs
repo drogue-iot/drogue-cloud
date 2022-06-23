@@ -80,19 +80,21 @@ impl Component for CreateDialog {
         html! (
             <Bullseye plain=true>
                 <Modal
-                    title = "Create a new device"
-                    variant = {ModalVariant::Small}
-                    footer = {html!(
-                        <button class="pf-c-button pf-m-primary"
+                    title="Create a new device"
+                    variant={ModalVariant::Small}
+                    footer={html!(
+                        <Button
+                            variant={Variant::Primary}
                             disabled={!is_valid || self.fetch_task.is_some()}
-                            type="button"
+                            r#type="submit"
                             onclick={ctx.link().callback(|_|Msg::Create)}
+                            form="create-form"
                         >
                             {"Create"}
-                        </button>
+                        </Button>
                     )}
                 >
-                    <Form>
+                    <Form id="create-form" method="dialog">
                         <FormGroup>
                             <TextInput
                                 autofocus=true
