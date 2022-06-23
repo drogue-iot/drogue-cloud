@@ -255,6 +255,61 @@ impl Component for CommandAndControl {
                     <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={send_command_cmd} />
                 </Card>
             });
+            if let Some(mqtt) = &ctx.props().endpoints.mqtt_integration {
+                let payload = match ctx.props().data.cmd_empty_message {
+                true => "".into(),
+                false => format!(
+                    "echo {payload} | ",
+                    payload = shell_single_quote(&ctx.props().data.payload)
+                ),
+            };
+                let command = &ctx.props().data.cmd_name;
+                let topic = match ctx.props().data.consumer_group {
+                    None => format!("command/{app}/device/", app = ctx.props().data.app_id),
+                    Some(ref group) => {
+                        format!(
+                            "$share/{group}/app/{app}",
+                            group = group,
+                            app = ctx.props().data.app_id
+                        )
+                    }
+                };
+                let token = match ctx.props().data.drg_token {
+                    true => "\"$(drg whoami -t)\"".into(),
+                    false => format!("\"{}\"", ctx.props().auth.access_token),
+                };
+                let command_mqtt_cmd = format!(
+                    r#"mqtt pub -h {host} -p {port} -s {certs} -pw {token} -t '{topic}/{command}' -m {payload}"#,
+                    host = mqtt.host,
+                    port = mqtt.port,
+                    command = command,
+                    token = token,
+                    topic = topic,
+                    payload = payload,
+                    certs = local_certs
+                        .then(|| "--cafile build/certs/endpoints/root-cert.pem ")
+                        .unwrap_or("")
+                );
+                cards.push(html! {
+                <Card title={html_prop!({"Send Command to device data using MQTT"})}>
+                    <div>
+                        {"The data, published by devices, can also be consumed using MQTT."}
+                    </div>
+                    <div>
+                        <Switch
+                            checked={ctx.props().data.drg_token}
+                            label="Use 'drg' to get the access token" label_off="Show current token in example"
+                            on_change={ctx.link().callback(Msg::DrgToken)}
+                            />
+                    </div>
+                    <div>
+                        {"Run the following command in a new terminal window:"}
+                    </div>
+                    <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={command_mqtt_cmd} />
+                    // {note_local_certs(local_certs)}
+                </Card>
+            });
+            }
         }
 
         cards
