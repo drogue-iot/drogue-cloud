@@ -178,7 +178,7 @@ impl Component for ConsumeData {
                 ctx.props().data.app_id,
                 token,
             );
-            let drg_cmd = format!("drg stream {}", ctx.props().data.app_id,);
+            let drg_cmd = format!("drg stream -a {}", ctx.props().data.app_id);
             cards.push(html!{
                 <Card title={html_prop!({"Consume device data using a Websocket"})}>
                     <div>

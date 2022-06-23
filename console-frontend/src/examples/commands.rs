@@ -65,7 +65,7 @@ impl Component for CommandAndControl {
     fn view(&self, ctx: &Context<Self>) -> Html {
         let mut cards: Vec<_> = vec![html! {
             <Alert
-                title="Command & control"
+                title="About command & control"
                 r#type={Type::Info} inline=true
                 >
                 <Content>
@@ -81,6 +81,10 @@ impl Component for CommandAndControl {
                 </Content>
             </Alert>
         }];
+
+        cards.push(html! {
+            <Title size={Size::Large}>{"Setting up a command consumer"}</Title>
+        });
 
         let local_certs = ctx
             .props()
@@ -208,14 +212,51 @@ impl Component for CommandAndControl {
             });
         }
 
+        cards.push(html! {
+            <Title size={Size::Large}>{"Sending the command payload"}</Title>
+        });
+
+        cards.push(html! {
+            <Card title={html_prop!({"Command to send"})}>
+                <div>
+                    {r#"
+                    Once the device is waiting for commands, you can send one.
+                    "#}
+                </div>
+                <Form>
+                    <FormGroup label="Command name">
+                        <TextInput
+                            value={ctx.props().data.cmd_name.clone()}
+                            required=true
+                            onchange={ctx.link().callback(Msg::CommandName)}
+                            validator={not_empty()}
+                            />
+                    </FormGroup>
+                    <FormGroup label="Command payload">
+                        <TextArea
+                            value={ctx.props().data.cmd_payload.clone()}
+                            onchange={ctx.link().callback(Msg::CommandPayload)}
+                            />
+                    </FormGroup>
+                </Form>
+            </Card>
+        });
+
         if let Some(cmd) = &ctx.props().endpoints.command_url {
             let token = match ctx.props().data.drg_token {
                 true => "$(drg whoami -t)",
                 false => ctx.props().auth.access_token.as_str(),
             };
+            let payload = &ctx.props().data.cmd_payload;
+            let payload = match payload.is_empty() {
+                true => "".to_string(),
+                false => format!(
+                    "echo {} | ",
+                    shell_single_quote(&ctx.props().data.cmd_payload)
+                ),
+            };
             let send_command_cmd = format!(
-                r#"echo {payload} | http POST {url}/api/command/v1alpha1/apps/{app}/devices/{device} command=={cmd} "Authorization:Bearer {token}""#,
-                payload = shell_single_quote(&ctx.props().data.cmd_payload),
+                r#"{payload}http POST {url}/api/command/v1alpha1/apps/{app}/devices/{device} command=={cmd} "Authorization:Bearer {token}""#,
                 url = cmd,
                 app = url_encode(&ctx.props().data.app_id),
                 device = url_encode(&ctx.props().data.device_id),
@@ -223,27 +264,8 @@ impl Component for CommandAndControl {
                 cmd = shell_quote(&ctx.props().data.cmd_name),
             );
             cards.push(html!{
-                <Card title={html_prop!({"Send a command"})}>
-                    <div>
-                        {r#"
-                        Once the device is waiting for commands, you can send one.
-                        "#}
-                    </div>
+                <Card title={html_prop!({"Send a command using HTTP"})}>
                     <Form>
-                        <FormGroup label="Command name">
-                            <TextInput
-                                value={ctx.props().data.cmd_name.clone()}
-                                required=true
-                                onchange={ctx.link().callback(Msg::CommandName)}
-                                validator={not_empty()}
-                                />
-                        </FormGroup>
-                        <FormGroup label="Command payload">
-                            <TextArea
-                                value={ctx.props().data.cmd_payload.clone()}
-                                onchange={ctx.link().callback(Msg::CommandPayload)}
-                                />
-                        </FormGroup>
                         <FormGroup>
                             <Switch
                                 checked={ctx.props().data.drg_token}
@@ -252,28 +274,21 @@ impl Component for CommandAndControl {
                                 />
                         </FormGroup>
                     </Form>
+                    <div>
+                        {"Run the following command in a new terminal window:"}
+                    </div>
                     <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={send_command_cmd} />
                 </Card>
             });
+
             if let Some(mqtt) = &ctx.props().endpoints.mqtt_integration {
-                let payload = match ctx.props().data.cmd_empty_message {
-                true => "".into(),
-                false => format!(
-                    "echo {payload} | ",
-                    payload = shell_single_quote(&ctx.props().data.payload)
-                ),
-            };
+                let payload = shell_single_quote(&ctx.props().data.cmd_payload);
                 let command = &ctx.props().data.cmd_name;
-                let topic = match ctx.props().data.consumer_group {
-                    None => format!("command/{app}/device/", app = ctx.props().data.app_id),
-                    Some(ref group) => {
-                        format!(
-                            "$share/{group}/app/{app}",
-                            group = group,
-                            app = ctx.props().data.app_id
-                        )
-                    }
-                };
+                let topic = format!(
+                    "command/{app}/{device}",
+                    app = ctx.props().data.app_id,
+                    device = ctx.props().data.device_id
+                );
                 let token = match ctx.props().data.drg_token {
                     true => "\"$(drg whoami -t)\"".into(),
                     false => format!("\"{}\"", ctx.props().auth.access_token),
@@ -293,9 +308,6 @@ impl Component for CommandAndControl {
                 cards.push(html! {
                 <Card title={html_prop!({"Send Command to device data using MQTT"})}>
                     <div>
-                        {"The data, published by devices, can also be consumed using MQTT."}
-                    </div>
-                    <div>
                         <Switch
                             checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
@@ -306,7 +318,7 @@ impl Component for CommandAndControl {
                         {"Run the following command in a new terminal window:"}
                     </div>
                     <Clipboard code=true readonly=true variant={ClipboardVariant::Expandable} value={command_mqtt_cmd} />
-                    // {note_local_certs(local_certs)}
+                    {note_local_certs(local_certs)}
                 </Card>
             });
             }

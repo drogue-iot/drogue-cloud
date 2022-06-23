@@ -6,6 +6,10 @@ pub fn shell_quote<S: ToString>(s: S) -> String {
 pub fn shell_single_quote<S: ToString>(s: S) -> String {
     let s = s.to_string();
 
+    if s.is_empty() {
+        return r#""""#.into();
+    }
+
     if s.chars()
         .all(|c| c.is_alphanumeric() || matches!(c, '-' | '_'))
     {
