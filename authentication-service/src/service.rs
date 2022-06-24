@@ -1,7 +1,6 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_client::{
     registry::{self, v1::Password},
@@ -11,7 +10,7 @@ use drogue_cloud_database_common::{
     error::ServiceError,
     models::Lock,
     models::{app::*, device::*},
-    Client, DatabaseService,
+    postgres, Client, DatabaseService,
 };
 use drogue_cloud_service_api::{
     auth::device::authn::{
@@ -25,7 +24,6 @@ use rustls_pemfile::Item;
 use serde::Deserialize;
 use sha_crypt::sha512_check;
 use std::{io::Cursor, time::SystemTime};
-use tokio_postgres::NoTls;
 use tracing::instrument;
 
 macro_rules! pass {
@@ -55,7 +53,7 @@ pub trait AuthenticationService: Clone {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthenticationServiceConfig {
-    pub pg: deadpool_postgres::Config,
+    pub pg: postgres::Config,
 }
 
 impl DatabaseService for PostgresAuthenticationService {
@@ -81,7 +79,7 @@ pub struct PostgresAuthenticationService {
 impl PostgresAuthenticationService {
     pub fn new(config: AuthenticationServiceConfig) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
+            pool: config.pg.create_pool()?,
         })
     }
 

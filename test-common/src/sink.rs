@@ -1,6 +1,8 @@
 use async_trait::async_trait;
-use drogue_cloud_endpoint_common::sender::PublishOutcome;
-use drogue_cloud_endpoint_common::sink::{Sink, SinkError, SinkTarget};
+use drogue_cloud_endpoint_common::{
+    sender::PublishOutcome,
+    sink::{Sink, SinkError, SinkTarget},
+};
 use std::sync::{Arc, RwLock};
 
 #[derive(Clone, Debug)]

@@ -1,21 +1,19 @@
 use chrono::Duration;
-use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     error::ServiceError,
     models::outbox::{OutboxAccessor, OutboxEntry, PostgresOutboxAccessor},
-    DatabaseService,
+    postgres, DatabaseService,
 };
 use drogue_cloud_registry_events::Event;
 use drogue_cloud_service_api::health::{HealthCheckError, HealthChecked};
 use futures::Stream;
 use serde::Deserialize;
 use std::pin::Pin;
-use tokio_postgres::NoTls;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct OutboxServiceConfig {
-    pub pg: deadpool_postgres::Config,
+    pub pg: postgres::Config,
 }
 
 /// A service for interacting with the outbox, mark entries seen and re-deliver lost ones.
@@ -42,7 +40,7 @@ impl HealthChecked for OutboxService {
 impl OutboxService {
     pub fn new(config: OutboxServiceConfig) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
+            pool: config.pg.create_pool()?,
         })
     }
 

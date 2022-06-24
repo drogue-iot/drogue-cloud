@@ -42,7 +42,7 @@ macro_rules! test {
 
         let sender = MockEventSender::new();
 
-        let pool = db.config.pg.create_pool(Some(deadpool::Runtime::Tokio1), tokio_postgres::NoTls)?;
+        let pool = db.config.pg.create_pool()?;
         let c = pool.get().await?;
         let outbox = drogue_cloud_database_common::models::outbox::PostgresOutboxAccessor::new(&c);
 

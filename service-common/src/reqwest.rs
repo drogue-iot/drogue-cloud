@@ -1,13 +1,11 @@
+use crate::tls::ClientConfig;
 use reqwest::Certificate;
-use serde::Deserialize;
 use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
     str::FromStr,
 };
-
-const SERVICE_CA_CERT: &str = "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt";
 
 /// Convert the name to an HTTP method.
 ///
@@ -52,19 +50,6 @@ fn add_cert<P: AsRef<Path>>(
     Ok(client)
 }
 
-fn add_service_cert(client: reqwest::ClientBuilder) -> anyhow::Result<reqwest::ClientBuilder> {
-    let cert = Path::new(SERVICE_CA_CERT);
-    if cert.exists() {
-        add_cert(client, cert)
-    } else {
-        log::info!(
-            "Service CA certificate does not exist, skipping! ({:?})",
-            cert
-        );
-        Ok(client)
-    }
-}
-
 fn make_insecure(client: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
     // previously we had to do a few extras for TLS 1.3 with rustls, but that seems fine now.
     log::warn!("Disabling TLS verification for client. Do not use this in production!");
@@ -75,14 +60,6 @@ fn make_insecure(client: reqwest::ClientBuilder) -> reqwest::ClientBuilder {
         .danger_accept_invalid_hostnames(true)
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
-pub struct ClientConfig {
-    #[serde(default)]
-    pub tls_insecure: bool,
-    #[serde(default)]
-    pub ca_certificates: Vec<String>,
-}
-
 /// Allows us to create clients.
 ///
 /// `reqwest` already has a `ClientBuilder`, however it is unable to be cloned. Also it is not
@@ -90,27 +67,31 @@ pub struct ClientConfig {
 /// and clients.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ClientFactory {
-    pub insecure: bool,
-    pub ca_certs: Vec<PathBuf>,
+    insecure: bool,
+    ca_certs: Vec<PathBuf>,
 }
 
 impl From<ClientConfig> for ClientFactory {
     fn from(config: ClientConfig) -> Self {
-        let mut factory = ClientFactory::new();
+        let mut factory = Self {
+            insecure: false,
+            ca_certs: vec![],
+        };
 
         if config.tls_insecure {
             factory = factory.make_insecure();
         }
 
-        factory = factory.add_ca_certs(&config.ca_certificates);
+        factory = factory.add_ca_certs(config.certificates());
 
         factory
     }
 }
 
 impl ClientFactory {
+    /// Create a new client factory from a default [`ClientConfig`].
     pub fn new() -> Self {
-        Default::default()
+        ClientConfig::default().into()
     }
 
     fn dedup(&mut self) {
@@ -143,8 +124,6 @@ impl ClientFactory {
 
     pub fn new_builder(&self) -> anyhow::Result<reqwest::ClientBuilder> {
         let mut builder = reqwest::ClientBuilder::new();
-
-        builder = add_service_cert(builder)?;
 
         for ca in &self.ca_certs {
             builder = add_cert(builder, &ca)?;

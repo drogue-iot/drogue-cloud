@@ -5,6 +5,7 @@ pub mod sink;
 
 use anyhow::Context;
 use deadpool::managed::{PoolConfig, Timeouts};
+use drogue_cloud_database_common::postgres;
 use serde_json::Value;
 use std::{
     fs,
@@ -244,7 +245,7 @@ fn podman_version() -> Option<u16> {
 pub fn db<C, SC, F>(cli: &C, f: F) -> anyhow::Result<PostgresRunner<C, SC>>
 where
     C: Docker,
-    F: FnOnce(deadpool_postgres::Config) -> SC,
+    F: FnOnce(postgres::Config) -> SC,
 {
     let host = match is_containerized() {
         true => "postgres",
@@ -267,7 +268,10 @@ where
 
         ..Default::default()
     };
-    let config = f(pc.clone());
+    let config = f(postgres::Config {
+        db: pc.clone(),
+        tls: Default::default(),
+    });
 
     PostgresRunner::new(cli, config, pc)
 }

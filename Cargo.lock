@@ -1486,7 +1486,6 @@ dependencies = [
  "bcrypt",
  "chrono",
  "config",
- "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-client",
@@ -1645,6 +1644,7 @@ dependencies = [
  "futures",
  "indexmap",
  "log",
+ "postgres-native-tls",
  "serde",
  "serde_json",
  "serial_test",
@@ -1702,7 +1702,6 @@ dependencies = [
  "bytes",
  "chrono",
  "config",
- "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-client",
@@ -2110,7 +2109,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "chrono",
- "deadpool",
  "deadpool-postgres",
  "drogue-client",
  "drogue-cloud-database-common",
@@ -2129,7 +2127,6 @@ dependencies = [
  "testcontainers",
  "thiserror",
  "tokio",
- "tokio-postgres",
  "tracing",
 ]
 
@@ -2142,7 +2139,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "config",
- "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-database-common",
@@ -2207,6 +2203,7 @@ dependencies = [
  "drogue-cloud-coap-endpoint",
  "drogue-cloud-command-endpoint",
  "drogue-cloud-console-backend",
+ "drogue-cloud-database-common",
  "drogue-cloud-device-management-service",
  "drogue-cloud-device-state-service",
  "drogue-cloud-endpoint-common",
@@ -2291,6 +2288,7 @@ dependencies = [
  "kube",
  "lazy_static",
  "log",
+ "native-tls",
  "ntex",
  "openid",
  "opentelemetry",
@@ -2321,6 +2319,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "drogue-client",
+ "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -2442,7 +2441,6 @@ dependencies = [
  "async-trait",
  "chrono",
  "config",
- "deadpool",
  "deadpool-postgres",
  "dotenv",
  "drogue-cloud-access-token-service",
@@ -4349,6 +4347,19 @@ dependencies = [
  "log",
  "wepoll-ffi",
  "winapi",
+]
+
+[[package]]
+name = "postgres-native-tls"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d442770e2b1e244bb5eb03b31c79b65bb2568f413b899eaba850fa945a65954"
+dependencies = [
+ "futures",
+ "native-tls",
+ "tokio",
+ "tokio-native-tls",
+ "tokio-postgres",
 ]
 
 [[package]]

@@ -5,7 +5,6 @@ mod utils;
 mod x509;
 
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
-use deadpool::Runtime;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::{registry, Translator};
 use drogue_cloud_database_common::{
@@ -19,7 +18,7 @@ use drogue_cloud_database_common::{
         outbox::PostgresOutboxAccessor,
         Advance, Lock, TypedAlias,
     },
-    Client, DatabaseService,
+    postgres, Client, DatabaseService,
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
 use drogue_cloud_service_api::{
@@ -30,12 +29,12 @@ use drogue_cloud_service_common::keycloak::KeycloakClient;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashSet;
-use tokio_postgres::{error::SqlState, NoTls};
+use tokio_postgres::error::SqlState;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PostgresManagementServiceConfig {
-    pub pg: deadpool_postgres::Config,
+    pub pg: postgres::Config,
     pub instance: String,
 }
 
@@ -86,7 +85,7 @@ where
         keycloak: K,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
+            pool: config.pg.create_pool()?,
             instance: config.instance,
             sender,
             keycloak,

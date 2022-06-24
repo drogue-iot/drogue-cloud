@@ -9,13 +9,11 @@ license = "Apache-2.0"
 [lib]
 
 [dependencies]
-
 anyhow = "1"
 async-trait = "0.1"
 bcrypt = "0.9"
 chrono = "0.4"
 config = "0.13"
-deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 dotenv = "0.15.0"
 drogue-client = "0.10"

@@ -1,21 +1,19 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
-use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_cloud_database_common::{
     auth::authorize,
     error::ServiceError,
     models::{app::*, Lock},
-    DatabaseService,
+    postgres, DatabaseService,
 };
-use drogue_cloud_service_api::auth::user::{UserDetails, UserInformation};
-use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_api::{
     auth::user::authz::{AuthorizationRequest, Outcome},
+    auth::user::{UserDetails, UserInformation},
     health::{HealthCheckError, HealthChecked},
+    webapp as actix_web,
 };
 use serde::Deserialize;
-use tokio_postgres::NoTls;
 
 #[async_trait]
 pub trait AuthorizationService: Clone {
@@ -26,7 +24,7 @@ pub trait AuthorizationService: Clone {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthorizationServiceConfig {
-    pub pg: deadpool_postgres::Config,
+    pub pg: postgres::Config,
 }
 
 impl DatabaseService for PostgresAuthorizationService {
@@ -52,7 +50,7 @@ pub struct PostgresAuthorizationService {
 impl PostgresAuthorizationService {
     pub fn new(config: AuthorizationServiceConfig) -> anyhow::Result<Self> {
         Ok(Self {
-            pool: config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?,
+            pool: config.pg.create_pool()?,
         })
     }
 }

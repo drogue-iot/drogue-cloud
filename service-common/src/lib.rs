@@ -13,6 +13,7 @@ pub mod kube;
 pub mod openid;
 pub mod reqwest;
 pub mod state;
+pub mod tls;
 pub mod tracing;
 mod utils;
 

@@ -36,8 +36,9 @@ tracing = "0.1"
 tracing-opentelemetry = "0.17"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2"
-uuid = { version = "1", features = ["v4"]}
+uuid = { version = "1", features = ["v4"] }
 
+native-tls = { version = "0.2", optional = true }
 opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
 rust_tls = { version = "0.20", package = "rustls", optional = true, features = ["dangerous_configuration"] }
 webpki = { version = "0.22", optional = true }
@@ -46,10 +47,10 @@ drogue-cloud-event-common = { path = "../event-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 
 [dev-dependencies]
-actix-rt = "2.6.0"
+actix-rt = "2.7"
 tokio = { version = "1", features = ["full"] }
 
 [features]
-default = ["rustls"]
+default = ["rustls", "native-tls"]
 rustls = ["rust_tls", "webpki", "reqwest/rustls-tls"]
 jaeger = ["opentelemetry-jaeger"]

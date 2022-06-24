@@ -1,9 +1,8 @@
 use crate::controller::base::Key;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use deadpool_postgres::tokio_postgres::types::Type;
-use deadpool_postgres::{Pool, PoolError};
-use drogue_cloud_database_common::Client;
+use deadpool_postgres::{tokio_postgres::types::Type, Pool, PoolError};
+use drogue_cloud_database_common::{postgres, Client};
 use serde::Deserialize;
 use std::fmt::{Debug, Formatter};
 use std::future::Future;
@@ -15,7 +14,7 @@ use tracing::instrument;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct WorkQueueConfig {
-    pub pg: deadpool_postgres::Config,
+    pub pg: postgres::Config,
     pub instance: String,
 }
 

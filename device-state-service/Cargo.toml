@@ -12,7 +12,6 @@ async-trait = "0.1"
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
 config = "0.13"
-deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 dotenv = "0.15"
 drogue-client = "0.10"

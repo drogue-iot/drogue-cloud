@@ -1,5 +1,4 @@
-use crate::reqwest::ClientConfig;
-use crate::{defaults, openid::TokenConfig, reqwest::ClientFactory};
+use crate::{defaults, openid::TokenConfig, reqwest::ClientFactory, tls::ClientConfig};
 use drogue_client::{
     core::PropagateCurrentContext,
     error::ClientError,

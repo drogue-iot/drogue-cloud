@@ -1,7 +1,6 @@
 mod common;
 
 use async_trait::async_trait;
-use deadpool::Runtime;
 use deadpool_postgres::Pool;
 use drogue_cloud_operator_common::controller::base::queue::{
     WorkQueueHandler, WorkQueueReader, WorkQueueReaderOptions, WorkQueueWriter,
@@ -12,7 +11,6 @@ use serial_test::serial;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio_postgres::NoTls;
 
 #[derive(Clone)]
 struct MockHandler {
@@ -47,7 +45,7 @@ where
     let cli = client();
     let db = db(&cli, |pg| pg).unwrap();
 
-    let pool: Pool = db.config.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+    let pool: Pool = db.config.create_pool().unwrap();
 
     let handler = MockHandler::new();
 

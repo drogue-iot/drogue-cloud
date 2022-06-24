@@ -2,6 +2,7 @@ use clap::{crate_version, App, Arg, ArgMatches, SubCommand};
 use core::str::FromStr;
 use diesel_migrations::embed_migrations;
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
+use drogue_cloud_database_common::postgres;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
 use drogue_cloud_device_state_service::service::postgres::PostgresServiceConfiguration;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
@@ -11,9 +12,8 @@ use drogue_cloud_service_api::{
     endpoints::*,
     kafka::{KafkaClientConfig, KafkaConfig},
 };
-use drogue_cloud_service_common::client::DeviceStateClientConfig;
 use drogue_cloud_service_common::{
-    client::{RegistryConfig, UserAuthClientConfig},
+    client::{DeviceStateClientConfig, RegistryConfig, UserAuthClientConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
     openid::{
         AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
@@ -22,8 +22,10 @@ use drogue_cloud_service_common::{
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use futures::future::{select, Either};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 use url::Url;
 
 #[macro_use]
@@ -693,15 +695,19 @@ fn main() {
             token_config: Some(token_config.clone()),
         };
 
-        let mut pg = deadpool_postgres::Config::new();
-        pg.host = Some(server.database.endpoint.host.clone());
-        pg.port = Some(server.database.endpoint.port);
-        pg.user = Some(server.database.user.clone());
-        pg.password = Some(server.database.password.clone());
-        pg.dbname = Some(server.database.db.clone());
-        pg.manager = Some(deadpool_postgres::ManagerConfig {
+        let mut db = deadpool_postgres::Config::new();
+        db.host = Some(server.database.endpoint.host.clone());
+        db.port = Some(server.database.endpoint.port);
+        db.user = Some(server.database.user.clone());
+        db.password = Some(server.database.password.clone());
+        db.dbname = Some(server.database.db.clone());
+        db.manager = Some(deadpool_postgres::ManagerConfig {
             recycling_method: deadpool_postgres::RecyclingMethod::Fast,
         });
+        let pg = postgres::Config {
+            db,
+            tls: Default::default(),
+        };
 
         let authurl: String = server.device_auth.clone().into();
         let auth = AuthConfig {

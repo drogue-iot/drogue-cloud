@@ -1,5 +1,4 @@
 use chrono::Duration;
-use deadpool::Runtime;
 use drogue_cloud_database_common::{
     models::outbox::{OutboxAccessor, OutboxEntry, PostgresOutboxAccessor},
     utils::millis_since_epoch,
@@ -9,7 +8,6 @@ use drogue_cloud_test_common::{client, db};
 use futures::TryStreamExt;
 use log::LevelFilter;
 use serial_test::serial;
-use tokio_postgres::NoTls;
 
 pub fn init() {
     let _ = env_logger::builder()
@@ -26,7 +24,7 @@ async fn test_outbox() -> anyhow::Result<()> {
     let cli = client();
     let db = db(&cli, |pg| pg)?;
 
-    let pool = db.config.create_pool(Some(Runtime::Tokio1), NoTls)?;
+    let pool = db.config.create_pool()?;
     let c = pool.get().await?;
 
     let outbox = PostgresOutboxAccessor::new(&c);
@@ -209,7 +207,7 @@ async fn test_recreate_resource() -> anyhow::Result<()> {
     let cli = client();
     let db = db(&cli, |pg| pg)?;
 
-    let pool = db.config.create_pool(Some(Runtime::Tokio1), NoTls)?;
+    let pool = db.config.create_pool()?;
     let c = pool.get().await?;
 
     let outbox = PostgresOutboxAccessor::new(&c);

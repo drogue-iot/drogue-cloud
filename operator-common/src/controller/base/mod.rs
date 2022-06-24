@@ -15,7 +15,6 @@ use crate::controller::{
 };
 use anyhow::Context;
 use async_trait::async_trait;
-use deadpool::Runtime;
 use drogue_client::error::ClientError;
 use std::{
     fmt::Debug,
@@ -26,7 +25,6 @@ use std::{
     time::Duration,
 };
 use tokio::sync::Mutex;
-use tokio_postgres::NoTls;
 use tracing::instrument;
 
 pub const CONDITION_RECONCILED: &str = "Reconciled";
@@ -92,7 +90,7 @@ where
 
         let pool = config
             .pg
-            .create_pool(Some(Runtime::Tokio1), NoTls)
+            .create_pool()
             .context("Failed to create database pool")?;
 
         let instance = config.instance;

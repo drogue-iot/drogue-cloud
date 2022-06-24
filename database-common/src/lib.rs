@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod error;
 pub mod models;
+pub mod postgres;
 pub mod utils;
 
 use crate::error::ServiceError;

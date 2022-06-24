@@ -2,10 +2,9 @@ use super::*;
 
 use async_trait::async_trait;
 use chrono::Utc;
-use deadpool::Runtime;
 use deadpool_postgres::{Pool, Transaction};
 use drogue_client::registry::v1::Application;
-use drogue_cloud_database_common::{Client, DatabaseService};
+use drogue_cloud_database_common::{postgres, Client, DatabaseService};
 use drogue_cloud_endpoint_common::sender::{
     DownstreamSender, Publish, PublishId, PublishOptions, PublishOutcome, Publisher,
 };
@@ -16,7 +15,7 @@ use std::{sync::Arc, time::Duration};
 use tokio::time::sleep;
 use tokio_postgres::{
     types::{Json, Type},
-    NoTls, Row,
+    Row,
 };
 use uuid::Uuid;
 
@@ -24,7 +23,7 @@ use uuid::Uuid;
 pub struct PostgresServiceConfiguration {
     #[serde(with = "humantime_serde", default = "default_session_timeout")]
     pub session_timeout: Duration,
-    pub pg: deadpool_postgres::Config,
+    pub pg: postgres::Config,
 }
 
 const fn default_session_timeout() -> Duration {
@@ -45,7 +44,7 @@ impl PostgresDeviceStateService {
         sender: DownstreamSender,
         registry: impl ApplicationLookup + 'static,
     ) -> anyhow::Result<Self> {
-        let pool = config.pg.create_pool(Some(Runtime::Tokio1), NoTls)?;
+        let pool = config.pg.create_pool()?;
 
         let timeout = chrono::Duration::from_std(config.session_timeout)?;
 
