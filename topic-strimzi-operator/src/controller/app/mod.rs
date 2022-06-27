@@ -31,6 +31,7 @@ use std::{ops::Deref, time::Duration};
 
 const FINALIZER: &str = "kafka";
 const LABEL_KAFKA_CLUSTER: &str = "strimzi.io/cluster";
+const LABEL_MARKER: &str = "drogue.io/auto-created";
 pub const ANNOTATION_APP_NAME: &str = "drogue.io/application-name";
 
 pub struct ApplicationController {

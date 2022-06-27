@@ -1,9 +1,11 @@
-use super::{condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER};
+use super::{
+    condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER,
+    LABEL_MARKER,
+};
 use crate::controller::ControllerConfig;
 use async_trait::async_trait;
-use drogue_client::registry::v1::DownstreamSpec;
 use drogue_client::{
-    registry::v1::{Application, KafkaAppStatus, KafkaUserStatus},
+    registry::v1::{Application, DownstreamSpec, KafkaAppStatus, KafkaUserStatus},
     Translator,
 };
 use drogue_cloud_operator_common::controller::reconciler::{
@@ -58,6 +60,8 @@ impl CreateUser<'_> {
                 user.metadata.labels.use_or_create(|labels| {
                     // set target cluster
                     labels.insert(LABEL_KAFKA_CLUSTER.into(), self.config.cluster_name.clone());
+                    // set marker
+                    labels.insert(LABEL_MARKER.into(), "true".to_string());
                 });
                 user.metadata.annotations.use_or_create(|annotations| {
                     annotations.insert(ANNOTATION_APP_NAME.into(), app.clone());
@@ -167,11 +171,7 @@ impl<'o> ProgressOperation<ConstructContext> for CreateUser<'o> {
         "CreateUser".into()
     }
 
-    async fn run(
-        &self,
-        mut ctx: ConstructContext,
-    ) -> drogue_cloud_operator_common::controller::reconciler::progress::Result<ConstructContext>
-    {
+    async fn run(&self, mut ctx: ConstructContext) -> progress::Result<ConstructContext> {
         let password = find_user_password(&ctx.app);
         let (user, user_name) = self
             .ensure_kafka_user(ctx.app.metadata.name.clone(), password)

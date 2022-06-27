@@ -1,4 +1,7 @@
-use super::{condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER};
+use super::{
+    condition_ready, retry, ConstructContext, ANNOTATION_APP_NAME, LABEL_KAFKA_CLUSTER,
+    LABEL_MARKER,
+};
 use crate::controller::ControllerConfig;
 use async_trait::async_trait;
 use drogue_client::{registry::v1::KafkaAppStatus, Translator};
@@ -11,8 +14,7 @@ use kube::{
     api::{ApiResource, DynamicObject},
     Api, Resource,
 };
-use operator_framework::process::create_or_update_by;
-use operator_framework::utils::UseOrCreate;
+use operator_framework::{process::create_or_update_by, utils::UseOrCreate};
 use serde_json::json;
 
 pub struct CreateTopic<'o> {
@@ -45,6 +47,8 @@ impl CreateTopic<'_> {
                 // set target cluster
                 topic.metadata.labels.use_or_create(|labels| {
                     labels.insert(LABEL_KAFKA_CLUSTER.into(), config.cluster_name.clone());
+                    // set marker
+                    labels.insert(LABEL_MARKER.into(), "true".to_string());
                 });
 
                 topic.metadata.annotations.use_or_create(|annotations| {
