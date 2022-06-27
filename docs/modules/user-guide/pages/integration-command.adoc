@@ -1,3 +1,5 @@
 = Command HTTP integration
 
 The command HTTP integration provides a simple HTTP based API to send commands to devices.
+
+It is part of the API endpoint: xref:api:endpoints.adoc#_command_control[Command API].
