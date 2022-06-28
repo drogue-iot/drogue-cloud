@@ -7,14 +7,25 @@ use actix::{
     fut, prelude::*, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner,
     Handler, Running, WrapFuture,
 };
-use actix_web_actors::ws::{self, Message::Text};
+use actix_web_actors::ws;
 use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
+use prometheus::{register_int_counter_vec, IntCounterVec};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 const AUTH_CHECK_INTERVAL: Duration = Duration::from_secs(90);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+
+lazy_static! {
+    pub static ref INCOMING_MESSAGE: IntCounterVec = register_int_counter_vec!(
+        "drogue_ws_integration_incoming_message",
+        "Incoming WS integration message",
+        &["type"]
+    )
+    .unwrap();
+}
 
 // This is the actor handling one websocket connection.
 pub struct WsHandler {
@@ -132,23 +143,35 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
             Ok(ws::Message::Ping(msg)) => {
+                INCOMING_MESSAGE.with_label_values(&["ping"]).inc();
                 self.heartbeat = Instant::now();
                 ctx.pong(&msg);
             }
             Ok(ws::Message::Pong(_)) => {
+                INCOMING_MESSAGE.with_label_values(&["pong"]).inc();
                 self.heartbeat = Instant::now();
             }
-            Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
+            Ok(ws::Message::Binary(bin)) => {
+                INCOMING_MESSAGE.with_label_values(&["binary"]).inc();
+                ctx.binary(bin)
+            }
+            Ok(ws::Message::Text(s)) => {
+                INCOMING_MESSAGE.with_label_values(&["text"]).inc();
+                log::debug!("Received text from client {}:\n{}", self.id, s)
+            }
             Ok(ws::Message::Close(reason)) => {
+                INCOMING_MESSAGE.with_label_values(&["close"]).inc();
                 log::debug!("Client disconnected");
                 ctx.close(reason);
                 ctx.stop();
             }
             Ok(ws::Message::Continuation(_)) => {
+                INCOMING_MESSAGE.with_label_values(&["continuation"]).inc();
                 ctx.stop();
             }
-            Ok(ws::Message::Nop) => (),
-            Ok(Text(s)) => log::debug!("Received text from client {}:\n{}", self.id, s),
+            Ok(ws::Message::Nop) => {
+                INCOMING_MESSAGE.with_label_values(&["nop"]).inc();
+            }
             Err(e) => {
                 log::error!("WebSocket Protocol Error: {}", e);
                 ctx.stop()
