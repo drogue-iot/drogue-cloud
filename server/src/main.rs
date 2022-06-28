@@ -980,14 +980,23 @@ fn main() {
                 {
                     log::info!("Enabling Websocket integration");
                     let bind_addr = server.websocket_integration.clone().into();
+                    let cert_bundle_file: Option<String> =
+                        matches.value_of("server-cert").map(|s| s.to_string());
+                    let key_file: Option<String> =
+                        matches.value_of("server-key").map(|s| s.to_string());
                     let kafka = server.kafka.clone();
                     let user_auth = user_auth.clone();
                     let config = drogue_cloud_websocket_integration::Config {
+                        disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                         workers: Some(1),
+                        max_json_payload_size: 65536,
+                        max_payload_size: 65536,
                         health: None,
                         enable_access_token: true,
                         oauth: oauth.clone(),
                         bind_addr,
+                        cert_bundle_file,
+                        key_file,
                         registry: registry.clone(),
                         kafka,
                         user_auth,

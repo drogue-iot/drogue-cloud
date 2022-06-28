@@ -42,6 +42,7 @@ native-tls = { version = "0.2", optional = true }
 opentelemetry-jaeger = { version = "0.16", features = ["rt-tokio"], optional = true }
 rust_tls = { version = "0.20", package = "rustls", optional = true, features = ["dangerous_configuration"] }
 webpki = { version = "0.22", optional = true }
+open_ssl = { version = "0.10", package = "openssl", optional = true }
 
 drogue-cloud-event-common = { path = "../event-common" }
 drogue-cloud-service-api = { path = "../service-api" }
@@ -51,6 +52,8 @@ actix-rt = "2.7"
 tokio = { version = "1", features = ["full"] }
 
 [features]
-default = ["rustls", "native-tls"]
+default = ["rustls", "native-tls", "actix"]
 rustls = ["rust_tls", "webpki", "reqwest/rustls-tls"]
+openssl = ["open_ssl", "drogue-cloud-service-api/openssl"]
 jaeger = ["opentelemetry-jaeger"]
+actix = ["drogue-cloud-service-api/actix-http"]
