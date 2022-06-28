@@ -69,7 +69,7 @@ echo
 echo "The installer created a default application 'example-app' and device 'device1' for you. The following commands were used:"
 echo
 echo "  drg create app example-app"
-echo "  drg create device --app example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"hey-rodney\" }]}}'"
+echo "  drg create device --application example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"hey-rodney\" }]}}'"
 echo
 bold "Subscribe to device data:"
 bold "---------------------------"
@@ -86,7 +86,7 @@ echo "You can also subscribe to data using WebSockets, receiving Cloud Events:"
 echo "  websocat  -H=\"Authorization: Bearer \$(drg whoami -t)\" $WEBSOCKET_INTEGRATION_URL/example-app"
 echo
 echo "Or simply through drg:"
-echo "  drg stream example-app"
+echo "  drg stream --application example-app"
 echo
 bold "Publish data:"
 bold "---------------"
@@ -119,7 +119,7 @@ echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device1
 echo
 echo "Or simply through drg:"
 echo
-echo "  drg cmd set-temp device1 --app example-app --payload '{\"target-temp\":25}' "
+echo "  drg cmd set-temp device1 --application example-app --payload '{\"target-temp\":25}' "
 echo
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
@@ -150,7 +150,7 @@ echo "Create a new device:"
 echo "-----------------------"
 echo
 echo "  drg create app example-app"
-echo "  drg create device --app example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"hey-rodney\" }]}}'"
+echo "  drg create device --application example-app device1 --spec '{\"credentials\": {\"credentials\":[{ \"pass\": \"hey-rodney\" }]}}'"
 echo "  cat FirstTestDevice.json | http --auth ditto:ditto PUT $TWIN_API/api/2/things/example-app:device1"
 echo
 echo "Publish some data:"
