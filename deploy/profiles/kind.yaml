@@ -36,6 +36,7 @@ drogueCloudCore:
         port: 30008
     websocket:
       ingress:
+        insecure: true
         port: 30004
 
   console:

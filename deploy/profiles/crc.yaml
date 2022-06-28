@@ -10,6 +10,12 @@ drogueCloudCore:
   console:
     localCertificates: true
 
+  integrations:
+    websocket:
+      ingress:
+        insecure: true
+        port: 80
+
   services:
     console:
       ingress:
