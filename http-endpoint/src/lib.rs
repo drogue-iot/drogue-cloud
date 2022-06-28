@@ -16,7 +16,9 @@ use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
     webapp::{self as actix_web, opentelemetry::RequestTracing, prom::PrometheusMetricsBuilder},
 };
-use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
+use drogue_cloud_service_common::{
+    actix, app::run_main, defaults, health::HealthServerConfig, tls::TlsMode, tls::WithTlsMode,
+};
 use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use serde_json::json;
@@ -127,39 +129,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         }
     });
 
-    let mut http_server = match (config.disable_tls, config.key_file, config.cert_bundle_file) {
-        (false, Some(key), Some(cert)) => {
-            if cfg!(feature = "openssl") {
-                use open_ssl::ssl;
-                let method = ssl::SslMethod::tls_server();
-                let mut builder = ssl::SslAcceptor::mozilla_intermediate_v5(method)?;
-                builder.set_private_key_file(key, ssl::SslFiletype::PEM)?;
-                builder.set_certificate_chain_file(cert)?;
-                // we ask for client certificates, but don't enforce them
-                builder.set_verify_callback(ssl::SslVerifyMode::PEER, |_, ctx| {
-                    log::debug!(
-                        "Accepting client certificates: {:?}",
-                        ctx.current_cert()
-                            .map(|cert| format!("{:?}", cert.subject_name()))
-                            .unwrap_or_else(|| "<unknown>".into())
-                    );
-                    true
-                });
-
-                http_server
-                    .bind_openssl(config.bind_addr, builder)?
-                    .tls_handshake_timeout(std::time::Duration::from_secs(10))
-            } else {
-                panic!("TLS is required, but no TLS implementation enabled")
-            }
-        }
-        (true, None, None) => http_server.bind(config.bind_addr)?,
-        (false, _, _) => panic!("Wrong TLS configuration: TLS enabled, but key or cert is missing"),
-        (true, Some(_), _) | (true, _, Some(_)) => {
-            // the TLS configuration must be consistent, to prevent configuration errors.
-            panic!("Wrong TLS configuration: key or cert specified, but TLS is disabled")
-        }
-    };
+    let mut http_server = actix::bind_http(
+        http_server,
+        config.bind_addr,
+        config.disable_tls.with_tls_mode(TlsMode::Client),
+        config.key_file,
+        config.cert_bundle_file,
+    )?;
 
     if let Some(workers) = config.workers {
         http_server = http_server.workers(workers)
