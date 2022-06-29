@@ -157,18 +157,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
                 INCOMING_MESSAGE.with_label_values(&["pong"]).inc();
                 self.heartbeat = Instant::now();
             }
-            Ok(ws::Message::Binary(bin)) => {
+            Ok(ws::Message::Binary(data)) => {
                 INCOMING_MESSAGE.with_label_values(&["binary"]).inc();
-                ctx.binary(bin)
+                log::debug!("Received binary from client {}:\n{:?}", self.id, data)
             }
-            Ok(ws::Message::Text(s)) => {
+            Ok(ws::Message::Text(data)) => {
                 INCOMING_MESSAGE.with_label_values(&["text"]).inc();
-                log::debug!("Received text from client {}:\n{}", self.id, s)
+                log::debug!("Received text from client {}:\n{}", self.id, data)
             }
             Ok(ws::Message::Close(reason)) => {
                 INCOMING_MESSAGE.with_label_values(&["close"]).inc();
-                log::debug!("Client disconnected");
-                ctx.close(reason);
+                log::debug!("Client disconnected - reason: {:?}", reason);
                 ctx.stop();
             }
             Ok(ws::Message::Continuation(_)) => {
