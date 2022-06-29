@@ -168,6 +168,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
             Ok(ws::Message::Close(reason)) => {
                 INCOMING_MESSAGE.with_label_values(&["close"]).inc();
                 log::debug!("Client disconnected - reason: {:?}", reason);
+                ctx.close(reason);
                 ctx.stop();
             }
             Ok(ws::Message::Continuation(_)) => {
