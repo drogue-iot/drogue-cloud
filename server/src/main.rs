@@ -22,6 +22,7 @@ use drogue_cloud_service_common::{
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use futures::future::{select, Either};
+use keycloak::types::CredentialRepresentation;
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
@@ -64,6 +65,7 @@ struct ServerConfig {
     pub user_auth: Endpoint,
     pub device_state: Endpoint,
     pub database: Database,
+    pub drogue: Drogue,
     pub keycloak: Keycloak,
     pub kafka: KafkaClientConfig,
     pub tls_insecure: bool,
@@ -84,6 +86,12 @@ pub struct Keycloak {
     realm: String,
     user: String,
     password: String,
+}
+
+#[derive(Clone)]
+pub struct Drogue {
+    admin_user: String,
+    admin_password: String,
 }
 
 impl ServerConfig {
@@ -131,7 +139,7 @@ impl ServerConfig {
                     .to_string(),
                 realm: matches
                     .value_of("keycloak-realm")
-                    .unwrap_or("master")
+                    .unwrap_or("drogue")
                     .to_string(),
                 user: matches
                     .value_of("keycloak-user")
@@ -139,6 +147,16 @@ impl ServerConfig {
                     .to_string(),
                 password: matches
                     .value_of("keycloak-password")
+                    .unwrap_or("admin123456")
+                    .to_string(),
+            },
+            drogue: Drogue {
+                admin_user: matches
+                    .value_of("drogue-admin-user")
+                    .unwrap_or("admin")
+                    .to_string(),
+                admin_password: matches
+                    .value_of("drogue-admin-password")
                     .unwrap_or("admin123456")
                     .to_string(),
             },
@@ -264,6 +282,29 @@ fn configure_keycloak(config: &ServerConfig) {
             config: Some(mapper_config),
         }];
 
+        let mut failed = 0;
+
+        // configure the realm
+        let r = keycloak::types::RealmRepresentation {
+            realm: Some(server.realm.clone()),
+            enabled: Some(true),
+            ..Default::default()
+        };
+
+        if let Err(e) = admin.post(r).await {
+            if let keycloak::KeycloakError::HttpFailure {
+                status: 409,
+                body: _,
+                text: _,
+            } = e
+            {
+                log::trace!("Realm 'drogue' already exists");
+            } else {
+                log::warn!("Error creating 'drogue' realm: {:?}", e);
+                failed += 1;
+            }
+        }
+
         // Configure oauth account
         let mut c: keycloak::types::ClientRepresentation = Default::default();
         c.client_id.replace("drogue".to_string());
@@ -282,7 +323,6 @@ fn configure_keycloak(config: &ServerConfig) {
         c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
         c.protocol_mappers.replace(mappers);
 
-        let mut failed = 0;
         if let Err(e) = admin.realm_clients_post(&server.realm, c).await {
             if let keycloak::KeycloakError::HttpFailure {
                 status: 409,
@@ -402,6 +442,34 @@ fn configure_keycloak(config: &ServerConfig) {
             }
             _ => {
                 log::warn!("Error retrieving 'drogue-user' and 'drogue-admin' roles");
+                failed += 1;
+            }
+        }
+
+        // configure the admin user
+
+        let u = keycloak::types::UserRepresentation {
+            username: Some(config.drogue.admin_user.clone()),
+            enabled: Some(true),
+            credentials: Some(vec![CredentialRepresentation {
+                type_: Some("password".into()),
+                value: Some(config.drogue.admin_password.clone()),
+                temporary: Some(false),
+                ..Default::default()
+            }]),
+            ..Default::default()
+        };
+
+        if let Err(e) = admin.realm_users_post(&server.realm, u).await {
+            if let keycloak::KeycloakError::HttpFailure {
+                status: 409,
+                body: _,
+                text: _,
+            } = e
+            {
+                log::trace!("User 'admin' already exists");
+            } else {
+                log::warn!("Error creating 'admin' user: {:?}", e);
                 failed += 1;
             }
         }
