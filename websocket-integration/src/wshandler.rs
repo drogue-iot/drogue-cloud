@@ -8,7 +8,9 @@ use actix::{
     Handler, Running, WrapFuture,
 };
 use actix_web_actors::ws;
+use actix_web_actors::ws::CloseReason;
 use chrono::{DateTime, Utc};
+use drogue_cloud_service_api::webapp::http::ws::CloseCode;
 use lazy_static::lazy_static;
 use prometheus::{register_int_counter_vec, IntCounterVec};
 use std::time::{Duration, Instant};
@@ -76,7 +78,11 @@ impl WsHandler {
         if let Some(expiration) = self.auth_expiration {
             ctx.run_interval(AUTH_CHECK_INTERVAL, move |_act, ctx| {
                 if Utc::now() > expiration {
-                    log::warn!("Disconnecting client : JWT token expired");
+                    log::info!("Disconnecting client: JWT token expired");
+                    ctx.close(Some(CloseReason {
+                        code: CloseCode::Policy,
+                        description: Some("JWT token expired".to_string()),
+                    }));
                     ctx.stop();
                 }
             });
