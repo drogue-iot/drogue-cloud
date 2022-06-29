@@ -286,9 +286,10 @@ impl StateRunner {
 
                     return Ok(self.next_deadline(response.expires));
                 }
-                Err(ClientError::Service(ErrorInformation { error, .. }))
-                    if error == "NotInitialized" =>
-                {
+                Err(ClientError::Service {
+                    error: ErrorInformation { error, .. },
+                    ..
+                }) if error == "NotInitialized" => {
                     // we lost the session
                     anyhow::bail!("Session got invalidated. Must terminate.");
                 }

@@ -21,9 +21,9 @@ pub(crate) async fn default_error<T>(
     response: Response,
 ) -> Result<T, ClientError> {
     match response.json::<ErrorInformation>().await {
-        Ok(result) => {
-            log::debug!("Service reported error ({}): {}", code, result);
-            Err(ClientError::Service(result))
+        Ok(error) => {
+            log::debug!("Service reported error ({}): {}", code, error);
+            Err(ClientError::Service { code, error })
         }
         Err(err) => {
             log::debug!(
