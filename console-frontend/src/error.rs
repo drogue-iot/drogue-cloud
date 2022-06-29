@@ -72,10 +72,7 @@ impl ErrorProvider for anyhow::Error {
     }
 }
 
-impl<E> ErrorProvider for ClientError<E>
-where
-    E: std::error::Error + Send + Sync + 'static,
-{
+impl ErrorProvider for ClientError {
     fn description(self) -> String {
         self.to_string()
     }

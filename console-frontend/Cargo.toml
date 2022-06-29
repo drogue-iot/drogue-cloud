@@ -94,7 +94,7 @@ lto = true
 patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "32c809e030ca9ec5f7785dc7e0a78d574b9830f8" } # FIXME: awaiting release
 #patternfly-yew = { path = "../../patternfly-yew" }
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "788e3ba00b675b15e3adcd83836f6e2b8f678bc3" } # FIXME: awaiting release
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "be7f2a715ffc03e1f3df8c49b29dc276552fd6c5" } # FIXME: awaiting release
 #drogue-client = { path = "../../drogue-client" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release

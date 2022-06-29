@@ -31,6 +31,8 @@ pub async fn start_connection(
         group_id.group_id,
         service_addr.get_ref().clone(),
         auth_expiration,
+        req.app_data().cloned(),
+        req.app_data().cloned(),
     );
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)

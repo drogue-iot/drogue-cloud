@@ -3,6 +3,7 @@ use cloudevents::{
     event::{Data, ExtensionValue},
     AttributesReader, Event,
 };
+use drogue_client::integration::ws::v1::client;
 use drogue_cloud_console_common::EndpointInformation;
 use drogue_cloud_service_api::EXT_DEVICE;
 use itertools::Itertools;
@@ -11,6 +12,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{MessageEvent, WebSocket};
+use yew::context::ContextHandle;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
 
@@ -23,7 +25,13 @@ pub struct Props {
 }
 
 pub struct Spy {
-    ws: Option<(WebSocket, Closure<dyn FnMut(&MessageEvent)>)>,
+    ws: Option<(
+        WebSocket,
+        Closure<dyn FnMut(&MessageEvent)>,
+        Closure<dyn FnMut(ErrorEvent)>,
+    )>,
+    oauth2: Option<OAuth2Context>,
+    _oauth2_handle: Option<ContextHandle<OAuth2Context>>,
     events: SharedTableModel<Entry>,
 
     application: String,
@@ -43,6 +51,7 @@ pub enum Msg {
     /// Source failed
     Failed,
     SetApplication(String),
+    OAuth2Context(OAuth2Context),
 }
 
 const DEFAULT_MAX_SIZE: usize = 200;
@@ -53,9 +62,18 @@ impl Component for Spy {
 
     fn create(ctx: &Context<Self>) -> Self {
         let application = ctx.props().application.clone().unwrap_or_default();
+        let (oauth2, oauth2_handle) = match ctx
+            .link()
+            .context::<OAuth2Context>(ctx.link().callback(|oauth| Msg::OAuth2Context(oauth)))
+        {
+            Some((oauth2, oauth2_handle)) => (Some(oauth2), Some(oauth2_handle)),
+            _ => (None, None),
+        };
         Self {
             events: Default::default(),
             ws: None,
+            oauth2,
+            _oauth2_handle: oauth2_handle,
             running: false,
             total_received: 0,
             application,
@@ -95,6 +113,24 @@ impl Component for Spy {
             }
             Msg::SetApplication(application) => {
                 self.application = application;
+            }
+            Msg::OAuth2Context(oauth2) => {
+                // refresh the token of the connection
+                if let (Some((ws, _, _)), Some(access_token)) = (&self.ws, oauth2.access_token()) {
+                    match serde_json::to_string(&client::Message::RefreshAccessToken(
+                        access_token.to_string(),
+                    )) {
+                        Ok(msg) => {
+                            log::info!("Sending new access token: {}", msg);
+                            let _ = ws.send_with_str(&msg);
+                        }
+                        Err(err) => {
+                            log::error!("Failed to encode message: {err}");
+                        }
+                    }
+                }
+                // update our token
+                self.oauth2 = Some(oauth2);
             }
         }
         true
@@ -177,7 +213,7 @@ impl Component for Spy {
     }
 
     fn destroy(&mut self, _: &Context<Self>) {
-        if let Some((ws, _)) = self.ws.take() {
+        if let Some((ws, _, _)) = self.ws.take() {
             let _ = ws.close();
         }
     }
@@ -204,12 +240,10 @@ impl Spy {
             _ => None,
         };
 
-        let auth = ctx.link().context::<OAuth2Context>(Callback::noop());
-
         if let (
             Some(mut url),
-            Some((OAuth2Context::Authenticated(Authentication { access_token, .. }), _)),
-        ) = (url, auth)
+            Some(OAuth2Context::Authenticated(Authentication { access_token, .. })),
+        ) = (url, self.oauth2.as_ref())
         {
             url.query_pairs_mut().append_pair("token", &access_token);
 
@@ -238,16 +272,15 @@ impl Spy {
                 link.send_message(Msg::Failed);
             }) as Box<dyn FnMut(ErrorEvent)>);
             ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
-            on_error.forget();
 
             // store result
             self.running = true;
-            self.ws = Some((ws, onmessage_callback));
+            self.ws = Some((ws, onmessage_callback, on_error));
         }
     }
 
     fn stop(&mut self) {
-        if let Some((ws, _)) = self.ws.take() {
+        if let Some((ws, _, _)) = self.ws.take() {
             let _ = ws.close();
         }
         self.running = false

@@ -1,4 +1,5 @@
 use actix::prelude::{Message, Recipient};
+use drogue_client::integration::ws::v1::client;
 use drogue_cloud_integration_common::stream::EventStream;
 use drogue_cloud_service_common::error::ServiceError;
 use uuid::Uuid;
@@ -41,3 +42,8 @@ pub struct StreamError {
     pub error: ServiceError,
     pub id: Uuid,
 }
+
+/// Protocol (client) message
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct Protocol(pub client::Message);

@@ -1,5 +1,5 @@
 use crate::{
-    messages::{Disconnect, StreamError, Subscribe, WsEvent},
+    messages::{Disconnect, Protocol, StreamError, Subscribe, WsEvent},
     service::Service,
     CONNECTIONS_COUNTER,
 };
@@ -7,10 +7,20 @@ use actix::{
     fut, prelude::*, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner,
     Handler, Running, WrapFuture,
 };
-use actix_web_actors::ws;
-use actix_web_actors::ws::CloseReason;
-use chrono::{DateTime, Utc};
-use drogue_cloud_service_api::webapp::http::ws::CloseCode;
+use actix_web_actors::ws::{self, CloseReason};
+use chrono::{DateTime, TimeZone, Utc};
+use drogue_client::integration::ws::v1::client;
+use drogue_cloud_service_api::{
+    auth::user::{
+        authz::{self, AuthorizationRequest, AuthorizationResponse, Permission},
+        UserInformation,
+    },
+    webapp::http::ws::CloseCode,
+};
+use drogue_cloud_service_common::{
+    client::UserAuthClient,
+    openid::{Authenticator, CustomClaims},
+};
 use lazy_static::lazy_static;
 use prometheus::{register_int_counter_vec, IntCounterVec};
 use std::time::{Duration, Instant};
@@ -29,36 +39,94 @@ lazy_static! {
     .unwrap();
 }
 
-// This is the actor handling one websocket connection.
-pub struct WsHandler {
-    // the topic to listen to
+#[derive(Clone)]
+struct AuthContext {
     application: String,
-    // the optional consumer group
+    /// authenticator for refreshing the token
+    authenticator: Authenticator,
+    /// user authorizer
+    user_auth: UserAuthClient,
+}
+
+enum AuthOutcome {
+    Allow(DateTime<Utc>),
+    Deny,
+}
+
+impl AuthContext {
+    /// Validate the openid (only) access token.
+    ///
+    /// We do not support credential types!
+    async fn validate_token(&self, token: String) -> Result<AuthOutcome, anyhow::Error> {
+        let token = self.authenticator.validate_token(token).await?;
+        let user = UserInformation::Authenticated(token.clone().into());
+
+        match self
+            .user_auth
+            .authorize(AuthorizationRequest {
+                application: self.application.clone(),
+                permission: Permission::Read,
+                user_id: user.user_id().map(ToString::to_string),
+                roles: user.roles().clone(),
+            })
+            .await?
+        {
+            AuthorizationResponse {
+                outcome: authz::Outcome::Allow,
+            } => Ok(AuthOutcome::Allow(
+                Utc.timestamp(token.standard_claims().exp, 0),
+            )),
+            AuthorizationResponse {
+                outcome: authz::Outcome::Deny,
+            } => Ok(AuthOutcome::Deny),
+        }
+    }
+}
+
+/// This is the actor handling one websocket connection.
+pub struct WsHandler {
+    /// the topic to listen to
+    application: String,
+    /// the optional consumer group
     group_id: Option<String>,
-    // to exit the actor if the client was disconnected
+    /// to exit the actor if the client was disconnected
     heartbeat: Instant,
     service_addr: Addr<Service>,
     id: Uuid,
-    // When the JWT expires, represented as the number of seconds from epoch
-    // It's optional, as some clients will use an access token, which are valid indefinitely
+    /// When the JWT expires, represented as the number of seconds from epoch
+    /// It's optional, as some clients will use an access token, which are valid indefinitely
     auth_expiration: Option<DateTime<Utc>>,
+    auth_context: Option<AuthContext>,
 }
 
 impl WsHandler {
     pub fn new(
-        app: String,
+        application: String,
         group_id: Option<String>,
         service_addr: Addr<Service>,
         auth_expiration: Option<DateTime<Utc>>,
+        authenticator: Option<Authenticator>,
+        user_auth: Option<UserAuthClient>,
     ) -> WsHandler {
         CONNECTIONS_COUNTER.inc();
+
+        let auth_context = match (authenticator, user_auth) {
+            (Some(authenticator), Some(user_auth)) => Some(AuthContext {
+                application: application.clone(),
+                authenticator,
+                user_auth,
+            }),
+            _ => None,
+        };
+
         WsHandler {
-            application: app,
+            application,
             group_id,
             heartbeat: Instant::now(),
             service_addr,
             id: Uuid::new_v4(),
             auth_expiration,
+            auth_context,
         }
     }
 
@@ -86,6 +154,23 @@ impl WsHandler {
                     ctx.stop();
                 }
             });
+        }
+    }
+
+    /// Handle the parse result of a client protocol message.
+    fn handle_protocol_message(
+        ctx: &mut ws::WebsocketContext<Self>,
+        result: Result<client::Message, serde_json::Error>,
+    ) {
+        match result {
+            Ok(msg) => ctx.address().do_send(Protocol(msg)),
+            Err(err) => {
+                ctx.close(Some(CloseReason {
+                    code: CloseCode::Protocol,
+                    description: Some(err.to_string()),
+                }));
+                ctx.stop();
+            }
         }
     }
 }
@@ -159,11 +244,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsHandler {
             }
             Ok(ws::Message::Binary(data)) => {
                 INCOMING_MESSAGE.with_label_values(&["binary"]).inc();
-                log::debug!("Received binary from client {}:\n{:?}", self.id, data)
+                Self::handle_protocol_message(
+                    ctx,
+                    serde_json::from_slice::<client::Message>(&data),
+                );
             }
             Ok(ws::Message::Text(data)) => {
                 INCOMING_MESSAGE.with_label_values(&["text"]).inc();
-                log::debug!("Received text from client {}:\n{}", self.id, data)
+                Self::handle_protocol_message(ctx, serde_json::from_str::<client::Message>(&data));
             }
             Ok(ws::Message::Close(reason)) => {
                 INCOMING_MESSAGE.with_label_values(&["close"]).inc();
@@ -205,7 +293,66 @@ impl Handler<StreamError> for WsHandler {
             "Service encountered an error with the stream: {}",
             msg.error
         );
-        ctx.text(format!("{:?}", msg.error));
+        ctx.close(Some(CloseReason {
+            code: CloseCode::Error,
+            description: Some(msg.error.to_string()),
+        }));
         ctx.stop()
+    }
+}
+
+impl Handler<Protocol> for WsHandler {
+    type Result = ResponseActFuture<Self, ()>;
+
+    fn handle(&mut self, msg: Protocol, _ctx: &mut Self::Context) -> Self::Result {
+        match msg.0 {
+            client::Message::RefreshAccessToken(token) => {
+                let auth_context = self.auth_context.clone();
+
+                Box::pin(
+                    async {
+                        if let Some(auth_context) = auth_context {
+                            auth_context.validate_token(token).await
+                        } else {
+                            Err(anyhow::anyhow!("Token authentication is not enabled"))
+                        }
+                    }
+                    .into_actor(self)
+                    .map(|result, act, ctx| {
+                        match result {
+                            Ok(outcome) => {
+                                match outcome {
+                                    AuthOutcome::Allow(auth_expiration) => {
+                                        // set new token
+                                        log::info!(
+                                            "Updating token expiration: {:?} -> {:?}",
+                                            act.auth_expiration,
+                                            auth_expiration
+                                        );
+                                        act.auth_expiration = Some(auth_expiration);
+                                    }
+                                    AuthOutcome::Deny => {
+                                        ctx.close(Some(CloseReason {
+                                            code: CloseCode::Policy,
+                                            description: Some(
+                                                "Failed to refresh token".to_string(),
+                                            ),
+                                        }));
+                                        ctx.stop();
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                ctx.close(Some(CloseReason {
+                                    code: CloseCode::Error,
+                                    description: Some(format!("Failed to refresh token: {err}")),
+                                }));
+                                ctx.stop();
+                            }
+                        }
+                    }),
+                )
+            }
+        }
     }
 }

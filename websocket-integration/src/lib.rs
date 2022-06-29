@@ -94,6 +94,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .app_data(service_addr.clone())
+            .app_data(authenticator.clone())
+            .app_data(user_auth.clone())
             .service(
                 web::scope("/{application}")
                     .wrap(AuthZ {

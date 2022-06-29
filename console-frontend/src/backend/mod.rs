@@ -21,7 +21,7 @@ pub struct BackendInformation {
     /// The API URL.
     pub url: Url,
 
-    pub openid: yew_oauth2::openid::Config,
+    pub openid: openid::Config,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub login_note: Option<String>,

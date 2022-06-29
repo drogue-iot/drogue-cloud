@@ -4,9 +4,10 @@ mod validate;
 
 pub use self::config::*;
 pub use authenticator::*;
+pub use openid::CustomClaims;
 
 use drogue_cloud_service_api::auth::user::UserDetails;
-use openid::{CompactJson, CustomClaims, StandardClaims};
+use openid::{CompactJson, StandardClaims};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
