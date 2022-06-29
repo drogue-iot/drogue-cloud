@@ -4,12 +4,13 @@ pub mod utils;
 
 use crate::service::management::ManagementService;
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::web;
 use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
 use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
 use drogue_cloud_service_common::{
+    actix::{HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
     app::run_main,
     client::{UserAuthClient, UserAuthClientConfig},
@@ -18,7 +19,6 @@ use drogue_cloud_service_common::{
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{Authenticator, AuthenticatorConfig},
 };
-use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;
 
@@ -30,9 +30,6 @@ pub struct WebData<S: ManagementService> {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr: String,
-
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
@@ -52,10 +49,7 @@ pub struct Config {
     pub keycloak: KeycloakAdminClientConfig,
 
     #[serde(default)]
-    pub workers: Option<usize>,
-
-    #[serde(default = "defaults::max_json_payload_size")]
-    pub max_json_payload_size: usize,
+    pub http: HttpConfig,
 }
 
 #[macro_export]
@@ -102,11 +96,8 @@ macro_rules! crud {
 
 #[macro_export]
 macro_rules! app {
-    ($sender:ty, $keycloak:ty, $max_json_payload_size:expr, $auth:expr) => {{
-        let app = App::new()
-            .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
-            .wrap(actix_web::middleware::Logger::default())
-            .app_data(web::JsonConfig::default().limit($max_json_payload_size));
+    ($cfg:expr, $sender:ty, $keycloak:ty,  $auth:expr) => {{
+        let app = $cfg;
 
         let app = {
             let scope = web::scope("/api/registry/v1alpha1")
@@ -202,37 +193,26 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
-    let max_json_payload_size = config.max_json_payload_size;
     let db_service = service.clone();
-    let mut main = HttpServer::new(move || {
+
+    let main = HttpBuilder::new(config.http, move |cfg| {
         let auth = AuthN {
             openid: authenticator.as_ref().cloned(),
             token: user_auth.clone(),
             enable_access_token,
         };
-        app!(
-            KafkaEventSender,
-            KeycloakAdminClient,
-            max_json_payload_size,
-            auth
-        )
-        // for the management service
-        .app_data(data.clone())
-        // for the admin service
-        .app_data(web::Data::new(apps::WebData {
-            service: db_service.clone(),
-        }))
+        app!(cfg, KafkaEventSender, KeycloakAdminClient, auth)
+            // for the management service
+            .app_data(data.clone())
+            // for the admin service
+            .app_data(web::Data::new(apps::WebData {
+                service: db_service.clone(),
+            }));
     })
-    .bind(config.bind_addr)
-    .context("error starting server")?;
-
-    if let Some(workers) = config.workers {
-        main = main.workers(workers)
-    }
+    .run()?;
 
     // run
 
-    let main = main.run().err_into().boxed_local();
     run_main([main], config.health, [service.boxed()]).await?;
 
     // exiting

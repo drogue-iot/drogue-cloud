@@ -5,7 +5,9 @@ authors = ["Jean-Baptiste Trystram <jbtrystram@redhat.com>"]
 edition = "2021"
 
 [dependencies]
+actix-cors = "0.6"
 actix-service = "2"
+actix-web-extras = "0.1"
 anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"

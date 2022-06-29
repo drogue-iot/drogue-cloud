@@ -39,20 +39,26 @@ macro_rules! test {
         let s: web::Data<dyn DeviceStateService> = web::Data::from(s);
 
         let $app = drogue_cloud_service_api::webapp::test::init_service(
-            app!(s, 16 * 1024, auth, None)
-                .wrap_fn(|req, srv|{
-                    log::warn!("Running test-user middleware");
-                    use drogue_cloud_service_api::webapp::dev::Service;
-                    use drogue_cloud_service_api::webapp::HttpMessage;
-                    {
-                        let user: Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
-                        if let Some(user) = user {
-                            log::warn!("Replacing user with test-user: {:?}", user);
-                            req.extensions_mut().insert(user.clone());
+            {
+                let app = App::new();
+                app
+                    .configure(move |cfg|{
+                        app!(cfg, s, auth);
+                    })
+                    .wrap_fn(|req, srv|{
+                        log::warn!("Running test-user middleware");
+                        use drogue_cloud_service_api::webapp::dev::Service;
+                        use drogue_cloud_service_api::webapp::HttpMessage;
+                        {
+                            let user: Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
+                            if let Some(user) = user {
+                                log::warn!("Replacing user with test-user: {:?}", user);
+                                req.extensions_mut().insert(user.clone());
+                            }
                         }
-                    }
-                    srv.call(req)
-                })
+                        srv.call(req)
+                    })
+            }
         )
         .await;
 

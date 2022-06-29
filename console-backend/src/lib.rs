@@ -3,16 +3,16 @@ mod api;
 mod demos;
 mod info;
 
-use actix_cors::Cors;
 use actix_web::{
-    get, middleware,
+    get,
     web::{self},
-    App, HttpRequest, HttpResponse, HttpServer, Responder,
+    HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Context;
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
 use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{
+    actix::{CorsBuilder, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
     app::run_main,
     client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
@@ -21,7 +21,6 @@ use drogue_cloud_service_common::{
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{AuthenticatorConfig, TokenConfig},
 };
-use futures::{FutureExt, TryFutureExt};
 use info::DemoFetcher;
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
@@ -51,9 +50,6 @@ async fn index(
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr: String,
-
     pub kafka: KafkaClientConfig,
 
     pub keycloak: KeycloakAdminClientConfig,
@@ -85,7 +81,7 @@ pub struct Config {
     pub enable_kube: bool,
 
     #[serde(default)]
-    pub workers: Option<usize>,
+    pub http: HttpConfig,
 }
 
 pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
@@ -155,8 +151,6 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     let openid_client = openid_client.map(web::Data::new);
 
-    let bind_addr = config.bind_addr.clone();
-
     let keycloak_admin_client =
         KeycloakAdminClient::new(config.keycloak).context("Creating keycloak admin client")?;
     let keycloak_service = web::Data::new(keys::WebData {
@@ -173,18 +167,15 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
 
     // main server
 
-    #[allow(clippy::let_and_return)]
-    let mut main =
-        HttpServer::new(move || {
+    let main =
+        HttpBuilder::new(config.http, move |cfg| {
             let auth = AuthN {
                 openid: authenticator.as_ref().cloned(),
                 token: user_auth.clone(),
                 enable_access_token,
             };
 
-            let app = App::new()
-                .wrap(Cors::permissive())
-                .wrap(middleware::Logger::default())
+            let app = cfg
                 .app_data(web::JsonConfig::default().limit(4096))
                 .app_data(web::Data::new(app_config.clone()));
 
@@ -247,17 +238,13 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                     web::scope("/.well-known")
                         .service(info::get_public_endpoints)
                         .service(info::get_drogue_version),
-                )
+                );
         })
-        .bind(bind_addr)?;
-
-    if let Some(workers) = config.workers {
-        main = main.workers(workers)
-    }
+        .cors(CorsBuilder::Permissive)
+        .run()?;
 
     // run
 
-    let main = main.run().err_into().boxed_local();
     run_main([main], config.health, vec![]).await?;
 
     // done

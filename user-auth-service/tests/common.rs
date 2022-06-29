@@ -24,14 +24,22 @@ macro_rules! test {
         });
 
         let auth = drogue_cloud_service_common::mock_auth!();
-        let $v = actix_web::test::init_service(drogue_cloud_user_auth_service::app!(
-            data,
-            drogue_cloud_access_token_service::mock::MockAccessTokenService,
-            api_key,
-            16 * 1024,
-            false,
-            auth
-        ))
+        let $v = actix_web::test::init_service({
+            let app = App::new();
+
+            let app = app.configure(|cfg| {
+                drogue_cloud_user_auth_service::app!(
+                    cfg,
+                    data,
+                    drogue_cloud_access_token_service::mock::MockAccessTokenService,
+                    api_key,
+                    false,
+                    auth
+                );
+            });
+
+            app
+        })
         .await;
 
         $code;

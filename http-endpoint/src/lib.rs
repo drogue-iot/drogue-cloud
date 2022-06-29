@@ -4,7 +4,7 @@ mod telemetry;
 mod ttn;
 mod x509;
 
-use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -14,30 +14,19 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_service_api::{
     health::BoxedHealthChecked,
     kafka::KafkaClientConfig,
-    webapp::{self as actix_web, opentelemetry::RequestTracing, prom::PrometheusMetricsBuilder},
+    webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix, app::run_main, defaults, health::HealthServerConfig, tls::TlsMode, tls::WithTlsMode,
+    actix::{HttpBuilder, HttpConfig},
+    app::run_main,
+    defaults,
+    health::HealthServerConfig,
 };
-use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use serde_json::json;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::max_json_payload_size")]
-    pub max_json_payload_size: usize,
-    #[serde(default = "defaults::max_payload_size")]
-    pub max_payload_size: usize,
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr: String,
-    #[serde(default)]
-    pub disable_tls: bool,
-    #[serde(default)]
-    pub cert_bundle_file: Option<String>,
-    #[serde(default)]
-    pub key_file: Option<String>,
-
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
@@ -54,10 +43,10 @@ pub struct Config {
     pub check_kafka_topic_ready: bool,
 
     #[serde(default)]
-    pub workers: Option<usize>,
+    pub endpoint_pool: ExternalClientPoolConfig,
 
     #[serde(default)]
-    pub endpoint_pool: ExternalClientPoolConfig,
+    pub http: HttpConfig,
 }
 
 async fn index() -> impl Responder {
@@ -77,30 +66,15 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     )?;
     let commands = Commands::new();
 
-    let max_payload_size = config.max_payload_size;
-    let max_json_payload_size = config.max_json_payload_size;
     let http_server_commands = commands.clone();
 
     let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
 
-    let prometheus = PrometheusMetricsBuilder::new("http_endpoint")
-        .registry(prometheus::default_registry().clone())
-        .build()
-        .unwrap();
-
-    let http_server = HttpServer::new(move || {
-        let app = App::new()
-            .wrap(RequestTracing::new())
-            .wrap(prometheus.clone())
-            .wrap(middleware::Logger::default())
-            .app_data(web::PayloadConfig::new(max_payload_size))
-            .app_data(web::JsonConfig::default().limit(max_json_payload_size))
-            .app_data(web::Data::new(sender.clone()))
-            .app_data(web::Data::new(http_server_commands.clone()));
-
-        let app = app.app_data(web::Data::new(device_authenticator.clone()));
-
-        app.service(web::resource("/").route(web::get().to(index)))
+    let main = HttpBuilder::new(config.http, move |cfg| {
+        cfg.app_data(web::Data::new(sender.clone()))
+            .app_data(web::Data::new(http_server_commands.clone()))
+            .app_data(web::Data::new(device_authenticator.clone()))
+            .service(web::resource("/").route(web::get().to(index)))
             // the standard endpoint
             .service(
                 web::scope("/v1")
@@ -118,7 +92,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .route("/", web::post().to(ttn::publish_v2))
                     .route("/v2", web::post().to(ttn::publish_v2))
                     .route("/v3", web::post().to(ttn::publish_v3)),
-            )
+            );
     })
     .on_connect(|con, ext| {
         if let Some(cert) = x509::from_socket(con) {
@@ -127,19 +101,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                 ext.insert(cert);
             }
         }
-    });
+    })
+    .run()?;
 
-    let mut http_server = actix::bind_http(
-        http_server,
-        config.bind_addr,
-        config.disable_tls.with_tls_mode(TlsMode::Client),
-        config.key_file,
-        config.cert_bundle_file,
-    )?;
-
-    if let Some(workers) = config.workers {
-        http_server = http_server.workers(workers)
-    }
+    // command source
 
     let command_source = KafkaCommandSource::new(
         commands,
@@ -149,7 +114,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    let main = http_server.run().err_into().boxed_local();
     run_main([main], config.health, [command_source.boxed()]).await?;
 
     // done
