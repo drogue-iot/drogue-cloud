@@ -21,13 +21,13 @@ macro_rules! test {
         });
 
         let auth = drogue_cloud_service_common::mock_auth!();
-        let $v = actix_web::test::init_service(drogue_cloud_authentication_service::app!(
-            data,
-            16 * 1024,
-            false,
-            auth,
-            None
-        ))
+
+        let $v = actix_web::test::init_service({
+            let app = App::new();
+            app.configure(|cfg| {
+                drogue_cloud_authentication_service::app!(cfg, data, false, auth);
+            })
+        })
         .await;
 
         $code;

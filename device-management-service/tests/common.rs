@@ -59,26 +59,32 @@ macro_rules! test {
         let $outbox = outbox;
 
         let $app = drogue_cloud_service_api::webapp::test::init_service(
-            app!(MockEventSender, KeycloakAdminMock, 16 * 1024, auth)
-                // for the management service
-                .app_data(data.clone())
-                // for the admin service
-                .app_data(web::Data::new(apps::WebData{
-                    service: service.clone(),
-                }))
-                .wrap_fn(|req, srv|{
-                    log::warn!("Running test-user middleware");
-                    use drogue_cloud_service_api::webapp::dev::Service;
-                    use drogue_cloud_service_api::webapp::HttpMessage;
-                    {
-                        let user: Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
-                        if let Some(user) = user {
-                            log::warn!("Replacing user with test-user: {:?}", user);
-                            req.extensions_mut().insert(user.clone());
+            {
+                let app = App::new();
+                let app = app.configure(|cfg|{
+                    app!(cfg, MockEventSender, KeycloakAdminMock, auth)
+                    // for the management service
+                    .app_data(data.clone())
+                    // for the admin service
+                    .app_data(web::Data::new(apps::WebData{
+                        service: service.clone(),
+                    }));
+                });
+                app
+                    .wrap_fn(|req, srv|{
+                        log::warn!("Running test-user middleware");
+                        use drogue_cloud_service_api::webapp::dev::Service;
+                        use drogue_cloud_service_api::webapp::HttpMessage;
+                        {
+                            let user: Option<&drogue_cloud_service_api::auth::user::UserInformation> = req.app_data();
+                            if let Some(user) = user {
+                                log::warn!("Replacing user with test-user: {:?}", user);
+                                req.extensions_mut().insert(user.clone());
+                            }
                         }
-                    }
-                    srv.call(req)
-                })
+                        srv.call(req)
+                    })
+            }
         )
         .await;
 

@@ -1715,7 +1715,6 @@ dependencies = [
  "env_logger",
  "form_urlencoded",
  "futures",
- "futures-util",
  "hostname-validator",
  "http",
  "indexmap",
@@ -2268,8 +2267,10 @@ dependencies = [
 name = "drogue-cloud-service-common"
 version = "0.10.0"
 dependencies = [
+ "actix-cors",
  "actix-rt",
  "actix-service",
+ "actix-web-extras",
  "anyhow",
  "async-trait",
  "chrono",

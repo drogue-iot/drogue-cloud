@@ -13,6 +13,7 @@ use drogue_cloud_service_api::{
     kafka::{KafkaClientConfig, KafkaConfig},
 };
 use drogue_cloud_service_common::{
+    actix::HttpConfig,
     client::{DeviceStateClientConfig, RegistryConfig, UserAuthClientConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
     openid::{
@@ -837,8 +838,13 @@ fn main() {
                     log::info!("Enabling device registry");
 
                     let config = drogue_cloud_device_management_service::Config {
-                        workers: Some(1),
-                        max_json_payload_size: 65536,
+                        http: HttpConfig {
+                            bind_addr: server.registry.clone().into(),
+                            workers: Some(1),
+                            metrics_namespace: Some("device_management_service".into()),
+                            ..Default::default()
+                        },
+
                         enable_access_token: true,
                         user_auth: user_auth.clone(),
                         oauth: oauth.clone(),
@@ -849,7 +855,7 @@ fn main() {
                         },
 
                         health: None,
-                        bind_addr: server.registry.clone().into(),
+
                         kafka_sender: kafka_sender("registry", &server.kafka.clone()),
                     };
 
@@ -863,8 +869,13 @@ fn main() {
 
                     let kafka = server.kafka.clone();
                     let config = drogue_cloud_device_state_service::Config {
-                        workers: Some(1),
-                        max_json_payload_size: 65536,
+                        http: HttpConfig {
+                            bind_addr: server.device_state.clone().into(),
+                            workers: Some(1),
+                            metrics_namespace: Some("device_state_service".into()),
+                            ..Default::default()
+                        },
+
                         enable_access_token: true,
                         oauth: oauth.clone(),
                         service: PostgresServiceConfiguration {
@@ -875,7 +886,6 @@ fn main() {
                         check_kafka_topic_ready: false,
                         kafka_downstream_config: kafka.clone(),
                         health: None,
-                        bind_addr: server.device_state.clone().into(),
                         endpoint_pool: Default::default(),
                         registry: registry.clone(),
                     };
@@ -888,13 +898,16 @@ fn main() {
                 {
                     log::info!("Enabling user authentication service");
                     let config = drogue_cloud_user_auth_service::Config {
-                        workers: Some(1),
-                        max_json_payload_size: 65536,
+                        http: HttpConfig {
+                            bind_addr: server.user_auth.clone().into(),
+                            workers: Some(1),
+                            metrics_namespace: Some("user_authentication_service".into()),
+                            ..Default::default()
+                        },
                         oauth: oauth.clone(),
                         keycloak: keycloak.clone(),
                         health: None,
                         service: AuthorizationServiceConfig { pg: pg.clone() },
-                        bind_addr: server.user_auth.clone().into(),
                     };
 
                     handles.push(Box::pin(drogue_cloud_user_auth_service::run::<
@@ -907,12 +920,15 @@ fn main() {
                 {
                     log::info!("Enabling device authentication service");
                     let config = drogue_cloud_authentication_service::Config {
-                        workers: Some(1),
-                        max_json_payload_size: 65536,
+                        http: HttpConfig {
+                            bind_addr: server.device_auth.clone().into(),
+                            workers: Some(1),
+                            metrics_namespace: Some("authentication_service".into()),
+                            ..Default::default()
+                        },
                         oauth: oauth.clone(),
                         health: None,
                         auth_service_config: AuthenticationServiceConfig { pg: pg.clone() },
-                        bind_addr: server.device_auth.clone().into(),
                     };
 
                     handles.push(Box::pin(drogue_cloud_authentication_service::run(config)));
@@ -924,10 +940,13 @@ fn main() {
                     let mut console_token_config = token_config.clone();
                     console_token_config.client_id = "drogue".to_string();
                     let config = drogue_cloud_console_backend::Config {
-                        workers: Some(1),
+                        http: HttpConfig {
+                            bind_addr: server.console.clone().into(),
+                            workers: Some(1),
+                            ..Default::default()
+                        },
                         oauth: oauth.clone(),
                         health: None,
-                        bind_addr: server.console.clone().into(),
                         enable_kube: false,
                         kafka: server.kafka.clone(),
                         keycloak: keycloak.clone(),
@@ -955,20 +974,21 @@ fn main() {
                         matches.value_of("server-key").map(|s| s.to_string());
 
                     let config = drogue_cloud_http_endpoint::Config {
-                        workers: Some(1),
+                        http: HttpConfig {
+                            workers: Some(1),
+                            disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                            cert_bundle_file,
+                            key_file,
+                            bind_addr: server.http.clone().into(),
+                            ..Default::default()
+                        },
                         auth: auth.clone(),
-                        disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                         health: None,
-                        max_json_payload_size: 65536,
-                        max_payload_size: 65536,
-                        cert_bundle_file,
-                        key_file,
                         command_source_kafka,
                         instance: "drogue".to_string(),
                         kafka_downstream_config: kafka.clone(),
                         kafka_command_config: kafka,
                         check_kafka_topic_ready: false,
-                        bind_addr: server.http.clone().into(),
                         endpoint_pool: Default::default(),
                     };
 
@@ -987,16 +1007,19 @@ fn main() {
                     let kafka = server.kafka.clone();
                     let user_auth = user_auth.clone();
                     let config = drogue_cloud_websocket_integration::Config {
-                        disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
-                        workers: Some(1),
-                        max_json_payload_size: 65536,
-                        max_payload_size: 65536,
+                        http: HttpConfig {
+                            disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                            workers: Some(1),
+                            bind_addr,
+                            cert_bundle_file,
+                            key_file,
+                            metrics_namespace: Some("websocket_integration".into()),
+                            ..Default::default()
+                        },
                         health: None,
                         enable_access_token: true,
                         oauth: oauth.clone(),
-                        bind_addr,
-                        cert_bundle_file,
-                        key_file,
+
                         registry: registry.clone(),
                         kafka,
                         user_auth,
@@ -1012,16 +1035,20 @@ fn main() {
                     let kafka = server.kafka.clone();
                     let user_auth = user_auth.clone();
                     let config = drogue_cloud_command_endpoint::Config {
+                        http: HttpConfig {
+                            bind_addr,
+                            workers: Some(1),
+                            metrics_namespace: Some("command_endpoint".into()),
+                            ..Default::default()
+                        },
                         health: None,
                         enable_access_token: true,
                         oauth: oauth.clone(),
-                        bind_addr,
                         registry,
                         instance: "drogue".to_string(),
                         check_kafka_topic_ready: false,
                         command_kafka_sink: kafka,
                         user_auth,
-                        max_json_payload_size: 65536,
                         endpoint_pool: Default::default(),
                     };
 

@@ -1,7 +1,6 @@
 mod v1alpha1;
 
-use actix_cors::Cors;
-use actix_web::{middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use drogue_cloud_endpoint_common::{
     sender::{ExternalClientPoolConfig, UpstreamSender},
     sink::KafkaSink,
@@ -10,6 +9,7 @@ use drogue_cloud_service_api::{
     auth::user::authz::Permission, kafka::KafkaClientConfig, webapp as actix_web,
 };
 use drogue_cloud_service_common::{
+    actix::{CorsBuilder, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
     actix_auth::authorization::AuthZ,
     app::run_main,
@@ -17,17 +17,12 @@ use drogue_cloud_service_common::{
     openid::AuthenticatorConfig,
 };
 use drogue_cloud_service_common::{defaults, health::HealthServerConfig, openid::Authenticator};
-use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use serde_json::json;
 use std::str;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::max_json_payload_size")]
-    pub max_json_payload_size: usize,
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr: String,
     #[serde(default = "defaults::enable_access_token")]
     pub enable_access_token: bool,
 
@@ -51,6 +46,9 @@ pub struct Config {
 
     #[serde(default)]
     pub endpoint_pool: ExternalClientPoolConfig,
+
+    #[serde(default)]
+    pub http: HttpConfig,
 }
 
 #[derive(Debug)]
@@ -71,8 +69,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         config.endpoint_pool,
     )?;
 
-    let max_json_payload_size = config.max_json_payload_size;
-
     let enable_access_token = config.enable_access_token;
 
     // set up authentication
@@ -90,11 +86,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
-    let main = HttpServer::new(move || {
-        App::new()
-            .wrap(middleware::Logger::default())
-            .app_data(web::JsonConfig::default().limit(max_json_payload_size))
-            .app_data(web::Data::new(sender.clone()))
+    let main = HttpBuilder::new(config.http, move |cfg| {
+        cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(registry.clone()))
             .app_data(web::Data::new(client.clone()))
             .service(web::resource("/").route(web::get().to(index)))
@@ -110,16 +103,15 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                         token: user_auth.clone(),
                         enable_access_token,
                     })
-                    .wrap(Cors::permissive())
                     .route("", web::post().to(v1alpha1::command)),
-            )
+            );
     })
-    .bind(config.bind_addr)?
-    .run();
+    .cors(CorsBuilder::Permissive)
+    .run()?;
 
     // run
 
-    run_main([main.err_into().boxed_local()], config.health, vec![]).await?;
+    run_main([main], config.health, vec![]).await?;
 
     // exiting
 

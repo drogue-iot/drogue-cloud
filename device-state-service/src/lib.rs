@@ -2,8 +2,7 @@ pub mod endpoints;
 pub mod service;
 
 use crate::service::{postgres::PostgresServiceConfiguration, DeviceStateService};
-use actix_web::{web, App, HttpServer};
-use anyhow::Context;
+use actix_web::web;
 use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
@@ -11,9 +10,10 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_service_api::{
     health::HealthChecked,
     kafka::KafkaClientConfig,
-    webapp::{self as actix_web, prom::PrometheusMetricsBuilder},
+    webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
+    actix::{HttpBuilder, HttpConfig},
     app::run_main,
     client::RegistryConfig,
     defaults,
@@ -21,15 +21,12 @@ use drogue_cloud_service_common::{
     openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
-use futures::{FutureExt, TryFutureExt};
+use futures::FutureExt;
 use serde::Deserialize;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr: String,
-
     #[serde(default)]
     pub health: Option<HealthServerConfig>,
 
@@ -47,47 +44,34 @@ pub struct Config {
     #[serde(default)]
     pub endpoint_pool: ExternalClientPoolConfig,
 
-    #[serde(default)]
-    pub workers: Option<usize>,
-
-    #[serde(default = "defaults::max_json_payload_size")]
-    pub max_json_payload_size: usize,
-
     pub registry: RegistryConfig,
+
+    #[serde(default)]
+    pub http: HttpConfig,
 }
 
 #[macro_export]
 macro_rules! app {
-    ($data:expr, $max_json_payload_size:expr, $auth: expr, $prometheus: expr) => {{
-        use drogue_cloud_service_api::webapp::{extras::middleware::Condition, middleware};
+    ($cfg:expr, $data:expr, $auth: expr) => {{
         use $crate::endpoints;
 
-        let prom: Condition<drogue_cloud_service_api::webapp::prom::PrometheusMetrics> =
-            Condition::from_option($prometheus);
-
-        App::new()
-            .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
-            .wrap(prom)
-            .wrap(middleware::Logger::default())
-            .app_data(web::JsonConfig::default().limit($max_json_payload_size))
-            .app_data($data.clone())
-            .service(
-                web::scope("/api/state/v1alpha1")
-                    .wrap($auth)
-                    .service(
-                        web::resource("/states/{application}/{device}")
-                            .route(web::get().to(endpoints::get)),
-                    )
-                    .service(web::resource("/sessions").route(web::put().to(endpoints::init)))
-                    .service(
-                        web::resource("/sessions/{session}").route(web::post().to(endpoints::ping)),
-                    )
-                    .service(
-                        web::resource("/sessions/{session}/states/{application}/{device}")
-                            .route(web::put().to(endpoints::create))
-                            .route(web::delete().to(endpoints::delete)),
-                    ),
-            )
+        $cfg.app_data($data.clone()).service(
+            web::scope("/api/state/v1alpha1")
+                .wrap($auth)
+                .service(
+                    web::resource("/states/{application}/{device}")
+                        .route(web::get().to(endpoints::get)),
+                )
+                .service(web::resource("/sessions").route(web::put().to(endpoints::init)))
+                .service(
+                    web::resource("/sessions/{session}").route(web::post().to(endpoints::ping)),
+                )
+                .service(
+                    web::resource("/sessions/{session}/states/{application}/{device}")
+                        .route(web::put().to(endpoints::create))
+                        .route(web::delete().to(endpoints::delete)),
+                ),
+        )
     }};
 }
 
@@ -129,42 +113,25 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // monitoring
 
-    let prometheus = PrometheusMetricsBuilder::new("device_state_service")
-        .registry(prometheus::default_registry().clone())
-        .build()
-        .unwrap();
-
     // main server
 
-    let max_json_payload_size = config.max_json_payload_size;
-    let mut main = HttpServer::new(move || {
+    let main = HttpBuilder::new(config.http, move |cfg| {
         let auth = openid_auth!(req -> {
             req
                 .app_data::<web::Data<Authenticator>>().as_ref().map(|s|s.get_ref())
         });
-        let mut app = app!(
-            service,
-            max_json_payload_size,
-            auth,
-            Some(prometheus.clone())
-        );
+        let mut app = app!(cfg, service, auth);
 
         if let Some(auth) = &authenticator {
             app = app.app_data(auth.clone())
         }
 
-        app.app_data(service.clone())
+        app.app_data(service.clone());
     })
-    .bind(config.bind_addr)
-    .context("error starting server")?;
-
-    if let Some(workers) = config.workers {
-        main = main.workers(workers)
-    }
+    .run()?;
 
     // run
 
-    let main = main.run().err_into().boxed_local();
     run_main([main, pruner], config.health, checks).await?;
 
     // exiting

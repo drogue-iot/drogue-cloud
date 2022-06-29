@@ -1,20 +1,19 @@
 pub mod endpoints;
 pub mod service;
 
-use actix_web::{web, App, HttpServer};
+use actix_web::web;
 use drogue_cloud_access_token_service::{
     endpoints::WebData as KeycloakWebData, service::KeycloakAccessTokenService,
 };
 use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
 use drogue_cloud_service_common::{
+    actix::{HttpBuilder, HttpConfig},
     app::run_main,
-    defaults,
     health::HealthServerConfig,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
     openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
-use futures_util::{FutureExt, TryFutureExt};
 use serde::Deserialize;
 use service::AuthorizationServiceConfig;
 
@@ -29,10 +28,6 @@ where
 #[derive(Clone, Deserialize)]
 pub struct Config {
     pub service: AuthorizationServiceConfig,
-    #[serde(default = "defaults::bind_addr")]
-    pub bind_addr: String,
-    #[serde(default = "defaults::max_json_payload_size")]
-    pub max_json_payload_size: usize,
 
     pub oauth: AuthenticatorConfig,
 
@@ -42,17 +37,13 @@ pub struct Config {
     pub health: Option<HealthServerConfig>,
 
     #[serde(default)]
-    pub workers: Option<usize>,
+    pub http: HttpConfig,
 }
 
 #[macro_export]
 macro_rules! app {
-    ($data:expr, $api_key_ty:ty, $api_key:expr, $max_json_payload_size:expr, $enable_auth: expr, $auth: expr) => {
-        App::new()
-            .wrap(drogue_cloud_service_api::webapp::opentelemetry::RequestTracing::new())
-            .wrap(actix_web::middleware::Logger::default())
-            .app_data(web::JsonConfig::default().limit($max_json_payload_size))
-            .app_data($data.clone())
+    ($cfg:expr, $data:expr, $api_key_ty:ty, $api_key:expr, $enable_auth:expr, $auth:expr) => {
+        $cfg.app_data($data.clone())
             .app_data($api_key.clone())
             .service(
                 web::scope("/api")
@@ -71,8 +62,6 @@ pub async fn run<K>(config: Config) -> anyhow::Result<()>
 where
     K: 'static + KeycloakClient + std::marker::Send + std::marker::Sync,
 {
-    let max_json_payload_size = config.max_json_payload_size;
-
     let authenticator = config.oauth.into_client().await?;
     let enable_auth = authenticator.is_some();
 
@@ -92,7 +81,7 @@ where
 
     // main server
 
-    let mut main = HttpServer::new(move || {
+    let main = HttpBuilder::new(config.http, move |cfg| {
         let auth = openid_auth!(req -> {
             req
             .app_data::<web::Data<WebData<service::PostgresAuthorizationService>>>()
@@ -100,22 +89,16 @@ where
             .and_then(|data|data.authenticator.as_ref())
         });
         app!(
+            cfg,
             data,
             KeycloakAccessTokenService<K>,
             api_key,
-            max_json_payload_size,
             enable_auth,
             auth
-        )
+        );
     })
-    .bind(config.bind_addr)?;
+    .run()?;
 
-    // run
-    if let Some(workers) = config.workers {
-        main = main.workers(workers)
-    }
-
-    let main = main.run().err_into().boxed_local();
     run_main([main], config.health, [data_service.boxed()]).await?;
 
     // exiting
