@@ -1,6 +1,9 @@
-use clap::{crate_version, App, Arg, ArgMatches, SubCommand};
-use core::str::FromStr;
-use diesel_migrations::embed_migrations;
+mod config;
+mod db;
+mod keycloak;
+
+use crate::{config::*, keycloak::*};
+use clap::{crate_version, App, Arg, SubCommand};
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_database_common::postgres;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
@@ -8,10 +11,7 @@ use drogue_cloud_device_state_service::service::postgres::PostgresServiceConfigu
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
 use drogue_cloud_mqtt_common::server::MqttServerOptions;
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
-use drogue_cloud_service_api::{
-    endpoints::*,
-    kafka::{KafkaClientConfig, KafkaConfig},
-};
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     actix::HttpConfig,
     client::{DeviceStateClientConfig, RegistryConfig, UserAuthClientConfig},
@@ -23,9 +23,9 @@ use drogue_cloud_service_common::{
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
 use futures::future::{select, Either};
-use keycloak::types::CredentialRepresentation;
 use std::{
     collections::HashMap,
+    thread::JoinHandle,
     time::{Duration, Instant},
 };
 use url::Url;
@@ -33,462 +33,8 @@ use url::Url;
 #[macro_use]
 extern crate diesel_migrations;
 
-embed_migrations!("../database-common/migrations");
-
-#[derive(Clone)]
-struct Endpoint {
-    pub host: String,
-    pub port: u16,
-}
-
-impl From<Endpoint> for String {
-    fn from(endpoint: Endpoint) -> Self {
-        format!("{}:{}", endpoint.host, endpoint.port)
-    }
-}
-
-#[derive(Clone)]
-struct ServerConfig {
-    pub console: Endpoint,
-    pub frontend: Endpoint,
-    pub mqtt: Endpoint,
-    pub mqtt_ws: Endpoint,
-    pub mqtt_ws_browser: Endpoint,
-    pub http: Endpoint,
-    pub coap: Endpoint,
-    pub mqtt_integration: Endpoint,
-    pub mqtt_integration_ws: Endpoint,
-    pub mqtt_integration_ws_browser: Endpoint,
-    pub websocket_integration: Endpoint,
-    pub command: Endpoint,
-    pub registry: Endpoint,
-    pub device_auth: Endpoint,
-    pub user_auth: Endpoint,
-    pub device_state: Endpoint,
-    pub database: Database,
-    pub drogue: Drogue,
-    pub keycloak: Keycloak,
-    pub kafka: KafkaClientConfig,
-    pub tls_insecure: bool,
-    pub tls_ca_certificates: Vec<String>,
-}
-
-#[derive(Clone)]
-pub struct Database {
-    endpoint: Endpoint,
-    db: String,
-    user: String,
-    password: String,
-}
-
-#[derive(Clone)]
-pub struct Keycloak {
-    url: String,
-    realm: String,
-    user: String,
-    password: String,
-}
-
-#[derive(Clone)]
-pub struct Drogue {
-    admin_user: String,
-    admin_password: String,
-}
-
-impl ServerConfig {
-    fn new(matches: &ArgMatches<'_>) -> ServerConfig {
-        let iface = matches
-            .value_of("bind-address")
-            .unwrap_or("localhost")
-            .to_string();
-        ServerConfig {
-            tls_insecure: matches.is_present("insecure"),
-            tls_ca_certificates: vec![],
-            kafka: KafkaClientConfig {
-                bootstrap_servers: matches
-                    .value_of("kafka-bootstrap-servers")
-                    .unwrap_or("localhost:9092")
-                    .to_string(),
-                properties: HashMap::new(),
-            },
-            database: Database {
-                endpoint: Endpoint {
-                    host: matches
-                        .value_of("database-host")
-                        .unwrap_or("localhost")
-                        .to_string(),
-                    port: u16::from_str(matches.value_of("database-port").unwrap_or("5432"))
-                        .unwrap(),
-                },
-                db: matches
-                    .value_of("database-name")
-                    .unwrap_or("drogue")
-                    .to_string(),
-                user: matches
-                    .value_of("database-user")
-                    .unwrap_or("admin")
-                    .to_string(),
-                password: matches
-                    .value_of("database-password")
-                    .unwrap_or("admin123456")
-                    .to_string(),
-            },
-            keycloak: Keycloak {
-                url: matches
-                    .value_of("keycloak-url")
-                    .unwrap_or("http://localhost:8080")
-                    .to_string(),
-                realm: matches
-                    .value_of("keycloak-realm")
-                    .unwrap_or("drogue")
-                    .to_string(),
-                user: matches
-                    .value_of("keycloak-user")
-                    .unwrap_or("admin")
-                    .to_string(),
-                password: matches
-                    .value_of("keycloak-password")
-                    .unwrap_or("admin123456")
-                    .to_string(),
-            },
-            drogue: Drogue {
-                admin_user: matches
-                    .value_of("drogue-admin-user")
-                    .unwrap_or("admin")
-                    .to_string(),
-                admin_password: matches
-                    .value_of("drogue-admin-password")
-                    .unwrap_or("admin123456")
-                    .to_string(),
-            },
-            frontend: Endpoint {
-                host: iface.to_string(),
-                port: 8010,
-            },
-            console: Endpoint {
-                host: iface.to_string(),
-                port: 8011,
-            },
-            mqtt: Endpoint {
-                host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    8883
-                } else {
-                    1883
-                },
-            },
-            mqtt_ws: Endpoint {
-                host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    20443
-                } else {
-                    20880
-                },
-            },
-            mqtt_ws_browser: Endpoint {
-                host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    21443
-                } else {
-                    21880
-                },
-            },
-            http: Endpoint {
-                host: iface.to_string(),
-                port: 8088,
-            },
-            coap: Endpoint {
-                host: iface.to_string(),
-                port: 5683,
-            },
-            mqtt_integration: Endpoint {
-                host: iface.to_string(),
-                port: 18883,
-            },
-            mqtt_integration_ws: Endpoint {
-                host: iface.to_string(),
-                port: 10443,
-            },
-            mqtt_integration_ws_browser: Endpoint {
-                host: iface.to_string(),
-                port: 11443,
-            },
-            websocket_integration: Endpoint {
-                host: iface.to_string(),
-                port: 10002,
-            },
-            command: Endpoint {
-                host: iface.to_string(),
-                port: 10003,
-            },
-            registry: Endpoint {
-                host: iface.to_string(),
-                port: 10004,
-            },
-            device_auth: Endpoint {
-                host: iface.to_string(),
-                port: 10005,
-            },
-            user_auth: Endpoint {
-                host: iface.to_string(),
-                port: 10006,
-            },
-            device_state: Endpoint {
-                host: iface,
-                port: 10007,
-            },
-        }
-    }
-}
-
-fn run_migrations(db: &Database) {
-    use diesel::Connection;
-    println!("Migrating database schema...");
-    let database_url = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        db.user, db.password, db.endpoint.host, db.endpoint.port, db.db
-    );
-    let connection = diesel::PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
-
-    embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
-    println!("Migrating database schema... done!");
-}
-
-const SERVICE_CLIENT_SECRET: &str = "a73d4e96-461b-11ec-8d66-d45ddf138840";
-
-fn configure_keycloak(config: &ServerConfig) {
-    print!("Configuring keycloak... ");
-    let server = &config.keycloak;
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let failed: usize = rt.block_on(async {
-        let url = &server.url;
-        let user = server.user.clone();
-        let password = server.password.clone();
-        let client = reqwest::Client::new();
-        let admin_token = keycloak::KeycloakAdminToken::acquire(url, &user, &password, &client)
-            .await
-            .unwrap();
-        let admin = keycloak::KeycloakAdmin::new(url, admin_token, client);
-
-        let mut mapper_config = HashMap::new();
-        mapper_config.insert("included.client.audience".into(), "drogue".into());
-        mapper_config.insert("id.token.claim".into(), "false".into());
-        mapper_config.insert("access.token.claim".into(), "true".into());
-        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
-            id: None,
-            name: Some("add-audience".to_string()),
-            protocol: Some("openid-connect".to_string()),
-            protocol_mapper: Some("oidc-audience-mapper".to_string()),
-            config: Some(mapper_config),
-        }];
-
-        let mut failed = 0;
-
-        // configure the realm
-        let r = keycloak::types::RealmRepresentation {
-            realm: Some(server.realm.clone()),
-            enabled: Some(true),
-            ..Default::default()
-        };
-
-        if let Err(e) = admin.post(r).await {
-            if let keycloak::KeycloakError::HttpFailure {
-                status: 409,
-                body: _,
-                text: _,
-            } = e
-            {
-                log::trace!("Realm 'drogue' already exists");
-            } else {
-                log::warn!("Error creating 'drogue' realm: {:?}", e);
-                failed += 1;
-            }
-        }
-
-        // Configure oauth account
-        let mut c: keycloak::types::ClientRepresentation = Default::default();
-        c.client_id.replace("drogue".to_string());
-        c.enabled.replace(true);
-        c.implicit_flow_enabled.replace(true);
-        c.standard_flow_enabled.replace(true);
-        c.direct_access_grants_enabled.replace(false);
-        c.service_accounts_enabled.replace(false);
-        c.full_scope_allowed.replace(true);
-        c.root_url.replace("".to_string());
-        c.redirect_uris.replace(vec!["*".to_string()]);
-        c.web_origins.replace(vec!["*".to_string()]);
-        c.client_authenticator_type
-            .replace("client-secret".to_string());
-        c.public_client.replace(true);
-        c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
-        c.protocol_mappers.replace(mappers);
-
-        if let Err(e) = admin.realm_clients_post(&server.realm, c).await {
-            if let keycloak::KeycloakError::HttpFailure {
-                status: 409,
-                body: _,
-                text: _,
-            } = e
-            {
-                log::trace!("Client 'drogue' already exists");
-            } else {
-                log::warn!("Error creating 'drogue' client: {:?}", e);
-                failed += 1;
-            }
-        }
-
-        // Configure service account
-        let mut c: keycloak::types::ClientRepresentation = Default::default();
-        c.client_id.replace("services".to_string());
-        c.implicit_flow_enabled.replace(false);
-        c.standard_flow_enabled.replace(false);
-        c.direct_access_grants_enabled.replace(false);
-        c.service_accounts_enabled.replace(true);
-        c.full_scope_allowed.replace(true);
-        c.enabled.replace(true);
-        c.client_authenticator_type
-            .replace("client-secret".to_string());
-        c.public_client.replace(false);
-        c.secret.replace(SERVICE_CLIENT_SECRET.to_string());
-
-        let mut mapper_config: HashMap<String, serde_json::value::Value> = HashMap::new();
-        mapper_config.insert("included.client.audience".into(), "services".into());
-        mapper_config.insert("id.token.claim".into(), "false".into());
-        mapper_config.insert("access.token.claim".into(), "true".into());
-        let mappers = vec![keycloak::types::ProtocolMapperRepresentation {
-            id: None,
-            name: Some("add-audience".to_string()),
-            protocol: Some("openid-connect".to_string()),
-            protocol_mapper: Some("oidc-audience-mapper".to_string()),
-            config: Some(mapper_config),
-        }];
-        c.protocol_mappers.replace(mappers);
-
-        if let Err(e) = admin.realm_clients_post(&server.realm, c).await {
-            if let keycloak::KeycloakError::HttpFailure {
-                status: 409,
-                body: _,
-                text: _,
-            } = e
-            {
-                log::trace!("Client 'services' already exists");
-            } else {
-                log::warn!("Error creating 'services' client: {:?}", e);
-                failed += 1;
-            }
-        }
-
-        // Configure roles
-        let mut admin_role = keycloak::types::RoleRepresentation::default();
-        admin_role.name.replace("drogue-admin".to_string());
-        if let Err(e) = admin
-            .realm_roles_post(&server.realm, admin_role.clone())
-            .await
-        {
-            if let keycloak::KeycloakError::HttpFailure {
-                status: 409,
-                body: _,
-                text: _,
-            } = e
-            {
-                log::trace!("Role 'drogue-admin' already exists");
-            } else {
-                log::warn!("Error creating 'drogue-admin' role: {:?}", e);
-                failed += 1;
-            }
-        }
-
-        let mut user_role = keycloak::types::RoleRepresentation::default();
-        user_role.name.replace("drogue-user".to_string());
-        if let Err(e) = admin
-            .realm_roles_post(&server.realm, user_role.clone())
-            .await
-        {
-            if let keycloak::KeycloakError::HttpFailure {
-                status: 409,
-                body: _,
-                text: _,
-            } = e
-            {
-                log::trace!("Role 'drogue-user' already exists");
-            } else {
-                log::warn!("Error creating 'drogue-user' role: {:?}", e);
-                failed += 1;
-            }
-        }
-
-        // Read back
-        let user_role = admin
-            .realm_roles_with_role_name_get(&server.realm, "drogue-user")
-            .await;
-        let admin_role = admin
-            .realm_roles_with_role_name_get(&server.realm, "drogue-admin")
-            .await;
-
-        match (user_role, admin_role) {
-            (Ok(user_role), Ok(admin_role)) => {
-                // Add to default roles if not present
-                if let Err(e) = admin
-                    .realm_roles_with_role_name_composites_post(
-                        &server.realm,
-                        &format!("default-roles-{}", server.realm),
-                        vec![admin_role, user_role],
-                    )
-                    .await
-                {
-                    log::warn!("Error associating roles with default: {:?}", e);
-                    failed += 1;
-                }
-            }
-            _ => {
-                log::warn!("Error retrieving 'drogue-user' and 'drogue-admin' roles");
-                failed += 1;
-            }
-        }
-
-        // configure the admin user
-
-        let u = keycloak::types::UserRepresentation {
-            username: Some(config.drogue.admin_user.clone()),
-            enabled: Some(true),
-            credentials: Some(vec![CredentialRepresentation {
-                type_: Some("password".into()),
-                value: Some(config.drogue.admin_password.clone()),
-                temporary: Some(false),
-                ..Default::default()
-            }]),
-            ..Default::default()
-        };
-
-        if let Err(e) = admin.realm_users_post(&server.realm, u).await {
-            if let keycloak::KeycloakError::HttpFailure {
-                status: 409,
-                body: _,
-                text: _,
-            } = e
-            {
-                log::trace!("User 'admin' already exists");
-            } else {
-                log::warn!("Error creating 'admin' user: {:?}", e);
-                failed += 1;
-            }
-        }
-
-        failed
-    });
-
-    if failed > 0 {
-        println!("failed!");
-    } else {
-        println!("done!");
-    }
-}
-
-fn main() {
-    //env_logger::init();
-    dotenv::dotenv().ok();
-    let mut app = App::new("Drogue Cloud Server")
+fn args() -> App<'static, 'static> {
+    App::new("Drogue Cloud Server")
         .about("Running Drogue Cloud in a single process")
         .version(crate_version!())
         .long_about("Drogue Server runs all the Drogue Cloud services in a single process, with an external dependency on PostgreSQL, Kafka and Keycloak for storing data, device management and user management")
@@ -667,8 +213,13 @@ fn main() {
                         .help("Kafka bootstrap servers")
                         .takes_value(true),
                 ),
-        );
+        )
+}
 
+fn main() {
+    dotenv::dotenv().ok();
+
+    let mut app = args();
     let matches = app.clone().get_matches();
 
     stderrlog::new()
@@ -682,7 +233,7 @@ fn main() {
         let server: ServerConfig = ServerConfig::new(matches);
         let eps = endpoints(&server, tls);
 
-        run_migrations(&server.database);
+        db::run_migrations(&server.database);
 
         configure_keycloak(&server);
         /*
@@ -1213,88 +764,15 @@ fn main() {
             }));
         }
 
-        println!("Drogue Cloud is running!");
-        println!();
-
-        println!("Endpoints:");
-        println!(
-            "\tAPI:\t http://{}:{}",
-            server.console.host, server.console.port
+        run(
+            Context {
+                tls,
+                mqtt_prefix,
+                http_prefix,
+            },
+            server,
+            threads,
         );
-        println!(
-            "\tHTTP:\t {}://{}:{}",
-            http_prefix, server.http.host, server.http.port
-        );
-        println!(
-            "\tMQTT:\t {}://{}:{}",
-            mqtt_prefix, server.mqtt.host, server.mqtt.port
-        );
-        println!("\tCoAP:\t coap://{}:{}", server.coap.host, server.coap.port);
-        println!();
-        println!("Integrations:");
-        println!(
-            "\tWebSocket:\t ws://{}:{}",
-            server.websocket_integration.host, server.websocket_integration.port
-        );
-        println!(
-            "\tMQTT:\t\t {}://{}:{}",
-            mqtt_prefix, server.mqtt_integration.host, server.mqtt_integration.port
-        );
-        println!();
-        println!("Command:");
-        println!(
-            "\tHTTP:\t http://{}:{}",
-            server.command.host, server.command.port
-        );
-        println!();
-
-        println!("Keycloak Credentials:");
-        println!("\tUser: {}", server.keycloak.user);
-        println!("\tPassword: {}", server.keycloak.password);
-        println!();
-
-        println!("Logging in:");
-        println!(
-            "\tdrg login http://{}:{}",
-            server.console.host, server.console.port
-        );
-        println!();
-
-        println!("Creating an application:");
-        println!("\tdrg create app example-app");
-        println!();
-
-        println!("Creating a device:");
-        println!("\tdrg create device --application example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
-        println!();
-
-        println!("Streaming telemetry data for an application:");
-        println!("\tdrg stream -a example-app");
-        println!();
-
-        println!("Publishing data to the HTTP endpoint:");
-        println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/telemetry", if tls { "-k https" } else {"http"}, server.http.host, server.http.port);
-        println!();
-
-        println!("Publishing data to the MQTT endpoint:");
-        println!("\tmqtt pub -v -h {host} -p {port} -u 'device1@example-app' -pw 'hey-rodney' {tls} -t temp -m '{{\"temp\":42}}'",
-            host = server.mqtt.host,
-            port = server.mqtt.port,
-            tls = if tls { "-s" } else { "" },
-        );
-        println!();
-
-        let now = Instant::now();
-
-        for t in threads.drain(..) {
-            t.join().unwrap();
-        }
-
-        log::info!("All services stopped");
-
-        if now.elapsed() < Duration::from_secs(2) {
-            log::warn!("Server exited quickly. Maybe no services had been enabled. You can enable services using --enable-* or enable all using --enable-all.");
-        }
     } else {
         log::error!("No subcommand specified");
         app.print_long_help().unwrap();
@@ -1302,90 +780,93 @@ fn main() {
     }
 }
 
-fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
-    let http_prefix = if tls { "https" } else { "http" };
-    Endpoints {
-        api: Some(format!(
-            "http://{}:{}",
-            config.console.host, config.console.port
-        )),
-        console: Some(format!(
-            "http://{}:{}",
-            config.frontend.host, config.frontend.port
-        )),
-        coap: Some(CoapEndpoint {
-            url: format!("coap://{}:{}", config.coap.host, config.coap.port),
-        }),
-        http: Some(HttpEndpoint {
-            url: format!(
-                "{}://{}:{}",
-                http_prefix, config.http.host, config.http.port
-            ),
-        }),
-        mqtt: Some(MqttEndpoint {
-            host: config.mqtt.host.clone(),
-            port: config.mqtt.port,
-        }),
-        mqtt_ws: Some(HttpEndpoint {
-            url: format!(
-                "{}://{}:{}",
-                http_prefix, config.mqtt_ws.host, config.mqtt_ws.port
-            ),
-        }),
-        mqtt_ws_browser: Some(HttpEndpoint {
-            url: format!(
-                "{}://{}:{}",
-                http_prefix, config.mqtt_ws_browser.host, config.mqtt_ws_browser.port
-            ),
-        }),
-        mqtt_integration: Some(MqttEndpoint {
-            host: config.mqtt_integration.host.clone(),
-            port: config.mqtt_integration.port,
-        }),
-        mqtt_integration_ws: Some(HttpEndpoint {
-            url: format!(
-                "{}://{}:{}",
-                http_prefix, config.mqtt_integration_ws.host, config.mqtt_integration_ws.port
-            ),
-        }),
-        mqtt_integration_ws_browser: Some(HttpEndpoint {
-            url: format!(
-                "{}://{}:{}",
-                http_prefix,
-                config.mqtt_integration_ws_browser.host,
-                config.mqtt_integration_ws_browser.port
-            ),
-        }),
-        websocket_integration: Some(HttpEndpoint {
-            url: format!(
-                "ws://{}:{}",
-                config.websocket_integration.host, config.websocket_integration.port
-            ),
-        }),
-        sso: Some(config.keycloak.url.clone()),
-        issuer_url: Some(format!(
-            "{}/realms/{}",
-            config.keycloak.url, config.keycloak.realm
-        )),
-        redirect_url: Some(format!(
-            "http://{}:{}",
-            config.frontend.host, config.frontend.port
-        )),
-        registry: Some(RegistryEndpoint {
-            url: format!("http://{}:{}", config.registry.host, config.registry.port),
-        }),
-        command_url: Some(format!(
-            "http://{}:{}",
-            config.command.host, config.command.port
-        )),
-        local_certs: false,
-        kafka_bootstrap_servers: Some(config.kafka.bootstrap_servers.clone()),
-    }
+pub struct Context<'c> {
+    pub mqtt_prefix: &'c str,
+    pub http_prefix: &'c str,
+    pub tls: bool,
 }
 
-fn kafka_config(kafka: &KafkaClientConfig, topic: &str) -> KafkaConfig {
-    KafkaConfig {
-        client: kafka.clone(),
-        topic: topic.to_string(),
+fn run(ctx: Context, server: ServerConfig, mut threads: Vec<JoinHandle<()>>) {
+    println!("Drogue Cloud is running!");
+    println!();
+
+    println!("Endpoints:");
+    println!(
+        "\tAPI:\t http://{}:{}",
+        server.console.host, server.console.port
+    );
+    println!(
+        "\tHTTP:\t {}://{}:{}",
+        ctx.http_prefix, server.http.host, server.http.port
+    );
+    println!(
+        "\tMQTT:\t {}://{}:{}",
+        ctx.mqtt_prefix, server.mqtt.host, server.mqtt.port
+    );
+    println!("\tCoAP:\t coap://{}:{}", server.coap.host, server.coap.port);
+    println!();
+    println!("Integrations:");
+    println!(
+        "\tWebSocket:\t ws://{}:{}",
+        server.websocket_integration.host, server.websocket_integration.port
+    );
+    println!(
+        "\tMQTT:\t\t {}://{}:{}",
+        ctx.mqtt_prefix, server.mqtt_integration.host, server.mqtt_integration.port
+    );
+    println!();
+    println!("Command:");
+    println!(
+        "\tHTTP:\t http://{}:{}",
+        server.command.host, server.command.port
+    );
+    println!();
+
+    println!("Keycloak Credentials:");
+    println!("\tUser: {}", server.keycloak.user);
+    println!("\tPassword: {}", server.keycloak.password);
+    println!();
+
+    println!("Logging in:");
+    println!(
+        "\tdrg login http://{}:{}",
+        server.console.host, server.console.port
+    );
+    println!();
+
+    println!("Creating an application:");
+    println!("\tdrg create app example-app");
+    println!();
+
+    println!("Creating a device:");
+    println!("\tdrg create device --application example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
+    println!();
+
+    println!("Streaming telemetry data for an application:");
+    println!("\tdrg stream -a example-app");
+    println!();
+
+    println!("Publishing data to the HTTP endpoint:");
+    println!("\tcurl -u 'device1@example-app:hey-rodney' -d '{{\"temp\": 42}}' -v -H \"Content-Type: application/json\" -X POST {}://{}:{}/v1/telemetry", if ctx.tls { "-k https" } else {"http"}, server.http.host, server.http.port);
+    println!();
+
+    println!("Publishing data to the MQTT endpoint:");
+    println!("\tmqtt pub -v -h {host} -p {port} -u 'device1@example-app' -pw 'hey-rodney' {tls} -t temp -m '{{\"temp\":42}}'",
+             host = server.mqtt.host,
+             port = server.mqtt.port,
+             tls = if ctx.tls { "-s" } else { "" },
+    );
+    println!();
+
+    let now = Instant::now();
+
+    for t in threads.drain(..) {
+        t.join().unwrap();
+    }
+
+    log::info!("All services stopped");
+
+    if now.elapsed() < Duration::from_secs(2) {
+        log::warn!("Server exited quickly. Maybe no services had been enabled. You can enable services using --enable-* or enable all using --enable-all.");
     }
 }
