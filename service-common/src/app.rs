@@ -1,7 +1,7 @@
 use crate::health::{HealthServer, HealthServerConfig};
 use drogue_cloud_service_api::health::HealthChecked;
 use futures::future::LocalBoxFuture;
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::stream::FuturesUnordered;
 
 #[macro_export]
 macro_rules! app {
@@ -57,16 +57,14 @@ pub fn init_tracing(name: &str) {
 
     use crate::tracing::{self, tracing_subscriber::prelude::*};
 
-    tracing::opentelemetry::global::set_text_map_propagator(
-        tracing::opentelemetry::sdk::propagation::TraceContextPropagator::new(),
+    opentelemetry::global::set_text_map_propagator(
+        opentelemetry::sdk::propagation::TraceContextPropagator::new(),
     );
-    let pipeline = tracing::opentelemetry_jaeger::new_pipeline()
+    let pipeline = opentelemetry_jaeger::new_pipeline()
         .with_service_name(name)
-        .with_trace_config(
-            tracing::opentelemetry::sdk::trace::Config::default().with_sampler(
-                opentelemetry::sdk::trace::Sampler::ParentBased(Box::new(tracing::sampler())),
-            ),
-        );
+        .with_trace_config(opentelemetry::sdk::trace::Config::default().with_sampler(
+            opentelemetry::sdk::trace::Sampler::ParentBased(Box::new(tracing::sampler())),
+        ));
 
     println!("Using Jaeger tracing.");
     println!("{:#?}", pipeline);
@@ -76,9 +74,9 @@ pub fn init_tracing(name: &str) {
         .install_batch(tracing::opentelemetry::runtime::Tokio)
         .unwrap();
 
-    tracing::tracing_subscriber::Registry::default()
-        .with(tracing::tracing_subscriber::EnvFilter::from_default_env())
-        .with(tracing::tracing_opentelemetry::layer().with_tracer(tracer))
+    tracing_subscriber::Registry::default()
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .init();
 }
 
@@ -115,7 +113,7 @@ where
         futures.push(Box::pin(health.run()));
     }
 
-    let result = futures.next().await;
+    let (result, _, _) = futures::future::select_all(futures).await;
 
     log::warn!("One of the main runners returned: {result:?}");
     log::warn!("Exiting application...");
