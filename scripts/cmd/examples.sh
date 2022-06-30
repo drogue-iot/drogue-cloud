@@ -119,7 +119,7 @@ echo "  http POST $API_URL/api/command/v1alpha1/apps/example-app/devices/device1
 echo
 echo "Or simply through drg:"
 echo
-echo "  drg cmd set-temp device1 --application example-app --payload '{\"target-temp\":25}' "
+echo "  drg cmd device1 set-temp --application example-app --payload '{\"target-temp\":25}' "
 echo
 
 if [[ "$DIGITAL_TWIN" == "true" ]]; then
