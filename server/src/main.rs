@@ -3,6 +3,7 @@ mod db;
 mod keycloak;
 
 use crate::{config::*, keycloak::*};
+use anyhow::anyhow;
 use clap::{crate_version, App, Arg, SubCommand};
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_database_common::postgres;
@@ -22,12 +23,14 @@ use drogue_cloud_service_common::{
     state::StateControllerConfiguration,
 };
 use drogue_cloud_user_auth_service::service::AuthorizationServiceConfig;
-use futures::future::{select, Either};
+use futures::TryFutureExt;
 use std::{
     collections::HashMap,
-    thread::JoinHandle,
+    future::Future,
+    pin::Pin,
     time::{Duration, Instant},
 };
+use tokio::runtime::Handle;
 use url::Url;
 
 #[macro_use]
@@ -216,7 +219,8 @@ fn args() -> App<'static, 'static> {
         )
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     dotenv::dotenv().ok();
 
     let mut app = args();
@@ -233,9 +237,9 @@ fn main() {
         let server: ServerConfig = ServerConfig::new(matches);
         let eps = endpoints(&server, tls);
 
-        db::run_migrations(&server.database);
+        db::run_migrations(&server.database).await.unwrap();
 
-        configure_keycloak(&server);
+        configure_keycloak(&server).await.unwrap();
         /*
         let kafka_stream = |topic: &str, consumer_group: &str| KafkaStreamConfig {
             client: kafka_config(topic),
@@ -359,7 +363,7 @@ fn main() {
             ..Default::default()
         };
 
-        let mut threads = Vec::new();
+        let mut tasks: Vec<Pin<Box<dyn Future<Output = anyhow::Result<()>>>>> = Vec::new();
 
         // Spawn actix runtime
         {
@@ -370,398 +374,405 @@ fn main() {
             let matches = matches.clone();
             let user_auth = user_auth.clone();
 
-            threads.push(std::thread::spawn(move || {
-                let runner = actix_rt::System::with_tokio_rt(|| {
-                    tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .worker_threads(1)
-                        .max_blocking_threads(1)
-                        .thread_name("actix")
-                        .build()
-                        .unwrap()
-                });
-                let mut handles: Vec<
-                    core::pin::Pin<Box<dyn core::future::Future<Output = anyhow::Result<()>>>>,
-                > = Vec::new();
+            if matches.is_present("enable-device-registry") || matches.is_present("enable-all") {
+                log::info!("Enabling device registry");
 
-                if matches.is_present("enable-device-registry") || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling device registry");
+                let config = drogue_cloud_device_management_service::Config {
+                    http: HttpConfig {
+                        bind_addr: server.registry.clone().into(),
+                        disable_tls: true,
+                        workers: Some(1),
+                        metrics_namespace: Some("device_management_service".into()),
+                        ..Default::default()
+                    },
 
-                    let config = drogue_cloud_device_management_service::Config {
-                        http: HttpConfig {
-                            bind_addr: server.registry.clone().into(),
-                            workers: Some(1),
-                            metrics_namespace: Some("device_management_service".into()),
-                            ..Default::default()
-                        },
+                    enable_access_token: true,
+                    user_auth: user_auth.clone(),
+                    oauth: oauth.clone(),
+                    keycloak: keycloak.clone(),
+                    database_config: PostgresManagementServiceConfig {
+                        pg: pg.clone(),
+                        instance: server.database.db.to_string(),
+                    },
 
-                        enable_access_token: true,
-                        user_auth: user_auth.clone(),
-                        oauth: oauth.clone(),
-                        keycloak: keycloak.clone(),
-                        database_config: PostgresManagementServiceConfig {
-                            pg: pg.clone(),
-                            instance: server.database.db.to_string(),
-                        },
+                    health: None,
 
-                        health: None,
+                    kafka_sender: kafka_sender("registry", &server.kafka.clone()),
+                };
 
-                        kafka_sender: kafka_sender("registry", &server.kafka.clone()),
-                    };
+                tasks.push(Box::pin(drogue_cloud_device_management_service::run(
+                    config,
+                )));
+            }
 
-                    handles.push(Box::pin(drogue_cloud_device_management_service::run(
-                        config,
-                    )));
-                }
+            if matches.is_present("enable-device-state") || matches.is_present("enable-all") {
+                log::info!("Enabling device state service");
 
-                if matches.is_present("enable-device-state") || matches.is_present("enable-all") {
-                    log::info!("Enabling device state service");
+                let kafka = server.kafka.clone();
+                let config = drogue_cloud_device_state_service::Config {
+                    http: HttpConfig {
+                        bind_addr: server.device_state.clone().into(),
+                        disable_tls: true,
+                        workers: Some(1),
+                        metrics_namespace: Some("device_state_service".into()),
+                        ..Default::default()
+                    },
 
-                    let kafka = server.kafka.clone();
-                    let config = drogue_cloud_device_state_service::Config {
-                        http: HttpConfig {
-                            bind_addr: server.device_state.clone().into(),
-                            workers: Some(1),
-                            metrics_namespace: Some("device_state_service".into()),
-                            ..Default::default()
-                        },
+                    enable_access_token: true,
+                    oauth: oauth.clone(),
+                    service: PostgresServiceConfiguration {
+                        session_timeout: Duration::from_secs(10),
+                        pg: pg.clone(),
+                    },
+                    instance: "drogue".to_string(),
+                    check_kafka_topic_ready: false,
+                    kafka_downstream_config: kafka.clone(),
+                    health: None,
+                    endpoint_pool: Default::default(),
+                    registry: registry.clone(),
+                };
 
-                        enable_access_token: true,
-                        oauth: oauth.clone(),
-                        service: PostgresServiceConfiguration {
-                            session_timeout: Duration::from_secs(10),
-                            pg: pg.clone(),
-                        },
-                        instance: "drogue".to_string(),
-                        check_kafka_topic_ready: false,
-                        kafka_downstream_config: kafka.clone(),
-                        health: None,
-                        endpoint_pool: Default::default(),
-                        registry: registry.clone(),
-                    };
+                tasks.push(Box::pin(drogue_cloud_device_state_service::run(config)));
+            }
 
-                    handles.push(Box::pin(drogue_cloud_device_state_service::run(config)));
-                }
+            if matches.is_present("enable-user-authentication-service")
+                || matches.is_present("enable-all")
+            {
+                log::info!("Enabling user authentication service");
+                let config = drogue_cloud_user_auth_service::Config {
+                    http: HttpConfig {
+                        bind_addr: server.user_auth.clone().into(),
+                        disable_tls: true,
+                        workers: Some(1),
+                        metrics_namespace: Some("user_authentication_service".into()),
+                        ..Default::default()
+                    },
+                    oauth: oauth.clone(),
+                    keycloak: keycloak.clone(),
+                    health: None,
+                    service: AuthorizationServiceConfig { pg: pg.clone() },
+                };
 
-                if matches.is_present("enable-user-authentication-service")
-                    || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling user authentication service");
-                    let config = drogue_cloud_user_auth_service::Config {
-                        http: HttpConfig {
-                            bind_addr: server.user_auth.clone().into(),
-                            workers: Some(1),
-                            metrics_namespace: Some("user_authentication_service".into()),
-                            ..Default::default()
-                        },
-                        oauth: oauth.clone(),
-                        keycloak: keycloak.clone(),
-                        health: None,
-                        service: AuthorizationServiceConfig { pg: pg.clone() },
-                    };
+                tasks.push(Box::pin(drogue_cloud_user_auth_service::run::<
+                    KeycloakAdminClient,
+                >(config)));
+            }
 
-                    handles.push(Box::pin(drogue_cloud_user_auth_service::run::<
-                        KeycloakAdminClient,
-                    >(config)));
-                }
+            if matches.is_present("enable-authentication-service")
+                || matches.is_present("enable-all")
+            {
+                log::info!("Enabling device authentication service");
+                let config = drogue_cloud_authentication_service::Config {
+                    http: HttpConfig {
+                        bind_addr: server.device_auth.clone().into(),
+                        disable_tls: true,
+                        workers: Some(1),
+                        metrics_namespace: Some("authentication_service".into()),
+                        ..Default::default()
+                    },
+                    oauth: oauth.clone(),
+                    health: None,
+                    auth_service_config: AuthenticationServiceConfig { pg: pg.clone() },
+                };
 
-                if matches.is_present("enable-authentication-service")
-                    || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling device authentication service");
-                    let config = drogue_cloud_authentication_service::Config {
-                        http: HttpConfig {
-                            bind_addr: server.device_auth.clone().into(),
-                            workers: Some(1),
-                            metrics_namespace: Some("authentication_service".into()),
-                            ..Default::default()
-                        },
-                        oauth: oauth.clone(),
-                        health: None,
-                        auth_service_config: AuthenticationServiceConfig { pg: pg.clone() },
-                    };
+                tasks.push(Box::pin(drogue_cloud_authentication_service::run(config)));
+            }
 
-                    handles.push(Box::pin(drogue_cloud_authentication_service::run(config)));
-                }
+            if matches.is_present("enable-console-backend") || matches.is_present("enable-all") {
+                log::info!("Enabling console backend service");
+                let mut console_token_config = token_config.clone();
+                console_token_config.client_id = "drogue".to_string();
+                let config = drogue_cloud_console_backend::Config {
+                    http: HttpConfig {
+                        bind_addr: server.console.clone().into(),
+                        disable_tls: true,
+                        workers: Some(1),
+                        metrics_namespace: Some("console_backend".into()),
+                        ..Default::default()
+                    },
+                    oauth: oauth.clone(),
+                    health: None,
+                    enable_kube: false,
+                    kafka: server.kafka.clone(),
+                    keycloak: keycloak.clone(),
+                    registry: registry.clone(),
+                    console_token_config: Some(console_token_config),
+                    disable_account_url: false,
+                    scopes: "openid profile email".into(),
+                    user_auth: user_auth.clone(),
+                    enable_access_token: true,
+                };
 
-                if matches.is_present("enable-console-backend") || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling console backend service");
-                    let mut console_token_config = token_config.clone();
-                    console_token_config.client_id = "drogue".to_string();
-                    let config = drogue_cloud_console_backend::Config {
-                        http: HttpConfig {
-                            bind_addr: server.console.clone().into(),
-                            workers: Some(1),
-                            ..Default::default()
-                        },
-                        oauth: oauth.clone(),
-                        health: None,
-                        enable_kube: false,
-                        kafka: server.kafka.clone(),
-                        keycloak: keycloak.clone(),
-                        registry: registry.clone(),
-                        console_token_config: Some(console_token_config),
-                        disable_account_url: false,
-                        scopes: "openid profile email".into(),
-                        user_auth: user_auth.clone(),
-                        enable_access_token: true,
-                    };
+                tasks.push(Box::pin(drogue_cloud_console_backend::run(
+                    config,
+                    endpoints(&server, tls),
+                )));
+            }
 
-                    handles.push(Box::pin(drogue_cloud_console_backend::run(
-                        config,
-                        endpoints(&server, tls),
-                    )));
-                }
-
-                if matches.is_present("enable-http-endpoint") || matches.is_present("enable-all") {
-                    log::info!("Enabling HTTP endpoint");
-                    let command_source_kafka = command_source("http_endpoint");
-                    let kafka = server.kafka.clone();
-                    let cert_bundle_file: Option<String> =
-                        matches.value_of("server-cert").map(|s| s.to_string());
-                    let key_file: Option<String> =
-                        matches.value_of("server-key").map(|s| s.to_string());
-
-                    let config = drogue_cloud_http_endpoint::Config {
-                        http: HttpConfig {
-                            workers: Some(1),
-                            disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
-                            cert_bundle_file,
-                            key_file,
-                            bind_addr: server.http.clone().into(),
-                            ..Default::default()
-                        },
-                        auth: auth.clone(),
-                        health: None,
-                        command_source_kafka,
-                        instance: "drogue".to_string(),
-                        kafka_downstream_config: kafka.clone(),
-                        kafka_command_config: kafka,
-                        check_kafka_topic_ready: false,
-                        endpoint_pool: Default::default(),
-                    };
-
-                    handles.push(Box::pin(drogue_cloud_http_endpoint::run(config)));
-                }
-
-                if matches.is_present("enable-websocket-integration")
-                    || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling Websocket integration");
-                    let bind_addr = server.websocket_integration.clone().into();
-                    let cert_bundle_file: Option<String> =
-                        matches.value_of("server-cert").map(|s| s.to_string());
-                    let key_file: Option<String> =
-                        matches.value_of("server-key").map(|s| s.to_string());
-                    let kafka = server.kafka.clone();
-                    let user_auth = user_auth.clone();
-                    let config = drogue_cloud_websocket_integration::Config {
-                        http: HttpConfig {
-                            disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
-                            workers: Some(1),
-                            bind_addr,
-                            cert_bundle_file,
-                            key_file,
-                            metrics_namespace: Some("websocket_integration".into()),
-                            ..Default::default()
-                        },
-                        health: None,
-                        enable_access_token: true,
-                        oauth: oauth.clone(),
-
-                        registry: registry.clone(),
-                        kafka,
-                        user_auth,
-                    };
-
-                    handles.push(Box::pin(drogue_cloud_websocket_integration::run(config)));
-                }
-
-                if matches.is_present("enable-command-endpoint") || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling Command endpoint");
-                    let bind_addr = server.command.clone().into();
-                    let kafka = server.kafka.clone();
-                    let user_auth = user_auth.clone();
-                    let config = drogue_cloud_command_endpoint::Config {
-                        http: HttpConfig {
-                            bind_addr,
-                            workers: Some(1),
-                            metrics_namespace: Some("command_endpoint".into()),
-                            ..Default::default()
-                        },
-                        health: None,
-                        enable_access_token: true,
-                        oauth: oauth.clone(),
-                        registry,
-                        instance: "drogue".to_string(),
-                        check_kafka_topic_ready: false,
-                        command_kafka_sink: kafka,
-                        user_auth,
-                        endpoint_pool: Default::default(),
-                    };
-
-                    handles.push(Box::pin(drogue_cloud_command_endpoint::run(config)));
-                }
-
-                runner.block_on(async move {
-                    futures::future::join_all(handles).await;
-                });
-            }));
-        }
-
-        {
-            let oauth = oauth.clone();
-            let server = server.clone();
-            let auth = auth.clone();
-            let matches = matches.clone();
-
-            threads.push(std::thread::spawn(move || {
-                let runner = ntex::rt::System::new("ntex");
-
-                let mut handles: Vec<
-                    core::pin::Pin<Box<dyn core::future::Future<Output = anyhow::Result<()>>>>,
-                > = Vec::new();
-
-                let command_source_kafka = command_source("mqtt_endpoint");
-                let bind_addr_mqtt = server.mqtt.clone().into();
-                let bind_addr_mqtt_ws = server.mqtt_ws.clone().into();
+            if matches.is_present("enable-http-endpoint") || matches.is_present("enable-all") {
+                log::info!("Enabling HTTP endpoint");
+                let command_source_kafka = command_source("http_endpoint");
                 let kafka = server.kafka.clone();
                 let cert_bundle_file: Option<String> =
                     matches.value_of("server-cert").map(|s| s.to_string());
                 let key_file: Option<String> =
                     matches.value_of("server-key").map(|s| s.to_string());
 
-                if matches.is_present("enable-mqtt-endpoint") || matches.is_present("enable-all") {
-                    log::info!("Enabling MQTT endpoint");
-
-                    let config = drogue_cloud_mqtt_endpoint::Config {
-                        mqtt: MqttServerOptions {
-                            workers: Some(1),
-                            bind_addr: Some(bind_addr_mqtt),
-                            ..Default::default()
-                        },
-                        endpoint: Default::default(),
-                        auth: auth.clone(),
-                        health: None,
+                let config = drogue_cloud_http_endpoint::Config {
+                    http: HttpConfig {
+                        workers: Some(1),
                         disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
-                        disable_client_certificates: false,
                         cert_bundle_file,
                         key_file,
-                        instance: "drogue".to_string(),
-                        command_source_kafka,
-                        kafka_downstream_config: kafka.clone(),
-                        kafka_command_config: kafka,
-                        check_kafka_topic_ready: false,
-                        endpoint_pool: Default::default(),
-                        state: state.clone(),
-                    };
-
-                    handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config.clone())));
-
-                    let mut config_ws = config;
-                    // browsers need disabled client certs
-                    config_ws.disable_client_certificates = true;
-                    config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
-
-                    handles.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config_ws)));
-                }
-
-                if matches.is_present("enable-mqtt-integration") || matches.is_present("enable-all")
-                {
-                    log::info!("Enabling MQTT integration");
-                    let bind_addr_mqtt = server.mqtt_integration.clone().into();
-                    let bind_addr_mqtt_ws = server.mqtt_integration_ws.clone().into();
-                    let kafka = server.kafka.clone();
-                    let cert_bundle_file: Option<String> =
-                        matches.value_of("server-cert").map(|s| s.to_string());
-                    let key_file: Option<String> =
-                        matches.value_of("server-key").map(|s| s.to_string());
-                    let registry = registry.clone();
-                    let user_auth = user_auth.clone();
-                    let config = drogue_cloud_mqtt_integration::Config {
-                        mqtt: MqttServerOptions {
-                            workers: Some(1),
-                            bind_addr: Some(bind_addr_mqtt),
-                            ..Default::default()
-                        },
-                        health: None,
-                        oauth,
-                        disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
-                        disable_client_certificates: false,
-                        cert_bundle_file,
-                        key_file,
-                        registry,
-                        service: drogue_cloud_mqtt_integration::ServiceConfig {
-                            kafka: kafka.clone(),
-                            enable_username_password_auth: false,
-                            disable_api_keys: false,
-                        },
-                        check_kafka_topic_ready: false,
-                        user_auth,
-                        instance: "drogue".to_string(),
-                        command_kafka_sink: kafka,
-                        endpoint_pool: Default::default(),
-                    };
-
-                    handles.push(Box::pin(drogue_cloud_mqtt_integration::run(config.clone())));
-
-                    let mut config_ws = config;
-                    // browsers need disabled client certs
-                    config_ws.disable_client_certificates = true;
-                    config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
-
-                    handles.push(Box::pin(drogue_cloud_mqtt_integration::run(config_ws)));
-                }
-
-                runner.block_on(async move {
-                    futures::future::join_all(handles).await;
-                });
-            }));
-        }
-        if matches.is_present("enable-coap-endpoint") || matches.is_present("enable-all") {
-            let server = server.clone();
-            threads.push(std::thread::spawn(move || {
-                let runner = actix_rt::System::with_tokio_rt(|| {
-                    tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .worker_threads(1)
-                        .max_blocking_threads(1)
-                        .thread_name("actix coap")
-                        .build()
-                        .unwrap()
-                });
-
-                log::info!("Enabling CoAP endpoint");
-                let command_source_kafka = command_source("coap_endpoint");
-                let bind_addr = server.coap.clone().into();
-                let kafka = server.kafka.clone();
-                let config = drogue_cloud_coap_endpoint::Config {
-                    auth,
+                        bind_addr: server.http.clone().into(),
+                        metrics_namespace: Some("http_endpoint".into()),
+                        ..Default::default()
+                    },
+                    auth: auth.clone(),
                     health: None,
-                    bind_addr_coap: Some(bind_addr),
-                    instance: "drogue".to_string(),
                     command_source_kafka,
+                    instance: "drogue".to_string(),
                     kafka_downstream_config: kafka.clone(),
                     kafka_command_config: kafka,
                     check_kafka_topic_ready: false,
                     endpoint_pool: Default::default(),
                 };
 
-                runner.block_on(async move {
-                    match select(
-                        Box::pin(drogue_cloud_coap_endpoint::run(config)),
-                        Box::pin(tokio::signal::ctrl_c()),
-                    )
-                    .await
-                    {
-                        Either::Left((r, _)) => r.unwrap(),
-                        Either::Right(_) => {}
-                    }
-                });
+                tasks.push(Box::pin(drogue_cloud_http_endpoint::run(config)));
+            }
+
+            if matches.is_present("enable-websocket-integration")
+                || matches.is_present("enable-all")
+            {
+                log::info!("Enabling Websocket integration");
+                let bind_addr = server.websocket_integration.clone().into();
+                let cert_bundle_file: Option<String> =
+                    matches.value_of("server-cert").map(|s| s.to_string());
+                let key_file: Option<String> =
+                    matches.value_of("server-key").map(|s| s.to_string());
+                let kafka = server.kafka.clone();
+                let user_auth = user_auth.clone();
+                let config = drogue_cloud_websocket_integration::Config {
+                    http: HttpConfig {
+                        disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
+                        workers: Some(1),
+                        bind_addr,
+                        cert_bundle_file,
+                        key_file,
+                        metrics_namespace: Some("websocket_integration".into()),
+                        ..Default::default()
+                    },
+                    health: None,
+                    enable_access_token: true,
+                    oauth: oauth.clone(),
+
+                    registry: registry.clone(),
+                    kafka,
+                    user_auth,
+                };
+
+                // The websocket integration uses the actix actors, so for now, that must run
+                // on an actix runtime.
+                tasks.push(Box::pin(async {
+                    Handle::current()
+                        .spawn_blocking(move || {
+                            let runner = actix_rt::System::with_tokio_rt(|| {
+                                tokio::runtime::Builder::new_current_thread()
+                                    .enable_all()
+                                    .worker_threads(1)
+                                    .max_blocking_threads(1)
+                                    .thread_name("actix")
+                                    .build()
+                                    .unwrap()
+                            });
+
+                            runner.block_on(async move {
+                                Ok::<(), anyhow::Error>(
+                                    drogue_cloud_websocket_integration::run(config).await?,
+                                )
+                            })
+                        })
+                        .await??;
+
+                    Ok::<(), anyhow::Error>(())
+                }));
+            }
+
+            if matches.is_present("enable-command-endpoint") || matches.is_present("enable-all") {
+                log::info!("Enabling Command endpoint");
+                let bind_addr = server.command.clone().into();
+                let kafka = server.kafka.clone();
+                let user_auth = user_auth.clone();
+                let config = drogue_cloud_command_endpoint::Config {
+                    http: HttpConfig {
+                        bind_addr,
+                        disable_tls: true,
+                        workers: Some(1),
+                        metrics_namespace: Some("command_endpoint".into()),
+                        ..Default::default()
+                    },
+                    health: None,
+                    enable_access_token: true,
+                    oauth: oauth.clone(),
+                    registry,
+                    instance: "drogue".to_string(),
+                    check_kafka_topic_ready: false,
+                    command_kafka_sink: kafka,
+                    user_auth,
+                    endpoint_pool: Default::default(),
+                };
+
+                tasks.push(Box::pin(drogue_cloud_command_endpoint::run(config)));
+            }
+        }
+
+        // ntex related tasks
+        {
+            let oauth = oauth.clone();
+            let server = server.clone();
+            let auth = auth.clone();
+            let matches = matches.clone();
+
+            let command_source_kafka = command_source("mqtt_endpoint");
+            let bind_addr_mqtt = server.mqtt.clone().into();
+            let bind_addr_mqtt_ws = server.mqtt_ws.clone().into();
+            let kafka = server.kafka.clone();
+            let cert_bundle_file: Option<String> =
+                matches.value_of("server-cert").map(|s| s.to_string());
+            let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+
+            tasks.push(Box::pin(async {
+                Handle::current()
+                    .spawn_blocking(move || {
+                        let runner = ntex::rt::System::new("ntex");
+
+                        let mut tasks: Vec<Pin<Box<dyn Future<Output = anyhow::Result<()>>>>> =
+                            Vec::new();
+
+                        {
+                            if matches.is_present("enable-mqtt-endpoint")
+                                || matches.is_present("enable-all")
+                            {
+                                log::info!("Enabling MQTT endpoint");
+
+                                let config = drogue_cloud_mqtt_endpoint::Config {
+                                    mqtt: MqttServerOptions {
+                                        workers: Some(1),
+                                        bind_addr: Some(bind_addr_mqtt),
+                                        ..Default::default()
+                                    },
+                                    endpoint: Default::default(),
+                                    auth: auth.clone(),
+                                    health: None,
+                                    disable_tls: !(key_file.is_some()
+                                        && cert_bundle_file.is_some()),
+                                    disable_client_certificates: false,
+                                    cert_bundle_file,
+                                    key_file,
+                                    instance: "drogue".to_string(),
+                                    command_source_kafka,
+                                    kafka_downstream_config: kafka.clone(),
+                                    kafka_command_config: kafka,
+                                    check_kafka_topic_ready: false,
+                                    endpoint_pool: Default::default(),
+                                    state: state.clone(),
+                                };
+
+                                tasks.push(Box::pin(drogue_cloud_mqtt_endpoint::run(
+                                    config.clone(),
+                                )));
+
+                                let mut config_ws = config;
+                                // browsers need disabled client certs
+                                config_ws.disable_client_certificates = true;
+                                config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
+
+                                tasks.push(Box::pin(drogue_cloud_mqtt_endpoint::run(config_ws)));
+                            }
+
+                            if matches.is_present("enable-mqtt-integration")
+                                || matches.is_present("enable-all")
+                            {
+                                log::info!("Enabling MQTT integration");
+                                let bind_addr_mqtt = server.mqtt_integration.clone().into();
+                                let bind_addr_mqtt_ws = server.mqtt_integration_ws.clone().into();
+                                let kafka = server.kafka.clone();
+                                let cert_bundle_file: Option<String> =
+                                    matches.value_of("server-cert").map(|s| s.to_string());
+                                let key_file: Option<String> =
+                                    matches.value_of("server-key").map(|s| s.to_string());
+                                let registry = registry.clone();
+                                let user_auth = user_auth.clone();
+                                let config = drogue_cloud_mqtt_integration::Config {
+                                    mqtt: MqttServerOptions {
+                                        workers: Some(1),
+                                        bind_addr: Some(bind_addr_mqtt),
+                                        ..Default::default()
+                                    },
+                                    health: None,
+                                    oauth,
+                                    disable_tls: !(key_file.is_some()
+                                        && cert_bundle_file.is_some()),
+                                    disable_client_certificates: false,
+                                    cert_bundle_file,
+                                    key_file,
+                                    registry,
+                                    service: drogue_cloud_mqtt_integration::ServiceConfig {
+                                        kafka: kafka.clone(),
+                                        enable_username_password_auth: false,
+                                        disable_api_keys: false,
+                                    },
+                                    check_kafka_topic_ready: false,
+                                    user_auth,
+                                    instance: "drogue".to_string(),
+                                    command_kafka_sink: kafka,
+                                    endpoint_pool: Default::default(),
+                                };
+
+                                tasks.push(Box::pin(drogue_cloud_mqtt_integration::run(
+                                    config.clone(),
+                                )));
+
+                                let mut config_ws = config;
+                                // browsers need disabled client certs
+                                config_ws.disable_client_certificates = true;
+                                config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
+
+                                tasks.push(Box::pin(drogue_cloud_mqtt_integration::run(config_ws)));
+                            }
+                        }
+
+                        runner.block_on(async move {
+                            let (result, _, _) = futures::future::select_all(tasks).await;
+                            result
+                        })?;
+
+                        Ok::<(), anyhow::Error>(())
+                    })
+                    .await??;
+
+                Ok(())
             }));
+        }
+
+        if matches.is_present("enable-coap-endpoint") || matches.is_present("enable-all") {
+            log::info!("Enabling CoAP endpoint");
+            let command_source_kafka = command_source("coap_endpoint");
+            let bind_addr = server.coap.clone().into();
+            let kafka = server.kafka.clone();
+            let config = drogue_cloud_coap_endpoint::Config {
+                auth,
+                health: None,
+                bind_addr_coap: Some(bind_addr),
+                instance: "drogue".to_string(),
+                command_source_kafka,
+                kafka_downstream_config: kafka.clone(),
+                kafka_command_config: kafka,
+                check_kafka_topic_ready: false,
+                endpoint_pool: Default::default(),
+            };
+
+            tasks.push(Box::pin(drogue_cloud_coap_endpoint::run(config)));
         }
 
         run(
@@ -771,8 +782,9 @@ fn main() {
                 http_prefix,
             },
             server,
-            threads,
-        );
+            tasks,
+        )
+        .await;
     } else {
         log::error!("No subcommand specified");
         app.print_long_help().unwrap();
@@ -786,7 +798,11 @@ pub struct Context<'c> {
     pub tls: bool,
 }
 
-fn run(ctx: Context, server: ServerConfig, mut threads: Vec<JoinHandle<()>>) {
+async fn run(
+    ctx: Context<'_>,
+    server: ServerConfig,
+    mut tasks: Vec<Pin<Box<dyn Future<Output = anyhow::Result<()>>>>>,
+) {
     println!("Drogue Cloud is running!");
     println!();
 
@@ -858,13 +874,16 @@ fn run(ctx: Context, server: ServerConfig, mut threads: Vec<JoinHandle<()>>) {
     );
     println!();
 
+    // add terminate handler
+    tasks.push(Box::pin(
+        tokio::signal::ctrl_c().map_err(|err| anyhow!(err)),
+    ));
+
     let now = Instant::now();
 
-    for t in threads.drain(..) {
-        t.join().unwrap();
-    }
+    let (result, _, _) = futures::future::select_all(tasks).await;
 
-    log::info!("All services stopped");
+    log::warn!("One service terminated: {result:?}");
 
     if now.elapsed() < Duration::from_secs(2) {
         log::warn!("Server exited quickly. Maybe no services had been enabled. You can enable services using --enable-* or enable all using --enable-all.");
