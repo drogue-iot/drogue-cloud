@@ -7,6 +7,7 @@ global:
       insecure: true
 
 drogueCloudCore:
+
   endpoints:
     coap:
       ingress:
@@ -35,6 +36,8 @@ drogueCloudCore:
       ingress:
         port: 30008
     websocket:
+      service:
+        insecure: true
       ingress:
         insecure: true
         port: 30004
@@ -43,20 +46,48 @@ drogueCloudCore:
     localCertificates: true
 
   services:
-    console:
+
+    api:
+      service:
+        insecure: true
       ingress:
         insecure: true
         port: 80
 
-    api:
+    auth:
+      service:
+        insecure: true
+
+    command:
+      service:
+        insecure: true
       ingress:
         insecure: true
         port: 80
+
+    console:
+      service:
+        insecure: true
+      ingress:
+        insecure: true
+        port: 80
+
+    deviceState:
+      service:
+        insecure: true
+
+    registry:
+      service:
+        insecure: true
 
     sso:
       ingress:
         insecure: true
         port: 80
+
+    userAuth:
+      service:
+        insecure: true
 
 
 drogueCloudExamples:
@@ -65,4 +96,3 @@ drogueCloudExamples:
     ingress:
       insecure: true
       port: 80
-
