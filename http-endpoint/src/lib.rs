@@ -21,6 +21,7 @@ use drogue_cloud_service_common::{
     app::run_main,
     defaults,
     health::HealthServerConfig,
+    tls::TlsMode,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -94,6 +95,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                     .route("/v3", web::post().to(ttn::publish_v3)),
             );
     })
+    .tls_mode(TlsMode::Client)
     .on_connect(|con, ext| {
         if let Some(cert) = x509::from_socket(con) {
             if !cert.0.is_empty() {

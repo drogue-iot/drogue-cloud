@@ -45,6 +45,7 @@ where
     app_builder: Box<F>,
     cors_builder: CorsBuilder,
     on_connect: Option<Box<dyn Fn(&dyn Any, &mut Extensions) + Send + Sync + 'static>>,
+    tls_mode: TlsMode,
 }
 
 impl<F> HttpBuilder<F>
@@ -57,6 +58,7 @@ where
             app_builder: Box::new(app_builder),
             cors_builder: Default::default(),
             on_connect: None,
+            tls_mode: TlsMode::NoClient,
         }
     }
 
@@ -70,6 +72,11 @@ where
         O: Fn(&dyn Any, &mut Extensions) + Send + Sync + 'static,
     {
         self.on_connect = Some(Box::new(on_connect));
+        self
+    }
+
+    pub fn tls_mode<I: Into<TlsMode>>(mut self, tls_mode: I) -> Self {
+        self.tls_mode = tls_mode.into();
         self
     }
 
@@ -113,7 +120,7 @@ where
         let mut main = bind_http(
             main,
             self.config.bind_addr,
-            self.config.disable_tls.with_tls_mode(TlsMode::NoClient),
+            self.config.disable_tls.with_tls_mode(self.tls_mode),
             self.config.key_file,
             self.config.cert_bundle_file,
         )?;
