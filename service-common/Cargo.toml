@@ -54,7 +54,7 @@ actix-rt = "2.7"
 tokio = { version = "1", features = ["full"] }
 
 [features]
-default = ["rustls", "native-tls", "actix"]
+default = ["rustls", "native-tls", "actix", "openssl"]
 rustls = ["rust_tls", "webpki", "reqwest/rustls-tls"]
 openssl = ["open_ssl", "drogue-cloud-service-api/openssl"]
 jaeger = ["opentelemetry-jaeger"]
