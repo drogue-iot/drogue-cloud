@@ -379,10 +379,17 @@ quick: build build-images tag-images
 # A shortcut for building and pushing the frontend only
 #
 .PHONY: frontend
-frontend:
-	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) frontend-build \
-		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
+frontend: host-frontend
 	$(MAKE) -C console-frontend images SKIP_BUILD=1
+
+
+#
+# Start a containerized frontend build
+#
+.PHONY: host-frontend
+host-frontend:
+	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) frontend-build \
+    		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
 
 
 #

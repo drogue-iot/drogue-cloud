@@ -165,6 +165,10 @@ jobs:
         run: |
           PQ_LIB_STATIC=1 SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static -p drogue-cloud-server
 
+      - name: Build frontend
+        run: |
+          make host-frontend
+
       - name: Build container image
         run: |
           # we have a pre-built binary, so we can skip the main build step
