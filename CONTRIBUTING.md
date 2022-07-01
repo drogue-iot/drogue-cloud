@@ -25,169 +25,10 @@ we already have this in our heads (and forgot to create an issue for it), or may
 In any case, it is always good to create an issue, or join the chat and tell us about your issues or plans. We will
 definitely try to help you.
 
-If you want to get started making changes to this project, you will need a few things. The following sub-sections
-should help you get ready.
+## Developing
 
-### Pre-requisites
-
-In any case, you will need:
-
-* Linux, Mac OS X, or Windows on an AMD64 platform (aka `x86_64`)
-* Podman or Docker
-  * Windows containers will not work, you need to use Linux based containers, and again `x86_64`.
-* Some tools
-  * git
-  * GNU Make
-  * Python 3.x with PyYAML module
-  * npm
-  * kubectl
-  * HTTPie 2.2+
-* A lot of cores, patience, memory, and disk space
-* Some form of Kubernetes cluster
-  * **Minikube** is what seems to work best for development, and is easy to get started with.
-  * **Kind** also works, uses less resources, but is less tested.
-  * **OpenShift** also works and make several things easier (like proper DNS names and certs), but is
-    also more complex to set up.
-
-### Optional requirements
-
-* **Rust 1.59+** – By default the build will run inside a container image, with Rust included. So you don't necessarily
-  need to install Rust on your local machine. However, having Rust installed might come in handy at some point. If you
-  want to use an IDE, that might require a Rust installation. Or if you want to quickly run tests, maybe from inside
-  your IDE, then this will require Rust as well.
-
-  In any case, you need to be sure that you install at least the version of Rust mentioned above. If you installed
-  Rust using `rustup` and default options, then performing an upgrade should be as easy as running `rustup update`.
-
-* **An IDE** – Whatever works best for you. Eclipse, Emacs, IntelliJ, Vim, … [^1] should all be usable with this
-  project. We do not require any specific IDE. We also do not commit any IDE specific files either.
-
-[^1]: This list is sorted in alphabetical order, not in the order of any preference.
-
-## Operating system
-
-There are different ways to install the required dependencies on the different operating systems. Some operating
-systems also might require some additional settings. This section should help to get you started.
-
-### Fedora
-
-Use an "update to date" version of Fedora. Install the following dependencies:
-
-    sudo dnf install curl openssl-devel npm gcc gcc-c++ make cyrus-sasl-devel cmake libpq-devel postgresql podman podman-docker
-
-### Windows
-
-Assuming you have Windows 10 and admin access.
-
-Install:
-
-* Git for Windows
-* GNU Make 4.x
-  * install mingw-w64, as described here: https://code.visualstudio.com/docs/cpp/config-mingw
-  * or, install "GNU make" using Chocolatey
-* Docker for Windows
-  * Enable WSL2
-
-**FIXME:** Needs more testing
-
-### Mac OS
-
-Most of the required tools you can install using [brew](https://brew.sh/) package manager, e.g.
-
-  brew install git make
-
-Using OpenSSL and Cyrus SASL libraries native is still work in progress, so you should use container build for the time being
- as described below.
-
-## Building
-
-While the build is based on `cargo`, the build is still driven by the main `Makefile`, located in
-the root of the repository. By default, the cargo build running inside a build container. This reduces
-the number of pre-requisites you need to install, and makes it easier on platforms like Windows or Mac OS.
-
-To perform a full build execute:
-
-    make build
-
-This builds the cargo based projects, the frontend, and the container images.
-
-Builds are done using Docker or Podman container runtimes. Podman is preferred if it is present on the system. However, it is
-required that Podman supports bind mounts feature properly which is not the case for all platforms today. In that case you can
-force Docker runtime with
-
-    CONTAINER=docker make build
-
-## Testing
-
-To run all tests:
-
-    make test
-
-**Note:** When using podman, you currently cannot use `make test`. You need to revert
-to `make container-test`, see below.
-
-### Running test on the host
-
-If you have a full build environment on your machine, you can also execute the tests on the host machine,
-rather than forking them off in the build container:
-
-    make container-test
-
-### IDE based testing
-
-You can also run cargo tests directly from your IDE. How this works, depends on your IDE.
-
-However, as tests are compiled and executed on the host machine, the same requirements, as when running
-tests on the host machine, apply (see above).
-
-## Publishing images
-
-The locally built images can be published with the Makefile as well. For this you need a location to push to.
-You can, for example use [quay.io](https://quay.io). Assuming your username on quay.io is "rodney", and
-you did log in using `docker login`, then you could do:
-
-    make push CONTAINER_REGISTRY=quay.io/rodney
-
-## Deploying
-
-By default, the installation scripts will use the official images from `ghcr.io/drogue-iot`.
-
-When you created and published custom images, you can deploy them using `make` as well. Before you
-do that, you will need to have access to a Kubernetes cluster. You can run a local cluster using `minikube`.
-Make sure that your `minikube` cluster is started with `ingress` addon and that you run `tunnel` in a separate shell
-
-~~~shell
-minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
-minikube tunnel # in a separate terminal, as it keeps running
-~~~
-
-Once the instance is up, and you have ensured that you can access the cluster with `kubectl`, you can run
-the following command to run the deployment:
-
-    make deploy CONTAINER_REGISTRY=quay.io/rodney
-
-If you need to pass additional arguments to the deploy script, you can use `DEPLOY_ARGS` environment variable like:
-
-~~~shell
-env INSTALL_STRIMZI=false DEPLOY_ARGS="-f deploy/examples/managed_kafka.yaml" make deploy
-~~~
-
-## Helm charts
-
-Helm charts are maintained in the separate repository: https://github.com/drogue-iot/drogue-cloud-helm-charts
-
-They are however included as a git submodule at the `deploy/helm` path. A `deploy` target will initialize the submodule.
-If you wish to do it manually run:
-
-~~~shell
-git submodule update --init
-~~~
-
-Also, to pull changes into the existing workspace run:
-
-~~~shell
- git submodule foreach git pull origin main
- ~~~
+We have some detailed development instructions in a separate document: [DEVELOPMENT.adoc](DEVELOPMENT.adoc). You can
+also find it in our [documentation](https://book.drogue.io).
 
 ## Contributing your work
 
@@ -200,7 +41,9 @@ Running locally will give you quicker results, and safe us a bit of time and CI 
 
 It is as easy as running:
 
-    make check
+```shell
+make check
+```
 
 This will:
 
@@ -219,49 +62,3 @@ to PRs that show up "green". So maybe check back and ensure that the CI comes up
 doesn't, and you don't understand why, please reach out to us.
 
 There are bonus points for adding your own tests ;-)
-
-## How to …
-
-### … work on the frontend
-
-You will need to have `trunk`, `npm` and `sass` installed, as it will drive parts of the build.
-
-`trunk` can be installed using `cargo`:
-
-```shell
-cargo install trunk
-```
-
-Installing `sass` can be done using the following command:
-
-```shell
-npm install -g sass@1.52.3
-```
-
-#### Running with a cloud backend
-
-You can also run the frontend with a backend in the cloud (or local cluster, e.g. minikube).
-To do so, you can create a `console-frontend/dev/endpoints/backend.local.json` file and populate it with the API and SSO urls of your drogue instance.
-
-For example (devbox):
-
-```json
-{
-  "url": "https://api-drogue-dev.apps.wonderful.iot-playground.org/",
-  "openid": {
-    "client_id": "drogue",
-    "issuer_url": "https://sso-drogue-dev.apps.wonderful.iot-playground.org/realms/drogue"
-  }
-}
-```
-
-NOTE: This model doesn't work if your frontend will use newer backend APIs, which are not yet deployed in the cloud.
-
-#### Running with a local server
-
-The simplest way to run the `console-backend` is to use [`drogue-cloud-server`](https://github.com/drogue-iot/drogue-cloud/tree/main/server). Once you have it running (bound to localhost which is the default), you can start the `console-frontend` in the development mode:
-
-~~~
-cd console-frontend
-trunk serve
-~~~
