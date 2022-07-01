@@ -3,6 +3,7 @@ title: Drogue Cloud
 version: dev
 nav:
   - modules/ROOT/nav.adoc
+  - modules/use-cases/nav.adoc
   - modules/introduction/nav.adoc
   - modules/deployment/nav.adoc
   - modules/user-guide/nav.adoc

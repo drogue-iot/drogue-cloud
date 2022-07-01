@@ -1,0 +1,12 @@
+= Use Cases
+
+Drogue Cloud has many applications in the world of IoT, but having some specific examples helps bringing the message out there. We've got 3 example use cases to highlight the different ways you can deploy Drogue Cloud and the different ways to use it.
+
+* xref:environmental-monitoring.adoc[Environmental Monitoring]
+* xref:smart-factories.adoc[Smart Factories]
+* xref:predictive-maintenance.adoc[Predictive Maintenance]
+
+The intendend audience for these use cases are architects and developers who are evaluating how Drogue Cloud works and which use cases it unlocks in their organization.
+
+
+Got any questions? Join our link:https://matrix.to/#/#drogue-iot:matrix.org[chat].

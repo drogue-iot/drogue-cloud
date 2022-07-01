@@ -1,0 +1,50 @@
+= Environmental Monitoring
+
+Environmental Monitoring involves collecting sensor data from a potential wide variety of sensors, and using that data in analysis and making informed decisions.
+
+Different sensor types may need to send data to the monitoring system using different protocols. Some are able to connect through a gateway in close proximity, while others may connect directly.
+
+Sensor onboarding and maintenance requires good integrations with existing resource management systems.
+
+== Example
+
+There are two main business applications in this example:
+
+* A forecasting system which will provide alerts when the trained forecasting model predicts a dangerous level of pollution.
+* A sensor onboarding service that is used to configure new sensors added to the system.
+
+The main data center, which can be on-premise or in the cloud, runs a Kubernetes cluster with Drogue Cloud and the business applications. All stateful systems uses managed services to simplify operations of the system.
+
+The following Drogue Cloud features are used:
+
+* Using the connectivity layer to supporting multiple protocols for ingesting data
+* RESTful APIs for integrating device management with existing systems
+* Managing Edge gateways operating system and software
+* Streaming APIs for consuming sensor data using MQTT or WebSockets
+* Using managed or external stateful services for storage
+
+image::environmental_sensing.svg[alt="Environmental Monitoring Architecture", link="{imagesdir}/environmental_sensing.svg"]
+
+=== Sensors
+
+Sensors use a combination of networks to send data to Drogue Cloud. Some areas that require long range coverage use a LoRaWAN network, others use the cellular network. Some sensors are restricted to a small area, and maybe use mesh networks such as Thread or Bluetooth Mesh in combination with a connected gateway.
+
+=== Edge
+
+Some sensors may operate require gateways to be placed in closer proximity to the sensors. Using link:https://project-flotta.io/[Flotta], gateways can be centrally managed in the cloud, and the workloads running on the gateway (such as a LoRaWAN gateway, or Bluetooth Gateway) can be configured via Drogue Cloud transparently. Drogue Cloud creates the required flotta configuration ensuring that the gateway software is running with the correct configuration, while flotta ensures that the operating system and software is running.
+
+=== Drogue Cloud
+
+The gateways or sensors send their events using the Drogue Cloud endpoints, which support several standard IoT protocols needed by different sensor types. All data is authenticated at the endpoint boundary, using the device registry, before it is handed to the external Apacke Kafka service. All sensor data is wrapped in the Cloud Events format, allowing the applications to rely to standardized envelopes for message metadata.
+
+=== Applications
+
+The forecasting system consumes events from the MQTT endpoint in Drogue Cloud. The application authenticates using API tokens created by the operations team which allows isolating the forecasting system for different areas or end users. Events received by the application are encoded using the link:https://cloudevents.io/[Cloud Events] speicfication, allowing the application to run in a serverless framework like link:https://knative.dev/docs/[KNative]. The forecasting application uses a model that is updated by data scientists.
+
+The sensor onboarding service is involved when a technician installs new sensors, ensuring they are securely paired and connected. The REST APIs allows registering new gateways and sensors, leaving the details of reconfiguring the gateways up to Drogue Cloud. More advanced self-test procedures can be performed by using the MQTT/Websocket Integration in combination with the Command API.
+
+=== External Services
+
+Drogue Cloud can be configured to use managed services for all stateful components. This reduces a big part of the administrative burden, and makes it easier to deal with disaster recovery and creating clusters in multiple regions.
+
+The stateful services used in this example are link:https://www.postgresql.org/[PostgreSQL] for storing device registry and (indirectly via Keycloak) authentication and authorization data, and link:https://kafka.apache.org/[Apache Kafka] for telemetry and events.

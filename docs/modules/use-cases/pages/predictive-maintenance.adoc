@@ -1,0 +1,44 @@
+= Predictive Maintenance
+
+Predictive Maintenance involves gathering data about the conditions for physical devices and tools, in order to predict the need for maintenance and prolong the life of the product.
+
+In this use case, the following Drogue Cloud features are used:
+
+* Connectivity layer for normalizing event data and storing in Apache Kafka
+* Firmware updates for bare metal (without operating system) devices
+* Integration with third party: Eclipse Ditto for Digital Twin
+
+The data stored in Apache Kafka is consumed by a fault detection model as well as a digital twin system. Digital Twin capability makes it easy to view the current state of devices. Software updates for devices are continously built and deployed to the fleet.
+
+== Example architecture
+
+All data related to devices are colocated and controlled by "the company". It is desireable that a digital representation of each device is kept up to date for humans to inspect and decide actions.
+
+image::predictive_maintenance.svg[alt="Predictive Maintenance Architecture", link="{imagesdir}/predictive_maintenance.svg"]
+
+=== Devices
+
+In this scenario, all devices are connected via LTE-M or NB-IoT, using a telco network for connectivity. The devices periodically "phone" home with the latest set of metrics with usage patterns and telemetry during their use.
+
+In parallel with normal operation, devices also report their current firmware versions, receiving updates if any are available.
+
+=== Drogue Cloud
+
+This data is propagated to Drogue Cloud, which handles authentication and normalizing the data to Cloud Events. Drogue Cloud runs in the same cluster as the database for the device registry and Apache Kafka handling the incoming data from devices.
+
+=== Digital Twin
+
+Each device has a digital twin representation that is stored in Eclipse Ditto. All telemetry data is streamed from Apache Kafka into Eclipse Ditto, which consumes the normalized Cloud Events. The digital twin model is kept up to date with both the telemetry data, as
+well as result from prediction models, so that all state related to the device can be found in a single place.
+
+=== Failure detection
+
+The telemetry data is also streamed by an application applying a machine learned model to detect devices that need replacement. By detecting vibrations during device use, it is able to alert users of the device and the company about part replacements.
+
+=== Firmware updates
+
+In order to isolate the firmware management from the regular telemetry traffic, a separate cluster is running the firmware services.
+
+Drogue Ajour and Eclipse Hawkbit is used to build and roll out firmware updates to devices. When software developers create a fix that is merged to a release branch, an immutable artifact with the firmware is published to an internal registry.
+
+When a release is created, the devices will automatically receive the update when they are reporting their current firmware revisions. Devices receive updates at their own pace, and the update status of all devices are tracked in Drogue Cloud.

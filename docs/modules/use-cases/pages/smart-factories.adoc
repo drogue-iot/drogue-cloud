@@ -1,0 +1,64 @@
+= Smart Factories
+
+Smart Factories collect data from the manufacturing process to detect anomalies, derive prediction models and adjust the process based on a feedback loop.
+
+Factories need to operate independently of eachother, so that if one factory has problems, it does not impact the other. However, managing configuration of the factories centrally is still desireable, to avoid diverging behavior.
+
+
+For this use case, multiple isolated Drogue Cloud instances are used, to ensure isolated operation of the factories. Each instance trains a local model to detect anomalies, and is able to quickly react to critical events. Event data as well as change events are forwarded to a centralized cluster for further analysis.
+
+== Example
+
+In this example, the smart factory is split into a system with three tiers. The central tier which is used to managed the factory clusters as well as running business applications that need a global view of the data.
+
+The second tier is the factory tier where all the applications needed for factory operation is running. The factory cluster configuration is managed by the central cluster.
+
+The third tier are the edge tier where control processes and devices are running. These processes are timing sensitive, and may communicate internally to respond to critical events. The processes and their configuration run in a cluster which is managed by the factory cluster.
+
+For users familiar with the link:https://open-manufacturing.org/[Open Manufacturing Platform (OMP)], these tiers correspond to the enterprise, facility and station (+ control and field) layers in the OMP reference architecture.
+
+The following Drogue Cloud features are used:
+
+* Using the connectivity layer to supporting multiple protocols for ingesting data
+* Command APIs for sending commands to end devices
+* Managing control cluster workloads using link:https://open-cluster-management.io/[Open Cluster Management]
+* Using external Apache Kafka instances
+
+
+image::smart_factories.svg[alt="Smart Factories Architecture", link="{imagesdir}/smart_factories.svg"]
+
+=== Edge
+
+The factory consists of several physical components:
+
+* Conveyor belts
+* Robot arms part of the manufacturing process
+* Quality sensors reporting production errors
+
+These components are accessible through an OPC-UA server, which communicate with eachother for critical events. An OPC-UA connector send telemetry data to and receive commands from Drogue Cloud running in the factory cluster.
+
+=== Factory
+
+The factory cluster contains the infrastructure needed to operate the factory. Stateful services such as PostgreSQL and Apache Kafka are running on the cluster (alternatively in their own cluster or outside Kubernetes) and Drogue Cloud connects to them as needed for device management and publishing telemetry data.
+
+Drogue Cloud configures and deploys the required workloads on the edge cluster using Open Cluster Management (OCM).
+
+=== Central
+
+A centralized control plane provides a single place for configuring the factories. The central cluster is a global instance that also serves infrastructure that is not critical to the day to day operation of the factories. If this cluster goes down,
+the factories can still operate independently.
+
+The factory clusters are managed using Open Cluster Management (OCM), ensuring that factories will have consistent configurations.
+
+The central cluster also holds a more powerful processing pipeline that consumes data from all factory clusters for later processing and analysis, such as adjusting device configuration or training failure detection models.
+
+An instance of MirrorMaker is used to forward events in Apache Kafka factory instance with the centralized Apache Kafka instance.
+
+=== Applications
+
+The business applications receive telemetry from Drogue Cloud via Apache Kafka, and send commands back using the command API.
+
+* Component failure detection - Using a machine learned model to learn when a component is about to fail and needs replacement. Capable of performing shutdown of production to avoid cascading failures.
+* Product quality monitoring - Using sensor data to provide a product quality metric that is fed back into the Apache Kafka cluster and mirrored to the central cluster.
+* Factory parameter tuner - Tuning factory configuration feedback from product quality and other telemetry data.
+* Model training - Using a global view of the data to infer improved models for failure detection.
