@@ -288,7 +288,7 @@ jobs:
 
       - name: Tag images
         run: |
-          make tag-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }} SKIP_SERVER=1 SKIP_BUILD=1
+          make tag-images CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }} SKIP_SERVER=1 SKIP_BUILD=1 SKIP_BUILD_IMAGES=1
 
       - name: Load images in kind
         run: make kind-load CONTAINER_REGISTRY=dev.local IMAGE_TAG=${{ github.sha }} SKIP_SERVER=1
