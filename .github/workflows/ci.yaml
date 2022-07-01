@@ -145,7 +145,7 @@ jobs:
 
   server-linux:
     needs: [check]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     env:
       VERSION: ${{needs.check.outputs.version}}
     steps:
@@ -162,29 +162,22 @@ jobs:
           key: ${{ runner.os }}-cargo-server-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update; DEBIAN_FRONTEND="noninteractive" sudo apt-get -y install build-essential curl tzdata
-          sudo apt install -y libssl-dev pkg-config libsasl2-dev librdkafka-dev libpqxx-dev
-
-      - name: Build PostgreSQL dependency
-        run: |
-          # Build and install postgresql dep
-          curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
-          tar xvf postgresql-11.13.tar.gz
-          cd postgresql-11.13
-          ./configure --prefix=$PWD/../libpq
-          make
-          make install
-          cd ..
+          sudo apt update
+          sudo apt install -y build-essential curl tzdata libssl-dev pkg-config libsasl2-dev librdkafka-dev libpq-dev libpqxx-dev
 
       - name: Build binary
         run: |
-          PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static -p drogue-cloud-server
+          PQ_LIB_STATIC=1 SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static -p drogue-cloud-server
 
       - name: Build container image
-          # also build the container image
+        run: |
           make 'build-image(server)'
+
       - name: Export container image
+        run: |
           make -C server save-images
           mv build/images/all.tar build/images/server.tar
 
