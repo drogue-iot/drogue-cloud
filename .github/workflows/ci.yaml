@@ -67,13 +67,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - uses: actions/cache@v2
-        with:
-          path: console-frontend/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
       - name: Check
         run: make host-check
 
