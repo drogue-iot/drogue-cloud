@@ -167,7 +167,8 @@ jobs:
 
       - name: Build container image
         run: |
-          make 'build-image(server)'
+          # we have a pre-built binary, so we can skip the main build step
+          make SKIP_BUILD=1 'build-image(server)'
 
       - name: Export container image
         run: |
