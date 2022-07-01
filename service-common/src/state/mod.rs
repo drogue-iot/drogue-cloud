@@ -67,7 +67,7 @@ impl DerefMut for StateStream {
 }
 
 pub enum CreationOutcome {
-    Created(State),
+    Created(Box<State>),
     Occupied,
     Failed,
 }
@@ -160,7 +160,7 @@ impl StateController {
                         application: application.metadata.name.to_string(),
                         device: device.metadata.name.to_string(),
                     };
-                    return CreationOutcome::Created(State {
+                    return CreationOutcome::Created(Box::new(State {
                         handle: StateHandle {
                             mux: self.mux.clone(),
                             deleted: false,
@@ -170,7 +170,7 @@ impl StateController {
                             state: self.clone(),
                         },
                         watcher: self.mux.lock().await.added(id, token),
-                    });
+                    }));
                 }
                 Ok(device_state::CreateResponse::Occupied) => {
                     if attempts > 0 {

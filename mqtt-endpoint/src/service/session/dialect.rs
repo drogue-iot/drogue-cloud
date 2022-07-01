@@ -63,7 +63,7 @@ impl DefaultTopicParser for MqttDialect {
 
                 match topic {
                     // No topic at all
-                    None if path == "" => Err(ParseError::Empty),
+                    None if path.is_empty() => Err(ParseError::Empty),
                     None => Err(ParseError::Syntax),
                     Some(("", path)) => Ok(ParsedTopic {
                         channel: path,

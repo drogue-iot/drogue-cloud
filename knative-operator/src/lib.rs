@@ -104,7 +104,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         deployments,
         ListParams {
             // only watch deployments having the app name annotation
-            label_selector: Some(format!("{}", LABEL_APP_MARKER)),
+            label_selector: Some(LABEL_APP_MARKER.to_string()),
             ..Default::default()
         },
     );

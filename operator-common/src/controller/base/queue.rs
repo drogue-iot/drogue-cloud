@@ -154,7 +154,7 @@ impl WorkQueueWriter {
     where
         K: Key,
     {
-        Ok(self.insert(key, after).await.map_err(|_| ())?)
+        self.insert(key, after).await.map_err(|_| ())
     }
 
     #[instrument(err)]

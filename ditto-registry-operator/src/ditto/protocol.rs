@@ -19,7 +19,7 @@ pub enum PolicyOperation {
 
 #[allow(unused)]
 pub enum ThingOperation {
-    CreateOrUpdate(Thing),
+    CreateOrUpdate(Box<Thing>),
     Delete(EntityId),
 }
 

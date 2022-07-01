@@ -36,6 +36,8 @@ where
     }
 }
 
+pub type OnConnectFn = dyn Fn(&dyn Any, &mut Extensions) + Send + Sync + 'static;
+
 pub struct HttpBuilder<F>
 where
     F: Fn(&mut ServiceConfig) + Send + Clone + 'static,
@@ -43,7 +45,7 @@ where
     config: HttpConfig,
     app_builder: Box<F>,
     cors_builder: CorsBuilder,
-    on_connect: Option<Box<dyn Fn(&dyn Any, &mut Extensions) + Send + Sync + 'static>>,
+    on_connect: Option<Box<OnConnectFn>>,
     tls_mode: TlsMode,
 }
 
