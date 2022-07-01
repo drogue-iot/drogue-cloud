@@ -8,3 +8,4 @@ nav:
   - modules/user-guide/nav.adoc
   - modules/ROOT/nav-integrations.adoc
   - modules/api/nav.adoc
+  - modules/developer-guide/nav.adoc

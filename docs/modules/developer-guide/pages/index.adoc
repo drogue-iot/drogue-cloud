@@ -1,0 +1,5 @@
+= Developer Guide
+
+This is a guide for developers, which would like to work on Drogue Cloud.
+
+include::partial$DEVELOPMENT.adoc[]
