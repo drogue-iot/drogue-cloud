@@ -31,9 +31,11 @@ const FIELD_MASK_WEBHOOK: &[&str] = &[
     "uplink_message.path",
 ];
 
+const FIELD_MASK_DEVICE_CREATE: &[&str] = &["ids.dev_eui", "ids.join_eui"];
+const FIELD_MASK_DEVICE_JS_CREATE: &[&str] = &["ids.dev_eui", "ids.join_eui", "ids.device_id"];
+const FIELD_MASK_DEVICE_NS_CREATE: &[&str] = &["ids.device_id", "ids.dev_eui", "ids.join_eui"];
+
 const FIELD_MASK_DEVICE_CORE: &[&str] = &[
-    "ids.dev_eui",
-    "ids.join_eui",
     "name",
     "description",
     "attributes",
@@ -44,9 +46,6 @@ const FIELD_MASK_DEVICE_CORE: &[&str] = &[
 const FIELD_MASK_DEVICE_JS: &[&str] = &[
     "network_server_address",
     "application_server_address",
-    "ids.device_id",
-    "ids.dev_eui",
-    "ids.join_eui",
     "network_server_kek_label",
     "application_server_kek_label",
     "application_server_id",
@@ -58,9 +57,6 @@ const FIELD_MASK_DEVICE_NS: &[&str] = &[
     "multicast",
     "supports_join",
     "lorawan_version",
-    "ids.device_id",
-    "ids.dev_eui",
-    "ids.join_eui",
     "mac_settings.supports_32_bit_f_cnt",
     "supports_class_c",
     "supports_class_b",
@@ -624,30 +620,18 @@ impl Client {
         app_id: &str,
         device: &Device,
         ctx: &Context,
+        ns_mask: &[&str],
+        js_mask: &[&str],
     ) -> Result<(), ReconcileError> {
         // NS
 
-        self.put_device_json(
-            "ns",
-            app_id,
-            &device.ids,
-            &device.ns_device,
-            FIELD_MASK_DEVICE_NS,
-            ctx,
-        )
-        .await?;
+        self.put_device_json("ns", app_id, &device.ids, &device.ns_device, ns_mask, ctx)
+            .await?;
 
         // JS
 
-        self.put_device_json(
-            "js",
-            app_id,
-            &device.ids,
-            &device.js_device,
-            FIELD_MASK_DEVICE_JS,
-            ctx,
-        )
-        .await?;
+        self.put_device_json("js", app_id, &device.ids, &device.js_device, js_mask, ctx)
+            .await?;
 
         // AS
 
@@ -687,7 +671,7 @@ impl Client {
             .json(&Self::make_device_json(
                 &device.ids,
                 &device.end_device,
-                FIELD_MASK_DEVICE_CORE,
+                &[FIELD_MASK_DEVICE_CORE, FIELD_MASK_DEVICE_CREATE].concat(),
             )?)
             .send()
             .await?;
@@ -699,7 +683,14 @@ impl Client {
 
         // set NS, JS, AS entries as well
 
-        self.set_ns_js_as(app_id, &device, ctx).await?;
+        self.set_ns_js_as(
+            app_id,
+            &device,
+            ctx,
+            &[FIELD_MASK_DEVICE_NS, FIELD_MASK_DEVICE_NS_CREATE].concat(),
+            &[FIELD_MASK_DEVICE_JS, FIELD_MASK_DEVICE_JS_CREATE].concat(),
+        )
+        .await?;
 
         // done
 
@@ -746,7 +737,14 @@ impl Client {
 
         // set NS, JS, AS entries as well
 
-        self.set_ns_js_as(app_id, &device, ctx).await?;
+        self.set_ns_js_as(
+            app_id,
+            &device,
+            ctx,
+            FIELD_MASK_DEVICE_NS,
+            FIELD_MASK_DEVICE_JS,
+        )
+        .await?;
 
         // Done
 
