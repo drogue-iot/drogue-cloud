@@ -392,7 +392,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "drogue-client"
 version = "0.10.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=be7f2a715ffc03e1f3df8c49b29dc276552fd6c5#be7f2a715ffc03e1f3df8c49b29dc276552fd6c5"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=57687f43d89828b9c603eddd6e7a74afd7549ea6#57687f43d89828b9c603eddd6e7a74afd7549ea6"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -404,7 +404,6 @@ dependencies = [
  "log",
  "nom 6.1.2",
  "reqwest",
- "reqwest-wasm-ext",
  "serde",
  "serde_json",
  "thiserror",
@@ -1827,16 +1826,6 @@ dependencies = [
  "web-sys",
  "webpki-roots",
  "winreg",
-]
-
-[[package]]
-name = "reqwest-wasm-ext"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19e2dea89d75a433873c47f51a534dbd5a85c110e6e8a5fd57bbf34701cf7858"
-dependencies = [
- "base64 0.13.0",
- "reqwest",
 ]
 
 [[package]]
