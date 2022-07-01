@@ -410,7 +410,7 @@ async fn main() {
                 },
                 instance: "drogue".to_string(),
                 check_kafka_topic_ready: false,
-                kafka_downstream_config: kafka.clone(),
+                kafka_downstream_config: kafka,
                 health: None,
                 endpoint_pool: Default::default(),
                 registry: registry.clone(),
@@ -622,9 +622,7 @@ async fn main() {
                         });
 
                         runner.block_on(async move {
-                            Ok::<(), anyhow::Error>(
-                                drogue_cloud_websocket_integration::run(config).await?,
-                            )
+                            drogue_cloud_websocket_integration::run(config).await
                         })
                     })
                     .await??;
@@ -661,7 +659,7 @@ async fn main() {
                         ..Default::default()
                     },
                     endpoint: Default::default(),
-                    auth: auth.clone(),
+                    auth,
                     health: None,
                     disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                     disable_client_certificates: false,
@@ -693,7 +691,7 @@ async fn main() {
                 log::info!("Enabling MQTT integration");
                 let bind_addr_mqtt = server.mqtt_integration.clone().into();
                 let bind_addr_mqtt_ws = server.mqtt_integration_ws.clone().into();
-                let kafka = server.kafka.clone();
+                let kafka = server.kafka;
                 let cert_bundle_file: Option<String> =
                     matches.value_of("server-cert").map(|s| s.to_string());
                 let key_file: Option<String> =

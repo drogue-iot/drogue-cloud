@@ -82,7 +82,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let authenticator = config.oauth.into_client().await?;
     log::info!("Authenticator: {authenticator:?}");
-    let authenticator = authenticator.map(|a| web::Data::new(a));
+    let authenticator = authenticator.map(web::Data::new);
 
     // set up registry client
     let registry = config.registry.into_client().await?;

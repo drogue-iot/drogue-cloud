@@ -266,11 +266,7 @@ impl Processor {
                     let body: Value = response.json().await.map_err(ExternalError::Request)?;
                     body["reason"].as_str().unwrap_or("Rejected").into()
                 } else {
-                    response
-                        .text()
-                        .await
-                        .map_err(ExternalError::Request)?
-                        .clone()
+                    response.text().await.map_err(ExternalError::Request)?
                 };
                 Ok(StepOutcome::Reject(reason))
             }

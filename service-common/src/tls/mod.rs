@@ -61,7 +61,7 @@ impl TryFrom<&ClientConfig> for native_tls::TlsConnector {
             tls.add_root_certificate(cert);
         }
 
-        Ok(tls.build().context("Create TLS connector")?)
+        tls.build().context("Create TLS connector")
     }
 }
 

@@ -43,13 +43,13 @@ impl<'o> ProgressOperation<ConstructContext> for CreateThing<'o> {
             .ditto
             .request(
                 self.provider,
-                ThingOperation::CreateOrUpdate(Thing {
+                ThingOperation::CreateOrUpdate(Box::new(Thing {
                     thing_id,
                     policy_id: policy_id(&ctx.app),
                     definition: None,
                     attributes: Default::default(),
                     features: Default::default(),
-                }),
+                })),
             )
             .await
             .map_err(map_ditto_error)?;

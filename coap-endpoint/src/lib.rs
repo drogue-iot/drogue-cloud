@@ -73,8 +73,7 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     // Check if first path argument is v1
     linked_list
         .next()
-        .map(|x| String::from_utf8(x.clone()).ok())
-        .flatten()
+        .and_then(|x| String::from_utf8(x.clone()).ok())
         .filter(|x| x.eq("v1"))
         .ok_or_else(|| EndpointError::InvalidRequest {
             details: "incorrect version number".to_string(),
@@ -83,8 +82,7 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     // Get channel value
     let channel = linked_list
         .next()
-        .map(|x| String::from_utf8(x.clone()).ok())
-        .flatten()
+        .and_then(|x| String::from_utf8(x.clone()).ok())
         .ok_or_else(|| EndpointError::InvalidRequest {
             details: "error parsing channel".to_string(),
         })?;
@@ -118,23 +116,20 @@ fn params(request: &CoapRequest<SocketAddr>) -> Params {
     let path_segments = request
         .message
         .get_option(CoapOption::UriPath)
-        .map(|paths| path_parser(paths).ok())
-        .flatten()
+        .and_then(|paths| path_parser(paths).ok())
         .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?;
 
     // Get optional query values
     let queries = request
         .message
         .get_option(CoapOption::UriQuery)
-        .map(|x| (x.front()))
-        .flatten();
+        .and_then(|x| (x.front()));
 
     // Get authentication information
     let auth = request
         .message
         .get_option(AUTH_OPTION)
-        .map(|x| x.front())
-        .flatten()
+        .and_then(|x| x.front())
         .ok_or_else(|| anyhow::Error::msg("Error parsing authentication information"))?;
 
     Ok((path_segments, queries, auth))
@@ -163,8 +158,7 @@ async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Opti
 
     // Deserialize optional queries into PublishOptions
     let options = queries
-        .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
-        .flatten()
+        .and_then(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
         .unwrap_or_default();
 
     match path_segments.len() {

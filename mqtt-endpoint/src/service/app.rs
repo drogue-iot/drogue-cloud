@@ -124,7 +124,7 @@ impl App {
             dialect,
             device,
             self.commands.clone(),
-            state,
+            *state,
         ))
     }
 

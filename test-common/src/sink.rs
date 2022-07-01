@@ -13,10 +13,7 @@ pub struct MockSink {
 
 impl MockSink {
     pub fn new() -> Self {
-        Self {
-            commands: Arc::new(RwLock::new(Vec::new())),
-            events: Arc::new(RwLock::new(Vec::new())),
-        }
+        Default::default()
     }
 
     pub async fn commands(&self) -> Vec<cloudevents::event::Event> {
@@ -25,6 +22,15 @@ impl MockSink {
 
     pub async fn events(&self) -> Vec<cloudevents::event::Event> {
         self.events.read().unwrap().clone()
+    }
+}
+
+impl Default for MockSink {
+    fn default() -> Self {
+        Self {
+            commands: Arc::new(RwLock::new(Vec::new())),
+            events: Arc::new(RwLock::new(Vec::new())),
+        }
     }
 }
 

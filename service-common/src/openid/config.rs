@@ -62,7 +62,7 @@ impl From<Vec<String>> for CommaSeparatedVec {
 
 impl From<String> for CommaSeparatedVec {
     fn from(value: String) -> Self {
-        Self(value.split(",").map(|s| s.into()).collect::<Vec<String>>())
+        Self(value.split(',').map(|s| s.into()).collect::<Vec<String>>())
     }
 }
 
@@ -94,7 +94,7 @@ impl TokenConfig {
             client = client.make_insecure();
         }
 
-        Ok(openid::Client::discover_with_client(
+        openid::Client::discover_with_client(
             client.build()?,
             self.client_id,
             self.client_secret,
@@ -102,7 +102,7 @@ impl TokenConfig {
             issuer,
         )
         .await
-        .context("Discovering endpoint")?)
+        .context("Discovering endpoint")
     }
 
     /// Create a new provider by discovering the OAuth2 client from the configuration
