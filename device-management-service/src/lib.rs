@@ -8,6 +8,8 @@ use actix_web::web;
 use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
+use drogue_cloud_service_api::health::HealthChecked;
+use drogue_cloud_service_api::webapp::web::ServiceConfig;
 use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
 use drogue_cloud_service_common::{
     actix::{HttpBuilder, HttpConfig},
@@ -160,9 +162,12 @@ macro_rules! app {
     }};
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
-    log::info!("Running device management service!");
-
+pub async fn configurator(
+    config: Config,
+) -> anyhow::Result<(
+    impl Fn(&mut ServiceConfig) + Send + Sync + Clone,
+    Vec<Box<dyn HealthChecked>>,
+)> {
     let enable_access_token = config.enable_access_token;
 
     // set up authentication
@@ -195,25 +200,34 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let db_service = service.clone();
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
-        let auth = AuthN {
-            openid: authenticator.as_ref().cloned(),
-            token: user_auth.clone(),
-            enable_access_token,
-        };
-        app!(cfg, KafkaEventSender, KeycloakAdminClient, auth)
-            // for the management service
-            .app_data(data.clone())
-            // for the admin service
-            .app_data(web::Data::new(apps::WebData {
-                service: db_service.clone(),
-            }));
-    })
-    .run()?;
+    Ok((
+        move |cfg: &mut ServiceConfig| {
+            let auth = AuthN {
+                openid: authenticator.as_ref().cloned(),
+                token: user_auth.clone(),
+                enable_access_token,
+            };
+            app!(cfg, KafkaEventSender, KeycloakAdminClient, auth)
+                // for the management service
+                .app_data(data.clone())
+                // for the admin service
+                .app_data(web::Data::new(apps::WebData {
+                    service: db_service.clone(),
+                }));
+        },
+        vec![service.boxed()],
+    ))
+}
+
+pub async fn run(config: Config) -> anyhow::Result<()> {
+    log::info!("Running device management service!");
+
+    let (builder, checks) = configurator(config.clone()).await?;
+    let main = HttpBuilder::new(config.http, builder).run()?;
 
     // run
 
-    run_main([main], config.health, [service.boxed()]).await?;
+    run_main([main], config.health, checks).await?;
 
     // exiting
 

@@ -5,6 +5,8 @@ use drogue_cloud_endpoint_common::{
     sender::{ExternalClientPoolConfig, UpstreamSender},
     sink::KafkaSink,
 };
+use drogue_cloud_service_api::health::HealthChecked;
+use drogue_cloud_service_api::webapp::web::ServiceConfig;
 use drogue_cloud_service_api::{
     auth::user::authz::Permission, kafka::KafkaClientConfig, webapp as actix_web,
 };
@@ -60,9 +62,12 @@ async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
-    log::info!("Starting Command service endpoint");
-
+pub async fn configurator(
+    config: Config,
+) -> anyhow::Result<(
+    impl Fn(&mut ServiceConfig) + Send + Sync + Clone,
+    Vec<Box<dyn HealthChecked>>,
+)> {
     let sender = UpstreamSender::new(
         config.instance,
         KafkaSink::from_config(config.command_kafka_sink, config.check_kafka_topic_ready)?,
@@ -84,34 +89,44 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     let client = reqwest::Client::new();
     let registry = config.registry.into_client().await?;
 
+    Ok((
+        move |cfg: &mut ServiceConfig| {
+            cfg.app_data(web::Data::new(sender.clone()))
+                .app_data(web::Data::new(registry.clone()))
+                .app_data(web::Data::new(client.clone()))
+                .service(web::resource("/").route(web::get().to(index)))
+                .service(
+                    web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
+                        .wrap(AuthZ {
+                            client: user_auth.clone(),
+                            permission: Permission::Write,
+                            app_param: "application".to_string(),
+                        })
+                        .wrap(AuthN {
+                            openid: authenticator.as_ref().cloned(),
+                            token: user_auth.clone(),
+                            enable_access_token,
+                        })
+                        .route("", web::post().to(v1alpha1::command)),
+                );
+        },
+        vec![],
+    ))
+}
+
+pub async fn run(config: Config) -> anyhow::Result<()> {
+    log::info!("Starting Command service endpoint");
+
     // main server
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
-        cfg.app_data(web::Data::new(sender.clone()))
-            .app_data(web::Data::new(registry.clone()))
-            .app_data(web::Data::new(client.clone()))
-            .service(web::resource("/").route(web::get().to(index)))
-            .service(
-                web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
-                    .wrap(AuthZ {
-                        client: user_auth.clone(),
-                        permission: Permission::Write,
-                        app_param: "application".to_string(),
-                    })
-                    .wrap(AuthN {
-                        openid: authenticator.as_ref().cloned(),
-                        token: user_auth.clone(),
-                        enable_access_token,
-                    })
-                    .route("", web::post().to(v1alpha1::command)),
-            );
-    })
-    .cors(CorsBuilder::Permissive)
-    .run()?;
+    let (cfg, checks) = configurator(config.clone()).await?;
+    let main = HttpBuilder::new(config.http, cfg)
+        .cors(CorsBuilder::Permissive)
+        .run()?;
 
     // run
 
-    run_main([main], config.health, vec![]).await?;
+    run_main([main], config.health, checks).await?;
 
     // exiting
 

@@ -214,11 +214,9 @@ impl ServerConfig {
 
 pub fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
     let http_prefix = if tls { "https" } else { "http" };
+    let api = format!("http://{}:{}", config.console.host, config.console.port);
     Endpoints {
-        api: Some(format!(
-            "http://{}:{}",
-            config.console.host, config.console.port
-        )),
+        api: Some(api.clone()),
         console: Some(format!(
             "http://{}:{}",
             config.frontend.host, config.frontend.port
@@ -281,13 +279,8 @@ pub fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
             "http://{}:{}",
             config.frontend.host, config.frontend.port
         )),
-        registry: Some(RegistryEndpoint {
-            url: format!("http://{}:{}", config.registry.host, config.registry.port),
-        }),
-        command_url: Some(format!(
-            "http://{}:{}",
-            config.command.host, config.command.port
-        )),
+        registry: Some(RegistryEndpoint { url: api.clone() }),
+        command_url: Some(api),
         local_certs: false,
         kafka_bootstrap_servers: Some(config.kafka.bootstrap_servers.clone()),
     }

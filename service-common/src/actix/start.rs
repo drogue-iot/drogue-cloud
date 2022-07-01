@@ -4,16 +4,15 @@ use crate::{
 };
 use actix_cors::Cors;
 use actix_web_extras::middleware::Condition;
-use drogue_cloud_service_api::webapp::dev::Extensions;
 use drogue_cloud_service_api::webapp::{
+    dev::Extensions,
     middleware,
     prom::PrometheusMetricsBuilder,
     web::{self, ServiceConfig},
     App, HttpServer,
 };
 use futures::{future::LocalBoxFuture, FutureExt, TryFutureExt};
-use std::any::Any;
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 #[derive(Clone)]
 pub enum CorsBuilder {
