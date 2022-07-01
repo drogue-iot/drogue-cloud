@@ -15,3 +15,5 @@ while (( RETRY < MAX_RETRY )); do
   echo "Failed to execute ... sleeping: $WAIT seconds"
   sleep "$WAIT"
 done
+
+echo "Completed: $CONTAINER " "$@"
