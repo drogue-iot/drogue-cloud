@@ -67,7 +67,7 @@ where
     K: AsRef<Path>,
     C: AsRef<Path>,
 {
-    use open_ssl::ssl;
+    use openssl::ssl;
     let method = ssl::SslMethod::tls_server();
     let mut builder = ssl::SslAcceptor::mozilla_intermediate_v5(method)?;
     builder.set_private_key_file(key_file, ssl::SslFiletype::PEM)?;
