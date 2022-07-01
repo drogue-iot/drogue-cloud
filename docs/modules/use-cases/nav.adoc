@@ -1,0 +1,4 @@
+* xref:index.adoc[Use Cases]
+** xref:environmental-monitoring.adoc[Environmental Monitoring]
+** xref:smart-factories.adoc[Smart Factories]
+** xref:predictive-maintenance.adoc[Predictive Maintenance]
