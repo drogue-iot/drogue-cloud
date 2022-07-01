@@ -15,8 +15,6 @@ TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
 BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.2.1
 
-# Control if the server binary is skipped. The server binary increases build times a lot.
-SKIP_SERVER ?= false
 # Control the build options (release, debug, perf)
 BUILD_PROFILE ?= release
 
@@ -74,7 +72,7 @@ ALL_IMAGES=\
 
 
 # allow skipping the server image
-ifeq ($(SKIP_SERVER), false)
+ifndef SKIP_SERVER
 ALL_IMAGES += server
 endif
 
@@ -128,7 +126,7 @@ check: host-check
 # Build artifacts and containers.
 #
 .PHONY: build
-ifeq ($(SKIP_BUILD), true)
+ifdef SKIP_BUILD
 build:
 else
 build: host-build
@@ -270,7 +268,7 @@ cargo-build: CARGO_BUILD_ARGS += --package drogue-cloud-$(MODULE)
 else
 # build the workspace
 cargo-build: CARGO_BUILD_ARGS += --workspace
-ifneq ($(SKIP_SERVER), false)
+ifdef SKIP_SERVER
 # but exclude the server binary if requested
 cargo-build: CARGO_BUILD_ARGS += --exclude drogue-cloud-server
 endif
@@ -384,7 +382,7 @@ quick: build build-images tag-images
 frontend:
 	$(CONTAINER) run $(CONTAINER_ARGS) --rm -t -v "$(TOP_DIR):/usr/src:z" "$(BUILDER_IMAGE)" make -j1 -C /usr/src/$(MODULE) frontend-build \
 		SKIP_SERVER=$(SKIP_SERVER) BUILD_PROFILE=$(BUILD_PROFILE)
-	$(MAKE) -C console-frontend images SKIP_BUILD=true
+	$(MAKE) -C console-frontend images SKIP_BUILD=1
 
 
 #
