@@ -309,11 +309,12 @@ frontend-build:
 .PHONY: build-image($(IMAGES))
 ifdef SKIP_BUILD_IMAGES
 build-images:
+build-image($(IMAGES)):
 else
 build-images: build-image($(IMAGES))
-endif
 build-image($(IMAGES)): | build
 	cd $(TOP_DIR) && $(CONTAINER) build . -f $%/Dockerfile -t localhost/$%:latest
+endif
 
 
 #
