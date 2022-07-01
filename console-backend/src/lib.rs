@@ -10,7 +10,10 @@ use actix_web::{
 };
 use anyhow::Context;
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
-use drogue_cloud_service_api::{endpoints::Endpoints, kafka::KafkaClientConfig};
+use drogue_cloud_service_api::health::HealthChecked;
+use drogue_cloud_service_api::{
+    endpoints::Endpoints, kafka::KafkaClientConfig, webapp::web::ServiceConfig,
+};
 use drogue_cloud_service_common::{
     actix::{CorsBuilder, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
@@ -84,11 +87,16 @@ pub struct Config {
     pub http: HttpConfig,
 }
 
-pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
-    log::info!("Running console server!");
-
-    log::debug!("Config: {:#?}", config);
-
+pub async fn configurator(
+    config: Config,
+    endpoints: Endpoints,
+) -> Result<
+    (
+        impl Fn(&mut ServiceConfig) + Send + Sync + Clone + 'static,
+        Vec<Box<dyn HealthChecked>>,
+    ),
+    anyhow::Error,
+> {
     // kube
 
     let config_maps = if config.enable_kube {
@@ -165,10 +173,8 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
         .await
         .context("Creating registry client")?;
 
-    // main server
-
-    let main =
-        HttpBuilder::new(config.http, move |cfg| {
+    Ok((
+        move |cfg: &mut ServiceConfig| {
             let auth = AuthN {
                 openid: authenticator.as_ref().cloned(),
                 token: user_auth.clone(),
@@ -239,13 +245,25 @@ pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
                         .service(info::get_public_endpoints)
                         .service(info::get_drogue_version),
                 );
-        })
+        },
+        vec![],
+    ))
+}
+
+pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
+    log::info!("Running console server!");
+    log::debug!("Config: {:#?}", config);
+
+    // main server
+
+    let (cfg, checks) = configurator(config.clone(), endpoints).await?;
+    let main = HttpBuilder::new(config.http.clone(), cfg)
         .cors(CorsBuilder::Permissive)
         .run()?;
 
     // run
 
-    run_main([main], config.health, vec![]).await?;
+    run_main([main], config.health, checks).await?;
 
     // done
 

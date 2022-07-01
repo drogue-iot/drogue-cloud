@@ -5,9 +5,10 @@ authors = ["Ulf Lilleengen <lulf@redhat.com>"]
 edition = "2021"
 
 [dependencies]
-actix-rt = { version = "2.2.0" }
+actix-files = "0.6"
+actix-rt = "2.2.0"
 anyhow = "1"
-clap = { version = "2.33.3" }
+clap = "2.33.3"
 deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 diesel = { version = "1.4.8", features = ["postgres"] }
@@ -18,10 +19,10 @@ keycloak = "18"
 log = "0.4"
 ntex = "0.5"
 ntex-rt = "0.4"
-pq-sys = { version = "0.4.6" }
-rdkafka-sys = { version = "4.0" }
-reqwest = { version = "0.11.6" }
-sasl2-sys = { version = "0.1.14" }
+pq-sys = "0.4.6"
+rdkafka-sys = "4.0"
+reqwest = "0.11.6"
+sasl2-sys = "0.1.14"
 serde_json = "1.0"
 stderrlog = { git = "https://github.com/cardoe/stderrlog-rs", rev = "d865acce1ac1eeac66cb20601f25f66b905092c7" }
 tokio = { version = "1.11.0", features = ["full"] }

@@ -45,7 +45,10 @@ impl Handler<Subscribe> for Service {
             // run the stream
             let _ = match stream {
                 Ok(s) => Service::run_stream(s, addr.clone(), app.clone().as_str()).await,
-                Err(s) => Err(anyhow!(s)),
+                Err(err) => {
+                    log::warn!("Stream failed: {err}");
+                    Err(anyhow!(err))
+                }
             };
         }
         .into_actor(self);
@@ -174,6 +177,8 @@ impl Service {
 
             log::debug!("Sent message - go back to sleep");
         }
+
+        log::info!("Event stream closed");
 
         Err(anyhow!("Stream Error"))
     }
