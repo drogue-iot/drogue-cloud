@@ -11,7 +11,8 @@ use drogue_cloud_service_api::auth::device::authn::{
 };
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
-    client::ReqwestAuthenticatorClient, defaults, openid::TokenConfig,
+    client::ReqwestAuthenticatorClient, defaults, openid::TokenConfig, reqwest::ClientFactory,
+    tls::ClientConfig,
 };
 use futures::future::{err, ok, Ready};
 use http::HeaderValue;
@@ -33,6 +34,9 @@ pub struct AuthConfig {
 
     #[serde(flatten, default)]
     pub token_config: Option<TokenConfig>,
+
+    #[serde(default)]
+    pub client: ClientConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -70,7 +74,11 @@ impl DeviceAuthenticator {
         };
 
         Ok(DeviceAuthenticator {
-            client: ReqwestAuthenticatorClient::new(Default::default(), url, token_provider)?,
+            client: ReqwestAuthenticatorClient::new(
+                ClientFactory::from(config.client).build()?,
+                url,
+                token_provider,
+            )?,
         })
     }
 

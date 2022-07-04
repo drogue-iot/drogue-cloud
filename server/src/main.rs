@@ -354,6 +354,7 @@ async fn main() {
         let auth = AuthConfig {
             auth_disabled: false,
             url: Url::parse(&format!("http://{}", authurl)).unwrap(),
+            client: Default::default(),
             token_config: Some(token_config.clone()),
         };
 
