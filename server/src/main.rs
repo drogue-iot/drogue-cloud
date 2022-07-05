@@ -265,6 +265,7 @@ async fn main() {
         */
         let http_prefix = if tls { "https" } else { "http" };
         let mqtt_prefix = if tls { "mqtts" } else { "mqtt" };
+        let ws_prefix = if tls { "wss" } else { "ws" };
 
         let kafka_sender = |topic: &str, config: &KafkaClientConfig| KafkaSenderConfig {
             client: kafka_config(config, topic),
@@ -823,6 +824,7 @@ async fn main() {
                 tls,
                 mqtt_prefix,
                 http_prefix,
+                ws_prefix,
                 frontend,
             },
             server,
@@ -839,6 +841,7 @@ async fn main() {
 pub struct Context<'c> {
     pub mqtt_prefix: &'c str,
     pub http_prefix: &'c str,
+    pub ws_prefix: &'c str,
     pub tls: bool,
     pub frontend: bool,
 }
@@ -884,8 +887,8 @@ async fn run(
     println!();
     println!("Integrations:");
     println!(
-        "\tWebSocket:\t ws://{}:{}",
-        server.websocket_integration.host, server.websocket_integration.port
+        "\tWebSocket:\t {}://{}:{}",
+        ctx.ws_prefix, server.websocket_integration.host, server.websocket_integration.port
     );
     println!(
         "\tMQTT:\t\t {}://{}:{}",
@@ -894,13 +897,13 @@ async fn run(
     println!();
     println!("Command:");
     println!(
-        "\tHTTP:\t http://{}:{}",
+        "\tHTTP:\t\t http://{}:{}",
         server.command.host, server.command.port
     );
     println!();
 
     println!("Keycloak Credentials:");
-    println!("\tUser:\t {}", server.keycloak.user);
+    println!("\tUser:\t\t {}", server.keycloak.user);
     println!("\tPassword:\t {}", server.keycloak.password);
     println!();
 

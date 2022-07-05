@@ -12,6 +12,7 @@ target/
 /tls_tmp.*
 tmp/
 test-cert-generator/scripts/endpoints/generated
+*.pem
 
 # Build
 
