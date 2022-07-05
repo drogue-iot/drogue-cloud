@@ -84,3 +84,15 @@ You can also use `cargo` to compile and run the server from this folder:
 ```shell
 cargo run -- run --enable-all
 ```
+
+### Using TLS
+
+You can enable TLS authentication for all endpoints if you provide certificates: 
+```shell
+./target/release/drogue-cloud-server run --enable-all --server-key key.pem --server-cert certificate.pem
+```
+
+You can generate a self-signed certificate amd private key with:
+```shell
+openssl req -newkey rsa:4096  -x509  -sha512 -nodes -out certificate.pem -keyout key.pem
+```
