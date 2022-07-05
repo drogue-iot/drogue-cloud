@@ -1,5 +1,6 @@
 version: "3.9"
 services:
+
   postgres:
     image: docker.io/bitnami/postgresql:14
     environment:
@@ -8,14 +9,21 @@ services:
       - POSTGRESQL_DATABASE=drogue
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   kafka:
     image: docker.io/moeenz/docker-kafka-kraft:latest
     ports:
       - "9092:9092"
     environment:
       - KRAFT_CONTAINER_HOST_NAME=localhost
+
   keycloak:
-    image: quay.io/keycloak/keycloak:18.0.0
+    image: quay.io/keycloak/keycloak:18.0.2
     command: start-dev
     environment:
       - KEYCLOAK_ADMIN=admin
@@ -23,3 +31,8 @@ services:
       - KEYCLOAK_DB=dev-file
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
