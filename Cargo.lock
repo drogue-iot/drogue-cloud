@@ -83,8 +83,8 @@ dependencies = [
 
 [[package]]
 name = "actix-http"
-version = "3.1.0"
-source = "git+https://github.com/ctron/actix-web?rev=0dba6310c66c3a0fd5bc02b072fc1ec696814bbf#0dba6310c66c3a0fd5bc02b072fc1ec696814bbf"
+version = "3.0.4"
+source = "git+https://github.com/ctron/actix-web?rev=fcba8a385805405d2733ddb56391e187604dcc34#fcba8a385805405d2733ddb56391e187604dcc34"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -112,7 +112,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rand",
- "sha1",
+ "sha-1 0.10.0",
  "smallvec",
  "tracing",
  "zstd",
@@ -214,8 +214,8 @@ dependencies = [
 
 [[package]]
 name = "actix-web"
-version = "4.1.0"
-source = "git+https://github.com/ctron/actix-web?rev=0dba6310c66c3a0fd5bc02b072fc1ec696814bbf#0dba6310c66c3a0fd5bc02b072fc1ec696814bbf"
+version = "4.0.1"
+source = "git+https://github.com/ctron/actix-web?rev=fcba8a385805405d2733ddb56391e187604dcc34#fcba8a385805405d2733ddb56391e187604dcc34"
 dependencies = [
  "actix-codec",
  "actix-http",
