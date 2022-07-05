@@ -214,6 +214,7 @@ impl ServerConfig {
 
 pub fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
     let http_prefix = if tls { "https" } else { "http" };
+    let ws_prefix = if tls { "wss" } else { "ws" };
     let api = format!("http://{}:{}", config.console.host, config.console.port);
     Endpoints {
         api: Some(api.clone()),
@@ -266,8 +267,8 @@ pub fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
         }),
         websocket_integration: Some(HttpEndpoint {
             url: format!(
-                "ws://{}:{}",
-                config.websocket_integration.host, config.websocket_integration.port
+                "{}://{}:{}",
+                ws_prefix, config.websocket_integration.host, config.websocket_integration.port
             ),
         }),
         sso: Some(config.keycloak.url.clone()),
