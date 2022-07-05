@@ -149,7 +149,7 @@ impl Component for CommandAndControl {
                 ),
             };
             let publish_http_cmd = format!(
-                r#"{payload}coap POST -O '4209,Basic {auth}' {url}/v1/foo?ct=30"#,
+                r#"{payload}coap post -O '4209,Basic {auth}' {url}/v1/foo?ct=30"#,
                 payload = payload,
                 url = coap.url,
                 auth = shell_quote(base64::encode_config(
