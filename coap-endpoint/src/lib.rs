@@ -155,6 +155,8 @@ async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Opti
         return ret;
     }
 
+    log::debug!("Request - path: {path_segments:?}, queries: {queries:?}");
+
     // Deserialize optional queries into PublishOptions
     let options = queries
         .and_then(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
