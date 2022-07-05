@@ -15,8 +15,7 @@ use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
-use drogue_cloud_service_api::health::BoxedHealthChecked;
-use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_api::{health::BoxedHealthChecked, kafka::KafkaClientConfig};
 use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
 use futures::{FutureExt, TryFutureExt};
 use serde::Deserialize;
