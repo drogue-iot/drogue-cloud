@@ -1,4 +1,3 @@
 = User Guide
 
 This guide describes how to use Drogue Cloud, from the perspective of a user, consume Drogue Cloud "as a service".
-
