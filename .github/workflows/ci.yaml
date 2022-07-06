@@ -83,7 +83,7 @@ jobs:
   check:
     runs-on: ubuntu-20.04
     needs: [prepare]
-    if: needs.prepare.outputs.do-build
+    if: needs.prepare.outputs.do-build == 'true'
     steps:
 
       - uses: actions/checkout@v3
@@ -106,7 +106,7 @@ jobs:
     name: test
     runs-on: ubuntu-20.04
     needs: [prepare, check]
-    if: needs.prepare.outputs.do-build
+    if: needs.prepare.outputs.do-build == 'true'
     steps:
 
       - uses: actions/checkout@v2
@@ -132,7 +132,7 @@ jobs:
     name: build
     runs-on: ubuntu-20.04
     needs: [prepare, check]
-    if: needs.prepare.outputs.do-build
+    if: needs.prepare.outputs.do-build == 'true'
     steps:
 
       - uses: actions/checkout@v2
@@ -173,7 +173,7 @@ jobs:
   server-linux:
     runs-on: ubuntu-22.04
     needs: [prepare, check]
-    if: needs.prepare.outputs.do-build
+    if: needs.prepare.outputs.do-build == 'true'
     env:
       VERSION: ${{needs.prepare.outputs.version}}
     steps:
@@ -232,7 +232,7 @@ jobs:
   server-macos:
     runs-on: macos-10.15
     needs: [prepare, check]
-    if: needs.prepare.outputs.do-build
+    if: needs.prepare.outputs.do-build == 'true'
     env:
       VERSION: ${{needs.prepare.outputs.version}}
     steps:
@@ -293,7 +293,7 @@ jobs:
     name: deploy on kind
     runs-on: ubuntu-20.04
     needs: [prepare, build]
-    if: needs.prepare.outputs.do-build
+    if: needs.prepare.outputs.do-build == 'true'
     env:
       CLUSTER: "kind"
     steps:
@@ -372,7 +372,7 @@ jobs:
 
   publish:
     needs: [prepare, deploy, test, server-linux, server-macos]
-    if: needs.prepare.outputs.do-build && needs.prepare.outputs.do-publish
+    if: (needs.prepare.outputs.do-build == 'true') && (needs.prepare.outputs.do-publish == 'true')
 
     runs-on: ubuntu-20.04
 
