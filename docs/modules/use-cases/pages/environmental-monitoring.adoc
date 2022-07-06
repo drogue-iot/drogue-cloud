@@ -4,14 +4,14 @@ Environmental Monitoring involves collecting sensor data from a potential wide v
 
 Different sensor types may need to send data to the monitoring system using different protocols. Some are able to connect through a gateway in close proximity, while others may connect directly.
 
-Sensor onboarding and maintenance requires good integrations with existing resource management systems.
+Sensor on-boarding and maintenance requires good integrations with existing resource management systems.
 
 == Example
 
 There are two main business applications in this example:
 
 * A forecasting system which will provide alerts when the trained forecasting model predicts a dangerous level of pollution.
-* A sensor onboarding service that is used to configure new sensors added to the system.
+* A sensor on-boarding service that is used to configure new sensors added to the system.
 
 The main data center, which can be on-premise or in the cloud, runs a Kubernetes cluster with Drogue Cloud and the business applications. All stateful systems uses managed services to simplify operations of the system.
 
@@ -35,13 +35,13 @@ Some sensors may operate require gateways to be placed in closer proximity to th
 
 === Drogue Cloud
 
-The gateways or sensors send their events using the Drogue Cloud endpoints, which support several standard IoT protocols needed by different sensor types. All data is authenticated at the endpoint boundary, using the device registry, before it is handed to the external Apacke Kafka service. All sensor data is wrapped in the Cloud Events format, allowing the applications to rely to standardized envelopes for message metadata.
+The gateways or sensors send their events using the Drogue Cloud endpoints, which support several standard IoT protocols needed by different sensor types. All data is authenticated at the endpoint boundary, using the device registry, before it is handed to the external Apache Kafka service. All sensor data is wrapped in the Cloud Events format, allowing the applications to rely to standardized envelopes for message metadata.
 
 === Applications
 
-The forecasting system consumes events from the MQTT endpoint in Drogue Cloud. The application authenticates using API tokens created by the operations team which allows isolating the forecasting system for different areas or end users. Events received by the application are encoded using the link:https://cloudevents.io/[Cloud Events] speicfication, allowing the application to run in a serverless framework like link:https://knative.dev/docs/[KNative]. The forecasting application uses a model that is updated by data scientists.
+The forecasting system consumes events from the MQTT endpoint in Drogue Cloud. The application authenticates using API tokens created by the operations team which allows isolating the forecasting system for different areas or end users. Events received by the application are encoded using the link:https://cloudevents.io/[Cloud Events] specification, allowing the application to run in a serverless framework like link:https://knative.dev/docs/[KNative]. The forecasting application uses a model that is updated by data scientists.
 
-The sensor onboarding service is involved when a technician installs new sensors, ensuring they are securely paired and connected. The REST APIs allows registering new gateways and sensors, leaving the details of reconfiguring the gateways up to Drogue Cloud. More advanced self-test procedures can be performed by using the MQTT/Websocket Integration in combination with the Command API.
+The sensor on-boarding service is involved when a technician installs new sensors, ensuring they are securely paired and connected. The REST APIs allows registering new gateways and sensors, leaving the details of re-configuring the gateways up to Drogue Cloud. More advanced self-test procedures can be performed by using the MQTT/Websocket Integration in combination with the Command API.
 
 === External Services
 

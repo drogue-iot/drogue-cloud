@@ -2,10 +2,7 @@
 
 Smart Factories collect data from the manufacturing process to detect anomalies, derive prediction models and adjust the process based on a feedback loop.
 
-Factories need to operate independently of eachother, so that if one factory has problems, it does not impact the other. However, managing configuration of the factories centrally is still desireable, to avoid diverging behavior.
-
-
-For this use case, multiple isolated Drogue Cloud instances are used, to ensure isolated operation of the factories. Each instance trains a local model to detect anomalies, and is able to quickly react to critical events. Event data as well as change events are forwarded to a centralized cluster for further analysis.
+Factories need to operate independently of each other, so that if one factory has problems, it does not impact the other. However, managing configuration of the factories centrally is still desirable, to avoid diverging behavior.
 
 == Example
 
@@ -35,7 +32,7 @@ The factory consists of several physical components:
 * Robot arms part of the manufacturing process
 * Quality sensors reporting production errors
 
-These components are accessible through an OPC-UA server, which communicate with eachother for critical events. An OPC-UA connector send telemetry data to and receive commands from Drogue Cloud running in the factory cluster.
+These components are accessible through an OPC-UA server, which communicate with each other for critical events. An OPC-UA connector send telemetry data to and receive commands from Drogue Cloud running in the factory cluster.
 
 === Factory
 
