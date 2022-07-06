@@ -432,18 +432,18 @@ jobs:
         if: ${{ needs.check.outputs.release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v${{ needs.check.outputs.version }}
+          RELEASE: ${{ needs.check.outputs.version }}
         run: |
           # add install ZIPs
-          hub release edit -m "" $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") $TAG
+          hub release edit -m "" $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") $RELEASE
           # add static server binaries
-          hub release edit -m "" $(find server-binaries -type f -printf "-a %p ") $TAG
+          hub release edit -m "" $(find server-binaries -type f -printf "-a %p ") $RELEASE
 
       - name: Remove draft status
         if: ${{ needs.check.outputs.release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v${{ needs.check.outputs.version }}
+          RELEASE: ${{ needs.check.outputs.version }}
         run: |
           # finally, remove the draft status
-          hub release edit -m "" --draft=false $TAG
+          hub release edit -m "" --draft=false $RELEASE
