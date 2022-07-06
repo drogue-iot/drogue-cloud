@@ -84,6 +84,14 @@ jobs:
         if: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
         run: make host-check
 
+  info:
+    name: info
+    runs-on: ubuntu-20.04
+    needs: [check]
+    steps:
+      - run: |
+          echo "do-build: ${{needs.check.outputs.do-build}}"
+
   test:
     name: test
     runs-on: ubuntu-20.04
