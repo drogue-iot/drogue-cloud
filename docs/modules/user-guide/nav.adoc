@@ -9,7 +9,8 @@
 *** xref:endpoint-coap.adoc[CoAP Endpoint]
 *** xref:endpoint-http.adoc[HTTP Endpoint]
 *** xref:endpoint-mqtt.adoc[MQTT Endpoint]
-** Integrations
+** xref:integration.adoc[Integrations]
+*** xref:integration.adoc[Overview]
 *** xref:integration-kafka.adoc[Apache Kafka™ Integration]
 *** xref:integration-command.adoc[HTTP Command Integration]
 *** xref:integration-knative.adoc[Knative Integration]

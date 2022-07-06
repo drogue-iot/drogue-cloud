@@ -1,0 +1,4 @@
+= Integrations
+
+Integrations refer to the cloud side APIs for Drogue Cloud, which allow your application to access data coming
+from devices, and schedule commands to devices.
