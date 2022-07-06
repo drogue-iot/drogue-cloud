@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     outputs:
-      do-build: ${{steps.changed-files-irrelevant.outputs.only_modified != 'true'}}
+      do-build: ${{steps.changed-files-irrelevant.outputs.only_modified != 'true' || steps.state.outputs.release == 'true'}}
       do-publish: ${{steps.state.outputs.do-publish}}
       release: ${{steps.state.outputs.release}}
       version: ${{steps.version.outputs.version}}
