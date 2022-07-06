@@ -26,11 +26,11 @@ jobs:
       release: ${{steps.state.outputs.release}}
       version: ${{steps.version.outputs.version}}
       prerelease: ${{steps.state.outputs.prerelease}}
-      do-build: ${{steps.changed-files-irrelevant.outputs.only_changed == 'true'}}
+      do-build: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
 
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch_depth: 2
@@ -71,7 +71,7 @@ jobs:
       # run checks
 
       - uses: actions/cache@v2
-        if: ${{steps.changed-files-irrelevant.outputs.only_changed == 'true'}}
+        if: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
         with:
           path: |
             ~/.cargo/registry
@@ -81,7 +81,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Check
-        if: ${{steps.changed-files-irrelevant.outputs.only_changed == 'true'}}
+        if: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
         run: make host-check
 
   test:
