@@ -74,6 +74,10 @@ jobs:
     if: ${{needs.prepare.outputs.do-build}}
     steps:
 
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
       - uses: actions/cache@v2
 
         with:
