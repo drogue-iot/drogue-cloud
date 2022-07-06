@@ -1,10 +1,21 @@
 = Installer script
 
-Most of the deployment of Drogue Cloud uses `Helm` in combination with `kubectl` for installing dependencies. However, we do require a few steps
-before and after the deployment. Installing dependencies on the cluster and setting URLs afterwards.
+Most of the deployment of Drogue Cloud uses `Helm` in combination with `kubectl` for installing dependencies. However,
+we do require a few steps before and after the deployment. Installing dependencies on the cluster and setting URLs
+afterwards.
 
 For this we have a _magic_ installer script, that does everything for you. It is suited for an easy start on a
 local test cluster.
+
+[NOTE]
+.Pure Helm based installation
+====
+While we describe the installation of Drogue Cloud using our installer script, it is also possible to install it using
+just Helm charts. In fact, the installer uses an opinionated value set for the Helm charts, and you can simply create
+your own wrapper chart, tweaking the values as needed.
+
+This is what we do for our public sandbox too. The installer script is just there to get you started quickly.
+====
 
 == Download the installer package
 
