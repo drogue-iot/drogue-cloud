@@ -79,7 +79,6 @@ jobs:
           submodules: recursive
 
       - uses: actions/cache@v2
-
         with:
           path: |
             ~/.cargo/registry
@@ -89,7 +88,6 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Check
-        if: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
         run: make host-check
 
   info:
