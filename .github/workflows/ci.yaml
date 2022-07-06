@@ -26,12 +26,14 @@ jobs:
       release: ${{steps.state.outputs.release}}
       version: ${{steps.version.outputs.version}}
       prerelease: ${{steps.state.outputs.prerelease}}
+      do-build: ${{steps.changed-files-irrelevant.outputs.only_changed == 'true'}}
 
     steps:
 
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+          fetch_depth: 2
 
       # Gather information for build
 
@@ -58,7 +60,18 @@ jobs:
           echo "::set-output name=version::$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+      # evaluate changed files
+      - name: Evaluate non-relevant changed files
+        id: changed-files-irrelevant
+        uses: tj-actions/changed-files@v23.1
+        with:
+          files: |
+            docs/
+
+      # run checks
+
       - uses: actions/cache@v2
+        if: ${{steps.changed-files-irrelevant.outputs.only_changed == 'true'}}
         with:
           path: |
             ~/.cargo/registry
@@ -68,12 +81,14 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Check
+        if: ${{steps.changed-files-irrelevant.outputs.only_changed == 'true'}}
         run: make host-check
 
   test:
     name: test
     runs-on: ubuntu-20.04
     needs: [check]
+    if: ${{needs.check.outputs.do-build}}
     steps:
 
       - uses: actions/checkout@v2
@@ -99,6 +114,7 @@ jobs:
     name: build
     runs-on: ubuntu-20.04
     needs: [check]
+    if: ${{needs.check.outputs.do-build}}
     steps:
 
       - uses: actions/checkout@v2
@@ -137,8 +153,9 @@ jobs:
           if-no-files-found: error
 
   server-linux:
-    needs: [check]
     runs-on: ubuntu-22.04
+    needs: [check]
+    if: ${{needs.check.outputs.do-build}}
     env:
       VERSION: ${{needs.check.outputs.version}}
     steps:
@@ -195,8 +212,9 @@ jobs:
 
 
   server-macos:
-    needs: [check]
     runs-on: macos-10.15
+    needs: [check]
+    if: ${{needs.check.outputs.do-build}}
     env:
       VERSION: ${{needs.check.outputs.version}}
     steps:
@@ -257,6 +275,7 @@ jobs:
     name: deploy on kind
     runs-on: ubuntu-20.04
     needs: [check, build]
+    if: ${{needs.check.outputs.do-build}}
     env:
       CLUSTER: "kind"
     steps:
@@ -334,15 +353,14 @@ jobs:
           path: /tmp/logs
 
   publish:
-    if: ${{needs.check.outputs.do-publish}}
+    needs: [check, deploy, test, server-linux, server-macos]
+    if: ${{needs.check.outputs.do-build && needs.check.outputs.do-publish}}
 
     runs-on: ubuntu-20.04
 
     env:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
       VERSION: ${{needs.check.outputs.version}}
-
-    needs: [check, deploy, test, server-linux, server-macos]
 
     steps:
 
