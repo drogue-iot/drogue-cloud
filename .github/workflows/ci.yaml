@@ -18,7 +18,7 @@ env:
 
 jobs:
 
-  check:
+  prepare:
     runs-on: ubuntu-20.04
 
     outputs:
@@ -26,7 +26,7 @@ jobs:
       release: ${{steps.state.outputs.release}}
       version: ${{steps.version.outputs.version}}
       prerelease: ${{steps.state.outputs.prerelease}}
-      do-build: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
+      do-build: ${{steps.changed-files-irrelevant.outputs.only_modified != 'true'}}
 
     steps:
 
@@ -68,10 +68,14 @@ jobs:
           files: |
             docs/
 
-      # run checks
+  check:
+    runs-on: ubuntu-20.04
+    needs: [prepare]
+    if: ${{needs.prepare.outputs.do-build}}
+    steps:
 
       - uses: actions/cache@v2
-        if: ${{steps.changed-files-irrelevant.outputs.only_modified == 'false'}}
+
         with:
           path: |
             ~/.cargo/registry
@@ -87,16 +91,16 @@ jobs:
   info:
     name: info
     runs-on: ubuntu-20.04
-    needs: [check]
+    needs: [prepare]
     steps:
       - run: |
-          echo "do-build: ${{needs.check.outputs.do-build}}"
+          echo "do-build: ${{needs.prepare.outputs.do-build}}"
 
   test:
     name: test
     runs-on: ubuntu-20.04
-    needs: [check]
-    if: ${{needs.check.outputs.do-build}}
+    needs: [prepare, check]
+    if: ${{needs.prepare.outputs.do-build}}
     steps:
 
       - uses: actions/checkout@v2
@@ -121,8 +125,8 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-20.04
-    needs: [check]
-    if: ${{needs.check.outputs.do-build}}
+    needs: [prepare, check]
+    if: ${{needs.prepare.outputs.do-build}}
     steps:
 
       - uses: actions/checkout@v2
@@ -162,10 +166,10 @@ jobs:
 
   server-linux:
     runs-on: ubuntu-22.04
-    needs: [check]
-    if: ${{needs.check.outputs.do-build}}
+    needs: [prepare, check]
+    if: ${{needs.prepare.outputs.do-build}}
     env:
-      VERSION: ${{needs.check.outputs.version}}
+      VERSION: ${{needs.prepare.outputs.version}}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -221,10 +225,10 @@ jobs:
 
   server-macos:
     runs-on: macos-10.15
-    needs: [check]
-    if: ${{needs.check.outputs.do-build}}
+    needs: [prepare, check]
+    if: ${{needs.prepare.outputs.do-build}}
     env:
-      VERSION: ${{needs.check.outputs.version}}
+      VERSION: ${{needs.prepare.outputs.version}}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -282,8 +286,8 @@ jobs:
   deploy:
     name: deploy on kind
     runs-on: ubuntu-20.04
-    needs: [check, build]
-    if: ${{needs.check.outputs.do-build}}
+    needs: [prepare, build]
+    if: ${{needs.prepare.outputs.do-build}}
     env:
       CLUSTER: "kind"
     steps:
@@ -361,23 +365,23 @@ jobs:
           path: /tmp/logs
 
   publish:
-    needs: [check, deploy, test, server-linux, server-macos]
-    if: ${{needs.check.outputs.do-build && needs.check.outputs.do-publish}}
+    needs: [prepare, deploy, test, server-linux, server-macos]
+    if: ${{needs.prepare.outputs.do-build && needs.prepare.outputs.do-publish}}
 
     runs-on: ubuntu-20.04
 
     env:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
-      VERSION: ${{needs.check.outputs.version}}
+      VERSION: ${{needs.prepare.outputs.version}}
 
     steps:
 
       - name: Dump state
         run: |
-          echo "Tag/version: ${VERSION} / ${{needs.check.outputs.version}}"
-          echo "Should we publish artifacts? - do-publish = ${{needs.check.outputs.do-publish}}"
-          echo "Release? - release = ${{needs.check.outputs.release}}"
-          echo "Pre-release? - prerelease = ${{needs.check.outputs.prerelease}}"
+          echo "Tag/version: ${VERSION} / ${{needs.prepare.outputs.version}}"
+          echo "Should we publish artifacts? - do-publish = ${{needs.prepare.outputs.do-publish}}"
+          echo "Release? - release = ${{needs.prepare.outputs.release}}"
+          echo "Pre-release? - prerelease = ${{needs.prepare.outputs.prerelease}}"
 
       # Start the actual build
 
@@ -444,21 +448,21 @@ jobs:
 
       - name: Create Release
         id: create-release
-        if: ${{ needs.check.outputs.release }}
+        if: ${{ needs.prepare.outputs.release }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ needs.check.outputs.version }}
-          release_name: ${{ needs.check.outputs.version }}
+          tag_name: v${{ needs.prepare.outputs.version }}
+          release_name: ${{ needs.prepare.outputs.version }}
           draft: true
-          prerelease: ${{ needs.check.outputs.prerelease }}
+          prerelease: ${{ needs.prepare.outputs.prerelease }}
 
       - name: Upload Release Assets
-        if: ${{ needs.check.outputs.release }}
+        if: ${{ needs.prepare.outputs.release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE: ${{ needs.check.outputs.version }}
+          RELEASE: ${{ needs.prepare.outputs.version }}
         run: |
           # add install ZIPs
           hub release edit -m "" $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") $RELEASE
@@ -466,10 +470,10 @@ jobs:
           hub release edit -m "" $(find server-binaries -type f -printf "-a %p ") $RELEASE
 
       - name: Remove draft status
-        if: ${{ needs.check.outputs.release }}
+        if: ${{ needs.prepare.outputs.release }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE: ${{ needs.check.outputs.version }}
+          RELEASE: ${{ needs.prepare.outputs.version }}
         run: |
           # finally, remove the draft status
           hub release edit -m "" --draft=false $RELEASE
