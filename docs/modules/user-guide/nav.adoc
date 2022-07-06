@@ -1,7 +1,7 @@
 * xref:index.adoc[User Guide]
 ** xref:index.adoc[Overview]
 ** xref:management.adoc[Management]
-*** xref:management.adoc#_applications[Applications]
+*** xref:management.adoc#applications[Applications]
 *** xref:management.adoc#devices[Devices]
 *** xref:management-rules.adoc[Event pre-processing]
 *** xref:management-mqtt.adoc[MQTT dialects]
