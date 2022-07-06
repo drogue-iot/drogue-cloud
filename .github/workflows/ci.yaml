@@ -97,6 +97,10 @@ jobs:
     steps:
       - run: |
           echo "do-build: ${{needs.prepare.outputs.do-build}}"
+          echo "do-publish: ${{needs.prepare.outputs.do-publish}}"
+          echo "release: ${{steps.state.outputs.release}}"
+          echo "version: ${{steps.version.outputs.version}}"
+          echo "prerelease: ${{steps.state.outputs.prerelease}}"
 
   test:
     name: test
