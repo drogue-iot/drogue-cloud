@@ -413,7 +413,7 @@ jobs:
 
       - name: Tag and push images
         run: |
-          make push "IMAGE_TAG=$VERSION"
+          make push "IMAGE_TAG=$VERSION" SKIP_SERVER=1 SKIP_BUILD=1 SKIP_BUILD_IMAGES=1
           sleep 10 # delay a bit for API rate limiting issues
 
       - name: Create Release
