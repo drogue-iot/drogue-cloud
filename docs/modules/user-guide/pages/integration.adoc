@@ -157,3 +157,6 @@ a| `senderuid`      | String | X | The unique ID of the device which delivered t
 
 The event doesn't carry any payload. It is just an information that the device changed.
 
+== Commands
+
+To be written …
