@@ -480,7 +480,7 @@ jobs:
         if: needs.prepare.outputs.release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE: ${{ needs.prepare.outputs.version }}
+          TAG: v${{ needs.prepare.outputs.version }}
         run: |
           # finally, remove the draft status
-          hub release edit -m "" --draft=false $RELEASE
+          hub release edit -m "" --draft=false $TAG
