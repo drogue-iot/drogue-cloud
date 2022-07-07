@@ -379,6 +379,7 @@ jobs:
     env:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
       VERSION: ${{needs.prepare.outputs.version}}
+      HUB_VERBOSE: "1"
 
     steps:
 
