@@ -11,7 +11,7 @@ use patternfly_yew::*;
 use unicode_segmentation::UnicodeSegmentation;
 use url::Url;
 use wasm_bindgen::{closure::Closure, JsCast};
-use web_sys::{MessageEvent, WebSocket};
+use web_sys::{CloseEvent, MessageEvent, WebSocket};
 use yew::context::ContextHandle;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
@@ -29,6 +29,7 @@ pub struct Spy {
         WebSocket,
         Closure<dyn FnMut(&MessageEvent)>,
         Closure<dyn FnMut(ErrorEvent)>,
+        Closure<dyn FnMut(CloseEvent)>,
     )>,
     oauth2: Option<OAuth2Context>,
     _oauth2_handle: Option<ContextHandle<OAuth2Context>>,
@@ -49,7 +50,7 @@ pub enum Msg {
     /// Failed when processing an event
     Error(String),
     /// Source failed
-    Failed,
+    Failed(String),
     SetApplication(String),
     OAuth2Context(OAuth2Context),
 }
@@ -107,8 +108,11 @@ impl Component for Spy {
             Msg::Error(err) => {
                 error("Failed to process event", err);
             }
-            Msg::Failed => {
-                error("Source error", "Connection to the websocket service failed");
+            Msg::Failed(err) => {
+                error(
+                    "Source error",
+                    format!("Connection to the websocket service failed ({err})"),
+                );
                 self.running = false;
             }
             Msg::SetApplication(application) => {
@@ -116,7 +120,8 @@ impl Component for Spy {
             }
             Msg::OAuth2Context(oauth2) => {
                 // refresh the token of the connection
-                if let (Some((ws, _, _)), Some(access_token)) = (&self.ws, oauth2.access_token()) {
+                if let (Some((ws, _, _, _)), Some(access_token)) = (&self.ws, oauth2.access_token())
+                {
                     match serde_json::to_string(&client::Message::RefreshAccessToken(
                         access_token.to_string(),
                     )) {
@@ -213,7 +218,7 @@ impl Component for Spy {
     }
 
     fn destroy(&mut self, _: &Context<Self>) {
-        if let Some((ws, _, _)) = self.ws.take() {
+        if let Some((ws, _, _, _)) = self.ws.take() {
             let _ = ws.close();
         }
     }
@@ -269,18 +274,26 @@ impl Spy {
             let link = ctx.link().clone();
             let on_error = Closure::wrap(Box::new(move |e: ErrorEvent| {
                 log::warn!("error event: {:?}", e);
-                link.send_message(Msg::Failed);
+                link.send_message(Msg::Failed(e.message()));
             }) as Box<dyn FnMut(ErrorEvent)>);
             ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
 
+            // setup onclose
+            let link = ctx.link().clone();
+            let on_close = Closure::wrap(Box::new(move |e: CloseEvent| {
+                log::warn!("close event: {:?}", e);
+                link.send_message(Msg::Failed(e.reason()));
+            }) as Box<dyn FnMut(CloseEvent)>);
+            ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
+
             // store result
             self.running = true;
-            self.ws = Some((ws, onmessage_callback, on_error));
+            self.ws = Some((ws, onmessage_callback, on_error, on_close));
         }
     }
 
     fn stop(&mut self) {
-        if let Some((ws, _, _)) = self.ws.take() {
+        if let Some((ws, _, _, _)) = self.ws.take() {
             let _ = ws.close();
         }
         self.running = false
