@@ -6,24 +6,29 @@ A core feature of Drogue Cloud is the abstraction of protocols. Typical IoT prot
 
 Ideally, your cloud side application only needs to think about implementing one protocol, in order to
 interact with your devices. However, different IoT protocols provide benefits on the device side. As the
-devices are more constrained than the cloud side, Drogue Cloud tries to levarage the benefits of IoT protocols,
+devices are more constrained than the cloud side, Drogue Cloud tries to leverage the benefits of IoT protocols,
 while providing a normalization layer on the cloud side, that makes it easy for your applications to consume the data.
 
-But also on the cloud side, different ways to consume data exists. May that be a direct connection to a Kafka topic, again MQTT, or a simple Web socket connection. Drogue Cloud tries to be integrate as good as possible, and not force you into a specific API.
+But also on the cloud side, different ways to consume data exists. May that be a direct connection to a Kafka topic,
+again MQTT, or a simple Web socket connection. Drogue Cloud tries to be integrated as good as possible, and not force
+you into a specific API.
 
 Drogue Cloud is based on Knative, and internally uses the Cloud Events specification to forward messages.
-Cloud events on the other side have different mappings to transport channels, such as MQTT, Kafka, HTTP, etc.. And while Cloud Events can also be used on the external interfaces of Drogue Cloud, it isn't a requirement, and you can use your custom protocols as you need.
+Cloud events on the other side have different mappings to transport channels, such as MQTT, Kafka, HTTP, etc.. And while
+Cloud Events can also be used on the external interfaces of Drogue Cloud, it isn't a requirement, and you can use your
+custom protocols as you need.
 
 image:data-plane.svg[Data plane overview]
 
 Devices communicate with the _Protocol endpoints_, which implement the protocol specific mapping between the
 actual protocol and the internal Cloud Events based message format.
 
-The protocol endpoints also authenticates and authorizes devices and its configured gateways. Validate credentials, or X.509 client certificates and ensure that the devices are enabled in the system.
+The protocol endpoints also authenticates and authorizes devices and its configured gateways. Validate credentials, or
+X.509 client certificates and ensure that the devices are enabled in the system.
 
 Once the device is granted access to publish (or receive) data, the protocol endpoint will hook up the device
 to the internal message flow. It subscribes to commands targeted towards the device, and forwards messages
-from the device to an internal Knative eventing endpoint which takes care of processing and delivering the messgaes.
+from the device to an internal Knative eventing endpoint which takes care of processing and delivering the messages.
 
 The actual payload of the messages is not processed, and just passed on the Knative eventing destination.
 
@@ -31,7 +36,8 @@ The actual payload of the messages is not processed, and just passed on the Knat
 ====
 In some cases the payload of an incoming request is not equal to the payload of the actual message.
 
-For example, a request from "The Things Network" (TTN) consists of a payload, which contains meta data (like the device ID), and then the actual payload of the original message from the device.
+For example, a request from "The Things Network" (TTN) consists of a payload, which contains metadata (like the device
+ID), and then the actual payload of the original message from the device.
 
 In cases like this it depends on the protocol adapter what it considers payload and what is metadata. In the case
 of TTN, you can configure if you want to have the full request payload, or just the original device payload.
@@ -54,12 +60,13 @@ uses Kafka to implement this. However, it is possible to replace the Kafka imple
 
 == Consuming messages
 
-Applications, like devices, are provided by the user and live outside of the Drogue Cloud instance. They still
+Applications, like devices, are provided by the user and live outside the Drogue Cloud instance. They still
 may run on the same cluster. By "consuming" messages, we mean that messages, sent by a device, are forwarded
 to the target application. It also implies a channel back to the device, for sending commands. However,
 as device-to-cloud messages are much more frequent, we simply focus on "consuming" messages.
 
-In general there are "push" or "pull" modes. Messages are always sent to the consumer in an event oriented manner, "push" and "pull" only refers on who initiates the process.
+In general there are "push" or "pull" modes. Messages are always sent to the consumer in an event oriented manner,
+"push" and "pull" only refers on who initiates the process.
 
 Push model:: A sender service inside the Drogue Cloud instance constantly tries to reach out to a target destination, trying to deliver messages.
 +
@@ -70,16 +77,36 @@ the consumer connected successfully, messages start to flow.
 +
 This might be an MQTT server, which publishes messages to the consumer once it subscribed.
 
+== Commands
+
+Applications also have the ability to send back messages to the device, called commands. Commands are best-effort,
+and are not guaranteed to be delivered. If it is important to the application that a command got delivered, it needs
+to implement a reconciliation process on top of the command functionality.
+
+This is necessary as it isn't always clear if and how it makes sense to buffer commands. Assuming a decision is made,
+and a command is executed. It is not necessarily correct to buffer the command for a longer period of time, and then
+just resend it. Also, just because a command was delivered to a device attached to Drogue Cloud, doesn't mean the
+action of the command was actually performed. A command could get lost in the next step of the processing. Therefore,
+it is important to have some feedback signal end-to-end. Some commands also cannot simply be retried, as that could
+be interpreted by a receiving device as a new request to process the command.
+
+Therefore, doesn't Drogue Cloud enforce any semantics on commands, and let the application deal with the case of
+undelivered commands.
+
+NOTE: In the future, we might add some add-on functionality, which might provide a more opinionated approach, and help
+implement common use-cases out of the box.
+
 == Authentication & authorization
 
-Authentication (authn) and authorization (authz) happens in two different realmsfootnote:[The term "realm" doesn't refer to an HTTP or Keycloak "realm" here] of the system. On the
-device facing side and on the user/application facing side. And while it may be technically incorrect, in the
-next few paragraphs "authentication" implies authentication and authorization, unless noted otherwise.
+Authentication (authn) and authorization (authz) happens in two different realmsfootnote:[The term "realm" doesn't refer
+to an HTTP or Keycloak "realm" here] of the system. On the device facing side and on the user/application facing side.
+And while it may be technically incorrect, in the next few paragraphs "authentication" implies authentication and
+authorization, unless noted otherwise.
 
 The device facing authentication is backed by the device registry, which is the central storage for device
 information and configuration. It also stores credentials of devices, like passwords or X.509 trust anchors.
 
-The user facing authentication is backed by an Open ID connect, single sign-on system. By default we use Keycloak, however it should be possible to use any other Open ID connect compatible solution.
+The user facing authentication is backed by an Open ID connect, single sign-on system. By default, we use Keycloak,
+however it should be possible to use any other Open ID connect compatible solution.
 
 Services internally also use the same SSO solution as external users.
-

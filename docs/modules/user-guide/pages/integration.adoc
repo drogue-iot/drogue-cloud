@@ -2,3 +2,158 @@
 
 Integrations refer to the cloud side APIs for Drogue Cloud, which allow your application to access data coming
 from devices and schedule commands to devices.
+
+== Incoming data
+
+Incoming data is streamed to applications in the form of Cloud Events. The message stream may contain telemetry events,
+as well as some infrastructure events.
+
+NOTE: The following events may contain additional attributes, not listed here. These are implementation details are
+should not be relied upon.
+
+=== Device events
+
+All regular messages/events a device sends, will end up as a "device event".
+
+==== Attributes
+
+[cols="3,1,^1,10"]
+|===
+|Attribute | Type | Required | Description
+
+4+| **Standard attributes**
+
+a| `specversion` | String | X a| Always `1.0`.
+a| `type`    | String | X a| Always `io.drogue.event.v1`.
+a| `id`      | String | X | A unique event ID.
+a| `subject` | String | X | The channel information.
+a| `time`    | String (RFC3339) | X | The time the event arrived in the system.
+a| `datacontenttype` | String | X | The content type of the message.
+a| `dataschema` | String | a| The schema of the payload, encoded in the format defined in `datacontenttype`.
+
+4+| **Extensions**
+
+a| `instance`       | String | X | A unique identifier of the Drogue Cloud instance on this connection.
+a| `application`    | String | X | The name of the application the device belonged to.
+a| `applicationuid` | String | X | The unique ID of the application the device belonged to.
+a| `device`         | String | X | The name of the device the event originated from.
+a| `deviceuid`      | String | X | The unique ID of the device the event originated from.
+a| `sender`         | String | X | The name of the device which delivered the event to Drogue Cloud.
+a| `senderuid`      | String | X | The unique ID of the device which delivered the event to Drogue Cloud.
+
+|===
+
+[NOTE]
+.UID fields
+====
+The `uid` variants of the attributes are using unique values, instead of names. Assume a device gets deleted
+and re-created with the same name. In this case, the name would be the same, but the UID in the event would be
+different.
+====
+
+[NOTE]
+.Sender vs Device
+====
+The sender is a device which connected to Drogue Cloud. The "device" is the device the event originated from. If the
+originating device is also the connected device, both fields will have the same value. Drogue Cloud will also enforce
+that a device must be listed as gateway, in order to act on its behalf.
+====
+
+==== Payload
+
+The payload is whatever the device sent as payload. Drogue Cloud, by default, doesn't interpret the data in any way. It
+will only ensure that the data is well-formed JSON in the case the `datacontenttype` indicates a JSON mime type. The
+payload may also be empty.
+
+=== Connection events
+
+When a device connects through a connection oriented protocol (like MQTT), connection events will be issued by Drogue
+Cloud on behalf of the device.
+
+NOTE: Only devices which directly connect to Drogue Cloud will issue such events. Devices connected via another device,
+acting as gateway, do not.
+
+==== Attributes
+
+[cols="3,1,^1,10"]
+|===
+|Attribute | Type | Required | Description
+
+4+| **Standard attributes**
+
+a| `specversion` | String | X a| Always `1.0`.
+a| `type`    | String | X a| Always `io.drogue.connection.v1`.
+a| `id`      | String | X | A unique event ID.
+a| `subject` | String | X | Always `connection`.
+a| `time`    | String (RFC3339) | X | The time the event was issues.
+a| `datacontenttype` | String | X | Always `application/json`.
+
+4+| **Extensions**
+
+a| `instance`       | String | X | A unique identifier of the Drogue Cloud instance on this connection.
+a| `application`    | String | X | The name of the application the device belonged to.
+a| `applicationuid` | String | X | The unique ID of the application the device belonged to.
+a| `device`         | String | X | The name of the device the event originated from.
+a| `deviceuid`      | String | X | The unique ID of the device the event originated from.
+a| `sender`         | String | X | The name of the device which delivered the event to Drogue Cloud.
+a| `senderuid`      | String | X | The unique ID of the device which delivered the event to Drogue Cloud.
+
+|===
+
+==== Payload
+
+The payload is defined by the following schema:
+
+.Schema of connection event payload
+[source,yaml]
+----
+type: object
+properties:
+  connected:
+    type: boolean
+    description: Whether the device is connected or not
+required:
+  - connected
+----
+
+
+.Example of connection event payload
+[source,json]
+----
+{"connected": true}
+----
+
+=== Device registry events
+
+Whenever a change is made to a device in the registry, a "device change event" is sent out.
+
+==== Attributes
+
+[cols="3,1,^1,10"]
+|===
+|Attribute | Type | Required | Description
+
+4+| **Standard attributes**
+
+a| `specversion` | String | X a| Always `1.0`.
+a| `type`    | String | X a| Always `io.drogue.registry.v1`.
+a| `id`      | String | X | A unique event ID.
+a| `subject` | String | X | Always `devices`.
+a| `time`    | String (RFC3339) | X | The time the event was generated.
+
+4+| **Extensions**
+
+a| `instance`       | String | X | A unique identifier of the Drogue Cloud instance on this connection.
+a| `application`    | String | X | The name of the application the device belonged to.
+a| `applicationuid` | String | X | The unique ID of the application the device belonged to.
+a| `device`         | String | X | The name of the device the event originated from.
+a| `deviceuid`      | String | X | The unique ID of the device the event originated from.
+a| `sender`         | String | X | The name of the device which delivered the event to Drogue Cloud.
+a| `senderuid`      | String | X | The unique ID of the device which delivered the event to Drogue Cloud.
+
+|===
+
+==== Payload
+
+The event doesn't carry any payload. It is just an information that the device changed.
+
