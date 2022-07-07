@@ -89,23 +89,28 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
     // main server
 
     let main = HttpBuilder::new(config.http, move |cfg| {
-        cfg.app_data(service_addr.clone())
-            .app_data(authenticator.clone())
-            .app_data(user_auth.clone())
-            .service(
-                web::scope("/{application}")
-                    .wrap(AuthZ {
-                        client: user_auth.clone(),
-                        permission: Permission::Read,
-                        app_param: "application".to_string(),
-                    })
-                    .wrap(AuthN {
-                        openid: authenticator.as_ref().cloned(),
-                        token: user_auth.clone(),
-                        enable_access_token,
-                    })
-                    .service(web::resource("").route(web::get().to(route::start_connection))),
-            );
+        cfg.app_data(service_addr.clone());
+        if let Some(authenticator) = authenticator.clone() {
+            cfg.app_data(authenticator);
+        }
+        if let Some(user_auth) = user_auth.clone() {
+            cfg.app_data(user_auth);
+        }
+
+        cfg.service(
+            web::scope("/{application}")
+                .wrap(AuthZ {
+                    client: user_auth.clone(),
+                    permission: Permission::Read,
+                    app_param: "application".to_string(),
+                })
+                .wrap(AuthN {
+                    openid: authenticator.as_ref().cloned(),
+                    token: user_auth.clone(),
+                    enable_access_token,
+                })
+                .service(web::resource("").route(web::get().to(route::start_connection))),
+        );
     })
     .run()?;
 

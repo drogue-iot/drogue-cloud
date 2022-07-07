@@ -25,15 +25,24 @@ pub async fn start_connection(
     let application = application.into_inner();
     let auth_expiration = auth_expiration.map(|e| e.into_inner().0);
 
+    let authenticator = req.app_data().cloned();
+    let user_auth = req.app_data().cloned();
+
+    log::debug!(
+        "Auth state - authenticator: {}, userAuth: {}",
+        authenticator.is_some(),
+        user_auth.is_some()
+    );
+
     // launch web socket actor
     let ws = WsHandler::new(
         application,
         group_id.group_id,
         service_addr.get_ref().clone(),
         auth_expiration,
-        req.app_data().cloned(),
-        req.app_data().cloned(),
+        authenticator,
+        user_auth,
     );
-    let resp = ws::start(ws, &req, stream)?;
-    Ok(resp)
+
+    Ok(ws::start(ws, &req, stream)?)
 }

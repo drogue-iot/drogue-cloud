@@ -143,8 +143,8 @@ impl WsHandler {
     }
 
     fn check_token_expiration(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        if let Some(expiration) = self.auth_expiration {
-            ctx.run_interval(AUTH_CHECK_INTERVAL, move |_act, ctx| {
+        ctx.run_interval(AUTH_CHECK_INTERVAL, move |act, ctx| {
+            if let Some(expiration) = act.auth_expiration {
                 if Utc::now() > expiration {
                     log::info!("Disconnecting client: JWT token expired");
                     ctx.close(Some(CloseReason {
@@ -153,8 +153,8 @@ impl WsHandler {
                     }));
                     ctx.stop();
                 }
-            });
-        }
+            }
+        });
     }
 
     /// Handle the parse result of a client protocol message.
