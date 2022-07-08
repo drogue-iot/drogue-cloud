@@ -7,6 +7,7 @@
 ** xref:management.adoc[Management]
 *** xref:management.adoc#applications[Applications]
 *** xref:management.adoc#devices[Devices]
+*** xref:management-app-members.adoc[Application sharing]
 *** xref:management-rules.adoc[Event pre-processing]
 *** xref:management-mqtt.adoc[MQTT dialects]
 ** Endpoints

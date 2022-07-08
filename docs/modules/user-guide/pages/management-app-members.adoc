@@ -1,0 +1,78 @@
+= Application sharing
+
+Application owners can share their applications with another users.
+Drogue Cloud defines several roles that can be given to the users.
+By default, an application have only an owner and no users to it's member list.
+
+== Members roles
+
+- Reader : This is the most basic level: read only access.
+- Manager: allows read and write access to the application. This include the reader role as well.
+- Administrator: This role allows to manage the members of the application, deleting the application, plus the above roles.
+
+|===
+|Actions |Reader |Manager | Administrator
+
+| read devices details                | ✔️ | ✔️ | ✔️
+| Consume application events stream   | ✔️ | ✔️ | ✔️
+| read application details            | ✔️ | ✔️ | ✔️
+| edit application details            | ❌ | ✔️ | ✔️
+| create and edit devices             | ❌ | ✔️ | ✔️
+| delete devices                      | ❌ | ✔️ | ✔️
+| Edit application details            | ❌ | ✔️ | ✔️
+| Delete application                  | ❌ | ❌ | ✔️
+| Edit application members            | ❌ | ❌ | ✔️
+
+|===
+
+The roles are defined per-application, so someone can be administrator for an application and reader for another.
+
+NOTE: If you wish to share your application to the whole world you can add a role to the anonymous user. In Drogue Cloud, the user name to use is an empty string : "".
+
+
+== Add users to an application
+
+There are two ways to manage application members: through the "Administration" tab in the console (from the application details page), or with drg.
+
+Here we'll show a few examples unsing drg:
+
+Add a reader and an administrator:
+[bash, source]
+-----
+drg add member <username> --role reader --app <AppId>
+drg add member <anotheruser> --role admin --app <AppId>
+-----
+NOTE: With drg, `member` and `members` can be used interchangeably.
+
+Remove a member :
+[bash, source]
+----
+drg delete member <username> --app <AppId>
+----
+
+You can also edit the members object with : `drg edit member` and make changes manually.
+Finally, drg can list members for an application with `drg get members`.
+
+NOTE: A user can be defined once in an application's members list.
+
+== Application ownership
+
+The owner hae the same rights as the "admin" role, with the added ability to transfer the ownership to another user.
+
+To initiate an ownership transfer, you can go to the "Administration" tab in the console, or use drg:
+[bash, source]
+----
+drg transfer init <username> --app <AppId>
+----
+
+The receiving user can acccept the transer with:
+[bash, source]
+----
+drg transfer accept <appId>
+----
+
+The owner of an application stays the owner until the transfer is accepted by another user. It is possible to cancel an initated (but not completed) transfer with :
+[bash, source]
+----
+drg transfer cancel <appId>
+----
