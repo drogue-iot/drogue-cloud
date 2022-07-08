@@ -3,13 +3,18 @@
 Integrations refer to the cloud side APIs for Drogue Cloud, which allow your application to access data coming
 from devices and schedule commands to devices.
 
-== Incoming data
+[#incoming_events]
+== Incoming events
 
-Incoming data is streamed to applications in the form of Cloud Events. The message stream may contain telemetry events,
-as well as some infrastructure events.
+Incoming events are streamed to applications in the form of Cloud Events. The message stream may contain telemetry
+events, as well as some infrastructure events.
 
 NOTE: The following events may contain additional attributes, not listed here. These are implementation details are
 should not be relied upon.
+
+Also see:
+
+* Common concepts - xref:common-concepts.adoc#incoming_events[Incoming events]
 
 === Device events
 
@@ -42,22 +47,6 @@ a| `sender`         | String | X | The name of the device which delivered the ev
 a| `senderuid`      | String | X | The unique ID of the device which delivered the event to Drogue Cloud.
 
 |===
-
-[NOTE]
-.UID fields
-====
-The `uid` variants of the attributes are using unique values, instead of names. Assume a device gets deleted
-and re-created with the same name. In this case, the name would be the same, but the UID in the event would be
-different.
-====
-
-[NOTE]
-.Sender vs Device
-====
-The sender is a device which connected to Drogue Cloud. The "device" is the device the event originated from. If the
-originating device is also the connected device, both fields will have the same value. Drogue Cloud will also enforce
-that a device must be listed as gateway, in order to act on its behalf.
-====
 
 ==== Payload
 
@@ -127,6 +116,9 @@ required:
 
 Whenever a change is made to a device in the registry, a "device change event" is sent out.
 
+Also see:
+* xref:common-concepts.adoc#synthetic_data[Synthetic data]
+
 ==== Attributes
 
 [cols="3,1,^1,10"]
@@ -157,6 +149,15 @@ a| `senderuid`      | String | X | The unique ID of the device which delivered t
 
 The event doesn't carry any payload. It is just an information that the device changed.
 
+[#commands]
 == Commands
 
-To be written …
+Commands are similar to evens coming from a device, just they are the other way round. Internally commands are also
+represented as Cloud Events.
+
+But although internally commands are CloudEvents, current integrations only offer more opinionated APIs for commands.
+This can be changed in the future, if that is required. So there is current no common representation exposed to the user.
+
+Also see:
+
+* Common concepts - xref:common-concepts.adoc#outgoing_commands[Outgoing commands]

@@ -1,4 +1,4 @@
-= Common topics
+= Common configuration
 
 This section describes a few topics that are common to various areas of Drogue Cloud.
 

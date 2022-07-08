@@ -1,0 +1,166 @@
+= Common concepts
+
+The following subsections describe concepts used throughout Drogue Cloud.
+
+== Resources
+
+Drogue Cloud stores configuration in resources similar to Kubernetes resources. And while they look similar to
+Kubernetes resource, and may also share some functionality, they are in fact not Kubernetes resources.
+
+Resources currently are:
+
+* Applications
+* Devices
+
+=== Scoped vs non-scoped
+
+Resources can be scoped by application. An application can be compared to the concept of a Kubernetes namespace. Device
+are scoped by application.
+
+Deleting an application will automatically also delete all scoped resources belonging to the application.
+
+=== Deletion
+
+Deleting a resource will primarily mark it as deleted (soft-deleted), and then perform necessary cleanups. After the cleanups have
+been performed, the resource will actually be deleted.
+
+Cleanups can be the deletion of scoped resources (in the case of deleting an application), or the processing of
+finalizers.
+
+A resource will be marked as deleted by setting the `.metadata.deletionTimestamp` to the time the deletion was
+requested.
+
+NOTE: If there are no cleanups, then the resource will be deleted right away, skipping the step of soft-deletion.
+
+=== Naming
+
+Resources are identified by their name. However, deleting and re-creating might point you to a different resource.
+Therefore, resources also have a "unique ID" (UID), which will be different between resource re-creation.
+
+Assume you are creating an application `foo`, delete it, and create another application named `foo`. This will result
+in a new application, but having the same name. The UID of the second instance will however be different to the first
+instance.
+
+TIP: Depending on your use-case, you can choose to interpret either the UID of the name of a resource.
+
+== Devices
+
+A device is something which connects to the protocol endpoints of Drogue Cloud.
+
+[#different_types_of_devices]
+=== Different types of devices
+
+In most cases a "device" would be an actual  device, however it can also be a simulator or just another application or
+service.
+
+For example the "The Things Network" (TTN) integration is using this concept. The actual devices are connected to TTN,
+while the TTN backend provides an aggregated link to Drogue Cloud. TTN isn't an actual device, but a remote service.
+However, in Drogue Cloud, it is treated as a "gateway device".
+
+=== Device identities
+
+Devices are manages as resources in Drogue Cloud, and therefore are identified by their name using the management API.
+
+However, devices do have their own device identity, which will be used when connecting via the protocol endpoints.
+
+Drogue Cloud has reasonable defaults in place, so that the device name of the resource will be used unless something
+different is being configured.
+
+TIP: Having a dedicated device identity supports use cases where it is possible to replace a physical device with a new one,
+mapping it to the same logical device in the system.
+
+=== Actual device vs sending/transmitting device
+
+Drogue Cloud can differentiate between devices which are directly connected to Drogue Cloud, and devices which connect
+through an intermediate (proxy, gateway) device.
+
+This can be necessary for network reasons, or just because some devices are not using a TCP/IP based network.
+
+In Drogue Cloud a device can list devices it trusts as a gateway device. This enables those gateways to act on behalf
+of these devices, sending events and receiving their commands.
+
+A proxied device does not require any credentials, as it does not direct connect to Drogue Cloud, and so does not
+go through the connection process. This also means, that proxies devices will not emit any connection state events.
+
+Gateway devices are regular devices, which have connection credentials configured. The only different between a regular
+device and a gateway device is, that some other devices list this device as their gateway.
+
+NOTE: Gateway "devices" can actually also be external services, which already provide an aggregated communication link.
+Also see: <<different_types_of_devices>>
+
+Events in Drogue Cloud will contain the information what the actual device was, and what the transmitting/sending device
+was. Same for commands, these will be sent to the actual (target) device, but will be sent through the configured
+gateways, if any.
+
+== Data
+
+The core idea of the connectivity layer of Drogue Cloud is to simply pass along data in a normalized way. Trying not
+to alter or change data in the process, as long as this is possible.
+
+Events (incoming and outgoing) are normalized on Cloud Events. For their specific mapping see: xref:integration.adoc#incoming_events[Incoming events] and xref:integration.adoc#commands[Commands].
+
+[#incoming_events]
+=== Incoming events
+
+Incoming events are initiated by a device, and carry the following information:
+
+* Originating device
+* Sending device
+* Channel
+* Content type
+* Payload
+
+Events are buffered by Drogue Cloud, so that consumer can fail gracefully, not loosing any data. Once consumers reconnect,
+it is possible to catch up and consume the missed data. Events will be ordered sequentially by the time they arrive, but
+only on a per-device level.
+
+The payload can be empty, and will be forwarded as-is. There is only one limitation: if the content type indicates JSON
+as data format, then the payload must be valid JSON. Otherwise, the event is rejected.
+
+While incoming events are buffered, this is not intended as a persistent store. Data will be removed eventually. The
+actual retention time is defined at the level of the Kafka topics backing the system. By default the Kafka retention
+time is 7 days.
+
+[#outgoing_commands]
+=== Outgoing commands
+
+Commands are initiated by applications, and carry the following information:
+
+* Target device
+* Channel
+* Payload
+
+Commands are short-lived, and are not buffered. If they cannot be delivered they will fail silently.
+
+.Command feedback channel
+[TIP]
+====
+Commands can fail on many levels before they can be executed. Most likely, a command sent to a device, will need to go
+through one or more hops, before they reach their actual target. And even then, executing a command might not turn into
+the expected result.
+
+Therefore, it is important to have some kind of feedback signal from the final device, which can indicate if the
+execution of a command was successful, or not. Even if this is just mirroring the received information.
+
+With this information of "desired state" (as evaluated by the application) and the "reported state" (as reported by the
+device), the application can act accordingly. For example, by implementing a reconciliation logic, which will
+periodically re-send the command, if that is appropriate for the use case.
+
+Drogue Cloud (currently) does not provide such a reconciliation logic. Simply because there are different use cases. In
+same cases it doesn't make sense, or would even be wrong, to deliver a command that was issues a while back. And while
+we currently rely on the application to implement this logic, this might change in the future, where we could provide an
+optional (opt-in) reconciliation process.
+====
+
+The payload is normally sent to the device unaltered. It can even be empty.
+
+NOTE: Some system cannot accept arbitrary data. LoRaWAN for example as a very limited packet size, and commands must
+adhere to such limitations. Otherwise, commands will fail.
+
+[#synthetic_data]
+=== Synthetic data
+
+Some events are not directly from devices, but are created by Drogue Cloud, but might still flow through the regular
+channels.
+
+This is for example the connection events, which are initiated based on the fact that a device connects/disconnects.
