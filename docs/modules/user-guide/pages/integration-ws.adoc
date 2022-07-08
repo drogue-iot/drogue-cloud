@@ -19,6 +19,20 @@ a| `username`  and `api_key` | Provide username and API key
 
 |===
 
+=== Refreshing the Oauth2 token
+
+Oauth bearer tokens usually have a short lifespan. When the token is expired, the Websocket endpoint will close the connexion.
+To keep the connexion alive, you can refresh the token by sending a json payload through the web socket containing a refreshed token.
+The bearer token must be passed with a key named `RefreshAccessToken`.
+
+
+Here is an example:
+```json
+{
+   "RefreshAccessToken":"eyJhbGciO[...]sRqg7xt_jzb_tg"
+}
+```
+
 == Consumer Group ID
 
 You can set the consumer group ID by providing a query parameter named `group_id`. This will set the Kafka consumer
