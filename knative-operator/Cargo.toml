@@ -1,7 +1,7 @@
 [package]
 name = "drogue-cloud-knative-operator"
 description = "KNative exporter operator"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"

@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-registry-events"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 edition = "2021"
 

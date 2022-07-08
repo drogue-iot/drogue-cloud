@@ -1,7 +1,7 @@
 openapi: "3.0.0"
 info:
   title: Drogue Cloud API
-  version: "0.10"
+  version: "0.11"
   contact:
     url: https://drogue.io
   description: |

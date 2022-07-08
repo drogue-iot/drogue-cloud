@@ -1,6 +1,6 @@
 [package]
 name = "drogue-cloud-command-endpoint"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Dejan Bosanac <dbosanac@redhat.com>"]
 edition = "2021"
 license = "Apache-2.0"
