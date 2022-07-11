@@ -82,7 +82,7 @@ pub fn init_tracing(name: &str) {
 
 #[cfg(not(feature = "jaeger"))]
 #[allow(unused)]
-fn init_tracing(_: &str) {
+pub fn init_tracing(_: &str) {
     init_no_tracing()
 }
 
