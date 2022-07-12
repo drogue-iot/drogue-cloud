@@ -17,7 +17,7 @@ spec:
     endpoint: # <1>
       url: https://my-knative-endpoint
 ----
-<1> External endpoint definition as described in xref:common.adoc#defining_external_endpoints[Defining external endpoints].
+<1> External endpoint definition as described in xref:common-configuration.adoc#defining_external_endpoints[Defining external endpoints].
 
 This will create a publisher, which will start sending new events as they come in.
 
