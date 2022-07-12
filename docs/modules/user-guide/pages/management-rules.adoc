@@ -210,7 +210,7 @@ then:
       type: cloudEvent # <3>
       mode: binary # or structured <4>
 ----
-<1> Endpoint configuration as described in xref:common.adoc#defining_external_endpoints[External endpoints]
+<1> Endpoint configuration as described in xref:common-configuration.adoc#defining_external_endpoints[External endpoints]
 <2> Parameters for the outgoing request. Defaults to binary encoded cloud event.
 <3> Selects the type of the encoding
 <4> The cloud events mode: `binary` or `structured`
@@ -233,7 +233,7 @@ then:
     response: # <5>
       type: cloudEvent # <6>
 ----
-<1> Endpoint configuration as described in xref:common.adoc#defining_external_endpoints[External endpoints]
+<1> Endpoint configuration as described in xref:common-configuration.adoc#defining_external_endpoints[External endpoints]
 <2> Parameters for the outgoing request. Defaults to binary encoded cloud event.
 <3> Selects the type of the encoding
 <4> The cloud events mode: `binary` or `structured`
