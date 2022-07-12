@@ -92,6 +92,46 @@ where
     }
 
     #[instrument(skip(self))]
+    async fn read_transfer_state(
+        &self,
+        identity: &UserInformation,
+        app_id: String,
+    ) -> Result<Option<TransferOwnership>, Self::Error> {
+        let mut c = self.pool.get().await?;
+        let t = c.build_transaction().start().await?;
+
+        let accessor = PostgresApplicationAccessor::new(&t);
+
+        // retrieve app
+
+        let app = accessor.get(&app_id, Lock::ForUpdate).await?;
+        let app = app.ok_or(ServiceError::NotFound)?;
+
+        // the app receiver is allowed to read the transfer state
+        if app.transfer_owner.as_deref() == identity.user_id()
+            // The app owner as well
+            || app.owner.as_deref() == identity.user_id()
+        {
+            match app.transfer_owner {
+                Some(new_user) => {
+                    // retrieve the user name
+                    match self.keycloak.username_from_id(new_user.as_str()).await {
+                        Ok(u) => Ok(Some(TransferOwnership { new_user: u })),
+                        // If the id does not exist in keycloak
+                        Err(_) => Err(ServiceError::Internal(
+                            "Transfer owner is no longer a keycloak user".to_string(),
+                        )
+                        .into()),
+                    }
+                }
+                None => Ok(None),
+            }
+        } else {
+            Err(ServiceError::NotFound.into())
+        }
+    }
+
+    #[instrument(skip(self))]
     async fn cancel(&self, identity: &UserInformation, app_id: String) -> Result<(), Self::Error> {
         let mut c = self.pool.get().await?;
         let t = c.build_transaction().start().await?;
@@ -158,46 +198,6 @@ where
             t.commit().await?;
 
             Ok(())
-        } else {
-            Err(ServiceError::NotFound.into())
-        }
-    }
-
-    #[instrument(skip(self))]
-    async fn read_transfer_state(
-        &self,
-        identity: &UserInformation,
-        app_id: String,
-    ) -> Result<Option<TransferOwnership>, Self::Error> {
-        let mut c = self.pool.get().await?;
-        let t = c.build_transaction().start().await?;
-
-        let accessor = PostgresApplicationAccessor::new(&t);
-
-        // retrieve app
-
-        let app = accessor.get(&app_id, Lock::ForUpdate).await?;
-        let app = app.ok_or(ServiceError::NotFound)?;
-
-        // the app receiver is allowed to read the transfer state
-        if app.transfer_owner.as_deref() == identity.user_id()
-            // The app owner as well
-            || app.owner.as_deref() == identity.user_id()
-        {
-            match app.transfer_owner {
-                Some(new_user) => {
-                    // retrieve the user name
-                    match self.keycloak.username_from_id(new_user.as_str()).await {
-                        Ok(u) => Ok(Some(TransferOwnership { new_user: u })),
-                        // If the id does not exist in keycloak
-                        Err(_) => Err(ServiceError::Internal(
-                            "Transfer owner is no longer a keycloak user".to_string(),
-                        )
-                        .into()),
-                    }
-                }
-                None => Ok(None),
-            }
         } else {
             Err(ServiceError::NotFound.into())
         }
