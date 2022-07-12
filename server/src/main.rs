@@ -12,11 +12,9 @@ use drogue_cloud_device_state_service::service::postgres::PostgresServiceConfigu
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, Transport};
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
-use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_api::webapp::HttpServer;
-use drogue_cloud_service_common::actix::{CorsBuilder, HttpBuilder};
+use drogue_cloud_service_api::{kafka::KafkaClientConfig, webapp::HttpServer};
 use drogue_cloud_service_common::{
-    actix::HttpConfig,
+    actix::{CorsBuilder, HttpBuilder, HttpConfig},
     client::{DeviceStateClientConfig, RegistryConfig, UserAuthClientConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
     openid::{
