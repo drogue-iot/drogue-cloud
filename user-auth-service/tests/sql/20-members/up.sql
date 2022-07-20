@@ -24,6 +24,7 @@ INSERT INTO APPLICATIONS (
         "bar-admin": { "role": "admin" },
         "bar-manager": { "role": "manager" },
         "bar-reader": { "role": "reader" },
+        "bar-publisher": { "role": "publisher" },
         "": { "role": "reader" }
      }'::JSONB,
     '{}'::JSONB

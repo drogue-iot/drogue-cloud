@@ -99,7 +99,7 @@ pub async fn configurator(
                     web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
                         .wrap(AuthZ {
                             client: user_auth.clone(),
-                            permission: Permission::Write,
+                            permission: Permission::Publish,
                             app_param: "application".to_string(),
                         })
                         .wrap(AuthN {

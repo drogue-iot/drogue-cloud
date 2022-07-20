@@ -30,6 +30,8 @@ pub enum Role {
     Admin,
     /// Allow reading and writing, but not changing members.
     Manager,
+    /// Allow reading and publishing commands.
+    Publisher,
     /// Allow reading only.
     Reader,
 }
@@ -39,6 +41,7 @@ impl Display for Role {
         match self {
             Self::Admin => write!(f, "Administrator"),
             Self::Manager => write!(f, "Manager"),
+            Self::Publisher => write!(f, "Publisher"),
             Self::Reader => write!(f, "Reader"),
         }
     }

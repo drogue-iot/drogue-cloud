@@ -269,7 +269,7 @@ impl mqtt::Session for Session {
             );
 
             if let Some(user_auth) = &self.user_auth {
-                self.authorize(app.to_string(), user_auth, Permission::Write)
+                self.authorize(app.to_string(), user_auth, Permission::Publish)
                     .await
                     .map_err(|_| PublishError::NotAuthorized)?;
             }

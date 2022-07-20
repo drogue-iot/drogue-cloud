@@ -33,6 +33,7 @@ async fn test_auth_member_admin() {
     test_member!("app-member1", "bar-admin", [], Permission::Owner => "deny");
     test_member!("app-member1", "bar-admin", [], Permission::Admin => "allow");
     test_member!("app-member1", "bar-admin", [], Permission::Write => "allow");
+    test_member!("app-member1", "bar-admin", [], Permission::Publish => "allow");
     test_member!("app-member1", "bar-admin", [], Permission::Read => "allow");
 }
 
@@ -42,7 +43,18 @@ async fn test_auth_member_manager() {
     test_member!("app-member1", "bar-manager", [], Permission::Owner => "deny");
     test_member!("app-member1", "bar-manager", [], Permission::Admin => "deny");
     test_member!("app-member1", "bar-manager", [], Permission::Write => "allow");
+    test_member!("app-member1", "bar-manager", [], Permission::Publish => "allow");
     test_member!("app-member1", "bar-manager", [], Permission::Read => "allow");
+}
+
+#[actix_rt::test]
+#[serial]
+async fn test_auth_member_publisher() {
+    test_member!("app-member1", "bar-publisher", [], Permission::Owner => "deny");
+    test_member!("app-member1", "bar-publisher", [], Permission::Admin => "deny");
+    test_member!("app-member1", "bar-publisher", [], Permission::Write => "deny");
+    test_member!("app-member1", "bar-publisher", [], Permission::Publish => "allow");
+    test_member!("app-member1", "bar-publisher", [], Permission::Read => "allow");
 }
 
 #[actix_rt::test]
@@ -51,6 +63,7 @@ async fn test_auth_member_reader() {
     test_member!("app-member1", "bar-reader", [], Permission::Owner => "deny");
     test_member!("app-member1", "bar-reader", [], Permission::Admin => "deny");
     test_member!("app-member1", "bar-reader", [], Permission::Write => "deny");
+    test_member!("app-member1", "bar-reader", [], Permission::Publish => "deny");
     test_member!("app-member1", "bar-reader", [], Permission::Read => "allow");
 }
 
@@ -60,6 +73,7 @@ async fn test_auth_member_anon() {
     test_member!("app-member1", "", [], Permission::Owner => "deny");
     test_member!("app-member1", "", [], Permission::Admin => "deny");
     test_member!("app-member1", "", [], Permission::Write => "deny");
+    test_member!("app-member1", "", [], Permission::Publish => "deny");
     test_member!("app-member1", "", [], Permission::Read => "allow");
 }
 
@@ -69,5 +83,6 @@ async fn test_auth_member_anon_2() {
     test_member!("app-member1", Permission::Owner => "deny");
     test_member!("app-member1", Permission::Admin => "deny");
     test_member!("app-member1", Permission::Write => "deny");
+    test_member!("app-member1", Permission::Publish => "deny");
     test_member!("app-member1", Permission::Read => "allow");
 }

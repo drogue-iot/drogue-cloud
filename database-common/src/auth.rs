@@ -64,6 +64,10 @@ pub fn authorize(
                         Role::Admin | Role::Manager => Outcome::Allow,
                         _ => Outcome::Deny,
                     },
+                    Permission::Publish => match member.role {
+                        Role::Admin | Role::Manager | Role::Publisher => Outcome::Allow,
+                        _ => Outcome::Deny,
+                    },
                     Permission::Read => Outcome::Allow,
                 }
             } else {
@@ -170,6 +174,7 @@ mod test {
                 Permission::Owner => Outcome::Allow,
                 Permission::Admin => Outcome::Allow,
                 Permission::Write => Outcome::Allow,
+                Permission::Publish => Outcome::Allow,
                 Permission::Read => Outcome::Allow
             ]
         )
@@ -184,6 +189,7 @@ mod test {
                 Permission::Owner => Outcome::Allow,
                 Permission::Admin => Outcome::Allow,
                 Permission::Write => Outcome::Allow,
+                Permission::Publish => Outcome::Allow,
                 Permission::Read => Outcome::Allow
             ]
         )
@@ -198,6 +204,7 @@ mod test {
                 Permission::Owner => Outcome::Deny,
                 Permission::Admin => Outcome::Allow,
                 Permission::Write => Outcome::Allow,
+                Permission::Publish => Outcome::Allow,
                 Permission::Read => Outcome::Allow
             ]
         )
@@ -212,6 +219,22 @@ mod test {
                 Permission::Owner => Outcome::Deny,
                 Permission::Admin => Outcome::Deny,
                 Permission::Write => Outcome::Allow,
+                Permission::Publish => Outcome::Allow,
+                Permission::Read => Outcome::Allow
+            ]
+        )
+    }
+
+    #[test]
+    fn test_auth_resource_publisher() {
+        test_auth!(
+            resource!("foo", ["bar" => Role::Publisher]),
+            user("bar", &[]),
+            [
+                Permission::Owner => Outcome::Deny,
+                Permission::Admin => Outcome::Deny,
+                Permission::Write => Outcome::Deny,
+                Permission::Publish => Outcome::Allow,
                 Permission::Read => Outcome::Allow
             ]
         )
@@ -226,6 +249,7 @@ mod test {
                 Permission::Owner => Outcome::Deny,
                 Permission::Admin => Outcome::Deny,
                 Permission::Write => Outcome::Deny,
+                Permission::Publish => Outcome::Deny,
                 Permission::Read => Outcome::Allow
             ]
         )
@@ -240,6 +264,7 @@ mod test {
                 Permission::Owner => Outcome::Deny,
                 Permission::Admin => Outcome::Deny,
                 Permission::Write => Outcome::Deny,
+                Permission::Publish => Outcome::Deny,
                 Permission::Read => Outcome::Allow
             ]
         )
@@ -254,6 +279,7 @@ mod test {
                 Permission::Owner => Outcome::Deny,
                 Permission::Admin => Outcome::Deny,
                 Permission::Write => Outcome::Deny,
+                Permission::Publish => Outcome::Deny,
                 Permission::Read => Outcome::Deny
             ]
         )

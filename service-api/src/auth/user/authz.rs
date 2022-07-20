@@ -7,6 +7,7 @@ pub enum Permission {
     Owner,
     Admin,
     Write,
+    Publish,
     Read,
 }
 
