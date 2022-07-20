@@ -7,21 +7,23 @@ By default, an application have only an owner and no users to it's member list.
 == Members roles
 
 - Reader : This is the most basic level: read only access.
+- Publisher : Allows to subscribe to events and sends commands.
 - Manager: allows read and write access to the application. This include the reader role as well.
 - Administrator: This role allows to manage the members of the application, deleting the application, plus the above roles.
 
 |===
-|Actions |Reader |Manager | Administrator
+|Actions | Reader | Publisher | Manager | Administrator
 
-| read devices details                | ✔️ | ✔️ | ✔️
-| Consume application events stream   | ✔️ | ✔️ | ✔️
-| read application details            | ✔️ | ✔️ | ✔️
-| edit application details            | ❌ | ✔️ | ✔️
-| create and edit devices             | ❌ | ✔️ | ✔️
-| delete devices                      | ❌ | ✔️ | ✔️
-| Edit application details            | ❌ | ✔️ | ✔️
-| Delete application                  | ❌ | ❌ | ✔️
-| Edit application members            | ❌ | ❌ | ✔️
+| read devices details                | ✔️ | ✔️ | ✔️ | ✔️
+| consume application events stream   | ✔️ | ✔️ | ✔️ | ✔️
+| read application details            | ✔️ | ✔️ | ✔️ | ✔️
+| send commands to devices            | ❌️ | ✔️ | ✔️ | ✔️
+| edit application details            | ❌ | ❌️ | ✔️ | ✔️
+| create and edit devices             | ❌ | ❌️ | ✔️ | ✔️
+| delete devices                      | ❌ | ❌️ | ✔️ | ✔️
+| edit application details            | ❌ | ❌️ | ✔️ | ✔️
+| delete application                  | ❌ | ❌ | ❌️ | ✔️
+| edit application members            | ❌ | ❌ | ❌️ | ✔️
 
 |===
 
