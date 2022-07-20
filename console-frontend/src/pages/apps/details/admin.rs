@@ -227,6 +227,7 @@ impl Component for Admin {
                                                 placeholder="Select user role"
                                                 variant={SelectVariant::Single(ctx.link().callback(Msg::NewMemberRole))}>
                                             <SelectOption<Role> value={Role::Reader} description="Read-only access" />
+                                            <SelectOption<Role> value={Role::Publisher} description="Read and publish access" />
                                             <SelectOption<Role> value={Role::Manager} description="Read-write access" />
                                             <SelectOption<Role> value={Role::Admin} description="Administrative access" />
                                         </Select<Role>>
