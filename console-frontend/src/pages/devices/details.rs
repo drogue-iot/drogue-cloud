@@ -6,16 +6,17 @@ use crate::{
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
-    pages::{apps::ApplicationContext, devices::DetailsSection},
+    pages::{
+        apps::ApplicationContext, devices::delete::DeleteConfirmation, devices::DetailsSection,
+    },
     utils::url_encode,
 };
 use drogue_client::registry::v1::Device;
-use http::{Method, StatusCode};
+use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::rc::Rc;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -32,7 +33,6 @@ pub enum Msg {
     Error(ErrorNotification),
     SaveEditor,
     Delete,
-    DeletionComplete,
 }
 
 pub struct Details {
@@ -83,17 +83,16 @@ impl Component for Details {
                 msg.toast();
                 self.fetch_task = None;
             }
-            Msg::Delete => match self.delete(ctx) {
-                Ok(task) => {
-                    self.fetch_task = Some(task);
-                }
-                Err(err) => error("Failed to delete", err),
-            },
-            Msg::DeletionComplete => RouteAgentDispatcher::<()>::new().send(
-                RouteRequest::ChangeRoute(Route::from(AppRoute::Devices(Pages::Index {
-                    app: ApplicationContext::Single(ctx.props().app.clone()),
-                }))),
-            ),
+            Msg::Delete => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <DeleteConfirmation
+                        backend={ctx.props().backend.clone()}
+                        name={ctx.props().name.clone()}
+                        app_name={ctx.props().app.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        />
+                }),
+            }),
         }
         true
     }
@@ -160,27 +159,6 @@ impl Details {
             ctx.callback_api::<(), _>(move |response| match response {
                 ApiResponse::Success(..) => Msg::Load,
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to update")),
-            }),
-        )?)
-    }
-
-    fn delete(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.request(
-            Method::DELETE,
-            format!(
-                "/api/registry/v1alpha1/apps/{}/devices/{}",
-                url_encode(&ctx.props().app),
-                url_encode(&ctx.props().name)
-            ),
-            vec![],
-            Nothing,
-            vec![],
-            ctx.callback_api::<(), _>(move |response| match response {
-                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::DeletionComplete,
-                ApiResponse::Success(_, code) => {
-                    Msg::Error(format!("Unknown message code: {}", code).notify("Failed to delete"))
-                }
-                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
             }),
         )?)
     }

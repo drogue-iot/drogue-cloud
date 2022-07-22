@@ -1,4 +1,5 @@
 mod create;
+mod delete;
 mod details;
 mod index;
 
