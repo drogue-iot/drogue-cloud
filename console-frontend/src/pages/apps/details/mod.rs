@@ -120,11 +120,11 @@ impl Component for Details {
                 self.is_admin = is_admin;
             }
             Msg::Delete => match self.delete(ctx) {
-                    Ok(task) => {
-                        self.fetch_task = Some(task);
-                    },
-                    Err(err) => error("Failed to delete", err),
-            }
+                Ok(task) => {
+                    self.fetch_task = Some(task);
+                }
+                Err(err) => error("Failed to delete", err),
+            },
             Msg::DeletionComplete => RouteAgentDispatcher::<()>::new().send(
                 RouteRequest::ChangeRoute(Route::from(AppRoute::Applications(Pages::Index))),
             ),
@@ -219,7 +219,10 @@ impl Details {
     fn delete(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         Ok(ctx.props().backend.request(
             Method::DELETE,
-            format!("/api/registry/v1alpha1/apps/{}", url_encode(&ctx.props().name)),
+            format!(
+                "/api/registry/v1alpha1/apps/{}",
+                url_encode(&ctx.props().name)
+            ),
             vec![],
             Nothing,
             vec![],
