@@ -1,5 +1,6 @@
 mod admin;
 mod debug;
+mod delete;
 mod integrations;
 
 use super::{ApplicationTabs, Pages};
@@ -11,7 +12,7 @@ use crate::{
     html_prop,
     pages::{
         apps::{
-            details::{admin::Admin, integrations::IntegrationDetails},
+            details::{admin::Admin, delete::DeleteConfirmation, integrations::IntegrationDetails},
             DetailsSection,
         },
         HasReadyState,
@@ -20,14 +21,13 @@ use crate::{
 };
 use drogue_client::registry::v1::Application;
 use drogue_cloud_console_common::EndpointInformation;
-use http::{Method, StatusCode};
+use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::{ops::Deref, rc::Rc};
 use yew::context::ContextHandle;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -47,7 +47,6 @@ pub enum Msg {
     SaveEditor,
     SetAdmin(bool),
     Delete,
-    DeletionComplete,
 }
 
 pub struct Details {
@@ -119,15 +118,15 @@ impl Component for Details {
                 self.fetch_role = None;
                 self.is_admin = is_admin;
             }
-            Msg::Delete => match self.delete(ctx) {
-                Ok(task) => {
-                    self.fetch_task = Some(task);
-                }
-                Err(err) => error("Failed to delete", err),
-            },
-            Msg::DeletionComplete => RouteAgentDispatcher::<()>::new().send(
-                RouteRequest::ChangeRoute(Route::from(AppRoute::Applications(Pages::Index))),
-            ),
+            Msg::Delete => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <DeleteConfirmation
+                        backend={ctx.props().backend.clone()}
+                        name={ctx.props().name.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        />
+                }),
+            }),
         }
         true
     }
@@ -212,26 +211,6 @@ impl Details {
             ctx.callback_api::<(), _>(move |response| match response {
                 ApiResponse::Success(..) => Msg::Load,
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to update")),
-            }),
-        )?)
-    }
-
-    fn delete(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.request(
-            Method::DELETE,
-            format!(
-                "/api/registry/v1alpha1/apps/{}",
-                url_encode(&ctx.props().name)
-            ),
-            vec![],
-            Nothing,
-            vec![],
-            ctx.callback_api::<(), _>(move |response| match response {
-                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::DeletionComplete,
-                ApiResponse::Success(_, code) => {
-                    Msg::Error(format!("Unknown message code: {}", code).notify("Failed to delete"))
-                }
-                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
             }),
         )?)
     }
