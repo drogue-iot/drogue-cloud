@@ -10,11 +10,12 @@ use crate::{
     utils::url_encode,
 };
 use drogue_client::registry::v1::Device;
-use http::Method;
+use http::{Method, StatusCode};
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::rc::Rc;
 use yew::prelude::*;
+use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -30,6 +31,8 @@ pub enum Msg {
     SetData(Rc<Device>),
     Error(ErrorNotification),
     SaveEditor,
+    Delete,
+    DeletionComplete,
 }
 
 pub struct Details {
@@ -80,6 +83,17 @@ impl Component for Details {
                 msg.toast();
                 self.fetch_task = None;
             }
+            Msg::Delete => match self.delete(ctx) {
+                Ok(task) => {
+                    self.fetch_task = Some(task);
+                }
+                Err(err) => error("Failed to delete", err),
+            },
+            Msg::DeletionComplete => RouteAgentDispatcher::<()>::new().send(
+                RouteRequest::ChangeRoute(Route::from(AppRoute::Devices(Pages::Index {
+                    app: ApplicationContext::Single(ctx.props().app.clone()),
+                }))),
+            ),
         }
         true
     }
@@ -89,7 +103,18 @@ impl Component for Details {
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
-                        <Title>{&ctx.props().name}</Title>
+                        <Flex>
+                            <FlexItem>
+                                <Title>{ctx.props().name.clone()}</Title>
+                            </FlexItem>
+                            <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
+                                <Button
+                                        label="Delete"
+                                        variant={Variant::DangerSecondary}
+                                        onclick={ctx.link().callback(|_|Msg::Delete)}
+                                />
+                            </FlexItem>
+                        </Flex>
                     </Content>
                 </PageSection>
             { if let Some(app) = &self.content {
@@ -135,6 +160,27 @@ impl Details {
             ctx.callback_api::<(), _>(move |response| match response {
                 ApiResponse::Success(..) => Msg::Load,
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to update")),
+            }),
+        )?)
+    }
+
+    fn delete(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
+        Ok(ctx.props().backend.request(
+            Method::DELETE,
+            format!(
+                "/api/registry/v1alpha1/apps/{}/devices/{}",
+                url_encode(&ctx.props().app),
+                url_encode(&ctx.props().name)
+            ),
+            vec![],
+            Nothing,
+            vec![],
+            ctx.callback_api::<(), _>(move |response| match response {
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::DeletionComplete,
+                ApiResponse::Success(_, code) => {
+                    Msg::Error(format!("Unknown message code: {}", code).notify("Failed to delete"))
+                }
+                ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
             }),
         )?)
     }
