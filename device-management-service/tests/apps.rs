@@ -71,6 +71,23 @@ async fn test_create_app_invalid_name() -> anyhow::Result<()> {
 
 #[actix_rt::test]
 #[serial]
+async fn test_create_app_uppercase_name() -> anyhow::Result<()> {
+    test!((app, sender, outbox) => {
+        let resp = call_http(&app, &user("foo"), TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({
+            "metadata": {
+                "name": "myApp",
+            },
+        }))).await;
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // no event must have been fired
+        assert_events(vec![sender.retrieve()?, outbox_retrieve(&outbox).await?], vec![]);
+    })
+}
+
+#[actix_rt::test]
+#[serial]
 async fn test_create_app_empty_name() -> anyhow::Result<()> {
     test!((app, sender, outbox) => {
     let resp = call_http(&app, &user("foo"), TestRequest::post().uri("/api/registry/v1alpha1/apps").set_json(&json!({

@@ -28,7 +28,10 @@ where
 {
     log::debug!("Creating application: '{:?}'", app);
 
-    if app.metadata.name.is_empty() || !hostname_validator::is_valid(app.metadata.name.as_str()) {
+    if app.metadata.name.is_empty() || !hostname_validator::is_valid(app.metadata.name.as_str())
+        // Also reject names that contain uppercase letters
+        || app.metadata.name.to_ascii_lowercase() != app.metadata.name
+    {
         return Ok(HttpResponse::BadRequest().finish());
     }
 
