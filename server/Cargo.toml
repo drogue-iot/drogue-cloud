@@ -8,7 +8,7 @@ edition = "2021"
 actix-files = "0.6"
 actix-rt = "2.2.0"
 anyhow = "1"
-clap = "2.33.3"
+clap = { version = "3.2.15", features = ["cargo", "env"] }
 deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 diesel = { version = "1.4.8", features = ["postgres"] }

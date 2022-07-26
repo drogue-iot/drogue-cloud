@@ -67,7 +67,7 @@ pub struct Drogue {
 }
 
 impl ServerConfig {
-    pub fn new(matches: &ArgMatches<'_>) -> ServerConfig {
+    pub fn new(matches: &ArgMatches) -> ServerConfig {
         let iface = matches
             .value_of("bind-address")
             .unwrap_or("localhost")
