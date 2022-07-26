@@ -4,7 +4,7 @@ mod keycloak;
 
 use crate::{config::*, keycloak::*};
 use anyhow::anyhow;
-use clap::{crate_version, App, Arg, SubCommand};
+use clap::{crate_version, Arg, ArgAction, SubCommand};
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_database_common::postgres;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
@@ -31,8 +31,8 @@ use url::Url;
 #[macro_use]
 extern crate diesel_migrations;
 
-fn args() -> App<'static, 'static> {
-    App::new("Drogue Cloud Server")
+fn args() -> clap::Command<'static> {
+    clap::Command::new("Drogue Cloud Server")
         .about("Running Drogue Cloud in a single process")
         .version(crate_version!())
         .long_about("Drogue Server runs all the Drogue Cloud services in a single process, with an external dependency on PostgreSQL, Kafka and Keycloak for storing data, device management and user management")
@@ -40,15 +40,15 @@ fn args() -> App<'static, 'static> {
             Arg::with_name("verbose")
                 .global(true)
                 .long("verbose")
-                .short("v")
-                .multiple(true)
+                .short('v')
+                .action(ArgAction::Count)
                 .help("Be verbose. Can be used multiple times to increase verbosity.")
         )
         .arg(
             Arg::with_name("quiet")
                 .global(true)
                 .long("quiet")
-                .short("q")
+                .short('q')
                 .conflicts_with("verbose")
                 .help("Be quiet.")
         )
@@ -70,7 +70,7 @@ fn args() -> App<'static, 'static> {
                 .arg(
                     Arg::with_name("enable-all")
                         .long("--enable-all")
-                        .help("enable all services"),
+                        .help("enable all services (except console-frontend)"),
                 )
                 .arg(
                     Arg::with_name("enable-api")
@@ -80,6 +80,7 @@ fn args() -> App<'static, 'static> {
                 .arg(
                     Arg::with_name("enable-console-frontend")
                         .long("--enable-console-frontend")
+                        .requires("ui-dist")
                         .help("enable console frontend serving"),
                 )
                 .arg(
@@ -87,6 +88,7 @@ fn args() -> App<'static, 'static> {
                     Arg::with_name("disable-console-frontend")
                         .long("--disable-console-frontend")
                         .conflicts_with("enable-console-frontend")
+                        .conflicts_with("ui-dist")
                         .help("disable console frontend serving"),
                 )
                 .arg(
@@ -214,6 +216,20 @@ fn args() -> App<'static, 'static> {
                         .long("--keycloak-password")
                         .value_name("PASSWORD")
                         .help("Keycloak realm admin password")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("drogue-admin-user")
+                        .long("drogue-admin-user")
+                        .value_name("USER")
+                        .help("Drogue admin user")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("drogue-admin-password")
+                        .long("drogue-admin-password")
+                        .value_name("PASSWORD")
+                        .help("Drogue admin password")
                         .takes_value(true),
                 )
                 .arg(
@@ -949,4 +965,9 @@ async fn run(
     let (result, _, _) = futures::future::select_all(tasks).await;
 
     log::warn!("Shutting down as one task terminated: {result:?}");
+}
+
+#[test]
+fn verify_app() {
+    args().debug_assert();
 }
