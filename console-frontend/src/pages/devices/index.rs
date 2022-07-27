@@ -9,7 +9,7 @@ use crate::{
         devices::{CloneDialog, CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
-    utils::{navigate_to, url_encode, PagingOptions},
+    utils::{navigate_to, success, url_encode, PagingOptions},
 };
 use drogue_client::registry::v1::{Application, Device};
 use http::{Method, StatusCode};
@@ -83,6 +83,8 @@ pub enum Msg {
     Delete(String),
     Clone(Device),
     TriggerModal,
+
+    DeletionComplete,
 }
 
 pub struct Index {
@@ -190,6 +192,10 @@ impl Component for Index {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to delete", err),
             },
+            Msg::DeletionComplete => {
+                success("Device deleted");
+                ctx.link().send_message(Msg::Load);
+            }
             Msg::Clone(device) => BackdropDispatcher::default().open(Backdrop {
                 content: (html! {
                     <CloneDialog
@@ -369,7 +375,7 @@ impl Index {
             Nothing,
             vec![],
             ctx.callback_api::<(), _>(move |response| match response {
-                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::Load,
+                ApiResponse::Success(_, StatusCode::NO_CONTENT) => Msg::DeletionComplete,
                 ApiResponse::Success(_, code) => {
                     Msg::Error(format!("Unknown message code: {}", code).notify("Failed to delete"))
                 }
