@@ -7,7 +7,8 @@ use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
     pages::{
-        apps::ApplicationContext, devices::delete::DeleteConfirmation, devices::DetailsSection,
+        apps::ApplicationContext, devices::delete::DeleteConfirmation, devices::CloneDialog,
+        devices::DetailsSection,
     },
     utils::url_encode,
 };
@@ -33,6 +34,7 @@ pub enum Msg {
     Error(ErrorNotification),
     SaveEditor,
     Delete,
+    Clone,
 }
 
 pub struct Details {
@@ -93,6 +95,16 @@ impl Component for Details {
                         />
                 }),
             }),
+            Msg::Clone => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <CloneDialog
+                        backend={ctx.props().backend.clone()}
+                        data={self.content.as_ref().unwrap().as_ref().clone()}
+                        app={ctx.props().app.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        />
+                }),
+            }),
         }
         true
     }
@@ -106,13 +118,21 @@ impl Component for Details {
                             <FlexItem>
                                 <Title>{ctx.props().name.clone()}</Title>
                             </FlexItem>
-                            <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
-                                <Button
-                                        label="Delete"
-                                        variant={Variant::DangerSecondary}
-                                        onclick={ctx.link().callback(|_|Msg::Delete)}
-                                />
-                            </FlexItem>
+                                <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
+                                    <Button
+                                            label="Clone"
+                                            disabled={self.content.is_none()}
+                                            variant={Variant::Secondary}
+                                            onclick={ctx.link().callback(|_|Msg::Clone)}
+                                    />
+                                </FlexItem>
+                                <FlexItem>
+                                    <Button
+                                            label="Delete"
+                                            variant={Variant::DangerSecondary}
+                                            onclick={ctx.link().callback(|_|Msg::Delete)}
+                                    />
+                                </FlexItem>
                         </Flex>
                     </Content>
                 </PageSection>

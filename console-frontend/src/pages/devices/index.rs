@@ -6,7 +6,7 @@ use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
     pages::{
         apps::ApplicationContext,
-        devices::{CreateDialog, DetailsSection, Pages},
+        devices::{CloneDialog, CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
     utils::{navigate_to, success, url_encode, PagingOptions},
@@ -21,6 +21,7 @@ pub struct DeviceEntry {
     pub device: Device,
     pub on_overview: Callback<()>,
     pub on_delete: Callback<()>,
+    pub on_clone: Callback<()>,
 }
 
 impl TableRenderer for DeviceEntry {
@@ -41,13 +42,22 @@ impl TableRenderer for DeviceEntry {
     }
 
     fn actions(&self) -> Vec<DropdownChildVariant> {
-        vec![html_nested! {
-        <DropdownItem
-            onclick={self.on_delete.clone()}
-        >
-            {"Delete"}
-        </DropdownItem>}
-        .into()]
+        vec![
+            html_nested! {
+            <DropdownItem
+                 onclick={self.on_clone.clone()}
+             >
+                 {"Clone"}
+             </DropdownItem>}
+            .into(),
+            html_nested! {
+            <DropdownItem
+                 onclick={self.on_delete.clone()}
+             >
+                 {"Delete"}
+             </DropdownItem>}
+            .into(),
+        ]
     }
 }
 
@@ -71,6 +81,7 @@ pub enum Msg {
 
     ShowOverview(String),
     Delete(String),
+    Clone(Device),
     TriggerModal,
 
     DeletionComplete,
@@ -185,6 +196,16 @@ impl Component for Index {
                 success("Device deleted");
                 ctx.link().send_message(Msg::Load);
             }
+            Msg::Clone(device) => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <CloneDialog
+                        backend={ctx.props().backend.clone()}
+                        data={device}
+                        app={ctx.props().app.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        />
+                }),
+            }),
         };
         true
     }
@@ -302,13 +323,16 @@ impl Index {
                         .map(move |device| {
                             let name = device.metadata.name.clone();
                             let name_copy = device.metadata.name.clone();
+                            let device_copy = device.clone();
                             let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
                             let on_delete = link.callback_once(move |_| Msg::Delete(name_copy));
+                            let on_clone = link.callback_once(move |_| Msg::Clone(device_copy));
 
                             DeviceEntry {
                                 device,
                                 on_overview,
                                 on_delete,
+                                on_clone,
                             }
                         })
                         .collect();

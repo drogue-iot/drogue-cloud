@@ -1,8 +1,10 @@
+mod clone;
 mod create;
 mod delete;
 mod details;
 mod index;
 
+pub use clone::*;
 pub use create::*;
 pub use details::*;
 pub use index::*;
