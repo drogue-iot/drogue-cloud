@@ -230,7 +230,7 @@ jobs:
 
 
   server-macos:
-    runs-on: macos-10.15
+    runs-on: macos-12
     needs: [prepare, check]
     if: needs.prepare.outputs.do-build == 'true'
     env:
