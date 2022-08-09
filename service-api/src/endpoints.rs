@@ -47,8 +47,6 @@ pub struct Endpoints {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub websocket_integration: Option<HttpEndpoint>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sso: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub issuer_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub redirect_url: Option<String>,

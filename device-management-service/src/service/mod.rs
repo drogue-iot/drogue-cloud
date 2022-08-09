@@ -6,7 +6,7 @@ mod x509;
 
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use deadpool_postgres::{Pool, Transaction};
-use drogue_client::{registry, Translator};
+use drogue_client::{registry, user::v1::authz::Permission, Translator};
 use drogue_cloud_database_common::{
     auth::ensure,
     error::ServiceError,
@@ -22,7 +22,7 @@ use drogue_cloud_database_common::{
 };
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError, SendEvent};
 use drogue_cloud_service_api::{
-    auth::user::{authz::Permission, UserInformation},
+    auth::user::UserInformation,
     health::{HealthCheckError, HealthChecked},
 };
 use drogue_cloud_service_common::keycloak::KeycloakClient;

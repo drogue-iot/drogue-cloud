@@ -3,7 +3,7 @@ use crate::{
     WebData,
 };
 use actix_web::{web, HttpResponse};
-use drogue_cloud_service_api::auth::user::authz::{AuthorizationRequest, AuthorizationResponse};
+use drogue_client::user::v1::authz::{AuthorizationRequest, AuthorizationResponse};
 use drogue_cloud_service_api::webapp as actix_web;
 
 /// Endpoint to authorize a user operation.

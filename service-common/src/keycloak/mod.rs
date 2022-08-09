@@ -2,8 +2,9 @@ pub mod client;
 pub mod error;
 pub mod mock;
 
-use crate::{defaults, openid::CommaSeparatedVec};
+use crate::defaults;
 use async_trait::async_trait;
+use drogue_bazaar::core::config::CommaSeparatedVec;
 use keycloak::KeycloakAdmin;
 use serde::Deserialize;
 use url::Url;

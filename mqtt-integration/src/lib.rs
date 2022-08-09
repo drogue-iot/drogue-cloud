@@ -9,10 +9,10 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_mqtt_common::server::{build, MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
-    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    app::{Startup, StartupExt},
+    auth::openid::AuthenticatorConfig,
+    client::{RegistryConfig, UserAuthClientConfig},
     defaults,
-    health::{HealthServer, HealthServerConfig},
-    openid::AuthenticatorConfig,
     reqwest::ClientFactory,
 };
 use futures::TryFutureExt;
@@ -57,9 +57,6 @@ pub struct Config {
 
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     pub oauth: AuthenticatorConfig,
 
@@ -106,7 +103,7 @@ impl Debug for OpenIdClient {
     }
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::debug!("Config: {:#?}", config);
 
     let app_config = config.clone();
@@ -121,8 +118,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        let user_auth = Arc::new(UserAuthClient::from_config(user_auth).await?);
-        Some(user_auth)
+        Some(Arc::new(user_auth.into_client().await?))
     } else {
         None
     };
@@ -153,18 +149,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let srv = build(config.mqtt.clone(), app, &app_config)?.run();
 
-    log::info!("Starting server");
-
     // run
 
-    if let Some(health) = config.health {
-        // health server
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        futures::try_join!(health.run_ntex(), srv.err_into(),)?;
-    } else {
-        futures::try_join!(srv)?;
-    }
+    startup.spawn(srv.err_into());
 
     // exiting
 

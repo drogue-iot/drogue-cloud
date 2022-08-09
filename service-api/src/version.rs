@@ -1,28 +1,14 @@
-use serde::{Deserialize, Serialize};
+use drogue_bazaar::project;
 
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+project!(PROJECT: "Drogue IoT" => r#"______ ______  _____  _____  _   _  _____   _____         _____ 
+|  _  \| ___ \|  _  ||  __ \| | | ||  ___| |_   _|       |_   _|
+| | | || |_/ /| | | || |  \/| | | || |__     | |    ___    | |  
+| | | ||    / | | | || | __ | | | ||  __|    | |   / _ \   | |  
+| |/ / | |\ \ \ \_/ /| |_\ \| |_| || |___   _| |_ | (_) |  | |  
+|___/  \_| \_| \___/  \____/ \___/ \____/   \___/  \___/   \_/  
+"#);
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DrogueVersion {
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Version {
     pub version: String,
-}
-
-impl DrogueVersion {
-    pub fn new() -> DrogueVersion {
-        DrogueVersion {
-            version: VERSION.to_string(),
-        }
-    }
-}
-
-impl Default for DrogueVersion {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ToString for DrogueVersion {
-    fn to_string(&self) -> String {
-        self.version.clone()
-    }
 }

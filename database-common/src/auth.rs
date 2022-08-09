@@ -1,10 +1,10 @@
 //! Common authn/authz logic
 
 use crate::{error::ServiceError, models::app::MemberEntry};
-use drogue_cloud_service_api::admin::Role;
-use drogue_cloud_service_api::auth::user::{
-    authz::{Outcome, Permission},
-    UserInformation,
+use drogue_client::user::v1::authz::{Outcome, Permission};
+use drogue_cloud_service_api::{
+    admin::Role,
+    auth::user::{IsAdmin, UserInformation},
 };
 use indexmap::map::IndexMap;
 use std::fmt::Debug;

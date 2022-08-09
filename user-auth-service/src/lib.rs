@@ -5,13 +5,12 @@ use actix_web::web;
 use drogue_cloud_access_token_service::{
     endpoints::WebData as KeycloakWebData, service::KeycloakAccessTokenService,
 };
-use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
+use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
-    actix::{HttpBuilder, HttpConfig},
-    app::run_main,
-    health::HealthServerConfig,
+    actix::http::{HttpBuilder, HttpConfig},
+    app::{Startup, StartupExt},
+    auth::openid::{Authenticator, AuthenticatorConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
-    openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
 use serde::Deserialize;
@@ -34,9 +33,6 @@ pub struct Config {
     pub keycloak: KeycloakAdminClientConfig,
 
     #[serde(default)]
-    pub health: Option<HealthServerConfig>,
-
-    #[serde(default)]
     pub http: HttpConfig,
 }
 
@@ -51,6 +47,10 @@ macro_rules! app {
                     .service(web::scope("/v1/user").service(
                         web::resource("/authz").route(web::post().to(endpoints::authorize)),
                     ))
+                    .service(
+                        web::resource("/user/v1alpha1/authz")
+                            .route(web::post().to(endpoints::authorize)),
+                    )
                     .service(web::resource("/user/v1alpha1/authn").route(web::post().to(
                         drogue_cloud_access_token_service::endpoints::authenticate::<$api_key_ty>,
                     ))),
@@ -58,7 +58,7 @@ macro_rules! app {
     };
 }
 
-pub async fn run<K>(config: Config) -> anyhow::Result<()>
+pub async fn run<K>(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()>
 where
     K: 'static + KeycloakClient + std::marker::Send + std::marker::Sync,
 {
@@ -81,7 +81,7 @@ where
 
     // main server
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
+    HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         let auth = openid_auth!(req -> {
             req
             .app_data::<web::Data<WebData<service::PostgresAuthorizationService>>>()
@@ -97,9 +97,9 @@ where
             auth
         );
     })
-    .run()?;
+    .start(startup)?;
 
-    run_main([main], config.health, [data_service.boxed()]).await?;
+    startup.check(data_service);
 
     // exiting
 

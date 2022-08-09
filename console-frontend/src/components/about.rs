@@ -2,7 +2,7 @@ use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
 use crate::error::{error, ErrorNotification, ErrorNotifier};
-use drogue_cloud_service_api::version::DrogueVersion;
+use drogue_cloud_service_api::version::Version;
 use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
@@ -14,12 +14,12 @@ pub struct Props {
 
 pub enum Msg {
     FetchInfo,
-    Info(DrogueVersion),
+    Info(Version),
     Error(ErrorNotification),
 }
 
 pub struct AboutModal {
-    info: Option<DrogueVersion>,
+    info: Option<Version>,
     task: Option<RequestHandle>,
 }
 
@@ -78,7 +78,7 @@ impl AboutModal {
             vec![],
             Nothing,
             vec![],
-            ctx.callback_api::<Json<DrogueVersion>, _>(|response| match response {
+            ctx.callback_api::<Json<Version>, _>(|response| match response {
                 ApiResponse::Success(info, _) => Msg::Info(info),
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to load information")),
             }),

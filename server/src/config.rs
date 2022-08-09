@@ -271,7 +271,6 @@ pub fn endpoints(config: &ServerConfig, tls: bool) -> Endpoints {
                 ws_prefix, config.websocket_integration.host, config.websocket_integration.port
             ),
         }),
-        sso: Some(config.keycloak.url.clone()),
         issuer_url: Some(format!(
             "{}/realms/{}",
             config.keycloak.url, config.keycloak.realm

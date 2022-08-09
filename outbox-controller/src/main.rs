@@ -1,7 +1,8 @@
-use drogue_cloud_outbox_controller::{run, Config};
-use drogue_cloud_service_common::app;
+use drogue_cloud_outbox_controller::run;
+use drogue_cloud_service_api::PROJECT;
+use drogue_cloud_service_common::runtime;
 
-#[actix::main]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    app!();
+    runtime!(PROJECT).exec(run).await
 }

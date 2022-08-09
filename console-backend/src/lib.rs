@@ -10,19 +10,22 @@ use actix_web::{
 };
 use anyhow::Context;
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
-use drogue_cloud_service_api::health::HealthChecked;
 use drogue_cloud_service_api::{
-    endpoints::Endpoints, kafka::KafkaClientConfig, webapp::web::ServiceConfig,
+    endpoints::Endpoints, health::HealthChecked, kafka::KafkaClientConfig,
+    webapp::web::ServiceConfig,
 };
 use drogue_cloud_service_common::{
-    actix::{CorsBuilder, HttpBuilder, HttpConfig},
+    actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
-    app::run_main,
-    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    app::{Startup, StartupExt},
+    auth::{
+        openid::{AuthenticatorConfig, TokenConfig},
+        pat,
+    },
+    client::{RegistryConfig, UserAuthClientConfig},
     defaults,
-    health::HealthServerConfig,
+    endpoints::create_endpoint_source,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
-    openid::{AuthenticatorConfig, TokenConfig},
 };
 use info::DemoFetcher;
 use k8s_openapi::api::core::v1::ConfigMap;
@@ -56,9 +59,6 @@ pub struct Config {
     pub kafka: KafkaClientConfig,
 
     pub keycloak: KeycloakAdminClientConfig,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     /// External OpenID configuration, required to discover external OpenID endpoints
     #[serde(rename = "ui", default)]
@@ -128,7 +128,7 @@ pub async fn configurator(
             .await
             .context("Creating UI client")?;
 
-        let user_auth = UserAuthClient::from_config(user_auth).await?;
+        let user_auth = user_auth.into_client().await?;
 
         let account_url = match config.disable_account_url {
             true => None,
@@ -177,7 +177,7 @@ pub async fn configurator(
         move |cfg: &mut ServiceConfig| {
             let auth = AuthN {
                 openid: authenticator.as_ref().cloned(),
-                token: user_auth.clone(),
+                token: user_auth.clone().map(pat::Authenticator::new),
                 enable_access_token,
             };
 
@@ -250,20 +250,25 @@ pub async fn configurator(
     ))
 }
 
-pub async fn run(config: Config, endpoints: Endpoints) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::info!("Running console server!");
     log::debug!("Config: {:#?}", config);
+
+    // the endpoint source we choose
+    let endpoint_source = create_endpoint_source()?;
+    log::info!("Using endpoint source: {:#?}", endpoint_source);
+    let endpoints = endpoint_source.eval_endpoints().await?;
 
     // main server
 
     let (cfg, checks) = configurator(config.clone(), endpoints).await?;
-    let main = HttpBuilder::new(config.http.clone(), cfg)
+    HttpBuilder::new(config.http.clone(), Some(startup.runtime_config()), cfg)
         .cors(CorsBuilder::Permissive)
-        .run()?;
+        .start(startup)?;
 
-    // run
+    // spawn
 
-    run_main([main], config.health, checks).await?;
+    startup.check_iter(checks);
 
     // done
 

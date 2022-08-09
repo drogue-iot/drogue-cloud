@@ -11,7 +11,7 @@ async-trait = "0.1"
 chrono = "0.4"
 deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
-drogue-client = "0.10"
+drogue-client = "0.11"
 futures = "0.3"
 indexmap = { version = "1.6", features = ["serde-1"] }
 log = "0.4"

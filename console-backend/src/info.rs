@@ -1,9 +1,10 @@
 use crate::demos::get_demos;
 use actix_web::{get, web, HttpResponse, Responder};
 use drogue_cloud_console_common::EndpointInformation;
-use drogue_cloud_service_api::{endpoints::Endpoints, version::DrogueVersion};
+use drogue_cloud_service_api::{endpoints::Endpoints, PROJECT};
 use k8s_openapi::api::core::v1::ConfigMap;
 use kube::Api;
+use serde_json::json;
 
 #[derive(Clone)]
 pub enum DemoFetcher {
@@ -38,5 +39,7 @@ pub async fn get_public_endpoints(endpoints: web::Data<Endpoints>) -> impl Respo
 
 #[get("/drogue-version")]
 pub async fn get_drogue_version() -> impl Responder {
-    HttpResponse::Ok().json(DrogueVersion::new())
+    HttpResponse::Ok().json(json!({
+        "version": PROJECT.version,
+    }))
 }

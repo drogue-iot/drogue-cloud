@@ -17,7 +17,9 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
-    app::run_main, client::RegistryConfig, defaults, health::HealthServerConfig,
+    app::{Startup, StartupExt},
+    client::RegistryConfig,
+    defaults,
 };
 use futures::FutureExt;
 use k8s_openapi::api::core::v1::Secret;
@@ -36,9 +38,6 @@ pub struct Config {
     pub bind_addr: String,
 
     pub registry: RegistryConfig,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     pub controller: ControllerConfig,
 
@@ -66,7 +65,7 @@ const GROUP_KAFKA_STRIMZI_IO: &str = "kafka.strimzi.io";
 const KIND_KAFKA_TOPIC: &str = "KafkaTopic";
 const KIND_KAFKA_USER: &str = "KafkaUser";
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::debug!("Config: {:#?}", config);
 
     let kube = kube::client::Client::try_default()
@@ -147,17 +146,12 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main(
-        [
-            registry.boxed_local(),
-            watcher_topics.boxed_local(),
-            watcher_users.boxed_local(),
-            watcher_secret.boxed_local(),
-        ],
-        config.health,
-        vec![],
-    )
-    .await?;
+    startup.spawn_iter([
+        registry.boxed_local(),
+        watcher_topics.boxed_local(),
+        watcher_users.boxed_local(),
+        watcher_secret.boxed_local(),
+    ]);
 
     // exiting
 

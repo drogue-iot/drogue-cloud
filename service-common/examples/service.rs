@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use chrono::Duration;
 use drogue_client::openid::Expires;
-use drogue_cloud_service_common::openid::ExtendedClaims;
+use drogue_cloud_service_common::auth::openid::ExtendedClaims;
 use openid::{
     biscuit::{self, jws::Compact},
     Client, CustomClaims, Jws,

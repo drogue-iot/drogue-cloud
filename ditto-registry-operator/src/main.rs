@@ -1,7 +1,8 @@
-use drogue_cloud_ditto_registry_operator::{run, Config};
-use drogue_cloud_service_common::app;
+use drogue_cloud_ditto_registry_operator::run;
+use drogue_cloud_service_api::PROJECT;
+use drogue_cloud_service_common::runtime;
 
-#[actix::main]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    app!();
+    runtime!(PROJECT).exec(run).await
 }

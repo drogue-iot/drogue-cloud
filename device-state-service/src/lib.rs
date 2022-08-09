@@ -8,18 +8,15 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_service_api::{
-    health::HealthChecked,
     kafka::KafkaClientConfig,
     webapp::{self as actix_web},
 };
+use drogue_cloud_service_common::app::{Startup, StartupExt};
 use drogue_cloud_service_common::{
-    actix::{HttpBuilder, HttpConfig},
-    app::run_main,
+    actix::http::{HttpBuilder, HttpConfig},
+    auth::openid::{Authenticator, AuthenticatorConfig},
     client::RegistryConfig,
-    defaults,
-    health::HealthServerConfig,
-    openid::{Authenticator, AuthenticatorConfig},
-    openid_auth,
+    defaults, openid_auth,
 };
 use futures::FutureExt;
 use serde::Deserialize;
@@ -27,9 +24,6 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
-
     #[serde(default = "defaults::enable_access_token")]
     pub enable_access_token: bool,
 
@@ -75,9 +69,7 @@ macro_rules! app {
     }};
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
-    log::info!("Running device state service!");
-
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     // set up authentication
 
     let authenticator = config.oauth.into_client().await?;
@@ -86,8 +78,6 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // set up registry client
     let registry = config.registry.into_client().await?;
-
-    let mut checks = Vec::<Box<dyn HealthChecked>>::new();
 
     // downstream sender
 
@@ -104,9 +94,9 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let service =
         service::postgres::PostgresDeviceStateService::new(config.service, sender, registry)?;
-    checks.push(Box::new(service.clone()));
+    startup.check(service.clone());
 
-    let pruner = service::postgres::run_pruner(service.clone()).boxed_local();
+    let pruner = service::postgres::run_pruner(service.clone()).boxed();
 
     let service: Arc<dyn DeviceStateService> = Arc::new(service);
     let service: web::Data<dyn DeviceStateService> = web::Data::from(service);
@@ -115,7 +105,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
+    let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         let auth = openid_auth!(req -> {
             req
                 .app_data::<web::Data<Authenticator>>().as_ref().map(|s|s.get_ref())
@@ -132,7 +122,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main([main, pruner], config.health, checks).await?;
+    startup.spawn(main);
+    startup.spawn(pruner);
 
     // exiting
 

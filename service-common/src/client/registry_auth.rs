@@ -1,4 +1,4 @@
-use crate::{defaults, openid::TokenConfig, reqwest::ClientFactory};
+use crate::{auth::openid::TokenConfig, defaults, reqwest::ClientFactory};
 use drogue_client::registry;
 use serde::Deserialize;
 use url::Url;

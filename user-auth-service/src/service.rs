@@ -1,6 +1,7 @@
 use actix_web::ResponseError;
 use async_trait::async_trait;
 use deadpool_postgres::Pool;
+use drogue_client::user::v1::authz::{AuthorizationRequest, Outcome};
 use drogue_cloud_database_common::{
     auth::authorize,
     error::ServiceError,
@@ -8,7 +9,6 @@ use drogue_cloud_database_common::{
     postgres, DatabaseService,
 };
 use drogue_cloud_service_api::{
-    auth::user::authz::{AuthorizationRequest, Outcome},
     auth::user::{UserDetails, UserInformation},
     health::{HealthCheckError, HealthChecked},
     webapp as actix_web,
