@@ -6,19 +6,19 @@ mod wshandler;
 use crate::service::Service;
 use actix::Actor;
 use actix_web::web;
+use drogue_client::user::v1::authz::Permission;
 use drogue_cloud_service_api::{
-    auth::user::authz::Permission,
     kafka::KafkaClientConfig,
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::{HttpBuilder, HttpConfig},
+    actix::http::{HttpBuilder, HttpConfig},
     actix_auth::{authentication::AuthN, authorization::AuthZ},
-    app::run_main,
-    client::{RegistryConfig, UserAuthClient, UserAuthClientConfig},
+    app::Startup,
+    auth::openid,
+    auth::pat,
+    client::{RegistryConfig, UserAuthClientConfig},
     defaults,
-    health::HealthServerConfig,
-    openid::AuthenticatorConfig,
 };
 use lazy_static::lazy_static;
 use prometheus::{labels, opts, register_int_gauge, IntGauge};
@@ -43,9 +43,6 @@ pub struct Config {
     pub enable_access_token: bool,
 
     #[serde(default)]
-    pub health: Option<HealthServerConfig>,
-
-    #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
 
     #[serde(default)]
@@ -53,13 +50,13 @@ pub struct Config {
 
     pub registry: RegistryConfig,
 
-    pub oauth: AuthenticatorConfig,
+    pub oauth: openid::AuthenticatorConfig,
 
     #[serde(default)]
     pub http: HttpConfig,
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     let enable_access_token = config.enable_access_token;
 
     log::info!("Starting WebSocket integration service endpoint");
@@ -69,8 +66,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        let user_auth = UserAuthClient::from_config(user_auth).await?;
-        Some(user_auth)
+        Some(user_auth.into_client().await?)
     } else {
         None
     };
@@ -88,7 +84,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
+    HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         cfg.app_data(service_addr.clone());
         if let Some(authenticator) = authenticator.clone() {
             cfg.app_data(authenticator);
@@ -106,17 +102,13 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
                 })
                 .wrap(AuthN {
                     openid: authenticator.as_ref().cloned(),
-                    token: user_auth.clone(),
+                    token: user_auth.clone().map(|u| pat::Authenticator::new(u)),
                     enable_access_token,
                 })
                 .service(web::resource("").route(web::get().to(route::start_connection))),
         );
     })
-    .run()?;
-
-    // run
-
-    run_main([main], config.health, vec![]).await?;
+    .start(startup)?;
 
     // exiting
     Ok(())

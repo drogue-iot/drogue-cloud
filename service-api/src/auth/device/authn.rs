@@ -1,6 +1,8 @@
-use crate::metrics::{AsPassFail, PassFail};
 use core::fmt::{self, Formatter};
-use drogue_client::registry;
+use drogue_client::{
+    metrics::{AsPassFail, PassFail},
+    registry,
+};
 use serde::{Deserialize, Serialize};
 
 /// Authenticate a device.

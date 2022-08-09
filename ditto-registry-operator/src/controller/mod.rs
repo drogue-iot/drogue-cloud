@@ -4,7 +4,7 @@ pub mod device;
 use crate::ditto::data::EntityId;
 use drogue_client::registry::v1::Application;
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
-use drogue_cloud_service_common::openid::TokenConfig;
+use drogue_cloud_service_common::auth::openid::TokenConfig;
 use serde::Deserialize;
 use url::Url;
 

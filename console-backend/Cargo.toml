@@ -16,14 +16,14 @@ cached = "0.25"
 chrono = { version = "0.4", features = ["serde"] }
 cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
 dotenv = "0.15"
-drogue-client = "0.10"
+drogue-client = "0.11"
 env_logger = "0.9"
 futures = "0.3"
 k8s-openapi = { version = "0.14.0", features = ["v1_19"] }
 kube = "0.68"
 log = "0.4"
 mime = "0.3"
-openid = "0.9"
+openid = "0.10"
 prometheus = { version = "^0.13", default-features = false }
 reqwest = "0.11"
 ring = "0.16.18" # required due to an issue in the public API
@@ -31,6 +31,7 @@ serde = "1"
 serde_json = "1"
 serde_yaml = "0.8"
 thiserror = "1"
+tokio = "1"
 tokio-stream = { version = "0.1", features = ["time"] }
 url = "2"
 uuid = { version = "1", features = ["v4"] }

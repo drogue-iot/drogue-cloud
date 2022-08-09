@@ -1,5 +1,6 @@
-use crate::{config::ConfigFromEnv, defaults};
+use crate::defaults;
 use async_trait::async_trait;
+use drogue_bazaar::core::config::ConfigFromEnv;
 use drogue_cloud_service_api::endpoints::*;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -154,7 +155,6 @@ impl EndpointSource for EnvEndpointSource {
             mqtt_integration_ws,
             mqtt_integration_ws_browser,
             websocket_integration,
-            sso,
             api,
             console,
             issuer_url,

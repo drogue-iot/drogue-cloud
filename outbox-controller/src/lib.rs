@@ -11,9 +11,10 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
-    app::run_main, config::ConfigFromEnv, defaults, health::HealthServerConfig,
+    app::{Startup, StartupExt},
+    config::ConfigFromEnv,
+    defaults,
 };
-use futures::FutureExt;
 use lazy_static::lazy_static;
 use prometheus::{register_int_counter, IntCounter};
 use serde::Deserialize;
@@ -42,9 +43,6 @@ pub struct Config {
     /// Send events older than x seconds.
     pub before: Duration,
 
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
-
     pub kafka_sender: KafkaSenderConfig,
     pub kafka_source: KafkaStreamConfig,
 }
@@ -72,7 +70,7 @@ impl EventHandler for OutboxHandler {
     }
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     let service = Arc::new(service::OutboxService::new(
         OutboxServiceConfig::from_env()?
     )?);
@@ -99,7 +97,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main([source.boxed_local()], config.health, vec![]).await?;
+    startup.spawn(source);
 
     // exiting
 

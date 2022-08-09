@@ -1,7 +1,7 @@
-use crate::client::metrics::PassFailErrorExt;
 use drogue_client::{
     core::PropagateCurrentContext,
     error::{ClientError, ErrorInformation},
+    metrics::PassFailErrorExt,
     openid::{OpenIdTokenProvider, TokenInjector},
 };
 use drogue_cloud_service_api::auth::device::authn::{

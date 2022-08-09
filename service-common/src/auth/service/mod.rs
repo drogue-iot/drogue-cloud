@@ -3,8 +3,8 @@ mod mock;
 pub use mock::*;
 
 use crate::{
+    auth::openid::{Authenticator, AuthenticatorError},
     error::ServiceError,
-    openid::{Authenticator, AuthenticatorError},
 };
 use actix_web::{dev::ServiceRequest, HttpMessage};
 use drogue_cloud_service_api::auth::user::UserInformation;
@@ -51,7 +51,7 @@ macro_rules! openid_auth {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::openid::ExtendedClaims;
+    use crate::auth::openid::ExtendedClaims;
     use openid::biscuit::jws::Compact;
     use openid::{Empty, Jws};
 

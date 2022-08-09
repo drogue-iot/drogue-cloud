@@ -4,15 +4,13 @@ pub mod service;
 use crate::service::PostgresAuthenticationService;
 use actix_web::web;
 use drogue_cloud_service_api::{
-    health::BoxedHealthChecked,
     health::HealthChecked,
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::{HttpBuilder, HttpConfig},
-    app::run_main,
-    health::HealthServerConfig,
-    openid::{Authenticator, AuthenticatorConfig},
+    actix::http::{HttpBuilder, HttpConfig},
+    app::{Startup, StartupExt},
+    auth::openid::{Authenticator, AuthenticatorConfig},
     openid_auth,
 };
 use serde::Deserialize;
@@ -32,9 +30,6 @@ pub struct Config {
 
     #[serde(flatten)]
     pub auth_service_config: AuthenticationServiceConfig,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     #[serde(default)]
     pub http: HttpConfig,
@@ -61,7 +56,7 @@ pub fn health_checks(service: PostgresAuthenticationService) -> Vec<Box<dyn Heal
     vec![Box::new(service)]
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     let authenticator = config.oauth.into_client().await?;
     let enable_auth = authenticator.is_some();
 
@@ -74,7 +69,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // main server
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
+    let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         let auth = openid_auth!(req -> {
             req
             .app_data::<web::Data<WebData<service::PostgresAuthenticationService>>>()
@@ -87,7 +82,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main([main], config.health, [data_service.boxed()]).await?;
+    startup.spawn(main);
+    startup.check(data_service);
 
     // exiting
 

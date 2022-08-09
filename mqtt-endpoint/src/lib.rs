@@ -11,9 +11,11 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_mqtt_common::server::build;
-use drogue_cloud_service_api::health::BoxedHealthChecked;
-use drogue_cloud_service_common::{app::run_main, state::StateController};
-use futures_util::{FutureExt, TryFutureExt};
+use drogue_cloud_service_common::{
+    app::{Startup, StartupExt},
+    state::StateController,
+};
+use futures_util::TryFutureExt;
 use lazy_static::lazy_static;
 use prometheus::{labels, opts, register_int_gauge, IntGauge};
 
@@ -29,7 +31,7 @@ lazy_static! {
     .unwrap();
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     let commands = Commands::new();
 
     // state service
@@ -70,13 +72,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    let srv = srv.err_into().boxed_local();
-    run_main(
-        [srv, runner.run().boxed_local()],
-        config.health,
-        [command_source.boxed()],
-    )
-    .await?;
+    let srv = srv.err_into();
+    startup.spawn(srv);
+    startup.spawn(runner.run());
+    startup.check(command_source);
 
     // exiting
 

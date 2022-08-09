@@ -1,7 +1,8 @@
-use drogue_cloud_coap_endpoint::{run, Config};
-use drogue_cloud_service_common::app;
+use drogue_cloud_coap_endpoint::run;
+use drogue_cloud_service_api::PROJECT;
+use drogue_cloud_service_common::runtime;
 
-#[drogue_cloud_service_api::webapp::main]
+#[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    app!();
+    runtime!(PROJECT).exec(run).await
 }

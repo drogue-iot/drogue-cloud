@@ -309,6 +309,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-web-httpauth"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dda62cf04bc3a9ad2ea8f314f721951cfdb4cdacec4e984d20e77c7bb170991"
+dependencies = [
+ "actix-utils",
+ "actix-web",
+ "base64 0.13.0",
+ "futures-core",
+ "futures-util",
+ "log",
+ "pin-project-lite",
+]
+
+[[package]]
 name = "actix-web-opentelemetry"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1447,9 +1462,52 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
+name = "drogue-bazaar"
+version = "0.2.0"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=a5204b3c9de03416747a375e9be41917d7d9088f#a5204b3c9de03416747a375e9be41917d7d9088f"
+dependencies = [
+ "actix-cors",
+ "actix-http",
+ "actix-service",
+ "actix-web",
+ "actix-web-extras",
+ "actix-web-httpauth 0.8.0",
+ "actix-web-prom",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "config",
+ "dotenv",
+ "drogue-client",
+ "env_logger",
+ "futures-core",
+ "futures-util",
+ "http",
+ "humantime",
+ "humantime-serde",
+ "log",
+ "native-tls",
+ "openid",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "pem",
+ "prometheus",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-actix-web",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "drogue-client"
-version = "0.10.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=57687f43d89828b9c603eddd6e7a74afd7549ea6#57687f43d89828b9c603eddd6e7a74afd7549ea6"
+version = "0.11.0"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=55135e532e4ddfdf88dfa50df73b751063740c71#55135e532e4ddfdf88dfa50df73b751063740c71"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -1459,11 +1517,13 @@ dependencies = [
  "http",
  "humantime-serde",
  "indexmap",
+ "lazy_static",
  "log",
  "nom 6.1.2",
  "openid",
  "opentelemetry",
  "opentelemetry-http",
+ "prometheus",
  "reqwest",
  "serde",
  "serde_json",
@@ -1485,6 +1545,7 @@ dependencies = [
  "chrono",
  "config",
  "crc",
+ "drogue-client",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
@@ -1625,6 +1686,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tokio",
  "url",
  "uuid 1.1.2",
 ]
@@ -1663,6 +1725,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "thiserror",
+ "tokio",
  "tokio-stream",
  "url",
  "uuid 1.1.2",
@@ -2206,6 +2269,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tokio",
  "tokio-postgres",
 ]
 
@@ -2291,7 +2355,7 @@ dependencies = [
  "actix-utils",
  "actix-web",
  "actix-web-extras",
- "actix-web-httpauth",
+ "actix-web-httpauth 0.6.0",
  "actix-web-opentelemetry",
  "actix-web-prom",
  "async-trait",
@@ -2299,6 +2363,7 @@ dependencies = [
  "base64-serde",
  "chrono",
  "config",
+ "drogue-bazaar",
  "drogue-client",
  "drogue-cloud-macros",
  "indexmap",
@@ -2327,6 +2392,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk",
  "config",
+ "drogue-bazaar",
  "drogue-client",
  "drogue-cloud-event-common",
  "drogue-cloud-service-api",
@@ -2496,6 +2562,7 @@ dependencies = [
  "config",
  "deadpool-postgres",
  "dotenv",
+ "drogue-client",
  "drogue-cloud-access-token-service",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
@@ -2542,6 +2609,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "tokio",
  "url",
  "uuid 1.1.2",
 ]
@@ -4002,9 +4070,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openid"
-version = "0.9.4"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "874cd75d55a8371aa3abae9d6dc69e1f8c113e7169a7ddfe9d397c042edea732"
+checksum = "fe5e370172fe96c436d69075f7e814dd175a5cd4e1149f567f11141becd6f06d"
 dependencies = [
  "base64 0.13.0",
  "biscuit",
@@ -4540,8 +4608,15 @@ dependencies = [
  "lazy_static",
  "memchr",
  "parking_lot 0.12.1",
+ "protobuf",
  "thiserror",
 ]
+
+[[package]]
+name = "protobuf"
+version = "2.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf7e6d18738ecd0902d30d1ad232c9125985a3422929b16c65517b38adc14f96"
 
 [[package]]
 name = "quote"
@@ -5729,6 +5804,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-actix-web"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0b2cd6e5074ff67679a0ff68bc6333be78d29910ba7cd295d948aa5ff152032"
+dependencies = [
+ "actix-web",
+ "opentelemetry",
+ "pin-project",
+ "tracing",
+ "tracing-futures",
+ "tracing-opentelemetry",
+ "uuid 1.1.2",
+]
+
+[[package]]
 name = "tracing-attributes"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5747,6 +5837,16 @@ checksum = "7709595b8878a4965ce5e87ebf880a7d39c9afc6837721b21a5a816a8117d921"
 dependencies = [
  "once_cell",
  "valuable",
+]
+
+[[package]]
+name = "tracing-futures"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
+dependencies = [
+ "pin-project",
+ "tracing",
 ]
 
 [[package]]
@@ -5895,9 +5995,9 @@ dependencies = [
 
 [[package]]
 name = "validator"
-version = "0.12.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "841d6937c33ec6039d8071bcf72933146b5bbe378d645d8fa59bdadabfc2a249"
+checksum = "f07b0a1390e01c0fc35ebb26b28ced33c9a3808f7f9fbe94d3cc01e233bfeed5"
 dependencies = [
  "idna",
  "lazy_static",
@@ -5907,14 +6007,13 @@ dependencies = [
  "serde_json",
  "url",
  "validator_derive",
- "validator_types",
 ]
 
 [[package]]
 name = "validator_derive"
-version = "0.12.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4286b4497f270f59276a89ae0ad109d5f8f18c69b613e3fb22b61201aadb0c4d"
+checksum = "ea7ed5e8cf2b6bdd64a6c4ce851da25388a89327b17b88424ceced6bd5017923"
 dependencies = [
  "if_chain",
  "lazy_static",
@@ -5928,9 +6027,13 @@ dependencies = [
 
 [[package]]
 name = "validator_types"
-version = "0.12.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9680608df133af2c1ddd5eaf1ddce91d60d61b6bc51494ef326458365a470a"
+checksum = "d2ddf34293296847abfc1493b15c6e2f5d3cd19f57ad7d22673bf4c6278da329"
+dependencies = [
+ "proc-macro2",
+ "syn",
+]
 
 [[package]]
 name = "valuable"

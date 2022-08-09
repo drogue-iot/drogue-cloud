@@ -6,7 +6,7 @@ use drogue_cloud_service_api::{
         test, HttpMessage,
     },
 };
-use drogue_cloud_service_common::openid::ExtendedClaims;
+use drogue_cloud_service_common::auth::openid::ExtendedClaims;
 use serde_json::json;
 
 pub fn user<S: AsRef<str>>(id: S) -> UserInformation {

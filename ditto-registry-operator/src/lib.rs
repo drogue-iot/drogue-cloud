@@ -11,10 +11,12 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
-    app::run_main, client::RegistryConfig, defaults, health::HealthServerConfig,
+    app::{Startup, StartupExt},
+    client::RegistryConfig,
+    defaults,
     reqwest::ClientFactory,
 };
-use futures::{FutureExt, TryFutureExt};
+use futures::TryFutureExt;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -28,9 +30,6 @@ pub struct Config {
     pub bind_addr: String,
 
     pub registry: RegistryConfig,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     pub work_queue: WorkQueueConfig,
 
@@ -64,7 +63,7 @@ fn is_device_relevant(event: &Event) -> Option<(String, String)> {
     }
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::debug!("Config: {:#?}", config);
 
     // client
@@ -107,8 +106,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     log::info!("Running service ...");
 
-    let main = source.err_into().boxed_local();
-    run_main([main], config.health, vec![]).await?;
+    let main = source.err_into();
+    startup.spawn(main);
 
     // exiting
     log::info!("Exiting main!");

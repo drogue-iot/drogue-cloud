@@ -6,7 +6,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::Utc;
 use core::pin::Pin;
-use drogue_client::registry;
+use drogue_client::{registry, user::v1::authz::Permission};
 use drogue_cloud_database_common::{
     auth::{ensure, ensure_with},
     error::ServiceError,
@@ -19,9 +19,7 @@ use drogue_cloud_database_common::{
 };
 use drogue_cloud_registry_events::{Event, EventSender, SendEvent};
 use drogue_cloud_service_api::{
-    auth::user::{authz::Permission, UserInformation},
-    labels::LabelSelector,
-    webapp::ResponseError,
+    auth::user::UserInformation, labels::LabelSelector, webapp::ResponseError,
 };
 use drogue_cloud_service_common::keycloak::KeycloakClient;
 use futures::{future, Stream, TryStreamExt};

@@ -1,25 +1,16 @@
 use crate::service::{session::Session, ServiceConfig};
 use async_trait::async_trait;
-use drogue_client::registry;
+use drogue_client::{registry, user};
 use drogue_cloud_endpoint_common::sender::UpstreamSender;
-use drogue_cloud_mqtt_common::{
-    error::ServerError,
-    mqtt::{self, *},
-};
-use drogue_cloud_service_api::auth::user::{
-    authn::{AuthenticationRequest, Outcome},
-    UserInformation,
-};
-use drogue_cloud_service_common::{
-    client::UserAuthClient,
-    openid::{Authenticator, AuthenticatorError},
-};
+use drogue_cloud_mqtt_common::{error::ServerError, mqtt::*};
+use drogue_cloud_service_api::auth::user::UserInformation;
+use drogue_cloud_service_common::auth::openid::{Authenticator, AuthenticatorError};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct App {
     pub authenticator: Option<Authenticator>,
-    pub user_auth: Option<Arc<UserAuthClient>>,
+    pub user_auth: Option<Arc<user::v1::Client>>,
     pub config: ServiceConfig,
     pub sender: UpstreamSender,
     pub client: reqwest::Client,
@@ -41,15 +32,17 @@ impl App {
                 let password = String::from_utf8(password.to_vec())?;
 
                 match user_auth
-                    .authenticate_access_token(AuthenticationRequest {
+                    .authenticate_access_token(user::v1::authn::AuthenticationRequest {
                         user_id: username,
                         access_token: password,
                     })
                     .await?
                     .outcome
                 {
-                    Outcome::Known(details) => UserInformation::Authenticated(details),
-                    Outcome::Unknown => {
+                    user::v1::authn::Outcome::Known(details) => {
+                        UserInformation::Authenticated(details)
+                    }
+                    user::v1::authn::Outcome::Unknown => {
                         log::debug!("Unknown API key");
                         return Err(AuthenticatorError::Failed.into());
                     }
@@ -84,7 +77,7 @@ impl App {
 }
 
 #[async_trait(?Send)]
-impl mqtt::Service<Session> for App {
+impl Service<Session> for App {
     async fn connect<'a>(
         &'a self,
         connect: Connect<'a>,

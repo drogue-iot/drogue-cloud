@@ -15,9 +15,12 @@ use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
-use drogue_cloud_service_api::{health::BoxedHealthChecked, kafka::KafkaClientConfig};
-use drogue_cloud_service_common::{app::run_main, defaults, health::HealthServerConfig};
-use futures::{FutureExt, TryFutureExt};
+use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::{
+    app::{Startup, StartupExt},
+    defaults,
+};
+use futures::TryFutureExt;
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
@@ -45,9 +48,6 @@ pub struct Config {
     pub instance: String,
 
     pub auth: AuthConfig,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     #[serde(default = "defaults::check_kafka_topic_ready")]
     pub check_kafka_topic_ready: bool,
@@ -200,11 +200,11 @@ async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Opti
     }
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     let commands = Commands::new();
     let addr = config
         .bind_addr_coap
-        .unwrap_or_else(|| "0.0.0.0:5683".to_string());
+        .unwrap_or_else(|| "[::]:5683".to_string());
     let coap_server_commands = commands.clone();
 
     let sender = DownstreamSender::new(
@@ -224,29 +224,27 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         commands: coap_server_commands,
     };
 
-    log::info!("Server up on {}", addr);
-    let mut server = Server::new(addr).unwrap();
-
-    let device_to_endpoint = server.run(move |request| {
-        let app = app.clone();
-        async move {
-            let response = publish_handler(request, app.clone()).await;
-            log::debug!("Returning response: {:?}", response);
-            response
-        }
-    });
     let command_source = KafkaCommandSource::new(
         commands,
         config.kafka_command_config,
         config.command_source_kafka,
     )?;
 
-    run_main(
-        [device_to_endpoint.err_into().boxed_local()],
-        config.health,
-        [command_source.boxed()],
-    )
-    .await?;
+    startup.spawn(async {
+        log::info!("Server up on {}", addr);
+        let mut server = Server::new(addr).unwrap();
+        let device_to_endpoint = server.run(move |request| {
+            let app = app.clone();
+            async move {
+                let response = publish_handler(request, app.clone()).await;
+                log::debug!("Returning response: {:?}", response);
+                response
+            }
+        });
+
+        device_to_endpoint.err_into().await
+    });
+    startup.check(command_source);
 
     Ok(())
 }

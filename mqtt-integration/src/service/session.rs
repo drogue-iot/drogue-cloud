@@ -7,6 +7,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use drogue_client::registry;
+use drogue_client::user;
 use drogue_cloud_endpoint_common::sender::UpstreamSender;
 use drogue_cloud_event_common::stream::CustomAck;
 use drogue_cloud_integration_common::{
@@ -19,13 +20,9 @@ use drogue_cloud_mqtt_common::{
     mqtt::{self, *},
 };
 use drogue_cloud_service_api::{
-    auth::user::{
-        authz::{self, AuthorizationRequest, Permission},
-        UserInformation,
-    },
+    auth::user::UserInformation,
     kafka::{KafkaConfigExt, KafkaEventType},
 };
-use drogue_cloud_service_common::client::UserAuthClient;
 use futures::lock::Mutex;
 use ntex_mqtt::{types::QoS, v5};
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
@@ -33,7 +30,7 @@ use tokio::task::JoinHandle;
 
 pub struct Session {
     pub config: ServiceConfig,
-    pub user_auth: Option<Arc<UserAuthClient>>,
+    pub user_auth: Option<Arc<user::v1::Client>>,
 
     pub sink: Sink,
     pub client_id: String,
@@ -52,7 +49,7 @@ impl Session {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: ServiceConfig,
-        user_auth: Option<Arc<UserAuthClient>>,
+        user_auth: Option<Arc<user::v1::Client>>,
         sink: Sink,
         user: UserInformation,
         client_id: String,
@@ -79,8 +76,8 @@ impl Session {
     async fn authorize(
         &self,
         application: String,
-        user_auth: &Arc<UserAuthClient>,
-        permission: Permission,
+        user_auth: &Arc<user::v1::Client>,
+        permission: user::v1::authz::Permission,
     ) -> Result<(), ()> {
         log::debug!(
             "Authorizing - user: {:?}, app: {}, permission: {:?}",
@@ -90,7 +87,7 @@ impl Session {
         );
 
         let response = user_auth
-            .authorize(AuthorizationRequest {
+            .authorize(user::v1::authz::AuthorizationRequest {
                 application,
                 permission,
                 user_id: self.user.user_id().map(ToString::to_string),
@@ -102,8 +99,8 @@ impl Session {
         log::debug!("Outcome: {:?}", response);
 
         match response.outcome {
-            authz::Outcome::Allow => Ok(()),
-            authz::Outcome::Deny => Err(()),
+            user::v1::authz::Outcome::Allow => Ok(()),
+            user::v1::authz::Outcome::Deny => Err(()),
         }
     }
 
@@ -164,9 +161,13 @@ impl Session {
         match &self.user_auth {
             Some(user_auth) => {
                 // authenticated user
-                self.authorize(app.to_string(), user_auth, Permission::Read)
-                    .await
-                    .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
+                self.authorize(
+                    app.to_string(),
+                    user_auth,
+                    user::v1::authz::Permission::Read,
+                )
+                .await
+                .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
             }
             None => {
                 // authorization disabled ... nothing to do
@@ -269,9 +270,13 @@ impl mqtt::Session for Session {
             );
 
             if let Some(user_auth) = &self.user_auth {
-                self.authorize(app.to_string(), user_auth, Permission::Write)
-                    .await
-                    .map_err(|_| PublishError::NotAuthorized)?;
+                self.authorize(
+                    app.to_string(),
+                    user_auth,
+                    user::v1::authz::Permission::Write,
+                )
+                .await
+                .map_err(|_| PublishError::NotAuthorized)?;
             }
 
             let response = futures::try_join!(

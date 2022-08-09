@@ -9,7 +9,8 @@ async-trait = "0.1"
 base64 = "0.13"
 base64-serde = "0.6"
 chrono = { version = "0.4", features = ["serde"] }
-drogue-client = { version = "0.10.0", default-features = false }
+drogue-bazaar = { version = "0.2", default-features = false }
+drogue-client = { version = "0.11", default-features = false }
 indexmap = { version = "1", features = ["serde"] }
 lazy_static = "1"
 log = "0.4"
@@ -35,10 +36,10 @@ drogue-cloud-macros = { path = "../macros" }
 
 [dev-dependencies]
 config = "0.13"
-drogue-client = { version = "0.10.0", features = [ "reqwest" ] }
+drogue-client = { version = "0.11.0", features = [ "reqwest" ] }
 
 [features]
 default = ["nom", "actix"]
-actix = ["actix-web", "actix-http", "actix-web-httpauth", "actix-rt", "actix-utils", "actix-web-prom", "actix-web-opentelemetry", "actix-web-extras"]
-rustls = ["actix-web/rustls"]
+actix = ["actix-web", "actix-http", "actix-web-httpauth", "actix-rt", "actix-utils", "actix-web-prom", "actix-web-opentelemetry", "actix-web-extras", "drogue-bazaar/actix"]
+rustls = ["actix-web/rustls", "drogue-bazaar/rustls-tls"]
 openssl = ["actix-web/openssl"]

@@ -1,5 +1,8 @@
 use crate::models::Lock;
-use drogue_cloud_service_api::{auth::user::UserInformation, labels::Operation};
+use drogue_cloud_service_api::{
+    auth::user::{IsAdmin, UserInformation},
+    labels::Operation,
+};
 use tokio_postgres::types::{ToSql, Type};
 
 pub fn slice_iter<'a>(

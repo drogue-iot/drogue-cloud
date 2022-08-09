@@ -64,9 +64,6 @@ impl Overview {
             ));
         }
 
-        if let Some(sso) = &endpoints.sso {
-            service_cards.push(self.render_card("Single sign-on", sso, true));
-        }
         if let Some(kafka) = &endpoints.kafka_bootstrap_servers {
             service_cards.push(self.render_card("Kafka bootstrap servers", &kafka, false));
         }

@@ -11,8 +11,8 @@ use drogue_cloud_service_api::auth::device::authn::{
 };
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
-    client::ReqwestAuthenticatorClient, defaults, openid::TokenConfig, reqwest::ClientFactory,
-    tls::ClientConfig,
+    auth::openid::TokenConfig, client::ReqwestAuthenticatorClient, defaults,
+    reqwest::ClientFactory, tls::ClientConfig,
 };
 use futures::future::{err, ok, Ready};
 use http::HeaderValue;

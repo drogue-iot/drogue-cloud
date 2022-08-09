@@ -9,18 +9,12 @@ use actix::{
 };
 use actix_web_actors::ws::{self, CloseReason};
 use chrono::{DateTime, TimeZone, Utc};
-use drogue_client::integration::ws::v1::client;
-use drogue_cloud_service_api::{
-    auth::user::{
-        authz::{self, AuthorizationRequest, AuthorizationResponse, Permission},
-        UserInformation,
-    },
-    webapp::http::ws::CloseCode,
+use drogue_client::{
+    integration::ws::v1::client,
+    user::{self, v1::authz},
 };
-use drogue_cloud_service_common::{
-    client::UserAuthClient,
-    openid::{Authenticator, CustomClaims},
-};
+use drogue_cloud_service_api::{auth::user::UserInformation, webapp::http::ws::CloseCode};
+use drogue_cloud_service_common::auth::openid::{self, CustomClaims};
 use lazy_static::lazy_static;
 use prometheus::{register_int_counter_vec, IntCounterVec};
 use std::time::{Duration, Instant};
@@ -43,9 +37,9 @@ lazy_static! {
 struct AuthContext {
     application: String,
     /// authenticator for refreshing the token
-    authenticator: Authenticator,
+    authenticator: openid::Authenticator,
     /// user authorizer
-    user_auth: UserAuthClient,
+    user_auth: user::v1::Client,
 }
 
 enum AuthOutcome {
@@ -63,20 +57,20 @@ impl AuthContext {
 
         match self
             .user_auth
-            .authorize(AuthorizationRequest {
+            .authorize(authz::AuthorizationRequest {
                 application: self.application.clone(),
-                permission: Permission::Read,
+                permission: authz::Permission::Read,
                 user_id: user.user_id().map(ToString::to_string),
                 roles: user.roles().clone(),
             })
             .await?
         {
-            AuthorizationResponse {
+            authz::AuthorizationResponse {
                 outcome: authz::Outcome::Allow,
             } => Ok(AuthOutcome::Allow(
                 Utc.timestamp(token.standard_claims().exp, 0),
             )),
-            AuthorizationResponse {
+            authz::AuthorizationResponse {
                 outcome: authz::Outcome::Deny,
             } => Ok(AuthOutcome::Deny),
         }
@@ -105,8 +99,8 @@ impl WsHandler {
         group_id: Option<String>,
         service_addr: Addr<Service>,
         auth_expiration: Option<DateTime<Utc>>,
-        authenticator: Option<Authenticator>,
-        user_auth: Option<UserAuthClient>,
+        authenticator: Option<openid::Authenticator>,
+        user_auth: Option<user::v1::Client>,
     ) -> WsHandler {
         CONNECTIONS_COUNTER.inc();
 

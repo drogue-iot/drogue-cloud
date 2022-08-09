@@ -1,5 +1,6 @@
 use crate::service::{error::PostgresManagementServiceError, PostgresManagementService};
 use async_trait::async_trait;
+use drogue_client::user::v1::authz::Permission;
 use drogue_cloud_admin_service::apps::AdminService;
 use drogue_cloud_database_common::{
     auth::ensure_with,
@@ -10,11 +11,8 @@ use drogue_cloud_database_common::{
     },
 };
 use drogue_cloud_registry_events::EventSender;
-use drogue_cloud_service_api::{
-    admin::{MemberEntry, Members, TransferOwnership},
-    auth::user::{authz::Permission, UserInformation},
-};
-use drogue_cloud_service_common::keycloak::KeycloakClient;
+use drogue_cloud_service_api::admin::{MemberEntry, Members, TransferOwnership};
+use drogue_cloud_service_common::{auth::UserInformation, keycloak::KeycloakClient};
 use indexmap::map::IndexMap;
 use tracing::instrument;
 

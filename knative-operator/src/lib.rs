@@ -14,11 +14,10 @@ use drogue_cloud_registry_events::{
     Event,
 };
 use drogue_cloud_service_common::{
+    app::{Startup, StartupExt},
     client::RegistryConfig,
     defaults,
-    health::{HealthServer, HealthServerConfig},
 };
-use futures::{select, FutureExt};
 use kube::{api::ListParams, Api};
 use kube_runtime::watcher;
 use serde::Deserialize;
@@ -41,9 +40,6 @@ pub struct Config {
     pub bind_addr: String,
 
     pub registry: RegistryConfig,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     pub controller: ControllerConfig,
 
@@ -68,7 +64,7 @@ fn is_relevant(event: &Event) -> Option<String> {
     }
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::debug!("Config: {:#?}", config);
 
     let kube = kube::client::Client::try_default()
@@ -116,21 +112,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    log::info!("Running service ...");
-    if let Some(health) = config.health {
-        let health =
-            HealthServer::new(health, vec![], Some(prometheus::default_registry().clone()));
-        select! {
-            _ = health.run().fuse() => (),
-            _ = registry.fuse() => (),
-            _ = watcher_deployments.fuse() => (),
-        }
-    } else {
-        select! {
-            _ = registry.fuse() => (),
-            _ = watcher_deployments.fuse() => (),
-        }
-    }
+    startup.spawn(registry);
+    startup.spawn(watcher_deployments);
 
     // exiting
 

@@ -8,18 +8,18 @@ use actix_web::web;
 use anyhow::Context;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
-use drogue_cloud_service_api::health::HealthChecked;
-use drogue_cloud_service_api::webapp::web::ServiceConfig;
-use drogue_cloud_service_api::{health::BoxedHealthChecked, webapp as actix_web};
+use drogue_cloud_service_api::{
+    health::BoxedHealthChecked, health::HealthChecked, webapp as actix_web,
+    webapp::web::ServiceConfig,
+};
 use drogue_cloud_service_common::{
-    actix::{HttpBuilder, HttpConfig},
+    actix::http::{HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
-    app::run_main,
-    client::{UserAuthClient, UserAuthClientConfig},
+    app::{Startup, StartupExt},
+    auth::{openid, pat},
+    client::UserAuthClientConfig,
     defaults,
-    health::HealthServerConfig,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
-    openid::{Authenticator, AuthenticatorConfig},
 };
 use serde::Deserialize;
 use service::PostgresManagementServiceConfig;
@@ -27,21 +27,18 @@ use service::PostgresManagementServiceConfig;
 #[derive(Debug)]
 pub struct WebData<S: ManagementService> {
     pub service: S,
-    pub authenticator: Option<Authenticator>,
+    pub authenticator: Option<openid::Authenticator>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
-
     #[serde(default = "defaults::enable_access_token")]
     pub enable_access_token: bool,
 
     #[serde(default)]
     pub user_auth: Option<UserAuthClientConfig>,
 
-    pub oauth: AuthenticatorConfig,
+    pub oauth: openid::AuthenticatorConfig,
 
     #[serde(flatten)]
     pub database_config: PostgresManagementServiceConfig,
@@ -174,8 +171,7 @@ pub async fn configurator(
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        let user_auth = UserAuthClient::from_config(user_auth).await?;
-        Some(user_auth)
+        Some(user_auth.into_client().await?)
     } else {
         None
     };
@@ -204,7 +200,9 @@ pub async fn configurator(
         move |cfg: &mut ServiceConfig| {
             let auth = AuthN {
                 openid: authenticator.as_ref().cloned(),
-                token: user_auth.clone(),
+                token: user_auth
+                    .clone()
+                    .map(|user_auth| pat::Authenticator::new(user_auth)),
                 enable_access_token,
             };
             app!(cfg, KafkaEventSender, KeycloakAdminClient, auth)
@@ -219,15 +217,15 @@ pub async fn configurator(
     ))
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::info!("Running device management service!");
 
     let (builder, checks) = configurator(config.clone()).await?;
-    let main = HttpBuilder::new(config.http, builder).run()?;
+    HttpBuilder::new(config.http, Some(startup.runtime_config()), builder).start(startup)?;
 
     // run
 
-    run_main([main], config.health, checks).await?;
+    startup.check_iter(checks);
 
     // exiting
 

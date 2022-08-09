@@ -1,12 +1,9 @@
 use crate::service::AccessTokenService;
-use actix_web::{web, HttpResponse};
-use drogue_cloud_service_api::webapp as actix_web;
+use drogue_client::user::v1::authn::{AuthenticationRequest, AuthenticationResponse, Outcome};
 use drogue_cloud_service_api::{
-    auth::user::{
-        authn::{AuthenticationRequest, AuthenticationResponse, Outcome},
-        UserInformation,
-    },
+    auth::user::UserInformation,
     token::AccessTokenCreationOptions,
+    webapp::{self as actix_web, web, HttpResponse},
 };
 use std::ops::Deref;
 

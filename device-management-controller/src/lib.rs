@@ -14,9 +14,10 @@ use drogue_cloud_registry_events::{
 };
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
-    app::run_main, client::RegistryConfig, defaults, health::HealthServerConfig,
+    app::{Startup, StartupExt},
+    client::RegistryConfig,
+    defaults,
 };
-use futures::FutureExt;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -25,9 +26,6 @@ use tokio::sync::Mutex;
 pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
-
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
 
     pub registry: RegistryConfig,
 
@@ -46,7 +44,7 @@ pub struct Config {
     pub endpoint_pool: ExternalClientPoolConfig,
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     // downstream sender
 
     let sender = DownstreamSender::new(
@@ -91,7 +89,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     // run
 
-    run_main([registry.boxed_local()], config.health, vec![]).await?;
+    startup.spawn(registry);
 
     // exiting
 

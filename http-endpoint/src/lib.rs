@@ -12,15 +12,13 @@ use drogue_cloud_endpoint_common::{
     sink::KafkaSink,
 };
 use drogue_cloud_service_api::{
-    health::BoxedHealthChecked,
     kafka::KafkaClientConfig,
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::{HttpBuilder, HttpConfig},
-    app::run_main,
+    actix::http::{HttpBuilder, HttpConfig},
+    app::{Startup, StartupExt},
     defaults,
-    health::HealthServerConfig,
     tls::TlsMode,
 };
 use serde::Deserialize;
@@ -28,9 +26,6 @@ use serde_json::json;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default)]
-    pub health: Option<HealthServerConfig>,
-
     pub auth: AuthConfig,
 
     pub command_source_kafka: KafkaCommandSourceConfig,
@@ -54,7 +49,7 @@ async fn index() -> impl Responder {
     HttpResponse::Ok().json(json!({"success": true}))
 }
 
-pub async fn run(config: Config) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new(
@@ -71,7 +66,7 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
     let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
 
-    let main = HttpBuilder::new(config.http, move |cfg| {
+    let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()))
             .app_data(web::Data::new(device_authenticator.clone()))
@@ -114,9 +109,10 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         config.command_source_kafka,
     )?;
 
-    // run
+    // spawn
 
-    run_main([main], config.health, [command_source.boxed()]).await?;
+    startup.spawn(main);
+    startup.check(command_source);
 
     // done
 
