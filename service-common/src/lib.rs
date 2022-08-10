@@ -6,7 +6,6 @@ pub mod error;
 pub mod id;
 pub mod keycloak;
 pub mod kube;
-pub mod reqwest;
 pub mod state;
 mod utils;
 
@@ -17,4 +16,5 @@ pub use drogue_bazaar::actix::auth as actix_auth;
 pub use drogue_bazaar::app;
 pub use drogue_bazaar::core::config;
 pub use drogue_bazaar::core::tls;
+pub use drogue_bazaar::reqwest;
 pub use drogue_bazaar::{component, project, runtime};
