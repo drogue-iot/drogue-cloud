@@ -1465,7 +1465,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-bazaar"
 version = "0.2.0"
-source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=476d2b1d5a6e4834c625039f64655731d5cfbb73#476d2b1d5a6e4834c625039f64655731d5cfbb73"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=cbccda06e5edd3f7eef2c0965da67b150429e898#cbccda06e5edd3f7eef2c0965da67b150429e898"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -1479,7 +1479,7 @@ dependencies = [
  "chrono",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "env_logger",
  "futures-core",
  "futures-util",
@@ -1488,7 +1488,7 @@ dependencies = [
  "humantime-serde",
  "log",
  "native-tls",
- "openid",
+ "openid 0.10.0",
  "openssl",
  "opentelemetry",
  "opentelemetry-jaeger",
@@ -1508,8 +1508,37 @@ dependencies = [
 
 [[package]]
 name = "drogue-client"
-version = "0.11.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=55135e532e4ddfdf88dfa50df73b751063740c71#55135e532e4ddfdf88dfa50df73b751063740c71"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e29f9cdb7ab09682979dde4c1f296d47cfa3facd1ab4fee4731d8b09e511e3f3"
+dependencies = [
+ "async-trait",
+ "base64 0.13.0",
+ "base64-serde",
+ "chrono",
+ "futures",
+ "http",
+ "humantime-serde",
+ "indexmap",
+ "log",
+ "nom 6.1.2",
+ "openid 0.9.4",
+ "opentelemetry",
+ "opentelemetry-http",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "drogue-client"
+version = "0.11.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4dacba8947ca13c2d7b45b00cf88fa7614a0d71c79dbc48d20e02cb544624d24"
 dependencies = [
  "async-trait",
  "base64 0.13.0",
@@ -1522,7 +1551,7 @@ dependencies = [
  "lazy_static",
  "log",
  "nom 6.1.2",
- "openid",
+ "openid 0.10.0",
  "opentelemetry",
  "opentelemetry-http",
  "prometheus",
@@ -1547,7 +1576,7 @@ dependencies = [
  "chrono",
  "config",
  "crc",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
@@ -1601,7 +1630,7 @@ dependencies = [
  "config",
  "deadpool-postgres",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-registry-events",
@@ -1645,7 +1674,7 @@ dependencies = [
  "coap",
  "coap-lite",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1673,7 +1702,7 @@ dependencies = [
  "cloudevents-sdk",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-integration-common",
  "drogue-cloud-service-api",
@@ -1706,7 +1735,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-access-token-service",
  "drogue-cloud-console-common",
  "drogue-cloud-event-common",
@@ -1719,7 +1748,7 @@ dependencies = [
  "kube",
  "log",
  "mime",
- "openid",
+ "openid 0.10.0",
  "prometheus",
  "reqwest",
  "ring",
@@ -1751,7 +1780,7 @@ dependencies = [
  "criterion",
  "deadpool",
  "deadpool-postgres",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
  "drogue-cloud-test-common",
@@ -1781,7 +1810,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-operator-common",
@@ -1819,7 +1848,7 @@ dependencies = [
  "config",
  "deadpool-postgres",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-access-token-service",
  "drogue-cloud-admin-service",
  "drogue-cloud-database-common",
@@ -1835,7 +1864,7 @@ dependencies = [
  "indexmap",
  "log",
  "maplit",
- "openid",
+ "openid 0.10.0",
  "pem",
  "pin-project",
  "prometheus",
@@ -1869,7 +1898,7 @@ dependencies = [
  "deadpool",
  "deadpool-postgres",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-admin-service",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
@@ -1886,7 +1915,7 @@ dependencies = [
  "lazy_static",
  "log",
  "maplit",
- "openid",
+ "openid 0.10.0",
  "pem",
  "pin-project",
  "prometheus",
@@ -1915,7 +1944,7 @@ dependencies = [
  "chrono",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-operator-common",
  "drogue-cloud-registry-events",
@@ -1954,7 +1983,7 @@ dependencies = [
  "chrono",
  "cloudevents-sdk",
  "config",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-event-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -1968,7 +1997,7 @@ dependencies = [
  "lru",
  "mime",
  "ntex",
- "openid",
+ "openid 0.10.0",
  "openssl",
  "percent-encoding",
  "prometheus",
@@ -2017,7 +2046,7 @@ dependencies = [
  "cloudevents-sdk",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -2029,7 +2058,7 @@ dependencies = [
  "http",
  "log",
  "mime",
- "openid",
+ "openid 0.10.0",
  "openssl",
  "percent-encoding",
  "prometheus",
@@ -2051,7 +2080,7 @@ dependencies = [
  "base64 0.13.0",
  "bytes",
  "cloudevents-sdk",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-event-common",
  "drogue-cloud-service-api",
@@ -2076,7 +2105,7 @@ dependencies = [
  "async-trait",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-operator-common",
  "drogue-cloud-registry-events",
@@ -2141,7 +2170,7 @@ dependencies = [
  "cloudevents-sdk",
  "clru",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-mqtt-common",
  "drogue-cloud-service-api",
@@ -2181,7 +2210,7 @@ dependencies = [
  "bytestring",
  "cloudevents-sdk",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-event-common",
  "drogue-cloud-integration-common",
@@ -2201,7 +2230,7 @@ dependencies = [
  "ntex-mqtt",
  "ntex-rt",
  "ntex-service",
- "openid",
+ "openid 0.10.0",
  "openssl",
  "prometheus",
  "reqwest",
@@ -2224,7 +2253,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "deadpool-postgres",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-registry-events",
  "drogue-cloud-service-api",
@@ -2365,7 +2394,8 @@ dependencies = [
  "chrono",
  "config",
  "drogue-bazaar",
- "drogue-client",
+ "drogue-client 0.10.1",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-macros",
  "indexmap",
  "lazy_static",
@@ -2394,7 +2424,7 @@ dependencies = [
  "cloudevents-sdk",
  "config",
  "drogue-bazaar",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-event-common",
  "drogue-cloud-service-api",
  "env_logger",
@@ -2409,7 +2439,7 @@ dependencies = [
  "log",
  "native-tls",
  "ntex",
- "openid",
+ "openid 0.10.0",
  "openssl",
  "opentelemetry",
  "opentelemetry-jaeger",
@@ -2438,7 +2468,7 @@ dependencies = [
  "cloudevents-sdk",
  "deadpool",
  "deadpool-postgres",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
  "drogue-cloud-service-api",
@@ -2460,7 +2490,7 @@ dependencies = [
  "async-trait",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-operator-common",
  "drogue-cloud-registry-events",
@@ -2490,7 +2520,7 @@ dependencies = [
  "async-trait",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-operator-common",
  "drogue-cloud-registry-events",
@@ -2525,7 +2555,7 @@ dependencies = [
  "chrono",
  "config",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-database-common",
  "drogue-cloud-operator-common",
  "drogue-cloud-registry-events",
@@ -2563,7 +2593,7 @@ dependencies = [
  "config",
  "deadpool-postgres",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-access-token-service",
  "drogue-cloud-database-common",
  "drogue-cloud-endpoint-common",
@@ -2598,7 +2628,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "dotenv",
- "drogue-client",
+ "drogue-client 0.11.0-alpha.1",
  "drogue-cloud-integration-common",
  "drogue-cloud-service-api",
  "drogue-cloud-service-common",
@@ -4071,6 +4101,24 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openid"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "874cd75d55a8371aa3abae9d6dc69e1f8c113e7169a7ddfe9d397c042edea732"
+dependencies = [
+ "base64 0.13.0",
+ "biscuit",
+ "chrono",
+ "lazy_static",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
+ "validator 0.12.0",
+]
+
+[[package]]
+name = "openid"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe5e370172fe96c436d69075f7e814dd175a5cd4e1149f567f11141becd6f06d"
@@ -4084,7 +4132,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "url",
- "validator",
+ "validator 0.15.0",
 ]
 
 [[package]]
@@ -5996,6 +6044,23 @@ dependencies = [
 
 [[package]]
 name = "validator"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "841d6937c33ec6039d8071bcf72933146b5bbe378d645d8fa59bdadabfc2a249"
+dependencies = [
+ "idna",
+ "lazy_static",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "url",
+ "validator_derive 0.12.0",
+ "validator_types 0.12.0",
+]
+
+[[package]]
+name = "validator"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f07b0a1390e01c0fc35ebb26b28ced33c9a3808f7f9fbe94d3cc01e233bfeed5"
@@ -6007,7 +6072,23 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "url",
- "validator_derive",
+ "validator_derive 0.15.0",
+]
+
+[[package]]
+name = "validator_derive"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4286b4497f270f59276a89ae0ad109d5f8f18c69b613e3fb22b61201aadb0c4d"
+dependencies = [
+ "if_chain",
+ "lazy_static",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
+ "validator_types 0.12.0",
 ]
 
 [[package]]
@@ -6023,8 +6104,14 @@ dependencies = [
  "quote",
  "regex",
  "syn",
- "validator_types",
+ "validator_types 0.15.0",
 ]
+
+[[package]]
+name = "validator_types"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad9680608df133af2c1ddd5eaf1ddce91d60d61b6bc51494ef326458365a470a"
 
 [[package]]
 name = "validator_types"

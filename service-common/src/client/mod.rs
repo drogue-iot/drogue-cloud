@@ -2,17 +2,15 @@
 
 mod device_auth;
 mod device_state;
-mod registry_auth;
-mod user_auth;
 
 pub use device_auth::*;
 pub use device_state::*;
-pub use registry_auth::*;
-pub use user_auth::*;
 
 use drogue_client::error::{ClientError, ErrorInformation};
 use http::StatusCode;
 use reqwest::Response;
+
+pub use drogue_bazaar::client::*;
 
 pub(crate) async fn default_error<T>(
     code: StatusCode,

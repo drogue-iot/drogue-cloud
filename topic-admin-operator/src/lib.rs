@@ -12,11 +12,10 @@ use drogue_cloud_registry_events::{
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
-    client::RegistryConfig,
+    client::ClientConfig,
     defaults,
 };
 use futures::TryFutureExt;
-use rdkafka::ClientConfig;
 use serde::Deserialize;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -30,7 +29,7 @@ pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     pub controller: ControllerConfig,
 
@@ -67,7 +66,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
     // controller
 
-    let client_config: ClientConfig = config.kafka_admin.into();
+    let client_config: rdkafka::ClientConfig = config.kafka_admin.into();
     let controller = Arc::new(Mutex::new(BaseController::new(
         config.work_queue,
         "app",

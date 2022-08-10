@@ -5,6 +5,7 @@ mod utils;
 
 use crate::controller::{app::ApplicationController, device::DeviceController};
 use anyhow::anyhow;
+use drogue_client::registry;
 use drogue_cloud_operator_common::controller::base::{
     queue::WorkQueueConfig, BaseController, EventDispatcher, FnEventProcessor,
 };
@@ -14,7 +15,7 @@ use drogue_cloud_registry_events::{
 };
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
-    client::RegistryConfig,
+    client::ClientConfig,
     defaults,
     endpoints::create_endpoint_source,
 };
@@ -32,7 +33,7 @@ pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     pub work_queue: WorkQueueConfig,
 
@@ -77,7 +78,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         .and_then(|url| Ok(Url::parse(&url)?))?
         .join("/ttn/v3")?;
 
-    let registry = config.registry.into_client().await?;
+    let registry: registry::v1::Client = config.registry.into_client().await?;
 
     let ttn_client = reqwest::Client::new();
 

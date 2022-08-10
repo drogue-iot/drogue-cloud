@@ -6,6 +6,7 @@ use crate::service::management::ManagementService;
 use actix_cors::Cors;
 use actix_web::web;
 use anyhow::Context;
+use drogue_client::user;
 use drogue_cloud_admin_service::apps;
 use drogue_cloud_registry_events::sender::{KafkaEventSender, KafkaSenderConfig};
 use drogue_cloud_service_api::{
@@ -17,7 +18,7 @@ use drogue_cloud_service_common::{
     actix_auth::authentication::AuthN,
     app::{Startup, StartupExt},
     auth::{openid, pat},
-    client::UserAuthClientConfig,
+    client::ClientConfig,
     defaults,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
 };
@@ -36,7 +37,7 @@ pub struct Config {
     pub enable_access_token: bool,
 
     #[serde(default)]
-    pub user_auth: Option<UserAuthClientConfig>,
+    pub user_auth: Option<ClientConfig>,
 
     pub oauth: openid::AuthenticatorConfig,
 
@@ -171,7 +172,7 @@ pub async fn configurator(
 
     let authenticator = config.oauth.into_client().await?;
     let user_auth = if let Some(user_auth) = config.user_auth {
-        Some(user_auth.into_client().await?)
+        Some(user_auth.into_client::<user::v1::Client>().await?)
     } else {
         None
     };

@@ -14,7 +14,7 @@ config = "0.13"
 deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 dotenv = "0.15"
-drogue-client = "0.11"
+drogue-client = "0.11.0-alpha.1"
 env_logger = "0.9"
 futures = "0.3"
 humantime = "2"

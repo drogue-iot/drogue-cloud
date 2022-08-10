@@ -9,6 +9,7 @@ use actix_web::{
     HttpRequest, HttpResponse, Responder,
 };
 use anyhow::Context;
+use drogue_client::{registry, user};
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
 use drogue_cloud_service_api::{
     endpoints::Endpoints, health::HealthChecked, kafka::KafkaClientConfig,
@@ -22,7 +23,7 @@ use drogue_cloud_service_common::{
         openid::{AuthenticatorConfig, TokenConfig},
         pat,
     },
-    client::{RegistryConfig, UserAuthClientConfig},
+    client::ClientConfig,
     defaults,
     endpoints::create_endpoint_source,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
@@ -71,9 +72,9 @@ pub struct Config {
     pub enable_access_token: bool,
 
     #[serde(default)]
-    pub user_auth: Option<UserAuthClientConfig>,
+    pub user_auth: Option<ClientConfig>,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     #[serde(default)]
     pub disable_account_url: bool,
@@ -128,7 +129,7 @@ pub async fn configurator(
             .await
             .context("Creating UI client")?;
 
-        let user_auth = user_auth.into_client().await?;
+        let user_auth: user::v1::Client = user_auth.into_client().await?;
 
         let account_url = match config.disable_account_url {
             true => None,
@@ -167,7 +168,7 @@ pub async fn configurator(
         },
     });
 
-    let registry = config
+    let registry: registry::v1::Client = config
         .registry
         .into_client()
         .await

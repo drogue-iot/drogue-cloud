@@ -1,6 +1,7 @@
 mod v1alpha1;
 
 use actix_web::{web, HttpResponse, Responder};
+use drogue_client::registry;
 use drogue_client::user::v1::authz::Permission;
 use drogue_cloud_endpoint_common::{
     sender::{ExternalClientPoolConfig, UpstreamSender},
@@ -20,7 +21,7 @@ use drogue_cloud_service_common::{
         openid::{Authenticator, AuthenticatorConfig},
         pat,
     },
-    client::{RegistryConfig, UserAuthClientConfig},
+    client::ClientConfig,
     defaults,
 };
 use serde::Deserialize;
@@ -32,10 +33,10 @@ pub struct Config {
     #[serde(default = "defaults::enable_access_token")]
     pub enable_access_token: bool,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     #[serde(default)]
-    pub user_auth: Option<UserAuthClientConfig>,
+    pub user_auth: Option<ClientConfig>,
 
     pub oauth: AuthenticatorConfig,
 
@@ -87,7 +88,7 @@ pub async fn configurator(
     };
 
     let client = reqwest::Client::new();
-    let registry = config.registry.into_client().await?;
+    let registry: registry::v1::Client = config.registry.into_client().await?;
 
     Ok((
         move |cfg: &mut ServiceConfig| {

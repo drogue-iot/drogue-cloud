@@ -3,6 +3,7 @@ pub mod service;
 
 use crate::service::{postgres::PostgresServiceConfiguration, DeviceStateService};
 use actix_web::web;
+use drogue_client::registry;
 use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
@@ -11,11 +12,11 @@ use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
     webapp::{self as actix_web},
 };
-use drogue_cloud_service_common::app::{Startup, StartupExt};
 use drogue_cloud_service_common::{
     actix::http::{HttpBuilder, HttpConfig},
+    app::{Startup, StartupExt},
     auth::openid::{Authenticator, AuthenticatorConfig},
-    client::RegistryConfig,
+    client::ClientConfig,
     defaults, openid_auth,
 };
 use futures::FutureExt;
@@ -38,7 +39,7 @@ pub struct Config {
     #[serde(default)]
     pub endpoint_pool: ExternalClientPoolConfig,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     #[serde(default)]
     pub http: HttpConfig,
@@ -77,7 +78,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     let authenticator = authenticator.map(web::Data::new);
 
     // set up registry client
-    let registry = config.registry.into_client().await?;
+    let registry: registry::v1::Client = config.registry.into_client().await?;
 
     // downstream sender
 

@@ -18,7 +18,7 @@ use drogue_cloud_registry_events::{
 };
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
-    client::RegistryConfig,
+    client::ClientConfig,
     defaults,
 };
 use futures::FutureExt;
@@ -37,7 +37,7 @@ pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     pub controller: ControllerConfig,
 

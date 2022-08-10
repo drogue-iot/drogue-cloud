@@ -13,7 +13,7 @@ async-trait = "0.1"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["reqwest"] }
 config = "0.13"
-drogue-client = "0.11"
+drogue-client = "0.11.0-alpha.1"
 drogue-bazaar = { version = "0.2", features = ["native-tls"] }
 env_logger = "0.9"
 futures = "0.3"

@@ -17,7 +17,7 @@ use drogue_cloud_service_common::{
     app::Startup,
     auth::openid,
     auth::pat,
-    client::{RegistryConfig, UserAuthClientConfig},
+    client::ClientConfig,
     defaults,
 };
 use lazy_static::lazy_static;
@@ -43,12 +43,12 @@ pub struct Config {
     pub enable_access_token: bool,
 
     #[serde(default)]
-    pub user_auth: Option<UserAuthClientConfig>,
+    pub user_auth: Option<ClientConfig>,
 
     #[serde(default)]
     pub kafka: KafkaClientConfig,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     pub oauth: openid::AuthenticatorConfig,
 

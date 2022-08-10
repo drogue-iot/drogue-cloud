@@ -19,7 +19,7 @@ use drogue_cloud_service_common::{
     auth::openid::{
         AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
     },
-    client::{DeviceStateClientConfig, RegistryConfig, UserAuthClientConfig},
+    client::{ClientConfig, DeviceStateClientConfig},
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig},
     state::StateControllerConfiguration,
 };
@@ -358,7 +358,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         tls_ca_certificates: server.tls_ca_certificates.clone().into(),
     };
 
-    let registry = RegistryConfig {
+    let registry = ClientConfig {
         url: Url::parse(&eps.registry.as_ref().unwrap().url).unwrap(),
         token_config: Some(token_config.clone()),
     };
@@ -385,7 +385,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         token_config: Some(token_config.clone()),
     };
 
-    let user_auth = Some(UserAuthClientConfig {
+    let user_auth = Some(ClientConfig {
         token_config: Some(token_config.clone()),
         url: Url::parse(&format!(
             "http://{}:{}",

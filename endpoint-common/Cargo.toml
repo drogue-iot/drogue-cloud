@@ -13,7 +13,7 @@ base64 = "0.13"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest", "rdkafka"] }
 config = "0.13"
-drogue-client = "0.11"
+drogue-client = "0.11.0-alpha.1"
 env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"

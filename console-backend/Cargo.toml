@@ -16,7 +16,7 @@ cached = "0.25"
 chrono = { version = "0.4", features = ["serde"] }
 cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
 dotenv = "0.15"
-drogue-client = "0.11"
+drogue-client = "0.11.0-alpha.1"
 env_logger = "0.9"
 futures = "0.3"
 k8s-openapi = { version = "0.14.0", features = ["v1_19"] }

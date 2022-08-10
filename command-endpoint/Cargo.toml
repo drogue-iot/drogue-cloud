@@ -13,7 +13,7 @@ base64 = "0.13"
 cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest"] }
 config = "0.13"
 dotenv = "0.15.0"
-drogue-client = "0.11"
+drogue-client = "0.11.0-alpha.1"
 env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"

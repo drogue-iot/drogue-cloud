@@ -15,7 +15,7 @@ use drogue_cloud_registry_events::{
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
-    client::RegistryConfig,
+    client::ClientConfig,
     defaults,
 };
 use serde::Deserialize;
@@ -27,7 +27,7 @@ pub struct Config {
     #[serde(default = "defaults::bind_addr")]
     pub bind_addr: String,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     #[serde(default)]
     pub controller: ControllerConfig,

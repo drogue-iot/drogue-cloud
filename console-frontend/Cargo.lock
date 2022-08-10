@@ -484,7 +484,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-bazaar"
 version = "0.2.0"
-source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=476d2b1d5a6e4834c625039f64655731d5cfbb73#476d2b1d5a6e4834c625039f64655731d5cfbb73"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=cbccda06e5edd3f7eef2c0965da67b150429e898#cbccda06e5edd3f7eef2c0965da67b150429e898"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -512,8 +512,9 @@ dependencies = [
 
 [[package]]
 name = "drogue-client"
-version = "0.11.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=55135e532e4ddfdf88dfa50df73b751063740c71#55135e532e4ddfdf88dfa50df73b751063740c71"
+version = "0.11.0-alpha.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4dacba8947ca13c2d7b45b00cf88fa7614a0d71c79dbc48d20e02cb544624d24"
 dependencies = [
  "async-trait",
  "base64 0.13.0",

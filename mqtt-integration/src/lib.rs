@@ -11,7 +11,7 @@ use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     auth::openid::AuthenticatorConfig,
-    client::{RegistryConfig, UserAuthClientConfig},
+    client::ClientConfig,
     defaults,
     reqwest::ClientFactory,
 };
@@ -50,13 +50,13 @@ pub struct Config {
     #[serde(default)]
     pub mqtt: MqttServerOptions,
 
-    pub registry: RegistryConfig,
+    pub registry: ClientConfig,
 
     #[serde(default)]
     pub service: ServiceConfig,
 
     #[serde(default)]
-    pub user_auth: Option<UserAuthClientConfig>,
+    pub user_auth: Option<ClientConfig>,
 
     pub oauth: AuthenticatorConfig,
 
