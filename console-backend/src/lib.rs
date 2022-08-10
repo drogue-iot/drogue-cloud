@@ -68,9 +68,6 @@ pub struct Config {
     #[serde(default = "defaults::oauth2_scopes")]
     pub scopes: String,
 
-    #[serde(default = "defaults::enable_access_token")]
-    pub enable_access_token: bool,
-
     #[serde(default)]
     pub user_auth: Option<ClientConfig>,
 
@@ -112,7 +109,6 @@ pub async fn configurator(
     // OpenIdConnect
 
     let app_config = config.clone();
-    let enable_access_token = config.enable_access_token;
 
     let authenticator = config
         .oauth
@@ -176,11 +172,10 @@ pub async fn configurator(
 
     Ok((
         move |cfg: &mut ServiceConfig| {
-            let auth = AuthN {
-                openid: authenticator.as_ref().cloned(),
-                token: user_auth.clone().map(pat::Authenticator::new),
-                enable_access_token,
-            };
+            let auth = AuthN::from((
+                authenticator.clone(),
+                user_auth.clone().map(pat::Authenticator::new),
+            ));
 
             let app = cfg
                 .app_data(web::JsonConfig::default().limit(4096))

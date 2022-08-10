@@ -18,7 +18,6 @@ use drogue_cloud_service_common::{
     auth::openid,
     auth::pat,
     client::ClientConfig,
-    defaults,
 };
 use lazy_static::lazy_static;
 use prometheus::{labels, opts, register_int_gauge, IntGauge};
@@ -39,9 +38,6 @@ lazy_static! {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::enable_access_token")]
-    pub enable_access_token: bool,
-
     #[serde(default)]
     pub user_auth: Option<ClientConfig>,
 
@@ -57,8 +53,6 @@ pub struct Config {
 }
 
 pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
-    let enable_access_token = config.enable_access_token;
-
     log::info!("Starting WebSocket integration service endpoint");
     log::info!("Kafka servers: {}", config.kafka.bootstrap_servers);
 
@@ -100,11 +94,10 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                     permission: Permission::Read,
                     app_param: "application".to_string(),
                 })
-                .wrap(AuthN {
-                    openid: authenticator.as_ref().cloned(),
-                    token: user_auth.clone().map(|u| pat::Authenticator::new(u)),
-                    enable_access_token,
-                })
+                .wrap(AuthN::from((
+                    authenticator.clone(),
+                    user_auth.clone().map(pat::Authenticator::new),
+                )))
                 .service(web::resource("").route(web::get().to(route::start_connection))),
         );
     })

@@ -75,8 +75,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
     // event source - device registry
 
-    let registry_dispatcher =
-        EventDispatcher::one(FnEventProcessor::new(controller.clone(), is_relevant));
+    let registry_dispatcher = EventDispatcher::one(FnEventProcessor::new(controller, is_relevant));
     let registry = KafkaEventStream::new(config.kafka_source)?;
     let registry = registry.run(registry_dispatcher);
 

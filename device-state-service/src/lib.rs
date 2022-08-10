@@ -25,9 +25,6 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::enable_access_token")]
-    pub enable_access_token: bool,
-
     pub oauth: AuthenticatorConfig,
 
     pub service: PostgresServiceConfiguration,

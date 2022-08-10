@@ -19,7 +19,6 @@ use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     auth::{openid, pat},
     client::ClientConfig,
-    defaults,
     keycloak::{client::KeycloakAdminClient, KeycloakAdminClientConfig, KeycloakClient},
 };
 use serde::Deserialize;
@@ -33,9 +32,6 @@ pub struct WebData<S: ManagementService> {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::enable_access_token")]
-    pub enable_access_token: bool,
-
     #[serde(default)]
     pub user_auth: Option<ClientConfig>,
 
@@ -166,8 +162,6 @@ pub async fn configurator(
     impl Fn(&mut ServiceConfig) + Send + Sync + Clone,
     Vec<Box<dyn HealthChecked>>,
 )> {
-    let enable_access_token = config.enable_access_token;
-
     // set up authentication
 
     let authenticator = config.oauth.into_client().await?;
@@ -199,13 +193,10 @@ pub async fn configurator(
 
     Ok((
         move |cfg: &mut ServiceConfig| {
-            let auth = AuthN {
-                openid: authenticator.as_ref().cloned(),
-                token: user_auth
-                    .clone()
-                    .map(|user_auth| pat::Authenticator::new(user_auth)),
-                enable_access_token,
-            };
+            let auth = AuthN::from((
+                authenticator.clone(),
+                user_auth.clone().map(pat::Authenticator::new),
+            ));
             app!(cfg, KafkaEventSender, KeycloakAdminClient, auth)
                 // for the management service
                 .app_data(data.clone())

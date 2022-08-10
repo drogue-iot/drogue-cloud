@@ -71,7 +71,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // event source - device registry
 
     let registry_dispatcher =
-        EventDispatcher::one(FnEventProcessor::new(controller.clone(), |evt| match evt {
+        EventDispatcher::one(FnEventProcessor::new(controller, |evt| match evt {
             Event::Device {
                 application,
                 uid,

@@ -1,11 +1,6 @@
 use url::Url;
 
 #[inline]
-pub fn enable_access_token() -> bool {
-    true
-}
-
-#[inline]
 pub fn realm() -> String {
     "drogue".into()
 }

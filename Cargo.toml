@@ -45,7 +45,7 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "cbccda06e5edd3f7eef2c0965da67b150429e898" } # FIXME: awaiting release 0.2.0
+drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "0dd7f19553dfd29637058784e43e040d2d32989a" } # FIXME: awaiting release 0.2.0
 #drogue-bazaar = { path = "../drogue-bazaar" }
 
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "55135e532e4ddfdf88dfa50df73b751063740c71" } # FIXME: awaiting release 0.11.0

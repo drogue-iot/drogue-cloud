@@ -44,5 +44,5 @@ pub async fn start_connection(
         user_auth,
     );
 
-    Ok(ws::start(ws, &req, stream)?)
+    ws::start(ws, &req, stream)
 }

@@ -30,9 +30,6 @@ use std::str;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    #[serde(default = "defaults::enable_access_token")]
-    pub enable_access_token: bool,
-
     pub registry: ClientConfig,
 
     #[serde(default)]
@@ -76,8 +73,6 @@ pub async fn configurator(
         config.endpoint_pool,
     )?;
 
-    let enable_access_token = config.enable_access_token;
-
     // set up authentication
 
     let authenticator = config.oauth.into_client().await?;
@@ -103,13 +98,10 @@ pub async fn configurator(
                             permission: Permission::Write,
                             app_param: "application".to_string(),
                         })
-                        .wrap(AuthN {
-                            openid: authenticator.as_ref().cloned(),
-                            token: user_auth
-                                .clone()
-                                .map(|user_auth| pat::Authenticator::new(user_auth)),
-                            enable_access_token,
-                        })
+                        .wrap(AuthN::from((
+                            authenticator.clone(),
+                            user_auth.clone().map(pat::Authenticator::new),
+                        )))
                         .route("", web::post().to(v1alpha1::command)),
                 );
         },

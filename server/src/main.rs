@@ -428,7 +428,6 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 ..Default::default()
             },
 
-            enable_access_token: true,
             oauth: oauth.clone(),
             service: PostgresServiceConfiguration {
                 session_timeout: Duration::from_secs(10),
@@ -496,13 +495,11 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 disable_account_url: false,
                 scopes: "openid profile email".into(),
                 user_auth: user_auth.clone(),
-                enable_access_token: true,
             }
         };
 
         let config_device_management_service = drogue_cloud_device_management_service::Config {
             http: Default::default(), // overridden later on
-            enable_access_token: true,
             user_auth: user_auth.clone(),
             oauth: oauth.clone(),
             keycloak: keycloak.clone(),
@@ -519,7 +516,6 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
 
             drogue_cloud_command_endpoint::Config {
                 http: Default::default(), // overridden later on
-                enable_access_token: true,
                 oauth: oauth.clone(),
                 registry: registry.clone(),
                 instance: "drogue".to_string(),
@@ -609,7 +605,6 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 metrics_namespace: Some("websocket_integration".into()),
                 ..Default::default()
             },
-            enable_access_token: true,
             oauth: oauth.clone(),
 
             registry: registry.clone(),
