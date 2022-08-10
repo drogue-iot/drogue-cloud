@@ -13,10 +13,9 @@ use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSource
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, Transport};
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
 use drogue_cloud_service_api::{kafka::KafkaClientConfig, webapp::HttpServer};
-use drogue_cloud_service_common::app::run::SubMain;
-use drogue_cloud_service_common::app::{Main, Startup, StartupExt};
 use drogue_cloud_service_common::{
     actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
+    app::{Main, Startup, StartupExt, SubMain},
     auth::openid::{
         AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
     },

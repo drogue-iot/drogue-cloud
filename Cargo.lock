@@ -84,7 +84,8 @@ dependencies = [
 [[package]]
 name = "actix-http"
 version = "3.2.1"
-source = "git+https://github.com/ctron/actix-web?rev=f3f41a0cc70e43564f8243b3ff425195566b5f16#f3f41a0cc70e43564f8243b3ff425195566b5f16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f9ffb6db08c1c3a1f4aef540f1a63193adc73c4fbd40b75a95fc8c5258f6e51"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -1464,7 +1465,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-bazaar"
 version = "0.2.0"
-source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=a5204b3c9de03416747a375e9be41917d7d9088f#a5204b3c9de03416747a375e9be41917d7d9088f"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=43a40917ae8220c93e840fe72f777d5add232c17#43a40917ae8220c93e840fe72f777d5add232c17"
 dependencies = [
  "actix-cors",
  "actix-http",
