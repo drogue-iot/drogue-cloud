@@ -3,7 +3,7 @@
 set -e
 
 : "${KAFKA_NS:=kafka}"
-: "${STRIMZI_VERSION:=0.28.0}"
+: "${STRIMZI_VERSION:=0.30.0}"
 
 echo "Installing Strimzi: ${STRIMZI_VERSION}"
 progress "📦 Deploying pre-requisites (Strimzi v${STRIMZI_VERSION}) ... "
