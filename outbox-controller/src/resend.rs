@@ -1,11 +1,12 @@
 use crate::service::OutboxService;
-use actix::prelude::*;
 use drogue_cloud_database_common::{error::ServiceError, models::outbox::OutboxEntry};
 use drogue_cloud_registry_events::{Event, EventSender, EventSenderError};
+use drogue_cloud_service_common::app::{Startup, StartupExt};
 use futures::TryStreamExt;
 use lazy_static::lazy_static;
 use prometheus::{register_int_counter_vec, IntCounterVec};
-use std::{convert::Infallible, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
+use tokio::time::MissedTickBehavior;
 
 lazy_static! {
     static ref RESENT_EVENTS: IntCounterVec = register_int_counter_vec!(
@@ -14,19 +15,6 @@ lazy_static! {
         &["result"]
     )
     .unwrap();
-}
-
-#[derive(Message)]
-#[rtype(result = "Result<(), Infallible>")]
-struct MsgResend;
-
-struct ResendContext<S>
-where
-    S: EventSender,
-{
-    pub service: Arc<OutboxService>,
-    pub sender: Arc<S>,
-    pub before: chrono::Duration,
 }
 
 /// Re-send missed outbox events.
@@ -44,28 +32,26 @@ where
     pub sender: Arc<S>,
 }
 
-impl<S> Actor for Resender<S>
-where
-    S: EventSender + 'static,
-{
-    type Context = Context<Self>;
-
-    fn started(&mut self, ctx: &mut Self::Context) {
-        self.trigger(ctx);
-    }
-}
-
 impl<S> Resender<S>
 where
     S: EventSender + 'static,
 {
-    fn trigger(&self, ctx: &mut Context<Self>) {
-        log::debug!("Trigger next: {:?}", self.interval);
-        ctx.notify_later(MsgResend, self.interval);
+    pub fn start(self, startup: &mut dyn Startup) {
+        startup.spawn(self.run());
     }
 
-    async fn execute(ctx: ResendContext<S>) {
-        match Self::process(ctx).await {
+    pub async fn run(self) -> anyhow::Result<()> {
+        let mut interval = tokio::time::interval(self.interval);
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+        loop {
+            interval.tick().await;
+            self.tick().await;
+        }
+    }
+
+    async fn tick(&self) {
+        match self.process().await {
             Ok(_) => {
                 log::debug!("Completed resend operation")
             }
@@ -75,14 +61,27 @@ where
         }
     }
 
-    async fn process(ctx: ResendContext<S>) -> Result<(), ServiceError> {
-        let mut stream = ctx.service.retrieve_unseen(ctx.before).await?;
+    async fn send_entry(&self, entry: OutboxEntry) -> Result<(), EventSenderError<S::Error>> {
+        let event: Event = entry.into();
+        match self.sender.notify(Some(event)).await {
+            Ok(result) => {
+                RESENT_EVENTS.with_label_values(&["ok"]).inc();
+                Ok(result)
+            }
+            Err(err) => {
+                RESENT_EVENTS.with_label_values(&["err"]).inc();
+                Err(err)
+            }
+        }
+    }
+    async fn process(&self) -> Result<(), ServiceError> {
+        let mut stream = self.service.retrieve_unseen(self.before).await?;
 
         let mut n = 0;
 
         loop {
             match stream.try_next().await {
-                Ok(Some(entry)) => Self::send_entry(entry, &ctx).await.map_err(|err| {
+                Ok(Some(entry)) => self.send_entry(entry).await.map_err(|err| {
                     ServiceError::Internal(format!("Failed to send event (n = {}): {}", n, err))
                 })?,
                 Ok(None) => {
@@ -103,51 +102,5 @@ where
         }
 
         Ok(())
-    }
-
-    async fn send_entry(
-        entry: OutboxEntry,
-        ctx: &ResendContext<S>,
-    ) -> Result<(), EventSenderError<S::Error>> {
-        let event: Event = entry.into();
-        match ctx.sender.notify(Some(event)).await {
-            Ok(result) => {
-                RESENT_EVENTS.with_label_values(&["ok"]).inc();
-                Ok(result)
-            }
-            Err(err) => {
-                RESENT_EVENTS.with_label_values(&["err"]).inc();
-                Err(err)
-            }
-        }
-    }
-}
-
-impl<S> Handler<MsgResend> for Resender<S>
-where
-    S: EventSender + 'static,
-{
-    type Result = ResponseActFuture<Self, Result<(), Infallible>>;
-
-    fn handle(&mut self, _: MsgResend, _: &mut Context<Self>) -> Self::Result {
-        log::debug!("Process resend");
-
-        let ctx = ResendContext {
-            service: self.service.clone(),
-            sender: self.sender.clone(),
-            before: self.before,
-        };
-
-        Box::pin(
-            async {
-                Self::execute(ctx).await;
-            }
-            .into_actor(self)
-            .map(|_, this, ctx| {
-                // whatever happened, we re-schedule
-                this.trigger(ctx);
-                Ok(())
-            }),
-        )
     }
 }

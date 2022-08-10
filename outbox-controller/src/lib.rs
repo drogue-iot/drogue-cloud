@@ -2,7 +2,6 @@ mod resend;
 mod service;
 
 use crate::{resend::Resender, service::OutboxServiceConfig};
-use actix::Actor;
 use anyhow::Context;
 use async_trait::async_trait;
 use drogue_cloud_registry_events::{
@@ -88,7 +87,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         service: service.clone(),
         sender: Arc::new(sender),
     }
-    .start();
+    .start(startup);
 
     // event source
 
