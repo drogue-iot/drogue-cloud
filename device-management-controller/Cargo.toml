@@ -38,7 +38,3 @@ drogue-cloud-service-common = { path = "../service-common" }
 
 [dev-dependencies]
 drogue-cloud-test-common = { path = "../test-common", features = ["actix"] }
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

@@ -49,7 +49,3 @@ pem = "1"
 rstest = "0.13"
 serial_test = "0.6"
 testcontainers = "0.12"
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

@@ -35,7 +35,3 @@ drogue-cloud-service-common = { path = "../service-common" }
 [dev-dependencies]
 regex = "1.5"
 url = "2.2"
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

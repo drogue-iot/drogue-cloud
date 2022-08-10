@@ -28,7 +28,3 @@ uuid = { version = "1", features = ["v4", "serde"] }
 drogue-cloud-integration-common = { path = "../integration-common" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]
