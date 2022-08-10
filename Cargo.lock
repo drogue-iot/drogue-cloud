@@ -1465,7 +1465,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-bazaar"
 version = "0.2.0"
-source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=43a40917ae8220c93e840fe72f777d5add232c17#43a40917ae8220c93e840fe72f777d5add232c17"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=476d2b1d5a6e4834c625039f64655731d5cfbb73#476d2b1d5a6e4834c625039f64655731d5cfbb73"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -1489,6 +1489,7 @@ dependencies = [
  "log",
  "native-tls",
  "openid",
+ "openssl",
  "opentelemetry",
  "opentelemetry-jaeger",
  "pem",
@@ -2247,7 +2248,6 @@ dependencies = [
 name = "drogue-cloud-outbox-controller"
 version = "0.11.0"
 dependencies = [
- "actix",
  "anyhow",
  "async-trait",
  "chrono",

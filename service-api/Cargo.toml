@@ -41,5 +41,5 @@ drogue-client = { version = "0.11.0", features = [ "reqwest" ] }
 [features]
 default = ["nom", "actix"]
 actix = ["actix-web", "actix-http", "actix-web-httpauth", "actix-rt", "actix-utils", "actix-web-prom", "actix-web-opentelemetry", "actix-web-extras", "drogue-bazaar/actix"]
-rustls = ["actix-web/rustls", "drogue-bazaar/rustls-tls"]
-openssl = ["actix-web/openssl"]
+rustls = ["actix-web/rustls", "drogue-bazaar/rustls"]
+openssl = ["actix-web/openssl", "drogue-bazaar/openssl"]
