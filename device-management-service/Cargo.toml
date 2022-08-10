@@ -56,7 +56,3 @@ testcontainers = "0.12"
 tokio = { version = "1", features = ["full"] }
 
 drogue-cloud-test-common = { path = "../test-common", features = ["actix"] }
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

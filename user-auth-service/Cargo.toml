@@ -45,7 +45,3 @@ serial_test = "0.6"
 testcontainers = "0.12"
 
 drogue-cloud-test-common = { path = "../test-common" }
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

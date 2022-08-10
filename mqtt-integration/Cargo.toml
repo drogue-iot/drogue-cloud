@@ -59,7 +59,6 @@ package = "rustls"
 features = ["dangerous_configuration"]
 
 [features]
-default = ["openssl", "jaeger"]
+default = ["openssl"]
 openssl = ["open-ssl", "ntex/openssl"]
 rustls = ["rust-tls", "ntex/rustls"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

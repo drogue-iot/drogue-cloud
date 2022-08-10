@@ -58,5 +58,5 @@ tokio = { version = "1", features = ["full"] }
 default = ["rustls", "native-tls", "actix", "openssl"]
 rustls = ["dep:rustls", "webpki", "reqwest/rustls-tls"]
 openssl = ["dep:openssl", "drogue-cloud-service-api/openssl"]
-jaeger = ["opentelemetry-jaeger"]
-actix = ["drogue-cloud-service-api/actix-http"]
+actix = ["drogue-cloud-service-api/actix-http", "drogue-bazaar/actix"]
+native-tls = ["dep:native-tls", "drogue-bazaar/native-tls"]

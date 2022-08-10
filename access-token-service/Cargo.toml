@@ -32,7 +32,7 @@ tokio = { version = "1", features = ["full"] }
 url = "2"
 
 drogue-cloud-service-api = { path = "../service-api" }
-drogue-cloud-service-common = { path = "../service-common", features = ["rustls", "jaeger"] }
+drogue-cloud-service-common = { path = "../service-common", features = ["rustls"] }
 
 [dev-dependencies]
 actix-rt = "2"

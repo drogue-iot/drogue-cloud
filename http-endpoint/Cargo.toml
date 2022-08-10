@@ -49,7 +49,6 @@ package = "openssl"
 features = ["v111"]
 
 [features]
-default = ["openssl", "jaeger"]
+default = ["openssl"]
 openssl = ["drogue-cloud-service-api/openssl"]
 rustls = ["drogue-cloud-service-api/rustls"]
-jaeger = ["drogue-cloud-service-common/jaeger"]

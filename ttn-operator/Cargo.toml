@@ -38,7 +38,3 @@ drogue-cloud-operator-common = { path = "../operator-common", features = ["with_
 drogue-cloud-registry-events = { path = "../registry-events" }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-
-[features]
-default = ["jaeger"]
-jaeger = ["drogue-cloud-service-common/jaeger"]
