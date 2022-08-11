@@ -99,7 +99,7 @@ lto = true
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "55135e532e4ddfdf88dfa50df73b751063740c71" } # FIXME: awaiting release
 #drogue-client = { path = "../../drogue-client" }
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "cbccda06e5edd3f7eef2c0965da67b150429e898" } # FIXME: awaiting release 0.2.0
+drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "3a5e58d05b4be89342e1c7b4ca1409e1cc305310" } # FIXME: awaiting release 0.2.0
 #drogue-bazaar = { path = "../../drogue-bazaar" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release

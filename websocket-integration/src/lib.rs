@@ -13,7 +13,7 @@ use drogue_cloud_service_api::{
 };
 use drogue_cloud_service_common::{
     actix::http::{HttpBuilder, HttpConfig},
-    actix_auth::{authentication::AuthN, authorization::AuthZ},
+    actix_auth::{authentication::AuthN, authorization::ApplicationAuthorizer},
     app::Startup,
     auth::openid,
     auth::pat,
@@ -89,11 +89,10 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
         cfg.service(
             web::scope("/{application}")
-                .wrap(AuthZ {
-                    client: user_auth.clone(),
-                    permission: Permission::Read,
-                    app_param: "application".to_string(),
-                })
+                .wrap(ApplicationAuthorizer::wrapping(
+                    user_auth.clone(),
+                    Permission::Read,
+                ))
                 .wrap(AuthN::from((
                     authenticator.clone(),
                     user_auth.clone().map(pat::Authenticator::new),

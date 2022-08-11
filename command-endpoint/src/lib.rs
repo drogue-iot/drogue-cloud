@@ -1,8 +1,7 @@
 mod v1alpha1;
 
 use actix_web::{web, HttpResponse, Responder};
-use drogue_client::registry;
-use drogue_client::user::v1::authz::Permission;
+use drogue_client::{registry, user::v1::authz::Permission};
 use drogue_cloud_endpoint_common::{
     sender::{ExternalClientPoolConfig, UpstreamSender},
     sink::KafkaSink,
@@ -15,7 +14,7 @@ use drogue_cloud_service_api::{
 use drogue_cloud_service_common::{
     actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
-    actix_auth::authorization::AuthZ,
+    actix_auth::authorization::ApplicationAuthorizer,
     app::{Startup, StartupExt},
     auth::{
         openid::{Authenticator, AuthenticatorConfig},
@@ -93,11 +92,10 @@ pub async fn configurator(
                 .service(web::resource("/").route(web::get().to(index)))
                 .service(
                     web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
-                        .wrap(AuthZ {
-                            client: user_auth.clone(),
-                            permission: Permission::Write,
-                            app_param: "application".to_string(),
-                        })
+                        .wrap(ApplicationAuthorizer::wrapping(
+                            user_auth.clone(),
+                            Permission::Read,
+                        ))
                         .wrap(AuthN::from((
                             authenticator.clone(),
                             user_auth.clone().map(pat::Authenticator::new),
