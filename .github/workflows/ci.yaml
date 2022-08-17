@@ -13,13 +13,13 @@ on:
   pull_request:
 
 env:
-  VERSION_HELM: "v3.7.1"
+  VERSION_HELM: "v3.9.3"
   CONTAINER: docker
 
 jobs:
 
   prepare:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     outputs:
       do-build: ${{steps.changed-files-irrelevant.outputs.only_modified != 'true' || steps.state.outputs.release == 'true'}}
@@ -70,7 +70,7 @@ jobs:
 
   info:
     name: info
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [prepare]
     steps:
       - run: |
@@ -81,7 +81,7 @@ jobs:
           echo "prerelease: ${{steps.state.outputs.prerelease}}"
 
   check:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [prepare]
     if: needs.prepare.outputs.do-build == 'true'
     steps:
@@ -104,7 +104,7 @@ jobs:
 
   test:
     name: test
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [prepare, check]
     if: needs.prepare.outputs.do-build == 'true'
     steps:
@@ -130,7 +130,7 @@ jobs:
 
   build:
     name: build
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [prepare, check]
     if: needs.prepare.outputs.do-build == 'true'
     steps:
@@ -291,7 +291,7 @@ jobs:
 
   deploy:
     name: deploy on kind
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [prepare, build]
     if: needs.prepare.outputs.do-build == 'true'
     env:
@@ -313,12 +313,12 @@ jobs:
           name: container-images
 
       - name: Create k8s kind Cluster
-        uses: helm/kind-action@v1.1.0
+        uses: helm/kind-action@v1.3.0
         with:
           wait: 300s
           cluster_name: kind
           config: deploy/kind/cluster-config.yaml
-          version: v0.11.1
+          version: v0.12.0
 
       - name: Load images in docker
         run: docker load -i all.tar
@@ -370,11 +370,12 @@ jobs:
           name: drogue-iot-logs
           path: /tmp/logs
 
+
   publish:
     needs: [prepare, deploy, test, server-linux, server-macos]
     if: (needs.prepare.outputs.do-build == 'true') && (needs.prepare.outputs.do-publish == 'true')
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     env:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
