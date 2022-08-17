@@ -36,7 +36,6 @@ drogue-cloud-macros = { path = "../macros" }
 
 [dev-dependencies]
 config = "0.13"
-drogue-client = { version = "*", features = [ "reqwest" ] }
 
 [features]
 default = ["nom", "actix"]

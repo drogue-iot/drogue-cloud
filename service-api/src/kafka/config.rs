@@ -85,8 +85,6 @@ mod test {
         let cfg = cfg.add_source(env.separator("__")).build().unwrap();
         let kafka: KafkaClientConfig = cfg.try_deserialize().unwrap();
 
-        println!("{:?}", kafka);
-
         assert_eq!(kafka.bootstrap_servers, "localhost:1234");
         assert_eq!(kafka.properties.get("a_b_c").cloned(), Some("d.e.f".into()));
     }
