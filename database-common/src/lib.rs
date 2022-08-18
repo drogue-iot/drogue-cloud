@@ -1,8 +1,9 @@
 pub mod auth;
 pub mod error;
 pub mod models;
-pub mod postgres;
 pub mod utils;
+
+pub use drogue_bazaar::db::postgres;
 
 use crate::error::ServiceError;
 use async_trait::async_trait;

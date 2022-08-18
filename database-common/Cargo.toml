@@ -9,11 +9,11 @@ license = "Apache-2.0"
 anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
-deadpool = "0.9"
+drogue-bazaar = "0.2"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 drogue-client = "0.11.0-alpha.1"
 futures = "0.3"
-indexmap = { version = "1.6", features = ["serde-1"] }
+indexmap = { version = "1.9", features = ["serde-1"] }
 log = "0.4"
 serde = "1"
 serde_json = "1"
@@ -22,14 +22,12 @@ tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1", 
 tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 
-postgres-native-tls = { version = "0.5", optional = true }
-
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 
 [features]
 default = ["native-tls"]
-native-tls = ["postgres-native-tls"]
+native-tls = ["drogue-bazaar/native-tls"]
 
 [dev-dependencies]
 criterion = { version = "0.3" } # , features = ["real_blackbox"]

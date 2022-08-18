@@ -484,7 +484,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "drogue-bazaar"
 version = "0.2.0"
-source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=673d1843b78b5c0ba1537c9a07d89a689577663f#673d1843b78b5c0ba1537c9a07d89a689577663f"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=1a769df7ec04d0b07a7da78f0d91789541bca51b#1a769df7ec04d0b07a7da78f0d91789541bca51b"
 dependencies = [
  "anyhow",
  "async-trait",
