@@ -138,7 +138,7 @@ You can silently drop the event using `drop`:
 then: drop
 ----
 
-Or accept the event directly, and stop processing following operations and rules:
+Or accept the event directly, and stop processing the following operations and rules:
 
 [source,yaml]
 ----
@@ -204,11 +204,11 @@ This will send an event to an external endpoint and wait for the response.
 [source,yaml]
 ----
 then:
-  validate:
-    endpoint: {} # <1>
-    request: # <2>
-      type: cloudEvent # <3>
-      mode: binary # or structured <4>
+  - validate:
+      endpoint: {} # <1>
+      request: # <2>
+        type: cloudEvent # <3>
+        mode: binary # or structured <4>
 ----
 <1> Endpoint configuration as described in xref:common-configuration.adoc#defining_external_endpoints[External endpoints]
 <2> Parameters for the outgoing request. Defaults to binary encoded cloud event.
@@ -225,13 +225,13 @@ will be used as the metadata and payload of the new event.
 [source,yaml]
 ----
 then:
-  enrich:
-    endpoint: {} # <1>
-    request: # <2>
-      type: cloudEvent # <3>
-      mode: binary # or structured <4>
-    response: # <5>
-      type: cloudEvent # <6>
+  - enrich:
+      endpoint: {} # <1>
+      request: # <2>
+        type: cloudEvent # <3>
+        mode: binary # or structured <4>
+      response: # <5>
+        type: cloudEvent # <6>
 ----
 <1> Endpoint configuration as described in xref:common-configuration.adoc#defining_external_endpoints[External endpoints]
 <2> Parameters for the outgoing request. Defaults to binary encoded cloud event.
