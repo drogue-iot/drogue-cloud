@@ -6,7 +6,7 @@ use deadpool_postgres::{Pool, Transaction};
 use drogue_client::registry::v1::Application;
 use drogue_cloud_database_common::{postgres, Client, DatabaseService};
 use drogue_cloud_endpoint_common::sender::{
-    DownstreamSender, Publish, PublishId, PublishOptions, PublishOutcome, Publisher,
+    DownstreamSender, Publish, PublishError, PublishId, PublishOptions, PublishOutcome, Publisher,
 };
 use drogue_cloud_service_api::health::HealthChecked;
 use futures::StreamExt;
@@ -516,15 +516,20 @@ WHERE
     where
         B: AsRef<[u8]> + Send + Sync,
     {
-        let outcome = self.sender.publish(publish, body).await?;
+        let outcome = self.sender.publish(publish, body).await;
 
         log::debug!("Publish outcome: {outcome:?}");
 
         match outcome {
-            PublishOutcome::Accepted => Ok(()),
-            PublishOutcome::Rejected | PublishOutcome::QueueFull => Err(ServiceError::Internal(
-                format!("Unable to send event: {outcome:?}"),
-            )),
+            Err(PublishError::Spec(err)) => {
+                log::debug!("Failed to publish event due to misconfigured spec section: {err}");
+                Ok(())
+            }
+            Err(err) => Err(ServiceError::Publish(err)),
+            Ok(PublishOutcome::Accepted) => Ok(()),
+            Ok(PublishOutcome::Rejected | PublishOutcome::QueueFull) => Err(
+                ServiceError::Internal(format!("Unable to send event: {outcome:?}")),
+            ),
         }
     }
 }
