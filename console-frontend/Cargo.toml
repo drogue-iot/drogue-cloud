@@ -12,7 +12,7 @@ async-trait = "0.1"
 base64 = "0.13"
 bstr = "0.2"
 chrono = { version = "0.4", features = ["wasmbind"] }
-chrono-tz = "0.5"
+chrono-tz = "0.6"
 cloudevents-sdk = "0.4"
 futures-util = "0.3"
 gloo-storage = "0.2"
@@ -21,9 +21,8 @@ gloo-utils = "0.1"
 headers = "0.3"
 hostname-validator = "1.1.0"
 http = "0.2"
-# FIXME: required due to: https://github.com/rustwasm/wasm-bindgen/issues/2770
-indexmap = "~1.6.2"
-itertools = "0.9"
+indexmap = "1.9"
+itertools = "0.10"
 java-properties = "1"
 js-sys = "0.3.50"
 log = "0.4"
@@ -36,11 +35,11 @@ pretty-hex = "0.3"
 reqwest = "0.11"
 serde = "1"
 serde_json = "1"
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 thiserror = "1"
 unicode-segmentation = "1"
 url = "2"
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "js"] }
 wasm-logger = "0.2"
 yew = "0.19"
 yew-agent = "0.1"
@@ -77,7 +76,7 @@ drogue-cloud-console-common = { path = "../console-common" }
 drogue-client = { version = "0.11.0-alpha.1", default-features = false, features = ["wasm"] }
 
 # we need to override the feature flags of the defaults
-openidconnect = { version = "2.2", default-features = false, features = ["reqwest", "rustls-tls", "rustcrypto"] }
+openidconnect = { version = "=2.2.0", default-features = false, features = ["reqwest", "rustls-tls", "rustcrypto"] }
 
 [dev-dependencies]
 env_logger = "0.9"
