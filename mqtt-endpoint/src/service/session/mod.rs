@@ -354,6 +354,13 @@ impl mqtt::Session for Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
+        if let Some(mut handle) = self.handle.take() {
+            log::warn!("Late handling session state deletion");
+            ntex_rt::spawn(async move {
+                handle.delete(DeleteOptions { skip_lwt: false }).await;
+            });
+        }
+
         CONNECTIONS_COUNTER.dec();
     }
 }

@@ -5,6 +5,7 @@ pub use self::config::*;
 pub use mux::*;
 
 use crate::client::DeviceStateClient;
+use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 use drogue_client::{
     error::{ClientError, ErrorInformation},
@@ -16,11 +17,13 @@ use drogue_cloud_service_api::services::device_state::{
 use futures::{channel::mpsc::UnboundedReceiver, stream::FusedStream};
 use std::{
     ops::{Deref, DerefMut},
+    process::abort,
     sync::Arc,
     time::Duration,
 };
 use tokio::{
-    sync::Mutex,
+    select,
+    sync::{oneshot, Mutex},
     time::{sleep, Instant},
 };
 use uuid::Uuid;
@@ -37,6 +40,7 @@ pub struct StateController {
     session: String,
     endpoint: String,
     retry_deletes: usize,
+    kill_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
 }
 
 pub struct StateRunner {
@@ -46,6 +50,7 @@ pub struct StateRunner {
     expires: DateTime<Utc>,
     delay_buffer: chrono::Duration,
     min_delay_ms: i64,
+    kill_rx: Option<oneshot::Receiver<()>>,
 }
 
 pub struct StateStream {
@@ -107,6 +112,7 @@ impl StateController {
         log::info!("Acquired new session: {session}");
 
         let mux = Arc::new(Mutex::new(Mux::new()));
+        let (kill_tx, kill_rx) = oneshot::channel();
 
         Ok((
             Self {
@@ -115,6 +121,7 @@ impl StateController {
                 session: session.clone(),
                 endpoint: config.endpoint,
                 retry_deletes: config.retry_deletes,
+                kill_tx: Arc::new(Mutex::new(Some(kill_tx))),
             },
             StateRunner {
                 client,
@@ -123,6 +130,7 @@ impl StateController {
                 mux,
                 delay_buffer: chrono::Duration::from_std(config.delay_buffer)?,
                 min_delay_ms: config.min_delay.as_millis() as _,
+                kill_rx: Some(kill_rx),
             },
         ))
     }
@@ -211,7 +219,8 @@ impl StateController {
 
     /// Delete device state.
     ///
-    /// This function will **panic** in the case that state service cannot be contacted, even after re-trying.
+    /// This function will shut down the runner in case the state service cannot be contacted,
+    /// even after re-trying. And if even that fails, it will **abort** the process.
     pub async fn delete(&self, application: &str, device: &str, token: &str, opts: DeleteOptions) {
         let mut attempts = self.retry_deletes;
         let delay = Duration::from_millis(250);
@@ -227,7 +236,16 @@ impl StateController {
                     attempts -= 1;
                     log::error!("Failed to communicate with state service (attempts left: {attempts}): {err}");
                     if attempts == 0 {
-                        panic!("Unable to contact state service. Last error was: {err}");
+                        if let Some(kill_tx) = self.kill_tx.lock().await.take() {
+                            let _ = kill_tx.send(());
+                            // if we failed to send the kill event, then the shutdown should be
+                            // already in progress.
+                        } else {
+                            // at this point, we couldn't even trigger a normal shutdown, so the
+                            // only thing that is left is to abort right away.
+                            eprintln!("Unable to contact state service. Last error was: {err}");
+                            abort();
+                        }
                     } else {
                         sleep(delay).await;
                     }
@@ -238,12 +256,33 @@ impl StateController {
 }
 
 impl StateRunner {
-    pub async fn run(self) -> anyhow::Result<()> {
-        // the first deadline
-        let (mut expires, mut deadline) = self.next_deadline(self.expires);
-        loop {
-            tokio::time::sleep_until(deadline).await;
-            (expires, deadline) = self.ping(expires).await?;
+    pub async fn run(mut self) -> anyhow::Result<()> {
+        let kill_rx = self
+            .kill_rx
+            .take()
+            .ok_or_else(|| anyhow!("Missing kill receiver"))?;
+
+        let looping = async {
+            // the first deadline
+            let (mut expires, mut deadline) = self.next_deadline(self.expires);
+            loop {
+                tokio::time::sleep_until(deadline).await;
+                (expires, deadline) = self.ping(expires).await?;
+            }
+        };
+
+        let killed = async {
+            if let Ok(()) = kill_rx.await {
+                Err(anyhow::anyhow!("Runner got killed"))
+            } else {
+                // normal shutdown
+                Ok(())
+            }
+        };
+
+        select! {
+            rc = looping => rc,
+            rc = killed => rc,
         }
     }
 
