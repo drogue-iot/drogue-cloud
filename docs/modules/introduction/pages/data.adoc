@@ -90,7 +90,7 @@ action of the command was actually performed. A command could get lost in the ne
 it is important to have some feedback signal end-to-end. Some commands also cannot simply be retried, as that could
 be interpreted by a receiving device as a new request to process the command.
 
-Therefore, doesn't Drogue Cloud enforce any semantics on commands, and let the application deal with the case of
+Therefore, Drogue Cloud doesn't enforce any semantics on commands, and let the application deal with the case of
 undelivered commands.
 
 NOTE: In the future, we might add some add-on functionality, which might provide a more opinionated approach, and help

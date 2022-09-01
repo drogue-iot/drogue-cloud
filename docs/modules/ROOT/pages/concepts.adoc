@@ -15,7 +15,7 @@ scope of an application.
 
 == Endpoints
 
-Endpoints, more explicitly *protocol endpoints*, is where device connect to, in order to communicate with the system.
+Endpoints, more explicitly *protocol endpoints*, are what devices connect to, in order to communicate with the system.
 
 On the device facing side these endpoints implement a device specific protocol, and on the cloud facing side, they
 communicate using Knative and Cloud Events.
