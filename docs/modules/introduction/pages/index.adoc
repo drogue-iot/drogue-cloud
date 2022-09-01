@@ -7,7 +7,7 @@ by showing information or controlling actuators.
 
 image:basics.svg[Basics]
 
-Of course this diagram over-simplifies the problem. And still, connecting to a device to a simple, single
+Of course this diagram over-simplifies the problem. And still, connecting a device to a simple, single
 backend application is a trivial task.
 
 So what does Drogue Cloud do? And why is it a more complex than a simple MQTT broker? The following sections will
