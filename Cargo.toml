@@ -45,7 +45,7 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "1a769df7ec04d0b07a7da78f0d91789541bca51b" } # FIXME: awaiting release 0.2.0
+#drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "1a769df7ec04d0b07a7da78f0d91789541bca51b" } # FIXME: awaiting release 0.2.0
 #drogue-bazaar = { path = "../drogue-bazaar" }
 
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "55135e532e4ddfdf88dfa50df73b751063740c71" } # FIXME: awaiting release 0.11.0
@@ -55,5 +55,5 @@ drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "1a
 
 #pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
 
-actix-web = { git = "https://github.com/ctron/actix-web", rev = "f3f41a0cc70e43564f8243b3ff425195566b5f16"} # FIXME: awaiting release 4.2.0
+#actix-web = { git = "https://github.com/ctron/actix-web", rev = "f3f41a0cc70e43564f8243b3ff425195566b5f16"} # FIXME: awaiting release 4.2.0
 #actix-http = { git = "https://github.com/ctron/actix-web", rev = "f3f41a0cc70e43564f8243b3ff425195566b5f16"} # FIXME: awaiting release 4.2.0
