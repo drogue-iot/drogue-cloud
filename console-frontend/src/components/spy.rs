@@ -22,6 +22,8 @@ pub struct Props {
     pub endpoints: EndpointInformation,
     #[prop_or_default]
     pub application: Option<String>,
+    #[prop_or_default]
+    pub device: Option<String>,
 }
 
 pub struct Spy {
@@ -36,6 +38,8 @@ pub struct Spy {
     events: SharedTableModel<Entry>,
 
     application: String,
+    device: String,
+    channel: String,
 
     running: bool,
     total_received: usize,
@@ -52,6 +56,8 @@ pub enum Msg {
     /// Source failed
     Failed(String),
     SetApplication(String),
+    SetDevice(String),
+    SetChannel(String),
     OAuth2Context(OAuth2Context),
 }
 
@@ -63,6 +69,7 @@ impl Component for Spy {
 
     fn create(ctx: &Context<Self>) -> Self {
         let application = ctx.props().application.clone().unwrap_or_default();
+        let device = ctx.props().device.clone().unwrap_or_default();
         let (oauth2, oauth2_handle) = match ctx
             .link()
             .context::<OAuth2Context>(ctx.link().callback(|oauth| Msg::OAuth2Context(oauth)))
@@ -78,6 +85,8 @@ impl Component for Spy {
             running: false,
             total_received: 0,
             application,
+            device,
+            channel: Default::default(),
         }
     }
 
@@ -100,7 +109,13 @@ impl Component for Spy {
             Msg::Event(event) => {
                 // log::debug!("Pushing event: {:?}", event);
                 self.total_received += 1;
-                self.events.insert(0, Entry(*event));
+                let entry = Entry(*event);
+                if (self.device == entry.device() || self.device.is_empty())
+                    && (self.channel == entry.channel() || self.channel.is_empty())
+                {
+                    self.events.insert(0, entry);
+                }
+
                 while self.events.len() > DEFAULT_MAX_SIZE {
                     self.events.pop();
                 }
@@ -136,6 +151,12 @@ impl Component for Spy {
                 }
                 // update our token
                 self.oauth2 = Some(oauth2);
+            }
+            Msg::SetDevice(device) => {
+                self.device = device;
+            }
+            Msg::SetChannel(channel) => {
+                self.channel = channel;
             }
         }
         true
@@ -194,6 +215,18 @@ impl Component for Spy {
                                 variant={Variant::Secondary}
                                 onclick={ctx.link().callback(|_|Msg::Clear)}
                                 />
+                        </ToolbarItem>
+                    if ctx.props().device.is_none() {
+                        <ToolbarItem>
+                            <TextInput
+                                onchange={ctx.link().callback(Msg::SetDevice)}
+                                placeholder="Device ID filter"/>
+                        </ToolbarItem>
+            }
+                        <ToolbarItem>
+                            <TextInput
+                                onchange={ctx.link().callback(Msg::SetChannel)}
+                                placeholder="Channel to filter"/>
                         </ToolbarItem>
                     </ToolbarGroup>
                     <ToolbarItem modifiers={[ToolbarElementModifier::Right.all()]}>
