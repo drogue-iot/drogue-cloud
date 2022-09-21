@@ -7,21 +7,24 @@ use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
     pages::{
-        apps::ApplicationContext, devices::delete::DeleteConfirmation, devices::CloneDialog,
-        devices::DetailsSection,
+        apps::ApplicationContext, devices::debug, devices::delete::DeleteConfirmation,
+        devices::CloneDialog, devices::DetailsSection,
     },
     utils::url_encode,
 };
 use drogue_client::registry::v1::Device;
+use drogue_cloud_console_common::EndpointInformation;
 use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
+use std::ops::Deref;
 use std::rc::Rc;
 use yew::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
     pub backend: AuthenticatedBackend,
+    pub endpoints: EndpointInformation,
     pub app: String,
     pub name: String,
     pub details: DetailsSection,
@@ -225,6 +228,7 @@ impl Details {
                         >
                         <TabRouterItem<DetailsSection> to={DetailsSection::Overview} label="Overview"/>
                         <TabRouterItem<DetailsSection> to={DetailsSection::Yaml} label="YAML"/>
+                        <TabRouterItem<DetailsSection> to={DetailsSection::Debug} label="Events"/>
                     </DevicesTabs>
                 </PageSection>
                 <PageSection>
@@ -232,6 +236,7 @@ impl Details {
                     match ctx.props().details {
                         DetailsSection::Overview => self.render_overview(device),
                         DetailsSection::Yaml => self.render_editor(ctx),
+                        DetailsSection::Debug => self.render_debug(ctx),
                     }
                 }
                 </PageSection>
@@ -295,5 +300,16 @@ impl Details {
             </Stack>
             </>
         };
+    }
+
+    fn render_debug(&self, ctx: &Context<Self>) -> Html {
+        html! (
+            <debug::Debug
+                backend={ctx.props().backend.deref().clone()}
+                application={ctx.props().app.clone()}
+                endpoints={ctx.props().endpoints.clone()}
+                device={ctx.props().name.clone()}
+                />
+        )
     }
 }

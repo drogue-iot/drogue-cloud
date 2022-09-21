@@ -1,11 +1,13 @@
 mod clone;
 mod create;
+mod debug;
 mod delete;
 mod details;
 mod index;
 
 pub use clone::*;
 pub use create::*;
+pub use debug::*;
 pub use details::*;
 pub use index::*;
 
@@ -30,6 +32,8 @@ pub enum Pages {
 pub enum DetailsSection {
     #[to = "yaml"]
     Yaml,
+    #[to = "debug"]
+    Debug,
     #[end]
     Overview,
 }

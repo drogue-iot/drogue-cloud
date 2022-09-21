@@ -270,6 +270,7 @@ impl Component for Console {
                                     />},
                                     AppRoute::Devices(pages::devices::Pages::Details{app, name, details}) => html!{<pages::devices::Details
                                         backend={backend.clone()}
+                                        endpoints={endpoints.clone()}
                                         app={url_decode(&app.to_string())}
                                         name={url_decode(&name)}
                                         details={details}
