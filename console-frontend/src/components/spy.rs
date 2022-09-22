@@ -110,8 +110,8 @@ impl Component for Spy {
                 // log::debug!("Pushing event: {:?}", event);
                 self.total_received += 1;
                 let entry = Entry(*event);
-                if (self.device == entry.device() || self.device.is_empty())
-                    && (self.channel == entry.channel() || self.channel.is_empty())
+                if (self.device.is_empty() || self.device == entry.device())
+                    && (self.channel.is_empty() || self.channel == entry.channel())
                 {
                     self.events.insert(0, entry);
                 }
