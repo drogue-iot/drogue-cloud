@@ -2,6 +2,7 @@ use super::{DevicesTabs, Pages};
 use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
+use crate::pages::apps;
 use crate::{
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
@@ -20,6 +21,7 @@ use patternfly_yew::*;
 use std::ops::Deref;
 use std::rc::Rc;
 use yew::prelude::*;
+use yew_router::{agent::RouteRequest, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -38,6 +40,7 @@ pub enum Msg {
     SaveEditor,
     Delete,
     Clone,
+    ShowApp(String),
 }
 
 pub struct Details {
@@ -108,6 +111,12 @@ impl Component for Details {
                         />
                 }),
             }),
+            Msg::ShowApp(app) => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
+                Route::from(AppRoute::Applications(apps::Pages::Details {
+                    name: app,
+                    details: apps::DetailsSection::Overview,
+                })),
+            )),
         }
         true
     }
@@ -234,7 +243,7 @@ impl Details {
                 <PageSection>
                 {
                     match ctx.props().details {
-                        DetailsSection::Overview => self.render_overview(device),
+                        DetailsSection::Overview => self.render_overview(ctx, device),
                         DetailsSection::Yaml => self.render_editor(ctx),
                         DetailsSection::Debug => self.render_debug(ctx),
                     }
@@ -244,7 +253,8 @@ impl Details {
         };
     }
 
-    fn render_overview(&self, device: &Device) -> Html {
+    fn render_overview(&self, ctx: &Context<Self>, device: &Device) -> Html {
+        let app = device.metadata.application.clone();
         return html! {
             <Grid gutter=true>
                 <GridItem cols={[3]}>
@@ -253,7 +263,8 @@ impl Details {
                     >
                     <DescriptionList>
                         <DescriptionGroup term="Application">
-                            {&device.metadata.application}
+                            <a onclick={ctx.link().callback_once(move |_| Msg::ShowApp(app))}>
+                                {&device.metadata.application}</a>
                         </DescriptionGroup>
                         <DescriptionGroup term="Name">
                             {&device.metadata.name}
