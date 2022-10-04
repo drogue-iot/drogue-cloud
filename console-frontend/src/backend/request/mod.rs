@@ -172,7 +172,7 @@ impl Request {
 
         let window = gloo_utils::window();
         let url = if let Some(query) = query {
-            format!("{}?{}", request.url.to_string(), query)
+            format!("{}?{}", request.url, query)
         } else {
             request.url.to_string()
         };

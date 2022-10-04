@@ -223,8 +223,8 @@ impl Component for Index {
         let app_filter = self.app_filter.clone();
 
         //pagination and set_limit callbacks
-        let nav = link.callback(move |nav| Msg::Navigate(nav));
-        let set_limit = link.callback(move |limit| Msg::SetLimit(limit));
+        let nav = link.callback(Msg::Navigate);
+        let set_limit = link.callback(Msg::SetLimit);
 
         return html! {
             <>

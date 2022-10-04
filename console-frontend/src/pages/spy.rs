@@ -3,7 +3,7 @@ use drogue_cloud_console_common::EndpointInformation;
 use patternfly_yew::*;
 use yew::prelude::*;
 
-#[derive(Clone, Debug, Properties, PartialEq)]
+#[derive(Clone, Debug, Properties, Eq, PartialEq)]
 pub struct Props {
     pub backend: BackendInformation,
     pub endpoints: EndpointInformation,

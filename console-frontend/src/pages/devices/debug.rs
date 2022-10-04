@@ -2,7 +2,7 @@ use crate::{backend::BackendInformation, components::spy::Spy};
 use drogue_cloud_console_common::EndpointInformation;
 use yew::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, Properties)]
+#[derive(Clone, Debug, PartialEq, Eq, Properties)]
 pub struct Props {
     pub backend: BackendInformation,
     pub endpoints: EndpointInformation,

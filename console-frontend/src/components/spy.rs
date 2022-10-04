@@ -16,7 +16,7 @@ use yew::context::ContextHandle;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
 
-#[derive(Clone, Debug, Properties, PartialEq)]
+#[derive(Clone, Debug, Properties, PartialEq, Eq)]
 pub struct Props {
     pub backend: BackendInformation,
     pub endpoints: EndpointInformation,
@@ -72,7 +72,7 @@ impl Component for Spy {
         let device = ctx.props().device.clone().unwrap_or_default();
         let (oauth2, oauth2_handle) = match ctx
             .link()
-            .context::<OAuth2Context>(ctx.link().callback(|oauth| Msg::OAuth2Context(oauth)))
+            .context::<OAuth2Context>(ctx.link().callback(Msg::OAuth2Context))
         {
             Some((oauth2, oauth2_handle)) => (Some(oauth2), Some(oauth2_handle)),
             _ => (None, None),
@@ -283,7 +283,7 @@ impl Spy {
             Some(OAuth2Context::Authenticated(Authentication { access_token, .. })),
         ) = (url, self.oauth2.as_ref())
         {
-            url.query_pairs_mut().append_pair("token", &access_token);
+            url.query_pairs_mut().append_pair("token", access_token);
 
             let ws = WebSocket::new(url.as_str()).unwrap();
 
@@ -350,7 +350,7 @@ impl Spy {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Entry(pub Event);
 
 impl TableRenderer for Entry {

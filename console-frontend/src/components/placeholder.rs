@@ -5,7 +5,7 @@ use yew::prelude::*;
 use yew_oauth2::{openid, prelude::*};
 use yew_router::prelude::*;
 
-#[derive(Clone, Debug, Properties, PartialEq)]
+#[derive(Clone, Debug, Properties, PartialEq, Eq)]
 pub struct Props {
     pub info: BackendInformation,
 }
@@ -34,7 +34,7 @@ impl Component for Placeholder {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let login = self.render_login(&ctx);
+        let login = self.render_login(ctx);
 
         html!(
             <Router<AppRoute, ()>
@@ -154,7 +154,6 @@ impl Placeholder {
                                             q.insert("kc_idp_hint".to_string(), id.clone());
                                             q
                                         },
-                                        ..Default::default()
                                     },
                                 );
                             })),

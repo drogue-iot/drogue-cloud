@@ -146,13 +146,12 @@ impl Component for Console {
                         .map(|s| s.to_string());
                     let account_url = {
                         let mut issuer = claims.issuer().url().clone();
-                        issuer
+                        if let Ok(mut paths) = issuer
                             .path_segments_mut()
                             .map_err(|_| anyhow::anyhow!("Failed to modify path"))
-                            .ok()
-                            .map(|mut paths| {
-                                paths.push("account");
-                            });
+                        {
+                            paths.push("account");
+                        }
                         issuer.to_string()
                     };
                     (id, name, full_name, Some(account_url), claims.email())
