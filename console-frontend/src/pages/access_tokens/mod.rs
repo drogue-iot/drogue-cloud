@@ -1,8 +1,12 @@
+mod create;
+mod success;
+
 use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
 use crate::error::{error, ErrorNotification, ErrorNotifier};
-use drogue_cloud_service_api::token::{AccessToken, AccessTokenCreated};
+use create::AccessTokenCreateModal;
+use drogue_cloud_service_api::token::AccessToken;
 use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
@@ -46,8 +50,8 @@ pub struct Props {
 }
 
 pub enum Msg {
-    Create,
-    Created(AccessTokenCreated),
+    CreateModal,
+    // Created(AccessTokenCreated),
     Load,
     SetData(Vec<AccessTokenEntry>),
     Delete(AccessToken),
@@ -100,32 +104,14 @@ impl Component for AccessTokens {
                 });
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::Create => match self.create(ctx) {
-                Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to create token", err),
-            },
-            Msg::Created(token) => {
-                self.fetch_task = None;
-                ToastDispatcher::default().toast(Toast {
-                    title: "Created access token".into(),
-                    body: html!{<>
-                        <Content>
-                        <p>{"A new access token was successfully created. The access token is:"}</p>
-                        <p>
-                        <Clipboard
-                            value={token.token}
-                            readonly=true
-                            name="access-token"
-                            />
-                        </p>
-                        <p>{"Once you close this alert, you won't have any chance to get the access token ever again. Be sure to copy it somewhere safe."}</p>
-                        </Content>
-                    </>},
-                    r#type: Type::Success,
-                    ..Default::default()
-                });
-                ctx.link().send_message(Msg::Load);
-            }
+            Msg::CreateModal => BackdropDispatcher::default().open(Backdrop {
+                content: (html! {
+                    <AccessTokenCreateModal
+                        backend={ctx.props().backend.clone()}
+                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        />
+                }),
+            }),
         };
         true
     }
@@ -154,7 +140,7 @@ impl Component for AccessTokens {
                                 <Button
                                     label="Create token"
                                     variant={Variant::Primary}
-                                    onclick={ctx.link().callback(|_|Msg::Create)}
+                                    onclick={ctx.link().callback(|_|Msg::CreateModal)}
                                     id="create-token"
                                 />
                             </ToolbarItem>
@@ -211,20 +197,6 @@ impl AccessTokens {
             ctx.callback_api::<(), _>(move |response| match response {
                 ApiResponse::Success(_, _) => Msg::Deleted,
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Failed to delete")),
-            }),
-        )?)
-    }
-
-    fn create(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
-        Ok(ctx.props().backend.request(
-            Method::POST,
-            "/api/tokens/v1alpha1",
-            vec![],
-            Nothing,
-            vec![],
-            ctx.callback_api::<Json<AccessTokenCreated>, _>(move |response| match response {
-                ApiResponse::Success(token, _) => Msg::Created(token),
-                ApiResponse::Failure(err) => Msg::Error(err.notify("Creation failed")),
             }),
         )?)
     }
