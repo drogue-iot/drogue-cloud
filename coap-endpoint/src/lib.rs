@@ -6,8 +6,7 @@ mod response;
 mod telemetry;
 
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
-use coap::Server;
-use coap_lite::{CoapOption, CoapRequest, CoapResponse};
+use coap_lite::{CoapOption, CoapRequest, CoapResponse, Packet};
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -20,10 +19,10 @@ use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     defaults,
 };
-use futures::TryFutureExt;
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
+use tokio::net::UdpSocket;
 
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
 //
@@ -54,6 +53,18 @@ pub struct Config {
 
     #[serde(default)]
     pub endpoint_pool: ExternalClientPoolConfig,
+
+    #[serde(default)]
+    pub disable_dtls: bool,
+
+    #[serde(default)]
+    pub disable_client_certificates: bool,
+
+    #[serde(default)]
+    pub cert_bundle_file: Option<String>,
+
+    #[serde(default)]
+    pub key_file: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -230,19 +241,38 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         config.command_source_kafka,
     )?;
 
-    startup.spawn(async {
-        log::info!("Server up on {}", addr);
-        let mut server = Server::new(addr).unwrap();
-        let device_to_endpoint = server.run(move |request| {
-            let app = app.clone();
-            async move {
-                let response = publish_handler(request, app.clone()).await;
-                log::debug!("Returning response: {:?}", response);
-                response
+    let server = UdpSocket::bind(&addr).await?;
+    log::info!("Server up on {}", addr);
+    startup.spawn(async move {
+        let mut buf = [0; 2048];
+        loop {
+            match server.recv_from(&mut buf).await {
+                Ok((size, src)) => match Packet::from_bytes(&buf[..size]) {
+                    Ok(packet) => {
+                        let request = CoapRequest::from_packet(packet, src);
+                        let response = publish_handler(request, app.clone()).await;
+                        if let Some(response) = response {
+                            log::debug!("Returning response: {:?}", response);
+                            match response.message.to_bytes() {
+                                Ok(packet) => match server.send_to(&packet[..], &src).await {
+                                    Ok(_) => log::trace!("Response sent"),
+                                    Err(e) => log::warn!("Error sending response: {:?}", e),
+                                },
+                                Err(e) => {
+                                    log::warn!("Error encoding response packet: {:?}", e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Error decoding request packet: {:?}", e);
+                    }
+                },
+                Err(e) => {
+                    log::warn!("Error receiving data on socket: {:?}", e);
+                }
             }
-        });
-
-        device_to_endpoint.err_into().await
+        }
     });
     startup.check(command_source);
 
