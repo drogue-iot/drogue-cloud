@@ -777,6 +777,9 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         let command_source_kafka = command_source("coap_endpoint");
         let bind_addr = server.coap.clone().into();
         let kafka = server.kafka.clone();
+        let cert_bundle_file: Option<String> =
+            matches.value_of("server-cert").map(|s| s.to_string());
+        let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
         let config = drogue_cloud_coap_endpoint::Config {
             auth,
             bind_addr_coap: Some(bind_addr),
@@ -786,6 +789,10 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             kafka_command_config: kafka,
             check_kafka_topic_ready: false,
             endpoint_pool: Default::default(),
+            disable_dtls: !(key_file.is_some() && cert_bundle_file.is_some()),
+            disable_client_certificates: false,
+            cert_bundle_file,
+            key_file,
         };
 
         drogue_cloud_coap_endpoint::run(config, &mut main).await?;

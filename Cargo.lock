@@ -960,30 +960,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "coap"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a4ef1b5546f6ba554509aa8eab047d71088e79f908dbd4a5d6dcf9610b616de"
-dependencies = [
- "bytes",
- "coap-lite",
- "futures",
- "log",
- "num-derive",
- "num-traits",
- "regex",
- "serde",
- "tokio",
- "tokio-stream",
- "tokio-util 0.6.10",
- "url",
-]
-
-[[package]]
 name = "coap-lite"
-version = "0.7.0"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2911526fe9fc3bb90ff13ff52bd5454e93da0685ba8ed105f06bfc0e898fd950"
+checksum = "31c0436bd40ab15b2eb784eb90baf5b72651fff5977dc03259ab5c1b05fdf1c5"
+dependencies = [
+ "lru_time_cache",
+]
 
 [[package]]
 name = "concurrent-queue"
@@ -1622,7 +1605,6 @@ dependencies = [
  "bytestring",
  "chrono",
  "cloudevents-sdk",
- "coap",
  "coap-lite",
  "dotenv",
  "drogue-client",
@@ -1633,6 +1615,7 @@ dependencies = [
  "futures",
  "http",
  "log",
+ "openssl",
  "prometheus",
  "regex",
  "serde",
@@ -3516,6 +3499,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lru_time_cache"
+version = "0.11.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9106e1d747ffd48e6be5bb2d97fa706ed25b144fbee4d5c02eae110cd8d6badd"
+
+[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3970,17 +3959,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "747d632c0c558b87dbabbe6a82f3b4ae03720d0646ac5b7b4dae89394be5f2c5"
 dependencies = [
  "num-traits",
-]
-
-[[package]]
-name = "num-derive"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -5614,9 +5592,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.20.1"
+version = "1.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a8325f63a7d4774dd041e363b2409ed1c5cbbd0f867795e661df066b2b0a581"
+checksum = "a9e03c497dc955702ba729190dc4aac6f2a0ce97f913e5b1b5912fc5039d9099"
 dependencies = [
  "autocfg",
  "bytes",
@@ -5624,7 +5602,6 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
- "once_cell",
  "parking_lot 0.12.1",
  "pin-project-lite",
  "signal-hook-registry",
