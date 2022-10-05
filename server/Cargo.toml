@@ -24,7 +24,7 @@ rdkafka-sys = "4.0"
 reqwest = "0.11.6"
 sasl2-sys = "0.1.14"
 serde_json = "1.0"
-stderrlog = { git = "https://github.com/cardoe/stderrlog-rs", rev = "d865acce1ac1eeac66cb20601f25f66b905092c7" }
+stderrlog = "0.5.3"
 tokio = { version = "1.11.0", features = ["full"] }
 url = "2"
 

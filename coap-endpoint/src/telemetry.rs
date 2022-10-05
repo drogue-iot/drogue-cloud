@@ -4,6 +4,7 @@ use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
     sender::{self, DownstreamSender, ToPublishId},
+    x509::ClientCertificateChain,
 };
 use drogue_cloud_service_api::auth::device::authn;
 use http::HeaderValue;
@@ -37,6 +38,7 @@ pub async fn publish_plain(
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     auth: &[u8],
+    certs: Option<ClientCertificateChain>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     publish(
         sender,
@@ -47,6 +49,7 @@ pub async fn publish_plain(
         opts,
         req,
         auth,
+        certs,
     )
     .await
 }
@@ -59,6 +62,7 @@ pub async fn publish_tail(
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     auth: &[u8],
+    certs: Option<ClientCertificateChain>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     let (channel, suffix) = path;
     publish(
@@ -70,6 +74,7 @@ pub async fn publish_tail(
         opts,
         req,
         auth,
+        certs,
     )
     .await
 }
@@ -84,14 +89,20 @@ pub async fn publish(
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
     auth: &[u8],
+    certs: Option<ClientCertificateChain>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
+    log::debug!(
+        "Auth header: {:?}",
+        HeaderValue::from_bytes(auth).as_ref().ok()
+    );
     let (application, device, r#as) = match authenticator
         .authenticate_coap(
             opts.common.application,
             opts.common.device,
             HeaderValue::from_bytes(auth).as_ref().ok(),
+            certs,
         )
         .await
         .map_err(|err| CoapEndpointError(err.into()))?

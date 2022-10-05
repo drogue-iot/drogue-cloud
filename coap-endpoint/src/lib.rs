@@ -3,10 +3,17 @@ mod command;
 mod downstream;
 mod error;
 mod response;
+mod session;
 mod telemetry;
+mod udp;
 
+use crate::session::{Session, SessionSink, SessionStream};
+use crate::udp::UdpStream;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
-use coap_lite::{CoapOption, CoapRequest, CoapResponse, Packet};
+use bytes::Bytes;
+use coap_lite::{CoapOption, CoapRequest, CoapResponse};
+
+use core::pin::Pin;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -19,20 +26,32 @@ use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     defaults,
 };
+use futures::StreamExt;
+use std::collections::{hash_map::Entry, HashMap};
+
+use drogue_cloud_endpoint_common::x509::{ClientCertificateChain, ClientCertificateRetriever};
+use openssl::ssl::{Ssl, SslContext, SslFiletype, SslMethod, SslVerifyMode};
 use serde::Deserialize;
+use std::sync::Arc;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
+
 use tokio::net::UdpSocket;
+use tokio::select;
+use tokio::sync::mpsc;
+use tokio::time::{Duration, Instant};
+use tokio_openssl::SslStream;
+use tokio_util::codec::{BytesCodec, Decoder};
 
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
 //
 // Option Number 4209 corresponds to the option assigned to carry authorization information
 // in the request, which contains HTTP-like authorization information
-const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
+pub const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
 //
 // Option Number 4210 corresponds to the option assigned to carry command information,
 // which is meant for commands to be sent back to the device in the response
-const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
+pub const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -72,6 +91,267 @@ pub struct App {
     pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
+}
+
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
+    let commands = Commands::new();
+    let addr = config
+        .bind_addr_coap
+        .unwrap_or_else(|| "[::]:5683".to_string());
+    let coap_server_commands = commands.clone();
+
+    let sender = DownstreamSender::new(
+        KafkaSink::from_config(
+            config.kafka_downstream_config,
+            config.check_kafka_topic_ready,
+        )?,
+        config.instance,
+        config.endpoint_pool,
+    )?;
+
+    let app = App {
+        downstream: sender,
+        authenticator: DeviceAuthenticator(
+            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth).await?,
+        ),
+        commands: coap_server_commands,
+    };
+
+    let command_source = KafkaCommandSource::new(
+        commands,
+        config.kafka_command_config,
+        config.command_source_kafka,
+    )?;
+
+    let server = UdpSocket::bind(&addr).await?;
+
+    let dtls = if !config.disable_dtls {
+        let mut ctx = SslContext::builder(SslMethod::dtls())?;
+        if let Some(key_file) = &config.key_file {
+            ctx.set_private_key_file(key_file, SslFiletype::PEM)?;
+        }
+        if let Some(cert_bundle_file) = &config.cert_bundle_file {
+            ctx.set_certificate_chain_file(cert_bundle_file)?;
+        }
+        ctx.set_verify_callback(SslVerifyMode::PEER, |_, ctx| {
+            log::debug!(
+                "Accepting client certificates: {:?}",
+                ctx.current_cert()
+                    .map(|cert| format!("{:?}", cert.subject_name()))
+                    .unwrap_or_else(|| "<unknown>".into())
+            );
+            true
+        });
+        /*
+        ctx.set_psk_server_callback(|ssl, identity, secret_mut| {
+            if let Some(identity) = identity {
+                log::debug!("PSK auth for {:?}", identity);
+            }
+            Ok(0)
+        });
+         */
+        ctx.check_private_key()?;
+        Some(Arc::new(ctx.build()))
+    } else {
+        None
+    };
+
+    log::info!("CoAP server up on {}", addr);
+    startup.spawn(async move {
+        let mut buf = [0; 2048];
+        let mut sessions: HashMap<SocketAddr, mpsc::Sender<Bytes>> = HashMap::new();
+        let (closed_out, mut closed_in) = mpsc::channel(10);
+        let (tx_out, mut rx_out) = mpsc::channel(10);
+
+        loop {
+            select! {
+                closed = closed_in.recv() => {
+                    if let Some(closed) = closed {
+                        log::trace!("Removed session for {}", closed);
+                        sessions.remove(&closed);
+                    }
+                }
+                inbound = server.recv_from(&mut buf) => {
+                    match inbound {
+                        Ok((size, src)) => {
+                            let entry = match sessions.entry(src) {
+                                Entry::Occupied(o) => {
+                                    o.into_mut()
+                                }
+                                Entry::Vacant(v) => {
+                                    let (tx_in, rx_in) = mpsc::channel(10);
+                                    // TODO: Make expiry configurable?
+                                    const EXPIRY: Duration = Duration::from_secs(60);
+                                    let expired = Instant::now() + EXPIRY;
+                                    let tx_out = tx_out.clone();
+                                    let app = app.clone();
+                                    let dtls = dtls.clone();
+                                    let closed_out = closed_out.clone();
+                                    tokio::spawn(async move {
+                                        let r = start_session(src, tx_out, rx_in, dtls, app, expired).await;
+                                        let _ = closed_out.send(src).await;
+                                        r
+                                    });
+
+                                    v.insert(tx_in)
+                                }
+                            };
+
+                            if let Err(e) = entry.send(Bytes::copy_from_slice(&buf[..size])).await {
+                                log::warn!("Error pushing data to handler for {}: {:?}", src, e);
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Error receiving data on socket: {:?}", e);
+                        }
+                    }
+                }
+                outbound = rx_out.recv() => {
+                    if let Some((dest, data)) = outbound {
+                        log::trace!("Got outbound data to {}", dest);
+                        match server.send_to(&data[..], &dest).await {
+                            Ok(_) => {
+                                log::trace!("Sent {} bytes to {}", data.len(), dest);
+                            }
+                            Err(e) => {
+                                log::warn!("Error sending {} bytes to {}: {:?}", data.len(), dest, e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+    startup.check(command_source);
+
+    Ok(())
+}
+
+async fn start_session(
+    src: SocketAddr,
+    tx_out: mpsc::Sender<(SocketAddr, Bytes)>,
+    rx_in: mpsc::Receiver<Bytes>,
+    dtls: Option<Arc<SslContext>>,
+    app: App,
+    expired: Instant,
+) -> Result<(), anyhow::Error> {
+    let udp = UdpStream::new(src, tx_out, rx_in);
+    let (sink, stream, certs): (
+        Pin<Box<SessionSink>>,
+        Pin<Box<SessionStream>>,
+        Option<ClientCertificateChain>,
+    ) = if let Some(ref ctx) = dtls.as_ref() {
+        let mut dtls = Box::pin(SslStream::new(Ssl::new(&ctx)?, udp)?);
+        dtls.as_mut().accept().await?;
+        let certs = dtls.as_mut().client_certs();
+        let (sink, stream) = BytesCodec::new().framed(dtls).split();
+        (Box::pin(sink), Box::pin(stream), certs)
+    } else {
+        let (sink, stream) = BytesCodec::new().framed(udp).split();
+        (Box::pin(sink), Box::pin(stream), None)
+    };
+
+    let mut session = Session::new(src, expired, sink, stream, app, certs);
+    session.run().await;
+    Ok(())
+}
+
+pub(crate) async fn publish_handler(
+    mut request: CoapRequest<SocketAddr>,
+    certs: Option<ClientCertificateChain>,
+    app: App,
+) -> Option<CoapResponse> {
+    log::debug!("CoAP request: {:?}", request);
+
+    let mut path_segments: Vec<String> = Vec::new();
+    let mut queries: Option<&Vec<u8>> = None;
+    let mut auth: &Vec<u8> = &Vec::new();
+
+    // Obtain vec[channel,subject] via 'p', optional query string via 'q'
+    // and authorization information via 'a'
+    if let Ok((p, q, a)) = params(&request) {
+        path_segments = p;
+        queries = q;
+        auth = a;
+    } else if let Err(e) = params(&request) {
+        let ret = Err(CoapEndpointError(EndpointError::InvalidRequest {
+            details: e.to_string(),
+        }))
+        .respond_to(&mut request);
+        return ret;
+    }
+
+    log::debug!("Request - path: {path_segments:?}, queries: {queries:?}");
+
+    // Deserialize optional queries into PublishOptions
+    let options = queries
+        .and_then(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
+        .unwrap_or_default();
+
+    match path_segments.len() {
+        // If only channel is present
+        1 => telemetry::publish_plain(
+            app.downstream,
+            app.authenticator,
+            app.commands,
+            path_segments[0].clone(),
+            options,
+            request.clone(),
+            auth,
+            certs,
+        )
+        .await
+        .respond_to(&mut request),
+
+        // If both channel and subject are present
+        2 => telemetry::publish_tail(
+            app.downstream,
+            app.authenticator,
+            app.commands,
+            (path_segments[0].clone(), path_segments[1].clone()),
+            queries
+                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x))?
+                .map_err(anyhow::Error::from)
+                .ok()?,
+            request.clone(),
+            auth,
+            certs,
+        )
+        .await
+        .respond_to(&mut request),
+
+        // If number of path arguments don't meet requirements
+        _ => Err(CoapEndpointError(EndpointError::InvalidRequest {
+            details: "Invalid number of path arguments".to_string(),
+        }))
+        .respond_to(&mut request),
+    }
+}
+
+type Params<'a> = Result<(Vec<String>, Option<&'a Vec<u8>>, &'a Vec<u8>), anyhow::Error>;
+
+fn params(request: &CoapRequest<SocketAddr>) -> Params {
+    // Get path values and extract channel and subject
+    let path_segments = request
+        .message
+        .get_option(CoapOption::UriPath)
+        .and_then(|paths| path_parser(paths).ok())
+        .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?;
+
+    // Get optional query values
+    let queries = request
+        .message
+        .get_option(CoapOption::UriQuery)
+        .and_then(|x| (x.front()));
+
+    // Get authentication information
+    let auth = request
+        .message
+        .get_option(AUTH_OPTION)
+        .and_then(|x| x.front())
+        .ok_or_else(|| anyhow::Error::msg("Error parsing authentication information"))?;
+
+    Ok((path_segments, queries, auth))
 }
 
 fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
@@ -117,166 +397,6 @@ fn path_parser(ll: &LinkedList<Vec<u8>>) -> Result<Vec<String>, EndpointError> {
     }
 
     Ok(option_values)
-}
-
-type Params<'a> = Result<(Vec<String>, Option<&'a Vec<u8>>, &'a Vec<u8>), anyhow::Error>;
-
-fn params(request: &CoapRequest<SocketAddr>) -> Params {
-    // Get path values and extract channel and subject
-    let path_segments = request
-        .message
-        .get_option(CoapOption::UriPath)
-        .and_then(|paths| path_parser(paths).ok())
-        .ok_or_else(|| anyhow::Error::msg("Error parsing path"))?;
-
-    // Get optional query values
-    let queries = request
-        .message
-        .get_option(CoapOption::UriQuery)
-        .and_then(|x| (x.front()));
-
-    // Get authentication information
-    let auth = request
-        .message
-        .get_option(AUTH_OPTION)
-        .and_then(|x| x.front())
-        .ok_or_else(|| anyhow::Error::msg("Error parsing authentication information"))?;
-
-    Ok((path_segments, queries, auth))
-}
-
-async fn publish_handler(mut request: CoapRequest<SocketAddr>, app: App) -> Option<CoapResponse> {
-    log::debug!("CoAP request: {:?}", request);
-
-    let mut path_segments: Vec<String> = Vec::new();
-    let mut queries: Option<&Vec<u8>> = None;
-    let mut auth: &Vec<u8> = &Vec::new();
-
-    // Obtain vec[channel,subject] via 'p', optional query string via 'q'
-    // and authorization information via 'a'
-    if let Ok((p, q, a)) = params(&request) {
-        path_segments = p;
-        queries = q;
-        auth = a;
-    } else if let Err(e) = params(&request) {
-        let ret = Err(CoapEndpointError(EndpointError::InvalidRequest {
-            details: e.to_string(),
-        }))
-        .respond_to(&mut request);
-        return ret;
-    }
-
-    log::debug!("Request - path: {path_segments:?}, queries: {queries:?}");
-
-    // Deserialize optional queries into PublishOptions
-    let options = queries
-        .and_then(|x| serde_urlencoded::from_bytes::<PublishOptions>(x).ok())
-        .unwrap_or_default();
-
-    match path_segments.len() {
-        // If only channel is present
-        1 => telemetry::publish_plain(
-            app.downstream,
-            app.authenticator,
-            app.commands,
-            path_segments[0].clone(),
-            options,
-            request.clone(),
-            auth,
-        )
-        .await
-        .respond_to(&mut request),
-
-        // If both channel and subject are present
-        2 => telemetry::publish_tail(
-            app.downstream,
-            app.authenticator,
-            app.commands,
-            (path_segments[0].clone(), path_segments[1].clone()),
-            queries
-                .map(|x| serde_urlencoded::from_bytes::<PublishOptions>(x))?
-                .map_err(anyhow::Error::from)
-                .ok()?,
-            request.clone(),
-            auth,
-        )
-        .await
-        .respond_to(&mut request),
-
-        // If number of path arguments don't meet requirements
-        _ => Err(CoapEndpointError(EndpointError::InvalidRequest {
-            details: "Invalid number of path arguments".to_string(),
-        }))
-        .respond_to(&mut request),
-    }
-}
-
-pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
-    let commands = Commands::new();
-    let addr = config
-        .bind_addr_coap
-        .unwrap_or_else(|| "[::]:5683".to_string());
-    let coap_server_commands = commands.clone();
-
-    let sender = DownstreamSender::new(
-        KafkaSink::from_config(
-            config.kafka_downstream_config,
-            config.check_kafka_topic_ready,
-        )?,
-        config.instance,
-        config.endpoint_pool,
-    )?;
-
-    let app = App {
-        downstream: sender,
-        authenticator: DeviceAuthenticator(
-            drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth).await?,
-        ),
-        commands: coap_server_commands,
-    };
-
-    let command_source = KafkaCommandSource::new(
-        commands,
-        config.kafka_command_config,
-        config.command_source_kafka,
-    )?;
-
-    let server = UdpSocket::bind(&addr).await?;
-    log::info!("Server up on {}", addr);
-    startup.spawn(async move {
-        let mut buf = [0; 2048];
-        loop {
-            match server.recv_from(&mut buf).await {
-                Ok((size, src)) => match Packet::from_bytes(&buf[..size]) {
-                    Ok(packet) => {
-                        let request = CoapRequest::from_packet(packet, src);
-                        let response = publish_handler(request, app.clone()).await;
-                        if let Some(response) = response {
-                            log::debug!("Returning response: {:?}", response);
-                            match response.message.to_bytes() {
-                                Ok(packet) => match server.send_to(&packet[..], &src).await {
-                                    Ok(_) => log::trace!("Response sent"),
-                                    Err(e) => log::warn!("Error sending response: {:?}", e),
-                                },
-                                Err(e) => {
-                                    log::warn!("Error encoding response packet: {:?}", e);
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        log::warn!("Error decoding request packet: {:?}", e);
-                    }
-                },
-                Err(e) => {
-                    log::warn!("Error receiving data on socket: {:?}", e);
-                }
-            }
-        }
-    });
-    startup.check(command_source);
-
-    Ok(())
 }
 
 #[cfg(test)]

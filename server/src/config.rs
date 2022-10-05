@@ -170,7 +170,11 @@ impl ServerConfig {
             },
             coap: Endpoint {
                 host: iface.to_string(),
-                port: 5683,
+                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
+                    5684
+                } else {
+                    5683
+                },
             },
             mqtt_integration: Endpoint {
                 host: iface.to_string(),

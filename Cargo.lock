@@ -1622,6 +1622,8 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
+ "tokio-openssl",
+ "tokio-util 0.7.3",
  "url",
 ]
 
@@ -5384,8 +5386,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stderrlog"
-version = "0.5.2-alpha.0"
-source = "git+https://github.com/cardoe/stderrlog-rs?rev=d865acce1ac1eeac66cb20601f25f66b905092c7#d865acce1ac1eeac66cb20601f25f66b905092c7"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af95cb8a5f79db5b2af2a46f44da7594b5adbcbb65cbf87b8da0959bfdd82460"
 dependencies = [
  "atty",
  "chrono",
