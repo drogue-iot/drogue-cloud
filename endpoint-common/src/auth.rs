@@ -144,12 +144,13 @@ impl DeviceAuthenticator {
         application: Option<T>,
         device: Option<D>,
         auth: Option<&HeaderValue>,
+        certs: Option<ClientCertificateChain>,
     ) -> AuthResult<AuthenticationResponse>
     where
         T: AsRef<str> + Debug,
         D: AsRef<str> + Debug,
     {
-        match (application, device, auth.map(AuthValue::from)) {
+        match (application, device, auth.map(AuthValue::from), certs) {
             // POST /<channel> -> basic auth `<device>@<tenant>` / `<password>` -> Password(<password>)
             (
                 None,
@@ -158,12 +159,13 @@ impl DeviceAuthenticator {
                     username: Username::Scoped { scope, device },
                     password,
                 }),
+                None,
             ) => {
                 self.authenticate(&scope, &device, Credential::Password(password), None)
                     .await
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
-            (Some(scope), None, Some(AuthValue::Basic { username, password })) => {
+            (Some(scope), None, Some(AuthValue::Basic { username, password }), None) => {
                 self.authenticate(
                     scope.as_ref(),
                     username.into_string(),
@@ -173,7 +175,7 @@ impl DeviceAuthenticator {
                 .await
             }
             // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
-            (Some(scope), Some(device), Some(AuthValue::Basic { username, password })) => {
+            (Some(scope), Some(device), Some(AuthValue::Basic { username, password }), None) => {
                 self.authenticate(
                     scope.as_ref(),
                     device.as_ref(),
@@ -197,6 +199,7 @@ impl DeviceAuthenticator {
                         },
                     password,
                 }),
+                None,
             ) => {
                 self.authenticate(
                     &scope,
@@ -206,7 +209,7 @@ impl DeviceAuthenticator {
                 )
                 .await
             }
-
+            (None, None, None, Some(certs)) => self.authenticate_cert(certs.0).await,
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
         }

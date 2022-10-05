@@ -290,6 +290,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
     };
     */
     let http_prefix = if tls { "https" } else { "http" };
+    let coap_prefix = if tls { "coaps" } else { "coap" };
     let mqtt_prefix = if tls { "mqtts" } else { "mqtt" };
     let ws_prefix = if tls { "wss" } else { "ws" };
 
@@ -831,6 +832,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             tls,
             mqtt_prefix,
             http_prefix,
+            coap_prefix,
             ws_prefix,
             frontend,
         },
@@ -845,6 +847,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
 pub struct Context<'c> {
     pub mqtt_prefix: &'c str,
     pub http_prefix: &'c str,
+    pub coap_prefix: &'c str,
     pub ws_prefix: &'c str,
     pub tls: bool,
     pub frontend: bool,
@@ -881,8 +884,8 @@ async fn run(ctx: Context<'_>, server: ServerConfig, mut main: Main<'_>) -> anyh
         ctx.mqtt_prefix, server.mqtt.host, server.mqtt.port
     );
     println!(
-        "\tCoAP:\t\t coap://{}:{}",
-        server.coap.host, server.coap.port
+        "\tCoAP:\t\t {}://{}:{}",
+        ctx.coap_prefix, server.coap.host, server.coap.port
     );
     println!();
     println!("Integrations:");
@@ -935,6 +938,15 @@ async fn run(ctx: Context<'_>, server: ServerConfig, mut main: Main<'_>) -> anyh
              host = server.mqtt.host,
              port = server.mqtt.port,
              tls = if ctx.tls { "-s" } else { "" },
+    );
+    println!();
+
+    println!("Publishing data to the CoAP endpoint:");
+    println!("\techo -n 1000 | coap-client -m post -O 4209,\"Basic ZGV2aWNlMUBleGFtcGxlLWFwcDpoZXktcm9kbmV5\" {tls} {scheme}://{host}:{port}/v1/foo -f -",
+             scheme = if ctx.tls { "coaps" } else {"coap"},
+             host = server.coap.host,
+             port = server.coap.port,
+             tls = if ctx.tls { "-n" } else { "" },
     );
     println!();
 
