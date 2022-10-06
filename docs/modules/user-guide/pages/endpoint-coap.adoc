@@ -1,81 +1,74 @@
 = CoAP protocol endpoint
 
-The CoAP protocol endpoint is a device facing service offering connectivity using a CoAP based API.
+The CoAP protocol endpoint is a device facing service offering connectivity using a CoAP based API. The CoAP endpoint supports
+encrypted sessions using DTLS.
 
-NOTE: Currently, the endpoint does not support DTLS. It is not recommended to use this in production or
-to transfer any sensitive data over public networks.
+== What is CoAP?
 
-== *Requests:*
-Before communicating with the endpoint, the respective device and application need to be registered with drogue cloud.
-The coap requests made to the endpoint need to be of the following format:
+CoAP (Constrained Application Protocol) is a specialized Internet application protocol for constrained devices. The protocol resembles HTTP, but with a smaller footprint, and typically uses UDP instead of TCP as the transport protocol. Encryption is supported when using DTLS.
+
+== Connecting
+
+Before communicating with the endpoint, the respective device and application need to be registered with Drogue Cloud.
+
+An example CoAP URI for Drogue Cloud looks like this:
 
 [source]
 ----
-coap://<coap-endpoint-address>/v1/{channel}/{subject(optional)}
+coap[s]://<coap-endpoint-address>/v1/{channel}
 ----
-The UriPath option should be set with v1, channel name and subject name(optional).
 
-Optional parameters can also be passed, but they need to be URL encoded. The rules for encoding the 
-device and application name can be viewed https://github.com/drogue-iot/rfcs/blob/main/active/0003-cloud-events-mapping.md#common-fields[over here].
+NOTE: The scheme `coaps://` is used for encrypted DTLS sessions.
 
-The following parameters can be passed as queries:
+The `/v1/\{channel\}` path suffix is required when used with Drogue Cloud. The `channel` parameter determines the `subject` in the Cloud Event that gets forwarded to applications.
 
-• application: The specific application ID that the device is sending telemetry to
-• device: The device ID
-• data_schema: Data schema of the payload
-• as: Allows the device to alias another ID
-• ct: The amount of time the device will wait for incoming commands
+Optional parameters can also be passed, but they need to be URL encoded. The rules for encoding the
+Drogue IoT specific parameters can be viewed https://github.com/drogue-iot/rfcs/blob/main/active/0003-cloud-events-mapping.md#common-fields[here].
 
-NOTE: For a device to receive commands, it must send a request with a specified timeout. 
+The following optional parameters can be passed:
+
+* `application`: Application that device belongs to
+* `device`: The device ID
+* `data_schema`: Data schema of the payload
+* `as`: Allows the device to alias another ID, typically used by gateways.
+* `ct`: The amount of time the device will wait for incoming commands
++
+NOTE: For a device to receive commands, it must set the `ct` parameter with a specified timeout.
+
 The command will piggyback on the response—the responsibility to track when the device issues a request and promptly issue the command lies on the application.
 
-Authentication information is sent using the `CoAP option number 4209`. It is carried out using HTTP-like
-authentication headers. For example:
 
-[source]
-----
-Basic ZGV2aWNlMUBhcHAxOmhleS1yb2RuZXk
-----
-Here, we use the HTTP Basic authentication scheme, along with the base64 encoded device authentication information.
-The format of the device authentication information is `<device-id>@<application-id>:<password>`.
+== Authentication
 
-A sample CoAP request would look something like the following:
+A device can authenticate itself using one of the following approaches:
 
-• The Request URL would be formatted like so, with the device name 'device#2' and 'device#4' percentage encoded:
+* Client certificate authentication - Only supported when using DTLS
+* Setting `CoAP option number 4209`. It is carried out using a base64 string similar to HTTP basic authentication. We strongly support using DTLS to ensure the password stays encrypted.
 
-[source]
-----
-coap://test-url/v1/sample_channel/sample_subject?application=app1&device=device%232&data_schema=application%2Foctet-stream&as=device%232&ct=30
-----
+== Responses
 
-• The value of Option 4209, representing auth information "device1@app1:hey-rodney":
+There are two response types that a device can receive.
 
-[source]
-----
-Basic ZGV2aWNlMUBhcHAxOmhleS1yb2RuZXk // present as bytes
-----
-
-• Value of the UriPath Option(obtained from request URL):
-
-[source]
-----
-v1, Rust, test // present as bytes
-----
-
-• Value of the UriQuery Option(obtained from request URL):
-
-[source]
-----
-// present as bytes
-application=app1&device=device%232&data_schema=application%2Foctet-stream&as=device%234&ct=30
-----
-
-== *Response:*
-
-There are two response types that a device can receive. 
-
-A device would receive a response with the `2.04(Changed)` status code if the publish action were successful. 
+A device would receive a response with the `2.04(Changed)` status code if the publish action were successful.
 
 If the request passed the `ct`(command timeout) parameter and a command is sent to the device within this interval, the device will receive the `2.05(Content)` response code. The contents of the command can then be read from the `CoAP option 4210`.
 
 If a request fails, the device can receive responses with appropriate status codes. The payload in such cases will contain the reason for the error as well.
+
+== Examples
+
+An example CoAP URI:
+
+[source]
+----
+coaps://sandbox.drogue.cloud:5674/v1/<channel>?application=example-app&device=device1&data_schema=application%2Foctet-stream&as=device%232&ct=30
+----
+
+NOTE: The Request URL must be URL-encoded.
+
+Using the `coap-client` tool authenticating with CoAP option number 4209, representing auth information "device1@example-app:hey-rodney":
+
+[source]
+----
+coap-client -m post coaps://sandbox.drogue.cloud:5684/v1/foo -O 4209,"Basic ZGV2aWNlMUBleGFtcGxlLWFwcDpoZXktcm9kbmV5"
+----
