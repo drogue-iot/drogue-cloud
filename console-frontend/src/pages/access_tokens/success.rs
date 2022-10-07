@@ -35,11 +35,11 @@ impl Component for AccessTokenCreatedSuccessModal {
         html!(
             <Bullseye plain=true>
                 <Modal
-                    title="Access token successfully created"
+                    title="Success!"
                     variant={ModalVariant::Medium}
                     footer={html!(
                         <Button
-                            variant={Variant::Warning}
+                            variant={Variant::Primary}
                             r#type="submit"
                             onclick={ctx.link().callback(|_|Msg::Close)}
                         >
@@ -48,7 +48,8 @@ impl Component for AccessTokenCreatedSuccessModal {
                     )}
                 >
                     <FlexItem>
-                    <p>{" The access token value is:"}</p>
+                    <p>{"The access token was successfully created. Here is the secret value:"}</p>
+                        <br/>
                         <p>
                         <Clipboard
                             value={ctx.props().token_secret.clone()}
@@ -56,8 +57,14 @@ impl Component for AccessTokenCreatedSuccessModal {
                             name="access-token"
                             />
                         </p>
-                        <p>{"Once you close this alert, you won't have any chance to get the access token ever again."}</p>
-                         <p>{"Be sure to copy it somewhere safe."}</p>
+                        <br/>
+                        <Alert
+                            inline=true
+                            title="You won't be able to see this secret again!" r#type={Type::Warning}
+                        >
+                            {"Once you close this alert, you won't have any chance to get the access token again as we don't store it."}
+                            <p>{"Please make sure to copy it somewhere safe!"}</p>
+                        </Alert>
                     </FlexItem>
                 </Modal>
             </Bullseye>
