@@ -2,7 +2,7 @@
 
 set -e
 
-: "${NGINX_VERSION:=1.1.0}"
+: "${NGINX_VERSION:=1.4.0}"
 
 echo "Installing NGINX Ingress Controller: ${NGINX_VERSION}"
 progress "📦 Deploying pre-requisites (NGINX Ingress Controller v${NGINX_VERSION}) ... "
