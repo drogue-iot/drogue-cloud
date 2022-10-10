@@ -147,7 +147,7 @@ impl Service {
                 .kafka_target(KafkaEventType::Events, kafka_config)
                 .map_err(|_| ServiceError::InternalError("This should be infallible".into()))?
                 .into(),
-            consumer_group: group_id,
+            consumer_group: group_id.map(|group_id| format!("{application}.{group_id}")),
         })
         .map_err(|err| {
             log::info!("Failed to subscribe to Kafka topic: {}", err);

@@ -190,7 +190,7 @@ impl Session {
                 .kafka_target(KafkaEventType::Events, &self.config.kafka)
                 .map(|target| target.into())
                 .map_err(|_| v5::codec::SubscribeAckReason::UnspecifiedError)?,
-            consumer_group: group_id.map(|s| s.to_string()),
+            consumer_group: group_id.map(|s| format!("{app}.{s}")),
         };
         let event_stream = EventStream::<CustomAck>::new(stream_config).map_err(|err| {
             log::info!("Failed to subscribe to Kafka topic: {}", err);
