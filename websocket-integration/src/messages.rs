@@ -1,4 +1,5 @@
 use actix::prelude::{Message, Recipient};
+use cloudevents::Event;
 use drogue_client::integration::ws::v1::client;
 use drogue_cloud_integration_common::stream::EventStream;
 use drogue_cloud_service_common::error::ServiceError;
@@ -7,7 +8,7 @@ use uuid::Uuid;
 // Service sends the kafka events in this message to WSHandler
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct WsEvent(pub String);
+pub struct WsEvent(pub Event);
 
 // WsHandler sends this to service to subscribe to the stream
 #[derive(Message)]

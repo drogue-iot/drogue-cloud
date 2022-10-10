@@ -9,6 +9,7 @@ use actix::{
 };
 use actix_web_actors::ws::{self, CloseReason};
 use chrono::{DateTime, TimeZone, Utc};
+use cloudevents::AttributesReader;
 use drogue_client::{
     integration::ws::v1::client,
     user::{self, v1::authz},
@@ -83,6 +84,8 @@ pub struct WsHandler {
     application: String,
     /// the optional consumer group
     group_id: Option<String>,
+    /// the optional channel filter
+    channel: Option<String>,
     /// to exit the actor if the client was disconnected
     heartbeat: Instant,
     service_addr: Addr<Service>,
@@ -97,6 +100,7 @@ impl WsHandler {
     pub fn new(
         application: String,
         group_id: Option<String>,
+        channel: Option<String>,
         service_addr: Addr<Service>,
         auth_expiration: Option<DateTime<Utc>>,
         authenticator: Option<openid::Authenticator>,
@@ -116,6 +120,7 @@ impl WsHandler {
         WsHandler {
             application,
             group_id,
+            channel,
             heartbeat: Instant::now(),
             service_addr,
             id: Uuid::new_v4(),
@@ -274,7 +279,17 @@ impl Handler<WsEvent> for WsHandler {
     type Result = ();
 
     fn handle(&mut self, msg: WsEvent, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
+        if let Some(channel) = &self.channel {
+            if msg.0.subject() != Some(channel.as_str()) {
+                return;
+            }
+        }
+
+        // Convert the event to a JSON string
+        match serde_json::to_string(&msg.0) {
+            Ok(evt) => ctx.text(evt),
+            Err(e) => log::warn!("Could not deserialize event : {e}"),
+        }
     }
 }
 

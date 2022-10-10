@@ -2653,6 +2653,7 @@ dependencies = [
  "actix-web-actors",
  "anyhow",
  "chrono",
+ "cloudevents-sdk",
  "dotenv",
  "drogue-client",
  "drogue-cloud-integration-common",

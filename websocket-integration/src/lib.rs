@@ -97,6 +97,10 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                     authenticator.clone(),
                     user_auth.clone().map(pat::Authenticator::new),
                 )))
+                .service(
+                    web::resource("/{channel}")
+                        .route(web::get().to(route::start_connection_with_channel_filter)),
+                )
                 .service(web::resource("").route(web::get().to(route::start_connection))),
         );
     })
