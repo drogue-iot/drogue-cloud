@@ -11,6 +11,7 @@ use http::{header::HeaderName, HeaderMap, HeaderValue, Method};
 use lru::LruCache;
 use reqwest::{Certificate, Url};
 use serde::Deserialize;
+use std::num::NonZeroUsize;
 use std::{sync::Arc, time::Duration};
 use thiserror::Error;
 use tokio::sync::Mutex;
@@ -29,12 +30,16 @@ pub enum ExternalError {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ExternalClientPoolConfig {
-    pub capacity: usize,
+    pub capacity: NonZeroUsize,
 }
+
+const DEFAULT_CAPACITY: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(8) };
 
 impl Default for ExternalClientPoolConfig {
     fn default() -> Self {
-        Self { capacity: 8 }
+        Self {
+            capacity: DEFAULT_CAPACITY,
+        }
     }
 }
 

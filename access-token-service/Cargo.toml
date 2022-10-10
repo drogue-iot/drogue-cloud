@@ -10,7 +10,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-base62 = "1"
+base62 = "2"
 chrono = "0.4"
 config = "0.13"
 crc = "1"
@@ -37,7 +37,7 @@ drogue-cloud-service-common = { path = "../service-common", features = ["rustls"
 [dev-dependencies]
 actix-rt = "2"
 actix-service = "2"
-serial_test = "0.6"
+serial_test = "0.9"
 testcontainers = "0.12"
 
 drogue-cloud-test-common = { path = "../test-common" }

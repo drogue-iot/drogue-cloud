@@ -40,7 +40,7 @@ metadata:
 spec:
   containers:
     - name: keycloak
-      image: quay.io/keycloak/keycloak:18.0.2
+      image: quay.io/keycloak/keycloak:19.0
       args:
         - start-dev
       env:

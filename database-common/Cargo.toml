@@ -9,7 +9,7 @@ license = "Apache-2.0"
 anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
-drogue-bazaar = "0.2"
+drogue-bazaar = "0.3"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 drogue-client = "0.11.0-alpha.1"
 futures = "0.3"
@@ -32,7 +32,7 @@ native-tls = ["drogue-bazaar/native-tls"]
 [dev-dependencies]
 criterion = { version = "0.3" } # , features = ["real_blackbox"]
 env_logger = "0.9"
-serial_test = "0.6"
+serial_test = "0.9"
 tokio = { version = "1", features = ["full"] }
 
 drogue-cloud-test-common = { path = "../test-common" }

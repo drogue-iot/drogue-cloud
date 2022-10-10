@@ -15,7 +15,7 @@ pub async fn openid_validator<F>(
     req: ServiceRequest,
     auth: BearerAuth,
     extract: F,
-) -> Result<ServiceRequest, actix_web::Error>
+) -> Result<ServiceRequest, (actix_web::Error, ServiceRequest)>
 where
     F: Fn(&ServiceRequest) -> Option<&Authenticator>,
 {
@@ -23,10 +23,13 @@ where
 
     let authenticator = extract(&req);
     log::debug!("Authenticator: {:?}", authenticator);
-    let authenticator = authenticator.ok_or_else(|| {
+    let authenticator = match authenticator.ok_or_else(|| {
         log::warn!("OAuth authentication is enabled, but we are missing the authenticator");
         ServiceError::InternalError("Missing authenticator instance".into())
-    })?;
+    }) {
+        Ok(authenticator) => authenticator,
+        Err(err) => return Err((err.into(), req)),
+    };
 
     match authenticator.validate_token(token).await {
         Ok(payload) => {
@@ -34,17 +37,18 @@ where
                 .insert(UserInformation::Authenticated(payload.into()));
             Ok(req)
         }
-        Err(AuthenticatorError::Missing) => {
-            Err(ServiceError::InternalError("Missing OpenID client".into()).into())
-        }
-        Err(AuthenticatorError::Failed) => Err(ServiceError::AuthenticationError.into()),
+        Err(AuthenticatorError::Missing) => Err((
+            ServiceError::InternalError("Missing OpenID client".into()).into(),
+            req,
+        )),
+        Err(AuthenticatorError::Failed) => Err((ServiceError::AuthenticationError.into(), req)),
     }
 }
 
 #[macro_export]
 macro_rules! openid_auth {
     ($req:ident -> $($extract:tt)* ) => {
-	actix_web::middleware::Compat::new(drogue_cloud_service_api::webapp::HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*)))
+	drogue_cloud_service_api::webapp::HttpAuthentication::bearer(|req, auth| $crate::auth::openid_validator(req, auth, |$req| $($extract)*))
     };
 }
 

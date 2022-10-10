@@ -274,9 +274,9 @@ dependencies = [
 
 [[package]]
 name = "cloudevents-sdk"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f86076fd3d8c3c3449f29cc8f41d5831504870620077307c1dcbae9f7861fa0"
+checksum = "38c036aa864420e0e684386a979f1847e8e170d3bfa8375b0675132bc8ab46b4"
 dependencies = [
  "base64 0.12.3",
  "bitflags",
@@ -549,9 +549,8 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drogue-bazaar"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "577bc3f7be4e8a121c03984ff734a3adbf55ec145141069eca27d30468648afa"
+version = "0.3.0"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=e0695894f5292af86a38043aa8168cd273682ff8#e0695894f5292af86a38043aa8168cd273682ff8"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3421,9 +3420,9 @@ dependencies = [
 
 [[package]]
 name = "yew-oauth2"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f943d7cdb8b51d0b5a8359e0d3412fea78ec5aeb57e59a7656bd8051a881a56f"
+checksum = "968c97268249460307e9e12e106975789ce28fc7f1091163f91f546a89c8ce78"
 dependencies = [
  "async-trait",
  "gloo-storage",

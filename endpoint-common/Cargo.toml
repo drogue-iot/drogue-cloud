@@ -12,16 +12,14 @@ async-trait = "0.1"
 base64 = "0.13"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest", "rdkafka"] }
-config = "0.13"
 drogue-client = "0.11.0-alpha.1"
-env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
 http = "0.2"
 lazy_static = "1.4.0"
 log = "0.4"
-lru = "0.7"
+lru = "0.8"
 mime = "0.3"
 openid = "0.10"
 percent-encoding = "2"
@@ -31,12 +29,12 @@ rdkafka = { version = "0.28", features = ["ssl", "sasl"] }
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-snafu = "0.6"
+snafu = "0.7"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
-x509-parser = "0.9"
+x509-parser = "0.14"
 
 ntex = { version = "0.5", optional = true }
 tokio-openssl = { version = "0.6", optional = true }
@@ -45,6 +43,9 @@ tokio-rustls = { version = "0.23", optional = true }
 drogue-cloud-service-api = { path = "../service-api", features = ["rdkafka"] }
 drogue-cloud-service-common = { path = "../service-common" }
 drogue-cloud-event-common = { path = "../event-common" }
+
+[dev-dependencies]
+env_logger = "0.9"
 
 [dependencies.open-ssl]
 version = "0.10"

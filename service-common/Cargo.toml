@@ -14,15 +14,14 @@ chrono = "0.4"
 cloudevents-sdk = { version = "0.5", features = ["reqwest"] }
 config = "0.13"
 drogue-client = "0.11.0-alpha.1"
-drogue-bazaar = { version = "0.2", features = ["native-tls"] }
-env_logger = "0.9"
+drogue-bazaar = { version = "0.3", features = ["native-tls"] }
 futures = "0.3"
 http = "0.2"
 humantime = "2"
 humantime-serde = "1"
-k8s-openapi = { version = "0.14.0", features = ["v1_19"] }
-keycloak = { version = "18" }
-kube = { version = "0.68" }
+k8s-openapi = { version = "0.16", features = ["v1_19"] }
+keycloak = { version = "19" }
+kube = { version = "0.75" }
 lazy_static = "1"
 log = "0.4"
 ntex = { version = "0.5", features = ["tokio"] }
@@ -53,6 +52,7 @@ drogue-cloud-service-api = { path = "../service-api" }
 [dev-dependencies]
 actix-rt = "2.7"
 tokio = { version = "1", features = ["full"] }
+env_logger = "0.9"
 
 [features]
 default = ["rustls", "native-tls", "actix", "openssl"]

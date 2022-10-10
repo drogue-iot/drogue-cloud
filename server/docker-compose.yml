@@ -23,7 +23,7 @@ services:
       - KRAFT_CONTAINER_HOST_NAME=localhost
 
   keycloak:
-    image: quay.io/keycloak/keycloak:18.0.2
+    image: quay.io/keycloak/keycloak:19.0
     command: start-dev
     environment:
       - KEYCLOAK_ADMIN=admin

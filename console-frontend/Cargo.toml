@@ -13,7 +13,7 @@ base64 = "0.13"
 bstr = "1"
 chrono = { version = "0.4", features = ["wasmbind"] }
 chrono-tz = "0.6"
-cloudevents-sdk = "0.4"
+cloudevents-sdk = "0.5"
 futures-util = "0.3"
 gloo-storage = "0.2"
 gloo-timers = "0.2"
@@ -43,7 +43,7 @@ uuid = { version = "1", features = ["v4", "js"] }
 wasm-logger = "0.2"
 yew = "0.19"
 yew-agent = "0.1"
-yew-oauth2 = { version = "0.3.0", features = ["openid", "router"] }
+yew-oauth2 = { version = "0.4", features = ["openid", "router"] }
 yew-router = { version = "0.16.1", package = "yew-router-nested" }
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
@@ -98,7 +98,7 @@ lto = true
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "55135e532e4ddfdf88dfa50df73b751063740c71" } # FIXME: awaiting release
 #drogue-client = { path = "../../drogue-client" }
 
-#drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "1a769df7ec04d0b07a7da78f0d91789541bca51b" } # FIXME: awaiting release 0.2.0
+drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "e0695894f5292af86a38043aa8168cd273682ff8" } # FIXME: awaiting release 0.3.0
 #drogue-bazaar = { path = "../../drogue-bazaar" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release

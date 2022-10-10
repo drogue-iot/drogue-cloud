@@ -12,8 +12,8 @@ chrono = "0.4"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 drogue-client = "0.11.0-alpha.1"
 futures = "0.3"
-kube = { version = "0.68", optional = true }
-kube-runtime = { version = "0.68", optional = true }
+kube = { version = "0.75", optional = true }
+kube-runtime = { version = "0.75", optional = true }
 log = "0.4"
 reqwest = { version = "0.11" }
 serde = { version = "1" }
@@ -38,4 +38,4 @@ env_logger = "0.9"
 actix-rt = "2"
 actix-service = "2"
 testcontainers = "0.12"
-serial_test = "0.6"
+serial_test = "0.9"

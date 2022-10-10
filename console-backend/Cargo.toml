@@ -12,15 +12,13 @@ actix-web = "4"
 anyhow = "1"
 async-trait = "0.1"
 biscuit = "0.5"
-cached = "0.25"
+cached = "0.39"
 chrono = { version = "0.4", features = ["serde"] }
 cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
-dotenv = "0.15"
 drogue-client = "0.11.0-alpha.1"
-env_logger = "0.9"
 futures = "0.3"
-k8s-openapi = { version = "0.14.0", features = ["v1_19"] }
-kube = "0.68"
+k8s-openapi = { version = "0.16", features = ["v1_19"] }
+kube = "0.75"
 log = "0.4"
 mime = "0.3"
 openid = "0.10"

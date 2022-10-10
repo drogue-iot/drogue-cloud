@@ -9,7 +9,7 @@ fn namespace_from_env() -> Option<String> {
 
 /// Try getting the namespace from the cluster configuration
 fn namespace_from_cluster() -> Option<String> {
-    kube::Config::from_cluster_env()
+    kube::Config::incluster_env()
         .ok()
         .map(|cfg| cfg.default_namespace)
 }

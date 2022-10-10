@@ -11,11 +11,8 @@ anyhow = "1"
 async-trait = "0.1"
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
-config = "0.13"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
-dotenv = "0.15"
 drogue-client = "0.11.0-alpha.1"
-env_logger = "0.9"
 futures = "0.3"
 http = "0.2"
 humantime-serde = "1"
@@ -34,7 +31,7 @@ tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] 
 tracing = "0.1"
 url = "2"
 uuid = "1"
-x509-parser = "0.9"
+x509-parser = "0.14"
 
 drogue-cloud-admin-service = { path = "../admin-service" }
 drogue-cloud-database-common = { path = "../database-common" }
@@ -53,7 +50,7 @@ env_logger = "0.9"
 form_urlencoded = "1"
 maplit = "1"
 openid = "0.10"
-serial_test = "0.6"
+serial_test = "0.9"
 testcontainers = "0.12"
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
