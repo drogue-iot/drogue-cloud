@@ -168,7 +168,9 @@ impl<'a> Reconciler for ApplicationReconciler<'a> {
             Ok(_) => {
                 log::info!("Topic {} deleted", topic_name);
             }
-            Err(KafkaError::AdminOp(RDKafkaErrorCode::UnknownTopic)) => {
+            Err(KafkaError::AdminOp(
+                RDKafkaErrorCode::UnknownTopic | RDKafkaErrorCode::UnknownTopicOrPartition,
+            )) => {
                 log::info!("Topic {} was already deleted", topic_name);
             }
             Err(KafkaError::AdminOp(RDKafkaErrorCode::BrokerTransportFailure)) => {
