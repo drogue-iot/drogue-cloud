@@ -1,7 +1,15 @@
 = WebSocket integration
 
-The WebSocket integration allows consuming device events using a simple WebSockets based protocol.Events are
-encoded as CloudEvents.
+The WebSocket integration allows consuming device events using a simple WebSockets based protocol.
+Events are encoded as CloudEvents.
+
+The application you want to consume must be passed as a path parameter.
+As an example, here is the url to connect to if you want to stream events for the application `example-app` :
+
+[source]
+----
+wss://ws-integration.sandbox.drogue.cloud/example-app
+----
 
 == Authentication
 
@@ -27,16 +35,27 @@ The bearer token must be passed with a key named `RefreshAccessToken`.
 
 
 Here is an example:
-```json
+[json]
+----
 {
    "RefreshAccessToken":"eyJhbGciO[...]sRqg7xt_jzb_tg"
 }
-```
+----
+
+== Channel filter
+
+You can set an additional path segment after the application ID to select a specific channel you want to consume the events from.
+
+For example, if you want to consume events only from the `sensor` channel you would connect to :
+[source]
+----
+wss://ws-integration.sandbox.drogue.cloud/example-app/sensor
+----
 
 == Consumer Group ID
 
 You can set the consumer group ID by providing a query parameter named `group_id`. This will set the Kafka consumer
-group ID to the provided value, which allows to share the load between different consumers.
+group ID to the provided value, allowing to share the load between different consumers.
 
 If no consumer group id is provided, a temporary one will be provided.
 

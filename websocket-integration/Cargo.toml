@@ -11,6 +11,7 @@ actix = "0.13.0"
 actix-web-actors = "4"
 anyhow = "1"
 chrono = "0.4"
+cloudevents-sdk = { version = "0.5"}
 dotenv = "0.15"
 drogue-client = "0.11.0-alpha.1"
 env_logger = "0.9"

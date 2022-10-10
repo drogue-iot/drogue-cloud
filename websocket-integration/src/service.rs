@@ -170,10 +170,8 @@ impl Service {
         while let Some(event) = stream.next().await {
             log::debug!("Topic: {} - Event: {:?}", application, event);
 
-            // Convert the event to a JSON string
-            let event = serde_json::to_string(&event?)?;
             // Send the event as an Actor message
-            recipient.send(WsEvent(event.to_string())).await?;
+            recipient.send(WsEvent(event?)).await?;
 
             log::debug!("Sent message - go back to sleep");
         }
