@@ -112,7 +112,7 @@ impl Handler<StreamError> for Service {
                 );
                 ctx.cancel_future(s.runner);
 
-                let _ = s.err_addr.do_send(msg);
+                s.err_addr.do_send(msg);
             }
             None => {
                 log::warn!("Stream Error, but no client registered with it.")
