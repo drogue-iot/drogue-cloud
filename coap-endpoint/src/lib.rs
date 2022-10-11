@@ -5,15 +5,12 @@ mod error;
 mod response;
 mod session;
 mod telemetry;
-mod udp;
 
-use crate::session::{Session, SessionSink, SessionStream};
-use crate::udp::UdpStream;
+use crate::session::Session;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
-use bytes::Bytes;
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
+use tokio_dtls_stream_sink::Server as DtlsServer;
 
-use core::pin::Pin;
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -26,22 +23,15 @@ use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     defaults,
 };
-use futures::StreamExt;
-use std::collections::{hash_map::Entry, HashMap};
 
-use drogue_cloud_endpoint_common::x509::{ClientCertificateChain, ClientCertificateRetriever};
-use openssl::ssl::{Ssl, SslContext, SslFiletype, SslMethod, SslVerifyMode};
+use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
+use openssl::ssl::{SslContext, SslFiletype, SslMethod, SslVerifyMode};
 use serde::Deserialize;
-use std::sync::Arc;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
 
 use tokio::net::UdpSocket;
-use tokio::select;
-use tokio::sync::mpsc;
 use tokio::time::{Duration, Instant};
-use tokio_openssl::SslStream;
-use tokio_util::codec::{BytesCodec, Decoder};
 
 // RFC0007 - Drogue IoT extension attributes to CoAP Option Numbers
 //
@@ -151,108 +141,33 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         });
          */
         ctx.check_private_key()?;
-        Some(Arc::new(ctx.build()))
+        Some(ctx.build())
     } else {
         None
     };
 
     log::info!("CoAP server up on {}", addr);
     startup.spawn(async move {
-        let mut buf = [0; 2048];
-        let mut sessions: HashMap<SocketAddr, mpsc::Sender<Bytes>> = HashMap::new();
-        let (closed_out, mut closed_in) = mpsc::channel(10);
-        let (tx_out, mut rx_out) = mpsc::channel(10);
-
+        let mut server = DtlsServer::new(server);
         loop {
-            select! {
-                closed = closed_in.recv() => {
-                    if let Some(closed) = closed {
-                        log::trace!("Removed session for {}", closed);
-                        sessions.remove(&closed);
-                    }
+            match server.accept(dtls.as_ref()).await {
+                Ok(session) => {
+                    // TODO: Make expiry configurable?
+                    const EXPIRY: Duration = Duration::from_secs(60);
+                    let expired = Instant::now() + EXPIRY;
+                    let app = app.clone();
+                    tokio::spawn(async move {
+                        Session::new(expired, session, app).run().await;
+                    });
                 }
-                inbound = server.recv_from(&mut buf) => {
-                    match inbound {
-                        Ok((size, src)) => {
-                            let entry = match sessions.entry(src) {
-                                Entry::Occupied(o) => {
-                                    o.into_mut()
-                                }
-                                Entry::Vacant(v) => {
-                                    let (tx_in, rx_in) = mpsc::channel(10);
-                                    // TODO: Make expiry configurable?
-                                    const EXPIRY: Duration = Duration::from_secs(60);
-                                    let expired = Instant::now() + EXPIRY;
-                                    let tx_out = tx_out.clone();
-                                    let app = app.clone();
-                                    let dtls = dtls.clone();
-                                    let closed_out = closed_out.clone();
-                                    tokio::spawn(async move {
-                                        let r = start_session(src, tx_out, rx_in, dtls, app, expired).await;
-                                        let _ = closed_out.send(src).await;
-                                        r
-                                    });
-
-                                    v.insert(tx_in)
-                                }
-                            };
-
-                            if let Err(e) = entry.send(Bytes::copy_from_slice(&buf[..size])).await {
-                                log::warn!("Error pushing data to handler for {}: {:?}", src, e);
-                            }
-                        }
-                        Err(e) => {
-                            log::warn!("Error receiving data on socket: {:?}", e);
-                        }
-                    }
-                }
-                outbound = rx_out.recv() => {
-                    if let Some((dest, data)) = outbound {
-                        log::trace!("Got outbound data to {}", dest);
-                        match server.send_to(&data[..], &dest).await {
-                            Ok(_) => {
-                                log::trace!("Sent {} bytes to {}", data.len(), dest);
-                            }
-                            Err(e) => {
-                                log::warn!("Error sending {} bytes to {}: {:?}", data.len(), dest, e);
-                            }
-                        }
-                    }
+                Err(e) => {
+                    log::warn!("Error when accepting session: {:?}", e);
                 }
             }
         }
     });
     startup.check(command_source);
 
-    Ok(())
-}
-
-async fn start_session(
-    src: SocketAddr,
-    tx_out: mpsc::Sender<(SocketAddr, Bytes)>,
-    rx_in: mpsc::Receiver<Bytes>,
-    dtls: Option<Arc<SslContext>>,
-    app: App,
-    expired: Instant,
-) -> Result<(), anyhow::Error> {
-    let udp = UdpStream::new(src, tx_out, rx_in);
-    let (sink, stream, certs): (
-        Pin<Box<SessionSink>>,
-        Pin<Box<SessionStream>>,
-        Option<ClientCertificateChain>,
-    ) = if let Some(ref ctx) = dtls.as_ref() {
-        let mut dtls = Box::pin(SslStream::new(Ssl::new(&ctx)?, udp)?);
-        dtls.as_mut().accept().await?;
-        let certs = dtls.as_mut().client_certs();
-        let (sink, stream) = BytesCodec::new().framed(dtls).split();
-        (Box::pin(sink), Box::pin(stream), certs)
-    } else {
-        let (sink, stream) = BytesCodec::new().framed(udp).split();
-        (Box::pin(sink), Box::pin(stream), None)
-    };
-
-    let mut session = Session::new(src, expired, sink, stream, app, certs);
-    session.run().await;
     Ok(())
 }
 
