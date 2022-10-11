@@ -59,6 +59,35 @@ impl<T> ClientCertificateRetriever for tokio_openssl::SslStream<T> {
     }
 }
 
+#[cfg(feature = "openssl")]
+impl ClientCertificateRetriever for tokio_dtls_stream_sink::Session {
+    fn client_certs(&self) -> Option<ClientCertificateChain> {
+        log::debug!("Try extracting client cert: using tokio-dtls");
+        if let Some(ssl) = self.ssl() {
+            let chain = ssl.verified_chain();
+            // **NOTE:** This chain (despite the function name) is **NOT** verified.
+            // These are the client certificates, which will be passed on to the authentication service.
+            let chain = chain
+                .map(|chain| {
+                    log::debug!("Peer cert chain len: {}", chain.len());
+                    chain
+                        .into_iter()
+                        .map(|cert| cert.to_der())
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()
+                .unwrap_or_else(|err| {
+                    log::info!("Failed to retrieve client certificate: {}", err);
+                    None
+                });
+            log::debug!("Client certificates: {:?}", chain);
+            chain.map(ClientCertificateChain)
+        } else {
+            None
+        }
+    }
+}
+
 impl FromRequest for ClientCertificateChain {
     type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;

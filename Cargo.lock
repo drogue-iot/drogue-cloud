@@ -1749,6 +1749,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
+ "tokio-dtls-stream-sink",
  "tokio-openssl",
  "tokio-util",
  "url",
@@ -2055,6 +2056,7 @@ dependencies = [
  "snafu 0.7.2",
  "thiserror",
  "tokio",
+ "tokio-dtls-stream-sink",
  "tokio-openssl",
  "tokio-rustls",
  "tracing",
@@ -5840,6 +5842,21 @@ dependencies = [
  "socket2",
  "tokio-macros",
  "winapi",
+]
+
+[[package]]
+name = "tokio-dtls-stream-sink"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91b22c7c50bda21a68e11bd85d1ac3ee023b50e2e70edbc749272ea264e39580"
+dependencies = [
+ "bytes",
+ "futures",
+ "log",
+ "openssl",
+ "tokio",
+ "tokio-openssl",
+ "tokio-util",
 ]
 
 [[package]]
