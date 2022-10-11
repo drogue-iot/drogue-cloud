@@ -281,8 +281,8 @@ impl<'a> ApplicationReconciler<'a> {
     ) -> Result<String, ReconcileError> {
         // find a current password
 
-        let password = match gateway.section::<registry::v1::DeviceSpecCredentials>() {
-            Some(Ok(creds)) => creds.credentials.iter().find_map(|cred| match cred {
+        let password = match gateway.get_credentials() {
+            Some(creds) => creds.iter().find_map(|cred| match cred {
                 registry::v1::Credential::Password(pwd) => Some(pwd.clone()),
                 _ => None,
             }),
@@ -295,11 +295,9 @@ impl<'a> ApplicationReconciler<'a> {
             password
         } else {
             let password = utils::random_password();
-            gateway.set_section(registry::v1::DeviceSpecCredentials {
-                credentials: vec![registry::v1::Credential::Password(
-                    registry::v1::Password::Plain(password.clone()),
-                )],
-            })?;
+            gateway.add_credential(registry::v1::Credential::Password(
+                registry::v1::Password::Plain(password.clone()),
+            ))?;
             password
         };
 

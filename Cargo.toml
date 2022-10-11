@@ -45,10 +45,10 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "e0695894f5292af86a38043aa8168cd273682ff8" } # FIXME: awaiting release 0.3.0
-#drogue-bazaar = { path = "../drogue-bazaar" }
+#drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "e0695894f5292af86a38043aa8168cd273682ff8" } # FIXME: awaiting release 0.3.0
+drogue-bazaar = { path = "../drogue-bazaar" }
 
-#drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "55135e532e4ddfdf88dfa50df73b751063740c71" } # FIXME: awaiting release 0.11.0
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "3e0fdb91305803c51946f8a818e4f053ab88c2c3" } # FIXME: awaiting release 0.11.0
 #drogue-client = { path = "../drogue-client" }
 
 operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "8366506a3ed44b638f899dcce4a82ac32fcaff9e" } # FIXME: awaiting release 0.7.0

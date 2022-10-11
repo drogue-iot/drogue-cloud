@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
 use drogue_client::{
-    registry::{self, v1::Password},
+    registry::{self, v1::Password, v1::PreSharedKey},
     Dialect, Translator,
 };
 use drogue_cloud_database_common::{
@@ -15,6 +15,7 @@ use drogue_cloud_database_common::{
 use drogue_cloud_service_api::{
     auth::device::authn::{
         self, AuthenticationRequest, AuthorizeGatewayRequest, GatewayOutcome, Outcome,
+        PreSharedKeyRequest,
     },
     health::{HealthCheckError, HealthChecked},
     webapp as actix_web,
@@ -40,6 +41,12 @@ macro_rules! pass {
 #[async_trait]
 pub trait AuthenticationService: Clone {
     type Error: ResponseError;
+
+    // retrieve current pre-shared key for a device
+    async fn request_key(
+        &self,
+        request: PreSharedKeyRequest,
+    ) -> Result<Option<registry::v1::PreSharedKey>, Self::Error>;
 
     // authenticate a device
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error>;
@@ -150,6 +157,50 @@ impl PostgresAuthenticationService {
 #[async_trait]
 impl AuthenticationService for PostgresAuthenticationService {
     type Error = ServiceError;
+
+    #[instrument(skip(self), err)]
+    async fn request_key(
+        &self,
+        request: PreSharedKeyRequest,
+    ) -> Result<Option<PreSharedKey>, Self::Error> {
+        let c = self.pool.get().await?;
+
+        // lookup the application
+
+        let application = PostgresApplicationAccessor::new(&c);
+        let application = match application.lookup(&request.application).await? {
+            Some(application) => application.into(),
+            None => {
+                return Ok(None);
+            }
+        };
+
+        log::debug!("Found application: {:?}", application);
+
+        // validate application
+
+        if !validate_app(&application) {
+            return Ok(None);
+        }
+
+        // lookup the device
+
+        let accessor = PostgresDeviceAccessor::new(&c);
+        let device = match accessor
+            .lookup(&application.metadata.name, &request.device)
+            .await?
+        {
+            Some(device) => device.into(),
+            None => {
+                return Ok(None);
+            }
+        };
+
+        log::debug!("Found device: {:?}", device);
+
+        // find
+        Ok(locate_psk(&device))
+    }
 
     #[instrument(skip(self), err)]
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error> {
@@ -265,6 +316,9 @@ fn strip_credentials(mut device: registry::v1::Device) -> registry::v1::Device {
     // FIXME: we need to do a better job here, maybe add a "secrets" section instead
     device
         .spec
+        .remove(registry::v1::DeviceSpecAuthentication::key());
+    device
+        .spec
         .remove(registry::v1::DeviceSpecCredentials::key());
     device
 }
@@ -295,6 +349,38 @@ fn validate_app(app: &registry::v1::Application) -> bool {
     true
 }
 
+fn locate_psk(device: &registry::v1::Device) -> Option<PreSharedKey> {
+    if device.metadata.deletion_timestamp.is_some() {
+        log::debug!("Device is about to being deleted");
+        return None;
+    }
+
+    let now = Utc::now();
+
+    let credentials = match device.get_credentials() {
+        Some(creds) => creds,
+        None => {
+            log::debug!("Missing or invalid device credentials section");
+            return None;
+        }
+    };
+
+    // Select eligible candidate keys
+    let mut candidates: Vec<&PreSharedKey> = credentials
+        .iter()
+        .flat_map(|c| match c {
+            // match passwords
+            registry::v1::Credential::PreSharedKey(key) => Some(key),
+            _ => None,
+        })
+        .filter(|k| k.validity.as_ref().map(|v| v.is_valid(now)).unwrap_or(true))
+        .collect();
+
+    // Order candidates by earliest not_before, then latest not_after
+    candidates.sort();
+    candidates.first().map(|s| PreSharedKey::clone(s))
+}
+
 #[instrument(ret)]
 fn validate_credential(
     app: &registry::v1::Application,
@@ -307,9 +393,9 @@ fn validate_credential(
         return false;
     }
 
-    let credentials = match device.section::<registry::v1::DeviceSpecCredentials>() {
-        Some(Ok(credentials)) => credentials.credentials,
-        _ => {
+    let credentials = match device.get_credentials() {
+        Some(creds) => creds,
+        None => {
             log::debug!("Missing or invalid device credentials section");
             return false;
         }

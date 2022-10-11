@@ -3,6 +3,7 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command::Commands,
     error::{EndpointError, HttpEndpointError},
+    psk::Identity,
     sender::{self, DownstreamSender, PublishIdPair},
     x509::ClientCertificateChain,
 };
@@ -42,6 +43,7 @@ pub async fn publish_plain(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
+    verified_identity: Option<Identity>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     publish(
         sender,
@@ -53,6 +55,7 @@ pub async fn publish_plain(
         req,
         body,
         certs,
+        verified_identity,
     )
     .await
 }
@@ -67,6 +70,7 @@ pub async fn publish_tail(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
+    verified_identity: Option<Identity>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let (channel, suffix) = path.into_inner();
     publish(
@@ -79,6 +83,7 @@ pub async fn publish_tail(
         req,
         body,
         certs,
+        verified_identity,
     )
     .await
 }
@@ -95,6 +100,7 @@ pub async fn publish(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
+    verified_identity: Option<Identity>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
@@ -104,6 +110,7 @@ pub async fn publish(
             opts.common.device,
             req.headers().get(http::header::AUTHORIZATION),
             certs.map(|c| c.0),
+            verified_identity,
             opts.r#as.clone(),
         )
         .await

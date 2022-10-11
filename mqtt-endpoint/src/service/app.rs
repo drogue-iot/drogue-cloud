@@ -7,6 +7,7 @@ use drogue_client::{
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
+    psk::{Identity, PskIdentityRetriever},
     sender::DownstreamSender,
     x509::{ClientCertificateChain, ClientCertificateRetriever},
 };
@@ -39,6 +40,7 @@ impl App {
         password: Option<&[u8]>,
         client_id: &str,
         certs: Option<ClientCertificateChain>,
+        verified_identity: Option<Identity>,
     ) -> Result<AuthOutcome, EndpointError> {
         let password = password
             .map(|p| String::from_utf8(p.to_vec()))
@@ -50,7 +52,7 @@ impl App {
 
         Ok(self
             .authenticator
-            .authenticate_mqtt(username, password, &client_id, certs)
+            .authenticate_mqtt(username, password, &client_id, certs, verified_identity)
             .await
             .map_err(|err| {
                 log::debug!("Failed to call authentication service: {}", err);
@@ -164,6 +166,7 @@ impl Service<Session> for App {
         }
 
         let certs = connect.io().client_certs();
+        let verified_identity = connect.io().verified_identity();
         let (username, password) = connect.credentials();
 
         match self
@@ -172,6 +175,7 @@ impl Service<Session> for App {
                 password.map(|p| p.as_ref()),
                 connect.client_id().as_ref(),
                 certs,
+                verified_identity,
             )
             .await
         {

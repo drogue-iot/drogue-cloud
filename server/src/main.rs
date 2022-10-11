@@ -792,6 +792,8 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             endpoint_pool: Default::default(),
             disable_dtls: !(key_file.is_some() && cert_bundle_file.is_some()),
             disable_client_certificates: false,
+            disable_psk: false,
+            dtls_session_timeout: None,
             cert_bundle_file,
             key_file,
         };

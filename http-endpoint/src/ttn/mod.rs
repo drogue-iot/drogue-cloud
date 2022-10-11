@@ -70,6 +70,7 @@ async fn publish_uplink(
             opts.device,
             req.headers().get(http::header::AUTHORIZATION),
             cert.map(|c| c.0),
+            None,
             Some(device_id.clone()),
         )
         .await

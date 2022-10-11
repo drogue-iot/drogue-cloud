@@ -5,7 +5,7 @@ use crate::{
 use actix_web::{web, HttpResponse};
 use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
-    AuthorizeGatewayResponse,
+    AuthorizeGatewayResponse, PreSharedKeyRequest, PreSharedKeyResponse,
 };
 use drogue_cloud_service_api::webapp as actix_web;
 use tracing::instrument;
@@ -17,6 +17,19 @@ pub async fn authenticate(
 ) -> Result<HttpResponse, actix_web::Error> {
     let result = match data.service.authenticate(req.0).await {
         Ok(outcome) => Ok(HttpResponse::Ok().json(AuthenticationResponse { outcome })),
+        Err(e) => Err(e.into()),
+    };
+
+    result
+}
+
+#[instrument(skip(data))]
+pub async fn request_key(
+    req: web::Json<PreSharedKeyRequest>,
+    data: web::Data<WebData<service::PostgresAuthenticationService>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let result = match data.service.request_key(req.0).await {
+        Ok(valid_key) => Ok(HttpResponse::Ok().json(PreSharedKeyResponse { valid_key })),
         Err(e) => Err(e.into()),
     };
 

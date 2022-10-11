@@ -15,6 +15,13 @@ pub struct AuthenticationRequest {
     pub r#as: Option<String>,
 }
 
+/// Requesting pre-shared keys for a device.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PreSharedKeyRequest {
+    pub application: String,
+    pub device: String,
+}
+
 /// Credentials, as presented by a device.
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Credential {
@@ -97,6 +104,13 @@ impl AuthenticationResponse {
             outcome: Outcome::Fail,
         }
     }
+}
+
+/// The result of a key request
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PreSharedKeyResponse {
+    /// A trusted key, if available.
+    pub valid_key: Option<registry::v1::PreSharedKey>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

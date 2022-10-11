@@ -2,6 +2,7 @@ use super::publish_handler;
 use super::App;
 
 use coap_lite::{CoapRequest, Packet};
+use drogue_cloud_endpoint_common::psk::PskIdentityRetriever;
 use drogue_cloud_endpoint_common::x509::ClientCertificateRetriever;
 use tokio_dtls_stream_sink::Session as DtlsSession;
 
@@ -25,7 +26,7 @@ impl Session {
         let timeout = self.expiry - Instant::now();
         select! {
             _ = self.process() => {
-                log::trace!("Processing stopped, exiting");
+                log::trace!("Processing stopped, stopping");
             }
             _ = tokio::time::sleep(timeout) => {
                 log::trace!("Session expired, stopping");
@@ -42,14 +43,18 @@ impl Session {
                     Ok(packet) => {
                         let request: CoapRequest<SocketAddr> =
                             CoapRequest::from_packet(packet, self.peer.peer());
-                        let response =
-                            publish_handler(request, self.peer.client_certs(), self.app.clone())
-                                .await;
+                        let response = publish_handler(
+                            request,
+                            self.peer.client_certs(),
+                            self.peer.verified_identity(),
+                            self.app.clone(),
+                        )
+                        .await;
                         if let Some(response) = response {
                             log::debug!("Returning response: {:?}", response);
                             match response.message.to_bytes() {
                                 Ok(packet) => match self.peer.write(&packet[..]).await {
-                                    Ok(_) => log::trace!("Response sent"),
+                                    Ok(_) => {}
                                     Err(e) => log::warn!("Error sending response: {:?}", e),
                                 },
                                 Err(e) => {
@@ -63,7 +68,7 @@ impl Session {
                     }
                 },
                 Err(e) => {
-                    log::warn!("Processing error: {:?}", e);
+                    log::trace!("Processing stopped: {:?}", e);
                     break;
                 }
             }
