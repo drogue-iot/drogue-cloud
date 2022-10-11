@@ -7,8 +7,6 @@ use actix_web::{
 use actix_web_actors::ws;
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::actix_auth::authentication::AuthenticatedUntil;
-use drogue_cloud_service_common::client::UserAuthClient;
-use drogue_cloud_service_common::openid::Authenticator;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -26,15 +24,6 @@ pub async fn start_connection(
 ) -> Result<HttpResponse, Error> {
     let application = application.into_inner();
 
-    let authenticator = req.app_data().cloned();
-    let user_auth = req.app_data().cloned();
-
-    log::debug!(
-        "Auth state - authenticator: {}, userAuth: {}",
-        authenticator.is_some(),
-        user_auth.is_some()
-    );
-
     start_websocket(
         req,
         stream,
@@ -43,8 +32,6 @@ pub async fn start_connection(
         service_addr,
         group_id.group_id,
         auth_expiration,
-        authenticator,
-        user_auth,
     )
 }
 
@@ -58,15 +45,6 @@ pub async fn start_connection_with_channel_filter(
 ) -> Result<HttpResponse, Error> {
     let (application, channel) = params.into_inner();
 
-    let authenticator = req.app_data().cloned();
-    let user_auth = req.app_data().cloned();
-
-    log::debug!(
-        "Auth state - authenticator: {}, userAuth: {}",
-        authenticator.is_some(),
-        user_auth.is_some()
-    );
-
     start_websocket(
         req,
         stream,
@@ -75,8 +53,6 @@ pub async fn start_connection_with_channel_filter(
         service_addr,
         group_id.group_id,
         auth_expiration,
-        authenticator,
-        user_auth,
     )
 }
 
@@ -88,10 +64,17 @@ fn start_websocket(
     service_addr: web::Data<Addr<Service>>,
     group_id: Option<String>,
     auth_expiration: Option<web::ReqData<AuthenticatedUntil>>,
-    authenticator: Option<Authenticator>,
-    user_auth: Option<UserAuthClient>,
 ) -> Result<HttpResponse, Error> {
     let auth_expiration = auth_expiration.map(|e| e.into_inner().0);
+
+    let authenticator= req.app_data().cloned();
+    let user_auth = req.app_data().cloned();
+
+    log::debug!(
+        "Auth state - authenticator: {}, userAuth: {}",
+        authenticator.is_some(),
+        user_auth.is_some()
+    );
 
     // launch web socket actor
     let ws = WsHandler::new(
