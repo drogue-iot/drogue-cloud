@@ -3,6 +3,7 @@ use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
+    psk::Identity,
     sender::{self, DownstreamSender, ToPublishId},
     x509::ClientCertificateChain,
 };
@@ -37,8 +38,9 @@ pub async fn publish_plain(
     channel: String,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    auth: &[u8],
+    auth: Option<&Vec<u8>>,
     certs: Option<ClientCertificateChain>,
+    verified_identity: Option<Identity>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     publish(
         sender,
@@ -50,6 +52,7 @@ pub async fn publish_plain(
         req,
         auth,
         certs,
+        verified_identity,
     )
     .await
 }
@@ -61,8 +64,9 @@ pub async fn publish_tail(
     path: (String, String),
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    auth: &[u8],
+    auth: Option<&Vec<u8>>,
     certs: Option<ClientCertificateChain>,
+    verified_identity: Option<Identity>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     let (channel, suffix) = path;
     publish(
@@ -75,6 +79,7 @@ pub async fn publish_tail(
         req,
         auth,
         certs,
+        verified_identity,
     )
     .await
 }
@@ -88,40 +93,48 @@ pub async fn publish(
     suffix: Option<String>,
     opts: PublishOptions,
     req: CoapRequest<SocketAddr>,
-    auth: &[u8],
+    auth: Option<&Vec<u8>>,
     certs: Option<ClientCertificateChain>,
+    verified_identity: Option<Identity>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
-    log::debug!(
-        "Auth header: {:?}",
-        HeaderValue::from_bytes(auth).as_ref().ok()
-    );
+    if let Some(auth) = &auth {
+        log::debug!(
+            "Auth header: {:?}",
+            HeaderValue::from_bytes(auth).as_ref().ok()
+        );
+    }
     let (application, device, r#as) = match authenticator
         .authenticate_coap(
             opts.common.application,
             opts.common.device,
-            HeaderValue::from_bytes(auth).as_ref().ok(),
+            auth.map(|a| HeaderValue::from_bytes(a).ok())
+                .flatten()
+                .as_ref(),
             certs,
+            verified_identity,
         )
         .await
         .map_err(|err| CoapEndpointError(err.into()))?
         .outcome
     {
-        authn::Outcome::Fail => return Err(CoapEndpointError(EndpointError::AuthenticationError)),
+        authn::Outcome::Fail => {
+            return Err(CoapEndpointError(EndpointError::AuthenticationError));
+        }
         authn::Outcome::Pass {
             application,
             device,
             r#as,
-        } => (application, device, r#as),
+        } => (application, device.metadata.name, r#as),
     };
 
     // If we have an "as" parameter, we publish as another device.
     let (sender_id, device_id) = match r#as {
         // use the "as" information as device id
-        Some(r#as) => ((&device.metadata).to_id(), (&r#as.metadata).to_id()),
+        Some(r#as) => (device.to_id(), (&r#as.metadata).to_id()),
         // use the original device id
-        None => ((&device.metadata).to_id(), (&device.metadata).to_id()),
+        None => (device.to_id(), device.to_id()),
     };
 
     // Create Publish Object

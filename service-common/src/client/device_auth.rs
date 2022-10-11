@@ -6,7 +6,7 @@ use drogue_client::{
 };
 use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
-    AuthorizeGatewayResponse,
+    AuthorizeGatewayResponse, PreSharedKeyRequest, PreSharedKeyResponse,
 };
 use lazy_static::lazy_static;
 use prometheus::{register_int_gauge_vec, IntGaugeVec};
@@ -23,6 +23,12 @@ lazy_static! {
         &["outcome"]
     )
     .unwrap();
+    /*pub static ref PRE_SHARED_KEY_REQUEST: IntGaugeVec = register_int_gauge_vec!(
+        "drogue_client_device_psk_request",
+        "Device pre shared key requests",
+        &["outcome"]
+    )
+    .unwrap();*/
     pub static ref AUTHORIZATION_AS: IntGaugeVec = register_int_gauge_vec!(
         "drogue_client_device_authorization_as",
         "Device authorization as operations",
@@ -37,6 +43,7 @@ pub struct ReqwestAuthenticatorClient {
     client: Client,
     auth_service_url: Url,
     auth_as_url: Url,
+    keys_url: Url,
     token_provider: Option<OpenIdTokenProvider>,
 }
 
@@ -51,8 +58,18 @@ impl ReqwestAuthenticatorClient {
             client,
             auth_service_url: url.join("auth")?,
             auth_as_url: url.join("authorize_as")?,
+            keys_url: url.join("keys")?,
             token_provider,
         })
+    }
+
+    #[instrument]
+    pub async fn request_psk(
+        &self,
+        request: PreSharedKeyRequest,
+    ) -> Result<PreSharedKeyResponse, ClientError> {
+        self.request(self.keys_url.clone(), request).await
+        //.record_outcome(&PRE_SHARED_KEY_REQUEST)
     }
 
     #[instrument]

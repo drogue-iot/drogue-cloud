@@ -9,6 +9,7 @@ mod telemetry;
 use crate::session::Session;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
+use drogue_cloud_endpoint_common::psk::Identity;
 use tokio_dtls_stream_sink::Server as DtlsServer;
 
 use drogue_cloud_endpoint_common::{
@@ -70,6 +71,13 @@ pub struct Config {
     pub disable_client_certificates: bool,
 
     #[serde(default)]
+    pub disable_psk: bool,
+
+    #[serde(default)]
+    #[serde(with = "humantime_serde")]
+    pub dtls_session_timeout: Option<Duration>,
+
+    #[serde(default)]
     pub cert_bundle_file: Option<String>,
 
     #[serde(default)]
@@ -81,6 +89,7 @@ pub struct App {
     pub downstream: DownstreamSender,
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
+    pub disable_psk: bool,
 }
 
 pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
@@ -105,6 +114,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
             drogue_cloud_endpoint_common::auth::DeviceAuthenticator::new(config.auth).await?,
         ),
         commands: coap_server_commands,
+        disable_psk: config.disable_psk,
     };
 
     let command_source = KafkaCommandSource::new(
@@ -123,38 +133,62 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         if let Some(cert_bundle_file) = &config.cert_bundle_file {
             ctx.set_certificate_chain_file(cert_bundle_file)?;
         }
-        ctx.set_verify_callback(SslVerifyMode::PEER, |_, ctx| {
-            log::debug!(
-                "Accepting client certificates: {:?}",
-                ctx.current_cert()
-                    .map(|cert| format!("{:?}", cert.subject_name()))
-                    .unwrap_or_else(|| "<unknown>".into())
-            );
-            true
-        });
-        /*
-        ctx.set_psk_server_callback(|ssl, identity, secret_mut| {
-            if let Some(identity) = identity {
-                log::debug!("PSK auth for {:?}", identity);
-            }
-            Ok(0)
-        });
-         */
+        if !config.disable_client_certificates {
+            ctx.set_verify_callback(SslVerifyMode::PEER, |_, ctx| {
+                log::debug!(
+                    "Accepting client certificates: {:?}",
+                    ctx.current_cert()
+                        .map(|cert| format!("{:?}", cert.subject_name()))
+                        .unwrap_or_else(|| "<unknown>".into())
+                );
+                true
+            });
+        }
+
+        if !config.disable_psk {
+            let auth = app.authenticator.clone();
+            ctx.set_psk_server_callback(move |_ssl, identity, secret_mut| {
+                let mut to_copy = 0;
+                if let Some(Ok(identity)) = identity.map(|s| core::str::from_utf8(s)) {
+                    log::trace!("PSK auth for {:?}", identity);
+                    if let Ok(identity) = Identity::parse(identity) {
+                        let app = identity.application().to_string();
+                        let device = identity.device().to_string();
+                        let auth = auth.clone();
+                        // Block this thread waiting for a response.
+                        let response = tokio::task::block_in_place(move || {
+                            // Run a temporary executor for this request
+                            futures::executor::block_on(async move {
+                                auth.request_psk(app, device).await
+                            })
+                        });
+
+                        if let Ok(response) = response {
+                            if let Some(valid) = response.valid_key {
+                                to_copy = std::cmp::min(valid.key.len(), secret_mut.len());
+                                secret_mut[..to_copy].copy_from_slice(&valid.key[..to_copy]);
+                            }
+                        }
+                    }
+                }
+                Ok(to_copy)
+            });
+        }
         ctx.check_private_key()?;
         Some(ctx.build())
     } else {
         None
     };
 
+    const DEFAULT_EXPIRY: Duration = Duration::from_secs(60);
+    let expiry = config.dtls_session_timeout.unwrap_or(DEFAULT_EXPIRY);
     log::info!("CoAP server up on {}", addr);
     startup.spawn(async move {
         let mut server = DtlsServer::new(server);
         loop {
             match server.accept(dtls.as_ref()).await {
                 Ok(session) => {
-                    // TODO: Make expiry configurable?
-                    const EXPIRY: Duration = Duration::from_secs(60);
-                    let expired = Instant::now() + EXPIRY;
+                    let expired = Instant::now() + expiry;
                     let app = app.clone();
                     tokio::spawn(async move {
                         Session::new(expired, session, app).run().await;
@@ -174,13 +208,17 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 pub(crate) async fn publish_handler(
     mut request: CoapRequest<SocketAddr>,
     certs: Option<ClientCertificateChain>,
+    identity: Option<Identity>,
     app: App,
 ) -> Option<CoapResponse> {
     log::debug!("CoAP request: {:?}", request);
 
     let mut path_segments: Vec<String> = Vec::new();
     let mut queries: Option<&Vec<u8>> = None;
-    let mut auth: &Vec<u8> = &Vec::new();
+    let mut auth: Option<&Vec<u8>> = None;
+
+    // Ensuring that we don't pass identities if PSK is not enabled
+    let verified_identity = if app.disable_psk { None } else { identity };
 
     // Obtain vec[channel,subject] via 'p', optional query string via 'q'
     // and authorization information via 'a'
@@ -214,6 +252,7 @@ pub(crate) async fn publish_handler(
             request.clone(),
             auth,
             certs,
+            verified_identity,
         )
         .await
         .respond_to(&mut request),
@@ -231,6 +270,7 @@ pub(crate) async fn publish_handler(
             request.clone(),
             auth,
             certs,
+            verified_identity,
         )
         .await
         .respond_to(&mut request),
@@ -243,7 +283,7 @@ pub(crate) async fn publish_handler(
     }
 }
 
-type Params<'a> = Result<(Vec<String>, Option<&'a Vec<u8>>, &'a Vec<u8>), anyhow::Error>;
+type Params<'a> = Result<(Vec<String>, Option<&'a Vec<u8>>, Option<&'a Vec<u8>>), anyhow::Error>;
 
 fn params(request: &CoapRequest<SocketAddr>) -> Params {
     // Get path values and extract channel and subject
@@ -263,8 +303,7 @@ fn params(request: &CoapRequest<SocketAddr>) -> Params {
     let auth = request
         .message
         .get_option(AUTH_OPTION)
-        .and_then(|x| x.front())
-        .ok_or_else(|| anyhow::Error::msg("Error parsing authentication information"))?;
+        .and_then(|x| x.front());
 
     Ok((path_segments, queries, auth))
 }

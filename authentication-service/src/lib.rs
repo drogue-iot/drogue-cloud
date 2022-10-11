@@ -44,6 +44,7 @@ macro_rules! app {
             web::scope("/api/v1")
                 .wrap(Condition::new($enable_auth, $auth))
                 .service(web::resource("/auth").route(web::post().to(endpoints::authenticate)))
+                .service(web::resource("/keys").route(web::post().to(endpoints::request_key)))
                 .service(
                     web::resource("/authorize_as").route(web::post().to(endpoints::authorize_as)),
                 ),

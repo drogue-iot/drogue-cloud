@@ -1,4 +1,4 @@
-use crate::x509::ClientCertificateChain;
+use crate::{psk::Identity, x509::ClientCertificateChain};
 use actix_web::{
     dev::Payload,
     error, {FromRequest, HttpMessage, HttpRequest},
@@ -7,7 +7,7 @@ use anyhow::Context;
 use drogue_client::{error::ClientError, registry};
 use drogue_cloud_service_api::auth::device::authn::{
     AuthenticationRequest, AuthenticationResponse, AuthorizeGatewayRequest,
-    AuthorizeGatewayResponse, Credential,
+    AuthorizeGatewayResponse, Credential, Outcome, PreSharedKeyRequest, PreSharedKeyResponse,
 };
 use drogue_cloud_service_api::webapp as actix_web;
 use drogue_cloud_service_common::{
@@ -137,6 +137,25 @@ impl DeviceAuthenticator {
             .await
     }
 
+    /// Authenticate a device based on a verified identity. The identity has previously been verified using pre-shared key
+    fn authenticate_verified_identity(
+        &self,
+        identity: &Identity,
+    ) -> AuthResult<AuthenticationResponse> {
+        let mut dev = registry::v1::Device::default();
+        dev.metadata.name = identity.device().to_string();
+        dev.metadata.application = identity.application().to_string();
+        let mut app = registry::v1::Application::default();
+        app.metadata.name = identity.application().to_string();
+        Ok(AuthenticationResponse {
+            outcome: Outcome::Pass {
+                application: app,
+                device: dev,
+                r#as: None,
+            },
+        })
+    }
+
     /// authenticate for a typical CoAP request
     #[instrument]
     pub async fn authenticate_coap<T, D>(
@@ -145,12 +164,19 @@ impl DeviceAuthenticator {
         device: Option<D>,
         auth: Option<&HeaderValue>,
         certs: Option<ClientCertificateChain>,
+        verified_identity: Option<Identity>,
     ) -> AuthResult<AuthenticationResponse>
     where
         T: AsRef<str> + Debug,
         D: AsRef<str> + Debug,
     {
-        match (application, device, auth.map(AuthValue::from), certs) {
+        match (
+            application,
+            device,
+            auth.map(AuthValue::from),
+            certs,
+            verified_identity,
+        ) {
             // POST /<channel> -> basic auth `<device>@<tenant>` / `<password>` -> Password(<password>)
             (
                 None,
@@ -160,12 +186,13 @@ impl DeviceAuthenticator {
                     password,
                 }),
                 None,
+                None,
             ) => {
                 self.authenticate(&scope, &device, Credential::Password(password), None)
                     .await
             }
             // POST /<channel>?tenant=<tenant> -> basic auth `<device>` / `<password>` -> Password(<password>)
-            (Some(scope), None, Some(AuthValue::Basic { username, password }), None) => {
+            (Some(scope), None, Some(AuthValue::Basic { username, password }), None, None) => {
                 self.authenticate(
                     scope.as_ref(),
                     username.into_string(),
@@ -175,7 +202,13 @@ impl DeviceAuthenticator {
                 .await
             }
             // POST /<channel>?tenant=<tenant>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
-            (Some(scope), Some(device), Some(AuthValue::Basic { username, password }), None) => {
+            (
+                Some(scope),
+                Some(device),
+                Some(AuthValue::Basic { username, password }),
+                None,
+                None,
+            ) => {
                 self.authenticate(
                     scope.as_ref(),
                     device.as_ref(),
@@ -200,6 +233,7 @@ impl DeviceAuthenticator {
                     password,
                 }),
                 None,
+                None,
             ) => {
                 self.authenticate(
                     &scope,
@@ -209,7 +243,10 @@ impl DeviceAuthenticator {
                 )
                 .await
             }
-            (None, None, None, Some(certs)) => self.authenticate_cert(certs.0).await,
+            (None, None, None, Some(certs), None) => self.authenticate_cert(certs.0).await,
+            (None, None, None, None, Some(verified_identity)) => {
+                self.authenticate_verified_identity(&verified_identity)
+            }
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
         }
@@ -223,6 +260,7 @@ impl DeviceAuthenticator {
         password: Option<P>,
         client_id: C,
         certs: Option<ClientCertificateChain>,
+        verified_identity: Option<Identity>,
     ) -> AuthResult<AuthenticationResponse>
     where
         U: AsRef<str> + Debug,
@@ -242,9 +280,10 @@ impl DeviceAuthenticator {
             password,
             Username::from(client_id),
             certs,
+            verified_identity,
         ) {
             // Username/password <device>@<tenant> / <password>, Client ID: ???
-            (Some(Username::Scoped { scope, device }), Some(password), _, None) => {
+            (Some(Username::Scoped { scope, device }), Some(password), _, None, None) => {
                 self.authenticate(&scope, &device, Credential::Password(password.into()), None)
                     .await
             }
@@ -253,6 +292,7 @@ impl DeviceAuthenticator {
                 Some(Username::NonScoped(username)),
                 Some(password),
                 Username::Scoped { scope, device },
+                None,
                 None,
             ) => {
                 self.authenticate(
@@ -267,7 +307,11 @@ impl DeviceAuthenticator {
                 .await
             }
             // Client cert only
-            (None, None, _, Some(certs)) => self.authenticate_cert(certs.0).await,
+            (None, None, _, Some(certs), None) => self.authenticate_cert(certs.0).await,
+            // TLS-PSK verified identity
+            (None, None, _, None, Some(verified_identity)) => {
+                self.authenticate_verified_identity(&verified_identity)
+            }
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
         }
@@ -288,13 +332,20 @@ impl DeviceAuthenticator {
         device: Option<D>,
         auth: Option<&HeaderValue>,
         certs: Option<Vec<Vec<u8>>>,
+        verified_identity: Option<Identity>,
         r#as: Option<String>,
     ) -> AuthResult<AuthenticationResponse>
     where
         T: AsRef<str> + Debug,
         D: AsRef<str> + Debug,
     {
-        match (application, device, auth.map(AuthValue::from), certs) {
+        match (
+            application,
+            device,
+            auth.map(AuthValue::from),
+            certs,
+            verified_identity,
+        ) {
             // POST /<channel> -> basic auth `<device>@<application>` / `<password>` -> Password(<password>)
             (
                 None,
@@ -304,12 +355,13 @@ impl DeviceAuthenticator {
                     password,
                 }),
                 None,
+                None,
             ) => {
                 self.authenticate(&scope, &device, Credential::Password(password), r#as)
                     .await
             }
             // POST /<channel>?application=<application> -> basic auth `<device>` / `<password>` -> Password(<password>)
-            (Some(scope), None, Some(AuthValue::Basic { username, password }), None) => {
+            (Some(scope), None, Some(AuthValue::Basic { username, password }), None, None) => {
                 self.authenticate(
                     scope.as_ref(),
                     username.into_string(),
@@ -319,7 +371,13 @@ impl DeviceAuthenticator {
                 .await
             }
             // POST /<channel>?application=<application>&device=<device> -> basic auth `<username>` / `<password>` -> UsernamePassword(<username>, <password>)
-            (Some(scope), Some(device), Some(AuthValue::Basic { username, password }), None) => {
+            (
+                Some(scope),
+                Some(device),
+                Some(AuthValue::Basic { username, password }),
+                None,
+                None,
+            ) => {
                 self.authenticate(
                     scope.as_ref(),
                     device.as_ref(),
@@ -344,6 +402,7 @@ impl DeviceAuthenticator {
                     password,
                 }),
                 None,
+                None,
             ) => {
                 self.authenticate(
                     &scope,
@@ -355,11 +414,32 @@ impl DeviceAuthenticator {
             }
 
             // X.509 client certificate -> all information from the cert
-            (None, None, None, Some(certs)) => self.authenticate_cert(certs).await,
+            (None, None, None, Some(certs), None) => self.authenticate_cert(certs).await,
+            (None, None, None, None, Some(verified_identity)) => {
+                self.authenticate_verified_identity(&verified_identity)
+            }
 
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
         }
+    }
+
+    #[instrument]
+    pub async fn request_psk<T, D>(
+        &self,
+        application: T,
+        device: D,
+    ) -> Result<PreSharedKeyResponse, ClientError>
+    where
+        T: ToString + Debug,
+        D: ToString + Debug,
+    {
+        self.client
+            .request_psk(PreSharedKeyRequest {
+                application: application.to_string(),
+                device: device.to_string(),
+            })
+            .await
     }
 
     /// Retrieve the end-entity (aka device) certificate, must be the first one.

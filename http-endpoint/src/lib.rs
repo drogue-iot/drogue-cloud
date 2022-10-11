@@ -8,6 +8,7 @@ use actix_web::{web, HttpResponse, Responder};
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
+    psk::Identity,
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
@@ -19,10 +20,9 @@ use drogue_cloud_service_common::{
     actix::http::{HttpBuilder, HttpConfig},
     app::{Startup, StartupExt},
     defaults,
-    tls::TlsMode,
+    tls::TlsAuthConfig,
 };
 use serde::Deserialize;
-use serde_json::json;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -46,7 +46,7 @@ pub struct Config {
 }
 
 async fn index() -> impl Responder {
-    HttpResponse::Ok().json(json!({"success": true}))
+    HttpResponse::Ok()
 }
 
 pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
@@ -65,6 +65,38 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     let http_server_commands = commands.clone();
 
     let device_authenticator = DeviceAuthenticator::new(config.auth).await?;
+
+    let disable_tls_psk: bool = config.http.disable_tls_psk;
+    let mut tls_auth_config = TlsAuthConfig::default();
+    if !disable_tls_psk {
+        let auth = device_authenticator.clone();
+        tls_auth_config.psk = Some(Box::new(move |identity, secret_mut| {
+            let mut to_copy = 0;
+            if let Some(Ok(identity)) = identity.map(|s| core::str::from_utf8(s)) {
+                log::trace!("PSK auth for {:?}", identity);
+                if let Ok(identity) = Identity::parse(identity) {
+                    let auth = auth.clone();
+                    let app = identity.application().to_string();
+                    let device = identity.device().to_string();
+                    // Block this thread waiting for a response.
+                    let response = tokio::task::block_in_place(move || {
+                        // Run a temporary executor for this request
+                        futures::executor::block_on(
+                            async move { auth.request_psk(app, device).await },
+                        )
+                    });
+
+                    if let Ok(response) = response {
+                        if let Some(valid) = response.valid_key {
+                            to_copy = std::cmp::min(valid.key.len(), secret_mut.len());
+                            secret_mut[..to_copy].copy_from_slice(&valid.key[..to_copy]);
+                        }
+                    }
+                }
+            }
+            Ok(to_copy)
+        }));
+    }
 
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         cfg.app_data(web::Data::new(sender.clone()))
@@ -90,14 +122,22 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                     .route("/v3", web::post().to(ttn::publish_v3)),
             );
     })
-    .tls_mode(TlsMode::Client)
-    .on_connect(|con, ext| {
-        if let Some(cert) = x509::from_socket(con) {
+    .tls_auth_config(tls_auth_config)
+    .on_connect(move |con, ext| {
+        let (mut psk, cert) = x509::from_socket(con);
+
+        // Disable PSK identity
+        if disable_tls_psk {
+            psk = None;
+        }
+
+        if let Some(cert) = cert {
             if !cert.0.is_empty() {
                 log::debug!("Added {} client certificates", cert.0.len());
                 ext.insert(cert);
             }
         }
+        ext.insert(psk);
     })
     .run()?;
 

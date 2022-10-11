@@ -171,8 +171,8 @@ where
         }
 
         // extract credentials
-        if let Some(Ok(credentials)) = device.section::<registry::v1::DeviceSpecCredentials>() {
-            for credential in credentials.credentials {
+        if let Some(credentials) = device.get_credentials() {
+            for credential in credentials {
                 match credential {
                     registry::v1::Credential::UsernamePassword {
                         username, unique, ..
