@@ -67,7 +67,7 @@ fn start_websocket(
 ) -> Result<HttpResponse, Error> {
     let auth_expiration = auth_expiration.map(|e| e.into_inner().0);
 
-    let authenticator= req.app_data().cloned();
+    let authenticator = req.app_data().cloned();
     let user_auth = req.app_data().cloned();
 
     log::debug!(
