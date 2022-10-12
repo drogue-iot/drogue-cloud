@@ -77,6 +77,7 @@ impl Component for AccessTokenCreateModal {
                             r#type="submit"
                             onclick={ctx.link().callback(|_|Msg::Create)}
                             form="create-form"
+                            id="confirm-create-token"
                         >
                             {"Create"}
                         </Button>
