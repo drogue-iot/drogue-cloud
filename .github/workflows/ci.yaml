@@ -90,7 +90,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -109,11 +109,11 @@ jobs:
     if: needs.prepare.outputs.do-build == 'true'
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -135,11 +135,11 @@ jobs:
     if: needs.prepare.outputs.do-build == 'true'
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -148,7 +148,7 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: console-frontend/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('console-frontend/package-lock.json') }}
@@ -177,11 +177,11 @@ jobs:
     env:
       VERSION: ${{needs.prepare.outputs.version}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -215,14 +215,14 @@ jobs:
           mv build/images/all.tar build/images/server.tar
 
       - name: Upload server binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: drogue-server-linux-amd64
           path: target/release/drogue-cloud-server
           if-no-files-found: error
 
       - name: Upload images
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: container-image-server
           path: build/images/server.tar
@@ -236,11 +236,11 @@ jobs:
     env:
       VERSION: ${{needs.prepare.outputs.version}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry
@@ -265,7 +265,7 @@ jobs:
           PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl DEP_OPENSSL_DIR=/usr/local/opt/openssl RUSTFLAGS="-C target-feature=+crt-static" cargo build --release -p drogue-cloud-server --features static
 
       - name: Upload server binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: drogue-server-macos-amd64
           path: target/release/drogue-cloud-server
@@ -303,7 +303,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Helm
-        uses: azure/setup-helm@v1
+        uses: azure/setup-helm@v3
         with:
           version: ${{ env.VERSION_HELM }}
 
@@ -313,12 +313,11 @@ jobs:
           name: container-images
 
       - name: Create k8s kind Cluster
-        uses: helm/kind-action@v1.3.0
+        uses: helm/kind-action@v1.4.0
         with:
           wait: 300s
           cluster_name: kind
           config: deploy/kind/cluster-config.yaml
-          version: v0.12.0
 
       - name: Load images in docker
         run: docker load -i all.tar
@@ -365,7 +364,7 @@ jobs:
 
       - name: Upload artifacts
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: drogue-iot-logs
           path: /tmp/logs
@@ -393,12 +392,12 @@ jobs:
 
       # Start the actual build
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
       - name: Set up Helm
-        uses: azure/setup-helm@v1
+        uses: azure/setup-helm@v3
         with:
           version: ${{ env.VERSION_HELM }}
 
@@ -406,30 +405,30 @@ jobs:
         run: |
           make -C installer VERSION=$VERSION
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: installers
           path: installer/build/drogue-install-*.zip
           if-no-files-found: error
 
       - name: Fetch container images
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: container-images
 
       - name: Fetch container image server
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: container-image-server
 
       - name: Fetch static server binary (linux-amd64)
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: drogue-server-linux-amd64
           path: drogue-server-linux-amd64
 
       - name: Fetch static server binary (macos-amd64)
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: drogue-server-macos-amd64
           path: drogue-server-macos-amd64
