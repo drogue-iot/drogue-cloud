@@ -379,7 +379,6 @@ jobs:
     env:
       CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
       VERSION: ${{needs.prepare.outputs.version}}
-      HUB_VERBOSE: "1"
 
     steps:
 
@@ -453,34 +452,27 @@ jobs:
           make push "IMAGE_TAG=$VERSION" SKIP_SERVER=1 SKIP_BUILD=1 SKIP_BUILD_IMAGES=1
           sleep 10 # delay a bit for API rate limiting issues
 
+      - name: Create release notes
+        run: |
+          # I know it feels like overkill to use cat and redirect, but it's a pattern for future extension of the
+          # release notes file. We could just add stuff.
+          cat installer/README.md > /tmp/notes.md
+
       - name: Create Release
-        id: create-release
-        if: needs.prepare.outputs.release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ needs.prepare.outputs.version }}
-          release_name: ${{ needs.prepare.outputs.version }}
-          draft: true
-          prerelease: ${{ needs.prepare.outputs.prerelease }}
-
-      - name: Upload Release Assets
         if: needs.prepare.outputs.release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: v${{ needs.prepare.outputs.version }}
         run: |
-          # add install ZIPs
-          hub release edit -m "" $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") $TAG
-          # add static server binaries
-          hub release edit -m "" $(find server-binaries -type f -printf "-a %p ") $TAG
-
-      - name: Remove draft status
-        if: needs.prepare.outputs.release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: v${{ needs.prepare.outputs.version }}
-        run: |
-          # finally, remove the draft status
-          hub release edit -m "" --draft=false $TAG
+          # we need to create and upload in a single step, otherwise the GitHub API might return "not found" on releases
+          OPTS=""
+          if [[ "${{ needs.prepare.outputs.prerelease }}" == "true" ]]; then
+            OPTS="${OPTS} -p"
+          fi
+          gh release create \
+            $OPTS \
+            --title "${{ needs.prepare.outputs.version }}" \
+            -F /tmp/notes.md \
+            $TAG \
+            $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") \
+            $(find server-binaries -type f -printf "-a %p ")
