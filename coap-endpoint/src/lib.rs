@@ -475,7 +475,7 @@ pub mod test {
             (
                 vec![(String::from("Rust"))],
                 None,
-                &"some auth val".as_bytes().to_vec()
+                Some(&"some auth val".as_bytes().to_vec())
             )
         );
 
@@ -485,7 +485,7 @@ pub mod test {
             (
                 vec![(String::from("Rust")), (String::from("test-1"))],
                 None,
-                &"some auth val".as_bytes().to_vec()
+                Some(&"some auth val".as_bytes().to_vec())
             )
         );
 
@@ -495,7 +495,7 @@ pub mod test {
             (
                 vec![(String::from("Rust"))],
                 Some(&"ct=30".as_bytes().to_vec()),
-                &"some auth val".as_bytes().to_vec()
+                Some(&"some auth val".as_bytes().to_vec())
             )
         );
 
@@ -508,7 +508,7 @@ pub mod test {
             (
                 vec![(String::from("Rust")), (String::from("test"))],
                 Some(&"ct=30&as=device%232".as_bytes().to_vec()),
-                &"some auth val".as_bytes().to_vec()
+                Some(&"some auth val".as_bytes().to_vec())
             )
         );
     }
@@ -521,7 +521,7 @@ pub mod test {
             (
                 vec![(String::from("Rust"))],
                 None,
-                &"some auth val".as_bytes().to_vec()
+                Some(&"some auth val".as_bytes().to_vec())
             )
         );
     }
