@@ -1,6 +1,6 @@
 global:
   drogueCloud:
-    useServiceCa: true
+    useServiceCA: true
 
 drogueCloudCore:
   endpoints:
