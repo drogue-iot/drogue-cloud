@@ -18,9 +18,15 @@ drogueCloudCore:
 
   services:
     console:
+      service:
+        insecure: true
       ingress:
         insecure: true
         port: 80
+
+    registry:
+      service:
+        insecure: true
 
     api:
       ingress:
