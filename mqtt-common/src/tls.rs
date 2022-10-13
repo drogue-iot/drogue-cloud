@@ -69,8 +69,27 @@ pub use openssl::tls_config as openssl_config;
 mod openssl {
     use crate::server::TlsConfig;
 
+    // Mozilla intermediate v5 + PSK
+    const DEFAULT_CIPHERS: &[&str] = &[
+        "PSK",
+        "ECDHE-ECDSA-AES128-GCM-SHA256",
+        "ECDHE-RSA-AES128-GCM-SHA256",
+        "ECDHE-ECDSA-AES256-GCM-SHA384",
+        "ECDHE-RSA-AES256-GCM-SHA384",
+        "ECDHE-ECDSA-CHACHA20-POLY1305",
+        "ECDHE-RSA-CHACHA20-POLY1305",
+        "DHE-RSA-AES128-GCM-SHA256",
+        "DHE-RSA-AES256-GCM-SHA384",
+    ];
+
     /// Build a server config for openssl.
-    pub fn tls_config(config: &dyn TlsConfig) -> anyhow::Result<open_ssl::ssl::SslAcceptor> {
+    pub fn tls_config<F>(
+        config: &dyn TlsConfig,
+        psk_verifier: Option<F>,
+    ) -> anyhow::Result<open_ssl::ssl::SslAcceptor>
+    where
+        F: Fn(Option<&[u8]>, &mut [u8]) -> Result<usize, std::io::Error> + Send + Sync + 'static,
+    {
         let key = config
             .key_file()
             .ok_or_else(|| anyhow::anyhow!("TLS configuration error: Missing key file"))?;
@@ -83,6 +102,7 @@ mod openssl {
         let mut builder = ssl::SslAcceptor::mozilla_intermediate_v5(method)?;
         builder.set_private_key_file(key, ssl::SslFiletype::PEM)?;
         builder.set_certificate_chain_file(cert)?;
+        builder.set_cipher_list(&DEFAULT_CIPHERS.join(","))?;
 
         if !config.disable_client_certs() {
             // we ask for client certificates, but don't enforce them
@@ -95,6 +115,20 @@ mod openssl {
                 );
                 true
             });
+        }
+
+        if !config.disable_psk() {
+            if let Some(psk) = psk_verifier {
+                builder.set_psk_server_callback(move |_ssl, identity, secret_mut| {
+                    match psk(identity, secret_mut) {
+                        Ok(len) => Ok(len),
+                        Err(e) => {
+                            log::debug!("Error during TLS-PSK handshake: {:?}", e);
+                            Ok(0)
+                        }
+                    }
+                });
+            }
         }
 
         Ok(builder.build())

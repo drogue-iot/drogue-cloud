@@ -54,6 +54,8 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "3e
 
 operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "8366506a3ed44b638f899dcce4a82ac32fcaff9e" } # FIXME: awaiting release 0.7.0
 
+ntex-tls = { git = "https://github.com/lulf/ntex.git", rev = "4fa7f5cceb5bf29fc8764fe1b97f5f5fd3fdf2e4" } # awaiting release with new ntex-tls dependency
+
 #pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
 
 #actix-web = { git = "https://github.com/ctron/actix-web", rev = "f3f41a0cc70e43564f8243b3ff425195566b5f16"} # FIXME: awaiting release 4.2.0

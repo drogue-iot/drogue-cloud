@@ -77,6 +77,10 @@ impl TlsConfig for Config {
         self.disable_tls
     }
 
+    fn disable_psk(&self) -> bool {
+        true
+    }
+
     fn disable_client_certs(&self) -> bool {
         self.disable_client_certificates
     }
@@ -147,7 +151,13 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
     // create server
 
-    let srv = build(config.mqtt.clone(), app, &app_config)?.run();
+    let srv = build(
+        config.mqtt.clone(),
+        app,
+        &app_config,
+        Some(Box::new(|_: Option<&[u8]>, _: &mut [u8]| Ok(0))),
+    )?
+    .run();
 
     // run
 

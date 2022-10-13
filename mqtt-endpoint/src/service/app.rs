@@ -7,7 +7,7 @@ use drogue_client::{
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
-    psk::{PskIdentityRetriever, VerifiedIdentity},
+    psk::{Identity, VerifiedIdentity},
     sender::DownstreamSender,
     x509::{ClientCertificateChain, ClientCertificateRetriever},
 };
@@ -16,7 +16,9 @@ use drogue_cloud_mqtt_common::{
     mqtt::{AckOptions, Connect, ConnectAck, Service, Sink},
 };
 use drogue_cloud_service_api::{
-    auth::device::authn::Outcome as AuthOutcome, services::device_state::LastWillTestament,
+    auth::device::authn::Outcome as AuthOutcome,
+    auth::device::authn::{PreSharedKeyOutcome, PreSharedKeyResponse},
+    services::device_state::LastWillTestament,
 };
 use drogue_cloud_service_common::state::{CreateOptions, CreationOutcome, StateController};
 use std::fmt::Debug;
@@ -29,6 +31,7 @@ pub struct App {
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
     pub states: StateController,
+    pub disable_psk: bool,
 }
 
 impl App {
@@ -150,6 +153,28 @@ impl App {
             },
         }
     }
+
+    async fn lookup_identity(&self, identity: &Identity) -> Option<VerifiedIdentity> {
+        if let Ok(PreSharedKeyResponse {
+            outcome:
+                PreSharedKeyOutcome::Found {
+                    key: _,
+                    app,
+                    device,
+                },
+        }) = self
+            .authenticator
+            .request_psk(identity.application(), identity.device())
+            .await
+        {
+            Some(VerifiedIdentity {
+                application: app,
+                device,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -166,7 +191,27 @@ impl Service<Session> for App {
         }
 
         let certs = connect.io().client_certs();
-        let verified_identity = connect.io().verified_identity();
+        let verified_identity = if self.disable_psk {
+            None
+        } else {
+            use ntex_tls::PskIdentity;
+
+            let psk_identity = connect.io().query::<PskIdentity>();
+            let psk_identity = if let Some(psk_identity) = psk_identity.as_ref() {
+                core::str::from_utf8(&psk_identity.0[..])
+                    .ok()
+                    .map(|i| Identity::parse(i).ok())
+                    .flatten()
+            } else {
+                None
+            };
+
+            if let Some(identity) = psk_identity {
+                self.lookup_identity(&identity).await
+            } else {
+                None
+            }
+        };
         let (username, password) = connect.credentials();
 
         match self

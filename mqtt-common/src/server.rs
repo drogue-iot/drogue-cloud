@@ -174,6 +174,7 @@ where
 pub trait TlsConfig {
     fn is_disabled(&self) -> bool;
     fn disable_client_certs(&self) -> bool;
+    fn disable_psk(&self) -> bool;
 
     #[cfg(feature = "rustls")]
     fn verifier_rustls(&self) -> std::sync::Arc<dyn rust_tls::server::ClientCertVerifier> {
@@ -287,13 +288,15 @@ where
     })
 }
 
-pub fn build<Svc, S>(
+pub fn build<Svc, F, S>(
     opts: MqttServerOptions,
     app: Svc,
     config: &dyn TlsConfig,
+    psk_verifier: Option<F>,
 ) -> anyhow::Result<ServerBuilder>
 where
     Svc: Service<S> + Clone + Send + 'static,
+    F: Fn(Option<&[u8]>, &mut [u8]) -> Result<usize, std::io::Error> + Send + Sync + 'static,
     S: Session + 'static,
 {
     log::info!("MQTT transport: {:?}", opts.transport);
@@ -307,6 +310,8 @@ where
         config.disable_client_certs()
     );
 
+    log::info!("PSK disabled: {}", config.disable_psk());
+
     if cfg!(feature = "rustls") {
         // with rustls
         #[cfg(feature = "rustls")]
@@ -314,7 +319,7 @@ where
     } else if cfg!(feature = "openssl") {
         // with openssl
         #[cfg(feature = "openssl")]
-        return build_openssl(opts, app, crate::tls::openssl_config(config)?);
+        return build_openssl(opts, app, crate::tls::openssl_config(config, psk_verifier)?);
     }
 
     // no implementation available

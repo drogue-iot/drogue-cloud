@@ -3,10 +3,12 @@ mod config;
 mod service;
 
 pub use config::Config;
+use drogue_cloud_service_api::auth::device::authn::{PreSharedKeyOutcome, PreSharedKeyResponse};
 
 use crate::{auth::DeviceAuthenticator, service::App};
 use drogue_cloud_endpoint_common::{
     command::{Commands, KafkaCommandSource},
+    psk::Identity,
     sender::DownstreamSender,
     sink::KafkaSink,
 };
@@ -56,9 +58,52 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         commands: commands.clone(),
 
         states,
+        disable_psk: config.disable_tls_psk,
     };
 
-    let srv = build(config.mqtt.clone(), app, &config)?.run();
+    let mut psk_verifier = None;
+    if !config.disable_tls_psk {
+        let auth = app.authenticator.clone();
+        /*
+        let (psk_req_tx, psk_req_rx) = ntex::channel::channel();
+        let (psk_res_tx, psk_res_rx) = ntex::channel::channel();*/
+        psk_verifier = Some(Box::new(
+            move |identity: Option<&[u8]>, secret_mut: &mut [u8]| {
+                let mut to_copy = 0;
+                if let Some(Ok(identity)) = identity.map(|s| core::str::from_utf8(s)) {
+                    if let Ok(identity) = Identity::parse(identity) {
+                        let auth = auth.clone();
+                        let app = identity.application().to_string();
+                        let device = identity.device().to_string();
+
+                        // Block this thread waiting for a response.
+                        let response = std::thread::spawn(move || {
+                            // Run a temporary executor for this request
+                            let runner = ntex::rt::System::new("ntex-blocking");
+                            runner.block_on(async move { auth.request_psk(app, device).await })
+                        })
+                        .join();
+
+                        if let Ok(Ok(PreSharedKeyResponse {
+                            outcome:
+                                PreSharedKeyOutcome::Found {
+                                    key,
+                                    app: _,
+                                    device: _,
+                                },
+                        })) = response
+                        {
+                            to_copy = std::cmp::min(key.key.len(), secret_mut.len());
+                            secret_mut[..to_copy].copy_from_slice(&key.key[..to_copy]);
+                        }
+                    }
+                }
+                Ok(to_copy)
+            },
+        ))
+    }
+
+    let srv = build(config.mqtt.clone(), app, &config, psk_verifier)?.run();
 
     log::info!("Starting web server");
 
