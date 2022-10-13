@@ -48,6 +48,9 @@ pub struct Config {
     pub disable_tls: bool,
 
     #[serde(default)]
+    pub disable_tls_psk: bool,
+
+    #[serde(default)]
     pub disable_client_certificates: bool,
 
     #[serde(default)]
@@ -86,6 +89,10 @@ impl TlsConfig for Config {
 
     fn disable_client_certs(&self) -> bool {
         self.disable_client_certificates
+    }
+
+    fn disable_psk(&self) -> bool {
+        self.disable_tls_psk
     }
 
     #[cfg(feature = "rustls")]

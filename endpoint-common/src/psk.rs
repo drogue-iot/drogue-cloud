@@ -104,11 +104,3 @@ pub struct VerifiedIdentity {
     pub application: registry::v1::Application,
     pub device: registry::v1::Device,
 }
-
-#[cfg(all(feature = "ntex", feature = "openssl"))]
-impl PskIdentityRetriever for ntex::io::IoBoxed {
-    fn verified_identity(&self) -> Option<VerifiedIdentity> {
-        // TODO: Not supported by ntex yet
-        None
-    }
-}

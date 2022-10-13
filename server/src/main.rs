@@ -672,6 +672,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 auth,
                 disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),
                 disable_client_certificates: false,
+                disable_tls_psk: false,
                 cert_bundle_file,
                 key_file,
                 instance: "drogue".to_string(),
@@ -924,7 +925,7 @@ async fn run(ctx: Context<'_>, server: ServerConfig, mut main: Main<'_>) -> anyh
     println!();
 
     println!("Creating a device:");
-    println!("\tdrg create device --application example-app device1 --spec '{{\"credentials\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
+    println!("\tdrg create device --application example-app device1 --spec '{{\"authentication\":{{\"credentials\":[{{\"pass\":\"hey-rodney\"}}]}}}}'");
     println!();
 
     println!("Streaming telemetry data for an application:");
