@@ -9,8 +9,7 @@ mod telemetry;
 use crate::session::Session;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
-use drogue_client::registry;
-use drogue_cloud_endpoint_common::psk::Identity;
+use drogue_cloud_endpoint_common::psk::{set_ssl_identity, Identity, VerifiedIdentity};
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -27,10 +26,7 @@ use drogue_cloud_service_common::{
 use tokio_dtls_stream_sink::Server as DtlsServer;
 
 use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
-use openssl::{
-    ex_data::Index,
-    ssl::{Ssl, SslContext, SslFiletype, SslMethod, SslVerifyMode},
-};
+use openssl::ssl::{SslContext, SslFiletype, SslMethod, SslVerifyMode};
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
@@ -47,11 +43,6 @@ pub const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
 // Option Number 4210 corresponds to the option assigned to carry command information,
 // which is meant for commands to be sent back to the device in the response
 pub const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
-
-lazy_static::lazy_static! {
-    static ref RESOURCE_INDEX: Index<Ssl, (registry::v1::Application, registry::v1::Device)> =
-        Ssl::new_ex_index().unwrap();
-}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -176,9 +167,15 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                             if let PreSharedKeyOutcome::Found { app, device, key } =
                                 response.outcome
                             {
-                                ssl.set_ex_data(*RESOURCE_INDEX, (app, device));
                                 to_copy = std::cmp::min(key.key.len(), secret_mut.len());
                                 secret_mut[..to_copy].copy_from_slice(&key.key[..to_copy]);
+                                set_ssl_identity(
+                                    ssl,
+                                    VerifiedIdentity {
+                                        application: app,
+                                        device,
+                                    },
+                                );
                             }
                         }
                     }
@@ -220,7 +217,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 pub(crate) async fn publish_handler(
     mut request: CoapRequest<SocketAddr>,
     certs: Option<ClientCertificateChain>,
-    identity: Option<Identity>,
+    identity: Option<VerifiedIdentity>,
     app: App,
 ) -> Option<CoapResponse> {
     log::debug!("CoAP request: {:?}", request);

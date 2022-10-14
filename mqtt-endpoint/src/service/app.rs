@@ -7,7 +7,7 @@ use drogue_client::{
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
-    psk::{Identity, PskIdentityRetriever},
+    psk::{PskIdentityRetriever, VerifiedIdentity},
     sender::DownstreamSender,
     x509::{ClientCertificateChain, ClientCertificateRetriever},
 };
@@ -40,7 +40,7 @@ impl App {
         password: Option<&[u8]>,
         client_id: &str,
         certs: Option<ClientCertificateChain>,
-        verified_identity: Option<Identity>,
+        verified_identity: Option<VerifiedIdentity>,
     ) -> Result<AuthOutcome, EndpointError> {
         let password = password
             .map(|p| String::from_utf8(p.to_vec()))
