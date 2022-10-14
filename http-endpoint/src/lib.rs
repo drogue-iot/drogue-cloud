@@ -12,6 +12,7 @@ use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
+use drogue_cloud_service_api::auth::device::authn::PreSharedKeyOutcome;
 use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
     webapp::{self as actix_web},
@@ -87,9 +88,9 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                     });
 
                     if let Ok(response) = response {
-                        if let Some(valid) = response.valid_key {
-                            to_copy = std::cmp::min(valid.key.len(), secret_mut.len());
-                            secret_mut[..to_copy].copy_from_slice(&valid.key[..to_copy]);
+                        if let PreSharedKeyOutcome::Found { app, device, key } = response.outcome {
+                            to_copy = std::cmp::min(key.key.len(), secret_mut.len());
+                            secret_mut[..to_copy].copy_from_slice(&key.key[..to_copy]);
                         }
                     }
                 }

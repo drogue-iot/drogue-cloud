@@ -110,7 +110,17 @@ impl AuthenticationResponse {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PreSharedKeyResponse {
     /// A trusted key, if available.
-    pub valid_key: Option<registry::v1::PreSharedKey>,
+    pub outcome: PreSharedKeyOutcome,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum PreSharedKeyOutcome {
+    Found {
+        app: registry::v1::Application,
+        device: registry::v1::Device,
+        key: registry::v1::PreSharedKey,
+    },
+    NotFound,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

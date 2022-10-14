@@ -29,7 +29,7 @@ pub async fn request_key(
     data: web::Data<WebData<service::PostgresAuthenticationService>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let result = match data.service.request_key(req.0).await {
-        Ok(valid_key) => Ok(HttpResponse::Ok().json(PreSharedKeyResponse { valid_key })),
+        Ok(outcome) => Ok(HttpResponse::Ok().json(PreSharedKeyResponse { outcome })),
         Err(e) => Err(e.into()),
     };
 

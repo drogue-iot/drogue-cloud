@@ -15,7 +15,7 @@ use drogue_cloud_database_common::{
 use drogue_cloud_service_api::{
     auth::device::authn::{
         self, AuthenticationRequest, AuthorizeGatewayRequest, GatewayOutcome, Outcome,
-        PreSharedKeyRequest,
+        PreSharedKeyOutcome, PreSharedKeyRequest,
     },
     health::{HealthCheckError, HealthChecked},
     webapp as actix_web,
@@ -46,7 +46,7 @@ pub trait AuthenticationService: Clone {
     async fn request_key(
         &self,
         request: PreSharedKeyRequest,
-    ) -> Result<Option<registry::v1::PreSharedKey>, Self::Error>;
+    ) -> Result<PreSharedKeyOutcome, Self::Error>;
 
     // authenticate a device
     async fn authenticate(&self, request: AuthenticationRequest) -> Result<Outcome, Self::Error>;
@@ -162,7 +162,7 @@ impl AuthenticationService for PostgresAuthenticationService {
     async fn request_key(
         &self,
         request: PreSharedKeyRequest,
-    ) -> Result<Option<PreSharedKey>, Self::Error> {
+    ) -> Result<PreSharedKeyOutcome, Self::Error> {
         let c = self.pool.get().await?;
 
         // lookup the application
@@ -171,7 +171,7 @@ impl AuthenticationService for PostgresAuthenticationService {
         let application = match application.lookup(&request.application).await? {
             Some(application) => application.into(),
             None => {
-                return Ok(None);
+                return Ok(PreSharedKeyOutcome::NotFound);
             }
         };
 
@@ -180,7 +180,7 @@ impl AuthenticationService for PostgresAuthenticationService {
         // validate application
 
         if !validate_app(&application) {
-            return Ok(None);
+            return Ok(PreSharedKeyOutcome::NotFound);
         }
 
         // lookup the device
@@ -192,14 +192,23 @@ impl AuthenticationService for PostgresAuthenticationService {
         {
             Some(device) => device.into(),
             None => {
-                return Ok(None);
+                return Ok(PreSharedKeyOutcome::NotFound);
             }
         };
 
         log::debug!("Found device: {:?}", device);
 
         // find
-        Ok(locate_psk(&device))
+        let key = locate_psk(&device);
+        if let Some(key) = key {
+            Ok(PreSharedKeyOutcome::Found {
+                app: application,
+                device: strip_credentials(device),
+                key,
+            })
+        } else {
+            Ok(PreSharedKeyOutcome::NotFound)
+        }
     }
 
     #[instrument(skip(self), err)]

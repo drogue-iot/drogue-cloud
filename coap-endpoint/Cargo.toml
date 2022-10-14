@@ -17,6 +17,7 @@ cloudevents-sdk = "0.5"
 coap-lite = "0.11"
 drogue-client = "0.11.0-alpha.1"
 openssl = { version = "0.10", features = ["v111"] }
+lazy_static = "1.4"
 futures = "0.3"
 http = "0.2"
 log = "0.4"
