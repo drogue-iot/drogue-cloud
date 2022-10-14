@@ -126,7 +126,12 @@ impl KafkaSink {
 
     fn is_ready(app: &registry::v1::Application) -> bool {
         app.section::<core::v1::Conditions>()
-            .and_then(|s| s.ok())
+            .and_then(|s| {
+                if let Err(err) = &s {
+                    log::info!("Failed to decode conditions: {err}");
+                }
+                s.ok()
+            })
             .and_then(|conditions| {
                 conditions
                     .iter()
