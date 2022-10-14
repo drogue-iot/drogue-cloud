@@ -113,6 +113,9 @@ impl KafkaSink {
         }
     }
 
+    #[instrument(level = "debug", skip_all, ret, fields(
+        application=%app.metadata.name,
+    ))]
     fn check_ready(&self, app: &registry::v1::Application) -> bool {
         if self.check_ready {
             Self::is_ready(app)
