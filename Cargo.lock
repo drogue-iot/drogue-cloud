@@ -1739,6 +1739,7 @@ dependencies = [
  "futures",
  "http",
  "humantime-serde",
+ "lazy_static",
  "log",
  "openssl",
  "prometheus",

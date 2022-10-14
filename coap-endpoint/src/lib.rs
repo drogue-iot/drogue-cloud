@@ -9,9 +9,8 @@ mod telemetry;
 use crate::session::Session;
 use crate::{auth::DeviceAuthenticator, error::CoapEndpointError, response::Responder};
 use coap_lite::{CoapOption, CoapRequest, CoapResponse};
+use drogue_client::registry;
 use drogue_cloud_endpoint_common::psk::Identity;
-use tokio_dtls_stream_sink::Server as DtlsServer;
-
 use drogue_cloud_endpoint_common::{
     auth::AuthConfig,
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
@@ -19,14 +18,19 @@ use drogue_cloud_endpoint_common::{
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
+use drogue_cloud_service_api::auth::device::authn::PreSharedKeyOutcome;
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     defaults,
 };
+use tokio_dtls_stream_sink::Server as DtlsServer;
 
 use drogue_cloud_endpoint_common::x509::ClientCertificateChain;
-use openssl::ssl::{SslContext, SslFiletype, SslMethod, SslVerifyMode};
+use openssl::{
+    ex_data::Index,
+    ssl::{Ssl, SslContext, SslFiletype, SslMethod, SslVerifyMode},
+};
 use serde::Deserialize;
 use std::{collections::LinkedList, net::SocketAddr};
 use telemetry::PublishOptions;
@@ -43,6 +47,11 @@ pub const AUTH_OPTION: CoapOption = CoapOption::Unknown(4209);
 // Option Number 4210 corresponds to the option assigned to carry command information,
 // which is meant for commands to be sent back to the device in the response
 pub const HEADER_COMMAND: CoapOption = CoapOption::Unknown(4210);
+
+lazy_static::lazy_static! {
+    static ref RESOURCE_INDEX: Index<Ssl, (registry::v1::Application, registry::v1::Device)> =
+        Ssl::new_ex_index().unwrap();
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -147,7 +156,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
         if !config.disable_psk {
             let auth = app.authenticator.clone();
-            ctx.set_psk_server_callback(move |_ssl, identity, secret_mut| {
+            ctx.set_psk_server_callback(move |ssl, identity, secret_mut| {
                 let mut to_copy = 0;
                 if let Some(Ok(identity)) = identity.map(|s| core::str::from_utf8(s)) {
                     log::trace!("PSK auth for {:?}", identity);
@@ -164,9 +173,12 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                         });
 
                         if let Ok(response) = response {
-                            if let Some(valid) = response.valid_key {
-                                to_copy = std::cmp::min(valid.key.len(), secret_mut.len());
-                                secret_mut[..to_copy].copy_from_slice(&valid.key[..to_copy]);
+                            if let PreSharedKeyOutcome::Found { app, device, key } =
+                                response.outcome
+                            {
+                                ssl.set_ex_data(*RESOURCE_INDEX, (app, device));
+                                to_copy = std::cmp::min(key.key.len(), secret_mut.len());
+                                secret_mut[..to_copy].copy_from_slice(&key.key[..to_copy]);
                             }
                         }
                     }
