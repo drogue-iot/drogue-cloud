@@ -8,7 +8,7 @@ use actix_web::{web, HttpResponse, Responder};
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
     command::{Commands, KafkaCommandSource, KafkaCommandSourceConfig},
-    psk::Identity,
+    psk::{set_ssl_identity, Identity, VerifiedIdentity},
     sender::{DownstreamSender, ExternalClientPoolConfig},
     sink::KafkaSink,
 };
@@ -71,7 +71,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     let mut tls_auth_config = TlsAuthConfig::default();
     if !disable_tls_psk {
         let auth = device_authenticator.clone();
-        tls_auth_config.psk = Some(Box::new(move |identity, secret_mut| {
+        tls_auth_config.psk = Some(Box::new(move |ssl, identity, secret_mut| {
             let mut to_copy = 0;
             if let Some(Ok(identity)) = identity.map(|s| core::str::from_utf8(s)) {
                 log::trace!("PSK auth for {:?}", identity);
@@ -91,6 +91,13 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                         if let PreSharedKeyOutcome::Found { app, device, key } = response.outcome {
                             to_copy = std::cmp::min(key.key.len(), secret_mut.len());
                             secret_mut[..to_copy].copy_from_slice(&key.key[..to_copy]);
+                            set_ssl_identity(
+                                ssl,
+                                VerifiedIdentity {
+                                    application: app,
+                                    device,
+                                },
+                            );
                         }
                     }
                 }

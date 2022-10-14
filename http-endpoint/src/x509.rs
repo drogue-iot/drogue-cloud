@@ -1,11 +1,11 @@
 use actix_rt::net::TcpStream;
 use drogue_cloud_endpoint_common::{
-    psk::{Identity, PskIdentityRetriever},
+    psk::{PskIdentityRetriever, VerifiedIdentity},
     x509::{ClientCertificateChain, ClientCertificateRetriever},
 };
 use std::any::Any;
 
-pub fn from_socket(con: &dyn Any) -> (Option<Identity>, Option<ClientCertificateChain>) {
+pub fn from_socket(con: &dyn Any) -> (Option<VerifiedIdentity>, Option<ClientCertificateChain>) {
     log::debug!("Try extracting client cert");
 
     #[cfg(feature = "openssl")]

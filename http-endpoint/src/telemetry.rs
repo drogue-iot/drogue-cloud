@@ -3,7 +3,7 @@ use drogue_cloud_endpoint_common::{
     auth::DeviceAuthenticator,
     command::Commands,
     error::{EndpointError, HttpEndpointError},
-    psk::Identity,
+    psk::VerifiedIdentity,
     sender::{self, DownstreamSender, PublishIdPair},
     x509::ClientCertificateChain,
 };
@@ -43,7 +43,7 @@ pub async fn publish_plain(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-    verified_identity: Option<Identity>,
+    verified_identity: Option<VerifiedIdentity>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     publish(
         sender,
@@ -70,7 +70,7 @@ pub async fn publish_tail(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-    verified_identity: Option<Identity>,
+    verified_identity: Option<VerifiedIdentity>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     let (channel, suffix) = path.into_inner();
     publish(
@@ -100,7 +100,7 @@ pub async fn publish(
     req: HttpRequest,
     body: web::Bytes,
     certs: Option<ClientCertificateChain>,
-    verified_identity: Option<Identity>,
+    verified_identity: Option<VerifiedIdentity>,
 ) -> Result<HttpResponse, HttpEndpointError> {
     log::debug!("Publish to '{}'", channel);
 

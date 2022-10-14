@@ -1,4 +1,4 @@
-use crate::{psk::Identity, x509::ClientCertificateChain};
+use crate::{psk::VerifiedIdentity, x509::ClientCertificateChain};
 use actix_web::{
     dev::Payload,
     error, {FromRequest, HttpMessage, HttpRequest},
@@ -140,17 +140,12 @@ impl DeviceAuthenticator {
     /// Authenticate a device based on a verified identity. The identity has previously been verified using pre-shared key
     fn authenticate_verified_identity(
         &self,
-        identity: &Identity,
+        identity: VerifiedIdentity,
     ) -> AuthResult<AuthenticationResponse> {
-        let mut dev = registry::v1::Device::default();
-        dev.metadata.name = identity.device().to_string();
-        dev.metadata.application = identity.application().to_string();
-        let mut app = registry::v1::Application::default();
-        app.metadata.name = identity.application().to_string();
         Ok(AuthenticationResponse {
             outcome: Outcome::Pass {
-                application: app,
-                device: dev,
+                application: identity.application,
+                device: identity.device,
                 r#as: None,
             },
         })
@@ -164,7 +159,7 @@ impl DeviceAuthenticator {
         device: Option<D>,
         auth: Option<&HeaderValue>,
         certs: Option<ClientCertificateChain>,
-        verified_identity: Option<Identity>,
+        verified_identity: Option<VerifiedIdentity>,
     ) -> AuthResult<AuthenticationResponse>
     where
         T: AsRef<str> + Debug,
@@ -245,7 +240,7 @@ impl DeviceAuthenticator {
             }
             (None, None, None, Some(certs), None) => self.authenticate_cert(certs.0).await,
             (None, None, None, None, Some(verified_identity)) => {
-                self.authenticate_verified_identity(&verified_identity)
+                self.authenticate_verified_identity(verified_identity)
             }
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
@@ -260,7 +255,7 @@ impl DeviceAuthenticator {
         password: Option<P>,
         client_id: C,
         certs: Option<ClientCertificateChain>,
-        verified_identity: Option<Identity>,
+        verified_identity: Option<VerifiedIdentity>,
     ) -> AuthResult<AuthenticationResponse>
     where
         U: AsRef<str> + Debug,
@@ -310,7 +305,7 @@ impl DeviceAuthenticator {
             (None, None, _, Some(certs), None) => self.authenticate_cert(certs.0).await,
             // TLS-PSK verified identity
             (None, None, _, None, Some(verified_identity)) => {
-                self.authenticate_verified_identity(&verified_identity)
+                self.authenticate_verified_identity(verified_identity)
             }
             // everything else is failed
             _ => Ok(AuthenticationResponse::failed()),
@@ -332,7 +327,7 @@ impl DeviceAuthenticator {
         device: Option<D>,
         auth: Option<&HeaderValue>,
         certs: Option<Vec<Vec<u8>>>,
-        verified_identity: Option<Identity>,
+        verified_identity: Option<VerifiedIdentity>,
         r#as: Option<String>,
     ) -> AuthResult<AuthenticationResponse>
     where
@@ -416,7 +411,7 @@ impl DeviceAuthenticator {
             // X.509 client certificate -> all information from the cert
             (None, None, None, Some(certs), None) => self.authenticate_cert(certs).await,
             (None, None, None, None, Some(verified_identity)) => {
-                self.authenticate_verified_identity(&verified_identity)
+                self.authenticate_verified_identity(verified_identity)
             }
 
             // everything else is failed

@@ -3,7 +3,7 @@ use coap_lite::{CoapOption, CoapRequest, CoapResponse};
 use drogue_cloud_endpoint_common::{
     command::Commands,
     error::EndpointError,
-    psk::Identity,
+    psk::VerifiedIdentity,
     sender::{self, DownstreamSender, ToPublishId},
     x509::ClientCertificateChain,
 };
@@ -40,7 +40,7 @@ pub async fn publish_plain(
     req: CoapRequest<SocketAddr>,
     auth: Option<&Vec<u8>>,
     certs: Option<ClientCertificateChain>,
-    verified_identity: Option<Identity>,
+    verified_identity: Option<VerifiedIdentity>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     publish(
         sender,
@@ -66,7 +66,7 @@ pub async fn publish_tail(
     req: CoapRequest<SocketAddr>,
     auth: Option<&Vec<u8>>,
     certs: Option<ClientCertificateChain>,
-    verified_identity: Option<Identity>,
+    verified_identity: Option<VerifiedIdentity>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     let (channel, suffix) = path;
     publish(
@@ -95,7 +95,7 @@ pub async fn publish(
     req: CoapRequest<SocketAddr>,
     auth: Option<&Vec<u8>>,
     certs: Option<ClientCertificateChain>,
-    verified_identity: Option<Identity>,
+    verified_identity: Option<VerifiedIdentity>,
 ) -> Result<Option<CoapResponse>, CoapEndpointError> {
     log::debug!("Publish to '{}'", channel);
 
