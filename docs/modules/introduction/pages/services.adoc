@@ -1,7 +1,7 @@
-= Noteworthy services
+= Public facing services
 
 Drogue Cloud consists of multiple internal and external services, as explained in this chapter. The following sub-sections
-list a few of the core services, considered interfacing points for users of Drogue Cloud.
+list a few of the core services that are accessible from the outside, considered interfacing points for users of Drogue Cloud.
 
 == Device Registry
 

@@ -4,4 +4,4 @@
 ** xref:control.adoc[Control plane]
 ** xref:devices.adoc[Devices, gateways & services]
 ** xref:addons.adoc[Additional components]
-** xref:services.adoc[Noteworthy services]
+** xref:services.adoc[Public facing services]

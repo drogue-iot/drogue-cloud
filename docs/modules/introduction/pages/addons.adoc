@@ -22,3 +22,17 @@ We have an "addon" deployment for this in our repository, and also deploy this o
 currently Eclipse Ditto is not part of the core Drogue Cloud infrastructure.
 
 The integration of Ditto is a future goal, but as of now still a work in progress.
+
+== Drogue Ajour
+
+
+Drogue Ajour is a firmware update and build service for tiny devices connected to Drogue IoT Cloud. It supports a wide range of IoT protocols and uses a low footprint update protocol.
+
+
+It offers:
+
+* Delivery - delivering firmware updates to connected devices.
+ ** Protocol support: any protocol supported by Drogue Cloud (HTTP, MQTT, CoAP, LoRaWAN)
+* Build - building firmware and storing it in a firmware repository.
+** RESTful API for inspecting and triggering builds.
+** Management console to inspect rollout status and builds.

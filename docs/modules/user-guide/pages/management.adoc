@@ -76,7 +76,7 @@ provide initial configuration using the `--spec <json>` argument:
 
 [source,bash]
 ----
-drg create device --app my-app my-device-1 --spec '{"credentials": {"credentials":[{ "pass": "foobar" }]}}'
+drg create device --app my-app my-device-1 --spec '{"authentication": {"credentials":[{ "pass": "foobar" }]}}'
 ----
 
 The `--spec` argument accepts a JSON string of the full "spec" section of the device.
@@ -124,7 +124,7 @@ metadata:
   # …
 spec:
   # …
-  credentials:
+  authentication:
     credentials:
       - pass: my-password <1>
 ----
@@ -139,7 +139,7 @@ metadata:
   # …
 spec:
   # …
-  credentials:
+  authentication:
     credentials:
       - pass:
           bcrypt: "$2a$12$WsLmgORBv3WHZ3CjCiMzXOeo2hL5UEeq8PEd11q9BfbM/RWqb7c3G" <1>
@@ -173,7 +173,7 @@ metadata:
   # …
 spec:
   # …
-  credentials:
+  authentication:
     credentials:
       - user:
           username: device-user <2>
@@ -192,7 +192,7 @@ metadata:
   # …
 spec:
   # …
-  credentials:
+  authentication:
     credentials:
       - user:
           username: device-user <2>
@@ -225,7 +225,7 @@ metadata:
   # …
 spec:
   # …
-  credentials:
+  authentication:
     credentials:
       - user:
           username: device-user
@@ -237,6 +237,64 @@ spec:
 As described in <<setting_username_password>>, you can use hashed passwords too.
 
 === Setting X.509 client certificate credentials
+
+If you want to use client certificates to authenticate your device, your application must be configured with a trust root that can verify the device.
+
+==== Pre-requisites
+
+* You have created an application
+
+==== Procedure
+
+Configure the application, adding a password credentials entry:
+
+[source,yaml]
+----
+metadata:
+  name: application
+  # …
+spec:
+  # …
+  trustAnchors:
+    anchors:
+      - certificate: <base64 encoded certificate> <1>
+----
+<1> The certificate must be a base64-encoded DER-encoded X.509 certificate.
+
+The device authenticating must present the client certificate in the (D)TLS handshake. The X.509 certificate `issuer` must correspond to the application name, and the `subject` must correspond to the device id.
+
+
+=== Setting TLS-PSK credentials
+
+If you want to use pre-shared keys to authenticate your device, your device must be configured with the pre-shared key you wish to use.
+
+==== Pre-requisites
+
+* You have created a device
+
+==== Procedure
+
+Configure the device, adding a password credentials entry:
+
+[source,yaml]
+----
+metadata:
+  name: device
+  # …
+spec:
+  # …
+  authentication:
+    credentials:
+      - psk:
+          key: aGV5LXJvZG5leQ== <1>
+          validity: <2>
+            notBefore: 2022-10-05T07:05:26Z <3>
+            notAfter: 2023-10-05T07:05:26Z <4>
+----
+<1> The key must be base64-encoded.
+<2> (Optional) If not present, the pre-shared key is valid forever.
+<3> The earliest date (ISO 8601 date) the key will be valid.
+<4> The latest date (ISO 8601 date) the key will be valid.
 
 === Configuring a gateway device
 

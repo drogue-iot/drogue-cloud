@@ -13,10 +13,7 @@ But also on the cloud side, different ways to consume data exists. May that be a
 again MQTT, or a simple Web socket connection. Drogue Cloud tries to be integrated as good as possible, and not force
 you into a specific API.
 
-Drogue Cloud is based on Knative, and internally uses the Cloud Events specification to forward messages.
-Cloud events on the other side have different mappings to transport channels, such as MQTT, Kafka, HTTP, etc.. And while
-Cloud Events can also be used on the external interfaces of Drogue Cloud, it isn't a requirement, and you can use your
-custom protocols as you need.
+Drogue Cloud uses the Cloud Events specification to forward messages internally. Cloud events have different mappings to transport channels, such as MQTT, Kafka, HTTP, etc.. And while Cloud Events can also be used on the external interfaces of Drogue Cloud, it isn't a requirement, and you can use your custom protocols as you need.
 
 image:data-plane.svg[Data plane overview]
 
@@ -27,10 +24,8 @@ The protocol endpoints also authenticates and authorizes devices and its configu
 X.509 client certificates and ensure that the devices are enabled in the system.
 
 Once the device is granted access to publish (or receive) data, the protocol endpoint will hook up the device
-to the internal message flow. It subscribes to commands targeted towards the device, and forwards messages
-from the device to an internal Knative eventing endpoint which takes care of processing and delivering the messages.
-
-The actual payload of the messages is not processed, and just passed on the Knative eventing destination.
+to the internal message flow. It forwards messages from the device to an internal Kafka cluster, which takes
+care of storing the messages.
 
 [NOTE]
 ====
@@ -46,17 +41,7 @@ of TTN, you can configure if you want to have the full request payload, or just 
 
 == Message persistence
 
-When a protocol endpoint drops off an incoming message to the Knative eventing service, this service is
-backed by a Kafka topicfootnote:[Technically it is a Knative eventing service, which could be implemented by different technologies. The default implementation for Drogue Cloud though is Kafka.].
-
-The responsibility of Kafka is to deliver messages to the target consumer. Persisting messages if needed, and
-handling shared consumer groups if requested. This allows Drogue Cloud to buffer messages when the consumer is
-unavailable or if there is a peak of messages that the consumer currently cannot handle. Also, this allows to
-drive a shared consumer model, where in a group of consumers only one receives a messages. This concept is used
-to share the load for messages to multiple instances of a consumer.
-
-As mentioned before, Drogue Cloud relies on a Knative eventing destination which provides these guarantees, and
-uses Kafka to implement this. However, it is possible to replace the Kafka implementation with a different implementation.
+The responsibility of Kafka is to store the message until it can be fetched by a consumer. This allows Drogue Cloud to store messages when the consumer is unavailable or if there is a peak of messages that consumers currently cannot handle. Using Kafka allows for a wide range of consumption patterns.
 
 == Consuming messages
 
@@ -104,9 +89,23 @@ And while it may be technically incorrect, in the next few paragraphs "authentic
 authorization, unless noted otherwise.
 
 The device facing authentication is backed by the device registry, which is the central storage for device
-information and configuration. It also stores credentials of devices, like passwords or X.509 trust anchors.
+information and configuration. It also stores credentials of devices, like passwords, pre-shared keys or X.509 trust anchors.
 
-The user facing authentication is backed by an Open ID connect, single sign-on system. By default, we use Keycloak,
-however it should be possible to use any other Open ID connect compatible solution.
+=== Devices
 
-Services internally also use the same SSO solution as external users.
+As mentioned above, the devices are authenticated at the protocol endpoints. There are three different ways devices can authenticate, supported by all protocol endpoints:
+
+* Username/password - Devices pass credentials using the mechanism appropriate for the particular protocol.
+* X.509 Client certificates - Devices present their certificates during the DTLS/TLS handshake.
+* Pre-shared key - Device use pre-shared keys during the DTLS/TLS handshake.
+
+Which authentication scheme you should use depends on what types of devices you are going to use with Drogue Cloud, taking into account bandwidth, security requirements and existing infrastructure.
+
+=== Applications
+
+The user facing authentication is backed by an Open ID Connect (OIDC), single sign-on system. By default, we use Keycloak,
+however it should be possible to use any other OIDC compatible solution.
+
+Applications may use OIDC to authenticate, or access tokens created using the management API.
+
+NOTE: Services internally also use the same SSO solution as external users.

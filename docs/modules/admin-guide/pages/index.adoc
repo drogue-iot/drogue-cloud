@@ -1,0 +1,9 @@
+= Admin Guide
+
+This guide describes how to deploy and manage Drogue Cloud, from the perspective of an administrator, running Drogue Cloud "as a service".
+
+You can deploy Drogue Cloud in different ways depending on your use case:
+
+* Kubernetes from a release - Deploying Drogue Cloud to Kubernetes is recommended for production systems.
+* Kubernetes from git - Deploying Drogue Cloud from git is useful for development or for using unreleased features.
+* Bare metal  - Runs all of Drogue Cloud in a single binary, useful for testing or running on hardware with limited resources.

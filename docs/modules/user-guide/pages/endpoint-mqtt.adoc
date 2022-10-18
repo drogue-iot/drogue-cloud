@@ -27,13 +27,13 @@ metadata:
   name: sensor01 <1>
   application: my-app
 spec:
-  credentials: {} <2>
+  authentication: {} <2>
   gatewaySelector:
     matchNames: <3>
       - gateway01
 ----
 <1> Name of the actual device.
-<2> Empty credentials, as this device doesn't need to allow a direct connection.
+<2> Empty authentication, as this device doesn't need to allow a direct connection.
 <3> Names of the devices (gateways) which are allowed to act on behalf of this device.
 
 A device can act both as direct device and as gateway a the same time.
@@ -46,8 +46,12 @@ A device can act both as direct device and as gateway a the same time.
 
 === X.509 Client certificates
 
-You may use X.509 client certificates when establishing the TLS connection.The certificate must be signed with a
+You may use X.509 client certificates when establishing the TLS connection. The certificate must be signed with a
 trust anchor stored in the device registry on the application level.
+
+=== TLS-PSK
+
+You may use pre-shared keys when establishing the TLS connection. See xref:management.adoc#_setting_tls_psk_credentials[Setting TLS-PSK credentials] for how to configure the device.
 
 === Username/password
 
