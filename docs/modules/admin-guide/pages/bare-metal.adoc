@@ -26,30 +26,7 @@ You thought you didn't need containers, HAH! Well, to make it simpler to get the
 
 [source,yaml]
 ----
-version: "3.9"
-services:
-  postgres:
-    image: docker.io/bitnami/postgresql:13
-    environment:
-      - POSTGRESQL_USERNAME=admin
-      - POSTGRESQL_PASSWORD=admin123456
-      - POSTGRESQL_DATABASE=drogue
-    ports:
-      - "5432:5432"
-  kafka:
-    image: docker.io/moeenz/docker-kafka-kraft:latest
-    ports:
-      - "9092:9092"
-    environment:
-      - KRAFT_CONTAINER_HOST_NAME=localhost
-  keycloak:
-    image: docker.io/jboss/keycloak:13.0.1
-    environment:
-      - KEYCLOAK_USER=admin
-      - KEYCLOAK_PASSWORD=admin123456
-      - DB_VENDOR=h2
-    ports:
-      - "8080:8080"
+include::example$docker-compose.yml[]
 ----
 
 == Running

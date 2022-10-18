@@ -5,7 +5,7 @@ nav:
   - modules/ROOT/nav.adoc
   - modules/use-cases/nav.adoc
   - modules/introduction/nav.adoc
-  - modules/deployment/nav.adoc
+  - modules/admin-guide/nav.adoc
   - modules/user-guide/nav.adoc
   - modules/ROOT/nav-integrations.adoc
   - modules/api/nav.adoc

@@ -42,7 +42,8 @@ The command will piggyback on the response—the responsibility to track when th
 
 A device can authenticate itself using one of the following approaches:
 
-* Client certificate authentication - Only supported when using DTLS
+* Client certificate authentication, only supported when using DTLS. See xref:management.adoc#_setting_x_509_client_certificate_credentials[Setting X.509 client certificate credentials] for how to configure the application.
+* Pre-shared key authentication, only supported when using DTLS. See xref:management.adoc#_setting_tls_psk_credentials[Setting TLS-PSK credentials] for how to configure the device.
 * Setting `CoAP option number 4209`. It is carried out using a base64 string similar to HTTP basic authentication. We strongly support using DTLS to ensure the password stays encrypted.
 
 == Responses

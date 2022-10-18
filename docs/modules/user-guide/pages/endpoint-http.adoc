@@ -27,6 +27,8 @@ You need to use one of the following authentication mechanisms:
 
 | X.509 Client certificate | Provide an X.509 client certificate during the TLS handshake. The certificate must be signed with a trust anchor stored in the device registry on the application level.
 
+| TLS-PSK | Provide a pre-shared key during the TLS handshake. See xref:management.adoc#_setting_tls_psk_credentials[Setting TLS-PSK credentials] for how to configure the device.
+
 a| * Credentials: `<username>@<application>:<password>`
 | Standard username/password authentication using `<username>@<application>` as HTTP username. The `<username>` can
 either be a device name, device alias, or unique username.

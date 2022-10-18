@@ -1,7 +1,9 @@
-= Deployment
+= Deploying
 
 Deploying a complex solution like this can be tricky. We tried make it as simple as possible for a local test
 installation.
 
 The following sections will walk you through the steps, required to install Drogue Cloud. It will also try to show
 options to customize this process.
+
+Deploying Drogue Cloud to Kubernetes is recommended for production systems.

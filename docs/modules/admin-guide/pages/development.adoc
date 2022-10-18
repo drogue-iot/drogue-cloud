@@ -1,7 +1,7 @@
-= Deploying from the repository
+= Deploying from git
 
 Instead of running the installer, which installs a released version of Drogue Cloud, you can also directly from the
-repository, using `:latest` images instead. The same way, you can also deploy your custom-built images.
+repository, using `:latest` images instead. The same way, you can also deploy your custom-built images. This is useful if you have made changes to the Drogue Cloud source code and want to test them out, or if you want to use some feature that has not yet been released.
 
 [IMPORTANT]
 .`main` and tagged versions

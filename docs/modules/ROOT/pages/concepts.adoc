@@ -18,7 +18,7 @@ scope of an application.
 Endpoints, more explicitly *protocol endpoints*, are what devices connect to, in order to communicate with the system.
 
 On the device facing side these endpoints implement a device specific protocol, and on the cloud facing side, they
-communicate using Knative and Cloud Events.
+communicate using Cloud Events.
 
 A protocol might be a binary protocol, custom to the device. Or also some other higher level API, based on existing
 communication protocols like MQTT, HTTP, or CoAP.
