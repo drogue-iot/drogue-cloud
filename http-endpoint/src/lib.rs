@@ -49,6 +49,9 @@ pub struct Config {
     // default for bool is false
     #[serde(default)]
     pub cors_allow_any_origin: bool,
+
+    #[serde(default)]
+    pub cors_allow_origin_url: Option<String>,
 }
 
 async fn index() -> impl Responder {
@@ -122,6 +125,8 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
         if config.cors_allow_any_origin {
             cors = cors.allow_any_origin();
+        } else if let Some(origin) = &config.cors_allow_origin_url {
+            cors = cors.allowed_origin(origin.as_str());
         }
 
         cfg.app_data(web::Data::new(sender.clone()))
