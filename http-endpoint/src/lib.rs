@@ -4,6 +4,7 @@ mod telemetry;
 mod ttn;
 mod x509;
 
+use actix_cors::Cors;
 use actix_web::{web, HttpResponse, Responder};
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
@@ -106,6 +107,14 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         }));
     }
 
+    let cors = Cors::default()
+        .allowed_origin("drogue.io")
+        .allowed_origin_fn(|origin, _req_head| origin.as_bytes().starts_with(b"localhost"))
+        .allowed_methods(vec!["POST"])
+        .allowed_headers(vec![http::header::AUTHORIZATION])
+        .allowed_header(http::header::CONTENT_TYPE)
+        .max_age(3600);
+
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()))
@@ -114,6 +123,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
             // the standard endpoint
             .service(
                 web::scope("/v1")
+                    .wrap(cors.clone())
                     .service(
                         web::resource("/{channel}").route(web::post().to(telemetry::publish_plain)),
                     )
@@ -125,6 +135,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
             // The Things Network variant
             .service(
                 web::scope("/ttn")
+                    .wrap(cors)
                     .route("/", web::post().to(ttn::publish_v2))
                     .route("/v2", web::post().to(ttn::publish_v2))
                     .route("/v3", web::post().to(ttn::publish_v3)),
