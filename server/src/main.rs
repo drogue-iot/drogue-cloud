@@ -583,6 +583,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             kafka_command_config: kafka,
             check_kafka_topic_ready: false,
             endpoint_pool: Default::default(),
+            cors_allow_any_origin: true,
         };
 
         drogue_cloud_http_endpoint::run(config, &mut main).await?;

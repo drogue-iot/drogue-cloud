@@ -45,6 +45,10 @@ pub struct Config {
 
     #[serde(default)]
     pub http: HttpConfig,
+
+    // default for bool is false
+    #[serde(default)]
+    pub cors_allow_any_origin: bool,
 }
 
 async fn index() -> impl Responder {
@@ -108,15 +112,17 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     }
 
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
-        let cors = Cors::default()
-            // allow all origins of requests
-            .allow_any_origin()
+        let mut cors = Cors::default()
             .allowed_methods(vec!["POST"])
             .allowed_headers(vec![
                 http::header::AUTHORIZATION,
                 http::header::CONTENT_TYPE,
             ])
             .max_age(3600);
+
+        if config.cors_allow_any_origin {
+            cors = cors.allow_any_origin();
+        }
 
         cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()))
