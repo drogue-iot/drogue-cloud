@@ -109,8 +109,8 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         let cors = Cors::default()
-            .allowed_origin("http://127.0.0.1:2603")
-            .allowed_origin_fn(|origin, _req_head| origin.as_bytes().ends_with(b"drogue.cloud"))
+            // allow all origins of requests
+            .allow_any_origin()
             .allowed_methods(vec!["POST"])
             .allowed_headers(vec![
                 http::header::AUTHORIZATION,
