@@ -133,24 +133,28 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
             .app_data(web::Data::new(http_server_commands.clone()))
             .app_data(web::Data::new(device_authenticator.clone()))
             .service(web::resource("/").route(web::get().to(index)))
-            // the standard endpoint
             .service(
-                web::scope("/v1")
+                web::scope("")
                     .wrap(cors)
+                    // the standard endpoint
                     .service(
-                        web::resource("/{channel}").route(web::post().to(telemetry::publish_plain)),
+                        web::scope("/v1")
+                            .service(
+                                web::resource("/{channel}")
+                                    .route(web::post().to(telemetry::publish_plain)),
+                            )
+                            .service(
+                                web::resource("/{channel}/{suffix:.*}")
+                                    .route(web::post().to(telemetry::publish_tail)),
+                            ),
                     )
+                    // The Things Network variant
                     .service(
-                        web::resource("/{channel}/{suffix:.*}")
-                            .route(web::post().to(telemetry::publish_tail)),
+                        web::scope("/ttn")
+                            .route("/", web::post().to(ttn::publish_v2))
+                            .route("/v2", web::post().to(ttn::publish_v2))
+                            .route("/v3", web::post().to(ttn::publish_v3)),
                     ),
-            )
-            // The Things Network variant
-            .service(
-                web::scope("/ttn")
-                    .route("/", web::post().to(ttn::publish_v2))
-                    .route("/v2", web::post().to(ttn::publish_v2))
-                    .route("/v3", web::post().to(ttn::publish_v3)),
             );
     })
     .tls_auth_config(tls_auth_config)
