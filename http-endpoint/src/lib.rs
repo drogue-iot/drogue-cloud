@@ -19,7 +19,7 @@ use drogue_cloud_service_api::{
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::http::{HttpBuilder, HttpConfig},
+    actix::http::{CorsConfig, HttpBuilder, HttpConfig},
     app::{Startup, StartupExt},
     defaults,
     tls::TlsAuthConfig,
@@ -45,13 +45,6 @@ pub struct Config {
 
     #[serde(default)]
     pub http: HttpConfig,
-
-    // default for bool is false
-    #[serde(default)]
-    pub cors_allow_any_origin: bool,
-
-    #[serde(default)]
-    pub cors_allow_origin_url: Option<String>,
 }
 
 async fn index() -> impl Responder {
@@ -115,27 +108,13 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     }
 
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
-        let mut cors = Cors::default()
-            .allowed_methods(vec!["POST"])
-            .allowed_headers(vec![
-                http::header::AUTHORIZATION,
-                http::header::CONTENT_TYPE,
-            ])
-            .max_age(3600);
-
-        if config.cors_allow_any_origin {
-            cors = cors.allow_any_origin();
-        } else if let Some(origin) = &config.cors_allow_origin_url {
-            cors = cors.allowed_origin(origin.as_str());
-        }
-
         cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()))
             .app_data(web::Data::new(device_authenticator.clone()))
             .service(web::resource("/").route(web::get().to(index)))
             .service(
                 web::scope("")
-                    .wrap(cors)
+                    //.wrap(cors)
                     // the standard endpoint
                     .service(
                         web::scope("/v1")
@@ -156,6 +135,9 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                             .route("/v3", web::post().to(ttn::publish_v3)),
                     ),
             );
+    })
+    .cors(move || {
+        <CorsConfig as Into<Cors>>::into(config.clone().http.cors).allowed_methods(vec!["POST"])
     })
     .tls_auth_config(tls_auth_config)
     .on_connect(move |con, ext| {
