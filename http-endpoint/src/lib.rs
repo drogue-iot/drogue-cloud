@@ -18,7 +18,7 @@ use drogue_cloud_service_api::{
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::http::{HttpBuilder, HttpConfig, Method},
+    actix::http::{HttpBuilder, HttpConfig},
     app::{Startup, StartupExt},
     defaults,
     tls::TlsAuthConfig,
@@ -108,7 +108,7 @@ pub async fn run(mut config: Config, startup: &mut dyn Startup) -> anyhow::Resul
 
     // If allowed methods are not set let's add them
     if config.http.cors.allowed_methods.is_none() {
-        config.http.cors.allowed_methods = Some(vec![Method::POST]);
+        config.http.cors.set_allowed_methods(vec!["POST"]);
     }
 
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
