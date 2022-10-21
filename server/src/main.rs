@@ -13,6 +13,7 @@ use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSource
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, Transport};
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
 use drogue_cloud_service_api::{kafka::KafkaClientConfig, webapp::HttpServer};
+use drogue_cloud_service_common::actix::http::CorsConfig;
 use drogue_cloud_service_common::{
     actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
     app::{Main, Startup, StartupExt, SubMain},
@@ -574,6 +575,10 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 key_file,
                 bind_addr: server.http.clone().into(),
                 metrics_namespace: Some("http_endpoint".into()),
+                cors: CorsConfig {
+                    allow_any_origin: true,
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             auth: auth.clone(),
@@ -583,8 +588,6 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             kafka_command_config: kafka,
             check_kafka_topic_ready: false,
             endpoint_pool: Default::default(),
-            cors_allow_any_origin: true,
-            cors_allow_origin_url: None,
         };
 
         drogue_cloud_http_endpoint::run(config, &mut main).await?;
