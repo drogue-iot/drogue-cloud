@@ -4,7 +4,6 @@ mod telemetry;
 mod ttn;
 mod x509;
 
-use actix_cors::Cors;
 use actix_web::{web, HttpResponse, Responder};
 use drogue_cloud_endpoint_common::{
     auth::{AuthConfig, DeviceAuthenticator},
@@ -19,7 +18,7 @@ use drogue_cloud_service_api::{
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::http::{CorsConfig, HttpBuilder, HttpConfig},
+    actix::http::{HttpBuilder, HttpConfig, Method},
     app::{Startup, StartupExt},
     defaults,
     tls::TlsAuthConfig,
@@ -51,7 +50,7 @@ async fn index() -> impl Responder {
     HttpResponse::Ok()
 }
 
-pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
+pub async fn run(mut config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new(
@@ -107,6 +106,11 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         }));
     }
 
+    // If allowed methods are not set let's add them
+    if config.http.cors.allowed_methods.is_none() {
+        config.http.cors.allowed_methods = Some(vec![Method::POST]);
+    }
+
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()))
@@ -135,9 +139,6 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                             .route("/v3", web::post().to(ttn::publish_v3)),
                     ),
             );
-    })
-    .cors(move || {
-        <CorsConfig as Into<Cors>>::into(config.clone().http.cors).allowed_methods(vec!["POST"])
     })
     .tls_auth_config(tls_auth_config)
     .on_connect(move |con, ext| {
