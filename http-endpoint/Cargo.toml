@@ -7,7 +7,6 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-actix-cors = "0.6.3"
 actix-rt = "2"
 actix-tls = "^3.0.0"
 anyhow = "1"
