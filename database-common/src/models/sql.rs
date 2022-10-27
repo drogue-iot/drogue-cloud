@@ -117,6 +117,7 @@ impl<'a> SelectBuilder<'a> {
 
         // must be equal to the owner (which may be empty)
         // or contain a member with one of the roles eligible for reading
+        // or contain the "anonymous" member
 
         self.select.push_str(&format!(
             r#"
@@ -124,6 +125,8 @@ impl<'a> SelectBuilder<'a> {
         OWNER=${idx}
     OR
         MEMBERS->${idx}->>'role' IN ('reader', 'manager', 'admin')
+    OR
+        MEMBERS->''->>'role' IN ('reader', 'manager', 'admin')
     )
 "#,
             idx = idx
