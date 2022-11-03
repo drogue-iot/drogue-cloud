@@ -164,7 +164,7 @@ jobs:
           make save-images SKIP_SERVER=1
 
       - name: Upload images
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: container-images
           path: build/images/all.tar
@@ -298,7 +298,7 @@ jobs:
       CLUSTER: "kind"
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -308,7 +308,7 @@ jobs:
           version: ${{ env.VERSION_HELM }}
 
       - name: Fetch container images
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: container-images
 
