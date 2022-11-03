@@ -85,7 +85,11 @@ where
     let max_size = opts.max_size.unwrap_or(DEFAULT_MAX_SIZE);
 
     MqttServer::new()
-        .handshake_timeout(Seconds(15))
+        .handshake_timeout(
+            opts.handshake_timeout
+                .map(|s| Seconds(s.as_secs() as u16))
+                .unwrap_or(Seconds(15).into()),
+        )
         // MQTTv3
         .v3(v3::MqttServer::new(fn_factory_with_config(move |_| {
             let app = app3.clone();
@@ -256,9 +260,13 @@ where
     log::info!("TLS based on rustls");
 
     build_server(opts, true, app, move |opts, app| {
-        pipeline_factory(ntex::tls::rustls::Acceptor::new(std::sync::Arc::new(
-            tls_config.clone(),
-        )))
+        pipeline_factory(
+            ntex::tls::rustls::Acceptor::new(std::sync::Arc::new(tls_config.clone())).timeout(
+                opts.handshake_timeout
+                    .map(|s| Seconds(s.as_secs() as u16))
+                    .unwrap_or(Seconds(15)),
+            ),
+        )
         .map_err(|err| {
             log::debug!("Connect error: {}", err);
             MqttError::Service(ServerError::InternalError(err.to_string()))
@@ -279,12 +287,18 @@ where
 {
     log::info!("TLS based on openssl");
     build_server(opts, true, app, move |opts, app| {
-        pipeline_factory(ntex::tls::openssl::Acceptor::new(tls_config.clone()))
-            .map_err(|err| {
-                log::debug!("Connect error: {}", err);
-                MqttError::Service(ServerError::InternalError(err.to_string()))
-            })
-            .and_then(create_server(opts, app))
+        pipeline_factory(
+            ntex::tls::openssl::Acceptor::new(tls_config.clone()).timeout(
+                opts.handshake_timeout
+                    .map(|s| Seconds(s.as_secs() as u16))
+                    .unwrap_or(Seconds(15)),
+            ),
+        )
+        .map_err(|err| {
+            log::debug!("Connect error: {}", err);
+            MqttError::Service(ServerError::InternalError(err.to_string()))
+        })
+        .and_then(create_server(opts, app))
     })
 }
 
