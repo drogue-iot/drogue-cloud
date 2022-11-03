@@ -63,10 +63,10 @@ jobs:
       # evaluate changed files
       - name: Evaluate non-relevant changed files
         id: changed-files-irrelevant
-        uses: tj-actions/changed-files@v23.1
+        uses: tj-actions/changed-files@v34
         with:
           files: |
-            docs/
+            docs/**
 
   info:
     name: info
