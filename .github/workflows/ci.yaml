@@ -248,12 +248,15 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-server-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build binary
+      - name: Install dependencies
         shell: bash
         run: |
           brew update
           brew install librdkafka openssl
 
+      - name: Build postgres
+        shell: bash
+        run: |
           # Build and install postgresql dep
           curl -fsSL -o postgresql-11.13.tar.gz https://ftp.postgresql.org/pub/source/v11.13/postgresql-11.13.tar.gz
           tar xvf postgresql-11.13.tar.gz
@@ -262,6 +265,10 @@ jobs:
           make
           make install
           cd ..
+
+      - name: Build binary
+        shell: bash
+        run: |
           PQ_LIB_STATIC=1 PQ_LIB_DIR=$PWD/libpq/lib SASL2_STATIC=1 OPENSSL_STATIC=1 OPENSSL_DIR=/usr/local/opt/openssl DEP_OPENSSL_DIR=/usr/local/opt/openssl RUSTFLAGS="-C target-feature=+crt-static" cargo build --release -p drogue-cloud-server --features static
 
       - name: Upload server binary
