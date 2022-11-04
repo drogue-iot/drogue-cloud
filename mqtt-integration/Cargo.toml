@@ -22,7 +22,7 @@ log = "0.4"
 mime = "0.3"
 ntex = "0.5"
 ntex-bytes = "0.1"
-ntex-mqtt = "0.8"
+ntex-mqtt = "0.9"
 ntex-rt = "0.4"
 ntex-service = "0.3"
 openid = "0.10"
@@ -49,7 +49,7 @@ package = "openssl"
 features = ["v111"]
 
 [dependencies.rust-tls]
-version = "0.19"
+version = "0.20"
 optional = true
 package = "rustls"
 # "dangerous" is required in order to implement ther ClientCertVerified trait

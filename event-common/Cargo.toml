@@ -18,7 +18,7 @@ uuid = { version = "1", features = ["v4"] }
 drogue-cloud-service-api = { path = "../service-api" }
 
 [dependencies.rdkafka]
-version = "0.28"
+version = "0.29"
 features = ["ssl", "sasl"]
 
 [dev-dependencies]

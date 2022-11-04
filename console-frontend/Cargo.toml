@@ -12,7 +12,7 @@ async-trait = "0.1"
 base64 = "0.13"
 bstr = "1"
 chrono = { version = "0.4", features = ["wasmbind"] }
-chrono-tz = "0.6"
+chrono-tz = "0.8"
 cloudevents-sdk = "0.5"
 futures-util = "0.3"
 gloo-storage = "0.2"

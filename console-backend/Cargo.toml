@@ -12,7 +12,7 @@ actix-web = "4"
 anyhow = "1"
 async-trait = "0.1"
 biscuit = "0.5"
-cached = "0.39"
+cached = "0.40"
 chrono = { version = "0.4", features = ["serde"] }
 cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
 drogue-client = "0.11.0-alpha.1"
@@ -27,7 +27,7 @@ reqwest = "0.11"
 ring = "0.16.18" # required due to an issue in the public API
 serde = "1"
 serde_json = "1"
-serde_yaml = "0.8"
+serde_yaml = "0.8" # remains at 0.8 because of the new serialization format
 thiserror = "1"
 tokio = "1"
 tokio-stream = { version = "0.1", features = ["time"] }

@@ -45,16 +45,16 @@ testcontainers = { git = "https://github.com/testcontainers/testcontainers-rs", 
 #reqwest = { git = "https://github.com/ctron/reqwest", branch = "feature/basic_auth_wasm_1" }
 #drogue-ttn = { git = "https://github.com/drogue-iot/drogue-ttn", rev = "cf0338a344309815f0f05e0d7d76acb712445175" } # FIXME: awaiting release
 
-
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "55202dc51f303f142cef004ba0e02a335f0f7849" } # FIXME: awaiting release 0.3.0
+drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "64d6b185cb5570b1d3bd31a6a3d53ac0595ba18f" } # FIXME: awaiting release 0.3.0
 #drogue-bazaar = { path = "../drogue-bazaar" }
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "3e0fdb91305803c51946f8a818e4f053ab88c2c3" } # FIXME: awaiting release 0.11.0
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "78aaf1b0ab7524f428efec5a9de75a1242701951" } # FIXME: awaiting release 0.11.0
 #drogue-client = { path = "../drogue-client" }
 
 operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "8366506a3ed44b638f899dcce4a82ac32fcaff9e" } # FIXME: awaiting release 0.7.0
 
 ntex-tls = { git = "https://github.com/lulf/ntex.git", rev = "4fa7f5cceb5bf29fc8764fe1b97f5f5fd3fdf2e4" } # awaiting release with new ntex-tls dependency
+cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "f4c85cd335a96a4731d53f9fd461a8c741563bc7" } # FIXME awaiting release for rdkafka update
 
 #pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
 

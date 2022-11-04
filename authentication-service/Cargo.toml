@@ -46,6 +46,6 @@ actix-rt = "2"
 actix-service = "2"
 drogue-cloud-test-common = { path = "../test-common" }
 pem = "1"
-rstest = "0.13"
-serial_test = "0.6"
+rstest = "0.15"
+serial_test = "0.9"
 testcontainers = "0.12"

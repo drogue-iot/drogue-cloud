@@ -12,7 +12,7 @@ futures = "0.3"
 humantime-serde = "1"
 log = "0.4"
 ntex = { version = "0.5", features = ["tokio"] }
-ntex-mqtt = "0.8"
+ntex-mqtt = "0.9"
 ntex-service = "0.3"
 pem = "1"
 serde = "1"

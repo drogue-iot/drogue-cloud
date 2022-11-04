@@ -26,5 +26,5 @@ drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
 
 [dependencies.rdkafka]
-version = "0.28"
+version = "0.29"
 features = ["ssl", "sasl"]

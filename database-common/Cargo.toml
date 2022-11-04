@@ -30,7 +30,7 @@ default = ["native-tls"]
 native-tls = ["drogue-bazaar/native-tls"]
 
 [dev-dependencies]
-criterion = { version = "0.3" } # , features = ["real_blackbox"]
+criterion = { version = "0.4" } # , features = ["real_blackbox"]
 env_logger = "0.9"
 serial_test = "0.9"
 tokio = { version = "1", features = ["full"] }
