@@ -1,0 +1,2 @@
+* xref:index.adoc[Migration Guide]
+** xref:google_iot_core.adoc[Google IoT Core]

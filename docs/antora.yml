@@ -7,6 +7,7 @@ nav:
   - modules/introduction/nav.adoc
   - modules/admin-guide/nav.adoc
   - modules/user-guide/nav.adoc
+  - modules/migration-guide/nav.adoc
   - modules/ROOT/nav-integrations.adoc
   - modules/api/nav.adoc
   - modules/developer-guide/nav.adoc

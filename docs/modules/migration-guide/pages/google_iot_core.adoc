@@ -1,0 +1,3 @@
+= Migrating from Google IoT Core
+
+NOTE: Google IoT Core product is link:[being shut down] on August 16, 2023. Following this guide will allow you to use a cloud vendor independent system for your IoT system.
