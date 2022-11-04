@@ -54,7 +54,7 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "78
 operator-framework = { git = "https://github.com/ctron/operator-framework", rev = "8366506a3ed44b638f899dcce4a82ac32fcaff9e" } # FIXME: awaiting release 0.7.0
 
 ntex-tls = { git = "https://github.com/lulf/ntex.git", rev = "4fa7f5cceb5bf29fc8764fe1b97f5f5fd3fdf2e4" } # awaiting release with new ntex-tls dependency
-cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "f4c85cd335a96a4731d53f9fd461a8c741563bc7" } # FIXME awaiting release for rdkafka update
+cloudevents-sdk = { git = "https://github.com/cloudevents/sdk-rust", rev = "c6a84b3c5a4ddfbd85a06882cb2599f967b53d64" } # FIXME awaiting release for rdkafka update
 
 #pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "3e367d53019a2740054d5dc6946e07931f1fb70b" } # needed for windows only
 
