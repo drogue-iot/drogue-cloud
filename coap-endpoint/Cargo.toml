@@ -13,7 +13,7 @@ async-trait = "0.1"
 bytes = "1"
 bytestring = "1"
 chrono = "0.4"
-cloudevents-sdk = "0.5"
+cloudevents-sdk = "0.6"
 coap-lite = "0.11"
 drogue-client = "0.11.0-alpha.1"
 openssl = { version = "0.10", features = ["v111"] }

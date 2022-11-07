@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-cloudevents-sdk = { version = "0.5", features = ["rdkafka"] }
+cloudevents-sdk = { version = "0.6", features = ["rdkafka"] }
 futures = "0.3"
 log = "0.4"
 owning_ref = "0.4"
