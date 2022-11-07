@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
-cloudevents-sdk = "0.5"
+cloudevents-sdk = "0.6"
 deadpool = "0.9"
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
 log = "0.4"

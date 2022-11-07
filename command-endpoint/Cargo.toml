@@ -10,7 +10,7 @@ actix-cors = "0.6"
 anyhow = "1"
 async-trait = "0.1"
 base64 = "0.13"
-cloudevents-sdk = { version = "0.5", features = ["actix", "reqwest"] }
+cloudevents-sdk = { version = "0.6", features = ["actix", "reqwest"] }
 drogue-client = "0.11.0-alpha.1"
 futures = "0.3"
 futures-core = "0.3"

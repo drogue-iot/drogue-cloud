@@ -12,7 +12,7 @@ actix-tls = "^3.0.0"
 anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
-cloudevents-sdk = { version = "0.5", features = ["actix"] }
+cloudevents-sdk = { version = "0.6", features = ["actix"] }
 drogue-client = "0.11.0-alpha.1"
 drogue-ttn = "0.6"
 futures = "0.3"

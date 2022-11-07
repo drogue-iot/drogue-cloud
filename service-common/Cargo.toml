@@ -11,7 +11,7 @@ actix-web-extras = "0.1"
 anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
-cloudevents-sdk = { version = "0.5", features = ["reqwest"] }
+cloudevents-sdk = { version = "0.6", features = ["reqwest"] }
 config = "0.13"
 drogue-client = "0.11.0-alpha.1"
 drogue-bazaar = { version = "0.3", features = ["native-tls"] }
