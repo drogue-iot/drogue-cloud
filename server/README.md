@@ -22,7 +22,7 @@ dnf install gcc-c++ cyrus-sasl-devel openssl-devel libpq-devel librdkafka-devel
 #### Installing dependencies on Mac OS X
 
 ```
-brew install cyrus2-sasl librdkafka openssl libpq
+brew install cyrus-sasl librdkafka openssl libpq
 ```
 
 ### Building the binary

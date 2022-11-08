@@ -953,6 +953,18 @@ async fn run(ctx: Context<'_>, server: ServerConfig, mut main: Main<'_>) -> anyh
     );
     println!();
 
+    println!("Subscribing MQTT device to receive commands:");
+    println!("\tmqtt sub -v -h {host} -p {port} -u 'device1@example-app' -pw 'hey-rodney' {tls} -t command/inbox//#",
+             host = server.mqtt.host,
+             port = server.mqtt.port,
+             tls = if ctx.tls { "-s" } else { "" },
+    );
+    println!();
+
+    println!("Sending command to the device:");
+    println!("\tdrg cmd device1 set-temp --application example-app --payload \"{{\\\"target-temp\\\":25}}\"");
+    println!();
+
     // add terminate handler
     main.spawn(
         tokio::signal::ctrl_c()
