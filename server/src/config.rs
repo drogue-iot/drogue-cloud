@@ -107,7 +107,7 @@ impl ServerConfig {
             keycloak: Keycloak {
                 url: matches
                     .value_of("keycloak-url")
-                    .unwrap_or("http://localhost:8080")
+                    .unwrap_or("http://localhost:8081")
                     .to_string(),
                 realm: matches
                     .value_of("keycloak-realm")
