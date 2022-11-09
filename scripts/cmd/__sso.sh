@@ -6,7 +6,7 @@
 
 set -e
 
-: "${KEYCLOAK_OPERATOR_VERSION:=19.0.3}"
+: "${KEYCLOAK_OPERATOR_VERSION:=20.0.1}"
 : "${KEYCLOAK_CRDS:=true}"
 
 progress "📦 Deploying pre-requisites (Keycloak v${KEYCLOAK_OPERATOR_VERSION}) ... "
