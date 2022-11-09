@@ -1,7 +1,6 @@
 drogueCloudCore:
   postgres:
     podSecurityContext:
-      enabled: true
       fsGroup: 2000
       runAsNonRoot: true
       runAsUser: 1000
@@ -9,7 +8,6 @@ drogueCloudCore:
 drogueCloudExamples:
   grafana:
     podSecurityContext:
-      enabled: true
       fsGroup: 2000
       runAsNonRoot: true
       runAsUser: 1000
