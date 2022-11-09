@@ -6303,8 +6303,3 @@ dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "cloudevents-sdk"
-version = "0.5.0"
-source = "git+https://github.com/cloudevents/sdk-rust?rev=c6a84b3c5a4ddfbd85a06882cb2599f967b53d64#c6a84b3c5a4ddfbd85a06882cb2599f967b53d64"
