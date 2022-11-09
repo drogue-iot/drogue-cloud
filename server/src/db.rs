@@ -1,6 +1,8 @@
 use crate::config::Database;
+use diesel_migrations::{EmbeddedMigrations, HarnessWithOutput, MigrationHarness};
 use tokio::runtime::Handle;
-embed_migrations!("../database-common/migrations");
+
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../database-common/migrations");
 
 pub async fn run_migrations(db: &Database) -> anyhow::Result<()> {
     use diesel::Connection;
@@ -12,10 +14,12 @@ pub async fn run_migrations(db: &Database) -> anyhow::Result<()> {
 
     Handle::current()
         .spawn_blocking(move || {
-            let connection = diesel::PgConnection::establish(&database_url)
+            let mut connection = diesel::PgConnection::establish(&database_url)
                 .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
 
-            embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
+            HarnessWithOutput::new(&mut connection, std::io::stdout())
+                .run_pending_migrations(MIGRATIONS)
+                .unwrap();
             println!("Migrating database schema... done!");
         })
         .await?;
