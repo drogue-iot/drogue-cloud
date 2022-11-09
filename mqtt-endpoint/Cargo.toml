@@ -23,7 +23,7 @@ lazy_static = "1.4.0"
 log = "0.4"
 ntex = { version = "0.5", features = ["tokio"] }
 ntex-mqtt = "0.9"
-ntex-tls = "0.1.6"
+ntex-tls = "0.1.7"
 ntex-rt = "0.4"
 ntex-service = "0.3"
 prometheus = { version = "^0.13", default-features = false }
