@@ -1386,9 +1386,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
+name = "dotenvy"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
+
+[[package]]
 name = "drogue-bazaar"
 version = "0.3.0"
-source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=55202dc51f303f142cef004ba0e02a335f0f7849#55202dc51f303f142cef004ba0e02a335f0f7849"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=aca2cf4165e8a91ce0ffc348a07a2e44ff3c13ba#aca2cf4165e8a91ce0ffc348a07a2e44ff3c13ba"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -1403,7 +1409,7 @@ dependencies = [
  "config",
  "deadpool",
  "deadpool-postgres",
- "dotenv",
+ "dotenvy",
  "drogue-client",
  "env_logger",
  "futures-core",
@@ -6297,3 +6303,8 @@ dependencies = [
  "cc",
  "libc",
 ]
+
+[[patch.unused]]
+name = "cloudevents-sdk"
+version = "0.5.0"
+source = "git+https://github.com/cloudevents/sdk-rust?rev=c6a84b3c5a4ddfbd85a06882cb2599f967b53d64#c6a84b3c5a4ddfbd85a06882cb2599f967b53d64"
