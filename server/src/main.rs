@@ -4,7 +4,7 @@ mod keycloak;
 
 use crate::{config::*, keycloak::*};
 use anyhow::anyhow;
-use clap::{crate_version, Arg, ArgAction, ArgMatches, SubCommand};
+use clap::{crate_version, value_parser, Arg, ArgAction, ArgMatches, Command};
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
 use drogue_cloud_database_common::postgres;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
@@ -30,16 +30,13 @@ use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Handle;
 use url::Url;
 
-#[macro_use]
-extern crate diesel_migrations;
-
-fn args() -> clap::Command<'static> {
-    clap::Command::new("Drogue Cloud Server")
+fn args() -> Command {
+    Command::new("Drogue Cloud Server")
         .about("Running Drogue Cloud in a single process")
         .version(crate_version!())
         .long_about("Drogue Server runs all the Drogue Cloud services in a single process, with an external dependency on PostgreSQL, Kafka and Keycloak for storing data, device management and user management")
         .arg(
-            Arg::with_name("verbose")
+            Arg::new("verbose")
                 .global(true)
                 .long("verbose")
                 .short('v')
@@ -47,7 +44,7 @@ fn args() -> clap::Command<'static> {
                 .help("Be verbose. Can be used multiple times to increase verbosity.")
         )
         .arg(
-            Arg::with_name("quiet")
+            Arg::new("quiet")
                 .global(true)
                 .long("quiet")
                 .short('q')
@@ -55,199 +52,199 @@ fn args() -> clap::Command<'static> {
                 .help("Be quiet.")
         )
         .subcommand(
-            SubCommand::with_name("run")
+            Command::new("run")
                 .about("run server")
                 .arg(
-                    Arg::with_name("insecure")
+                    Arg::new("insecure")
                         .long("--insecure")
+                        .action(ArgAction::SetTrue)
                         .help("Run insecure, like disabling TLS checks")
                 )
                 .arg(
-                    Arg::with_name("bind-address")
+                    Arg::new("bind-address")
                         .long("--bind-address")
                         .help("bind to specific network address (default localhost)")
-                        .value_name("ADDRESS")
-                        .takes_value(true),
+                        .value_name("ADDRESS"),
                 )
                 .arg(
-                    Arg::with_name("enable-all")
+                    Arg::new("enable-all")
                         .long("--enable-all")
+                        .action(ArgAction::SetTrue)
                         .help("enable all services (except console-frontend)"),
                 )
                 .arg(
-                    Arg::with_name("enable-api")
+                    Arg::new("enable-api")
                         .long("--enable-api")
+                        .action(ArgAction::SetTrue)
                         .help("enable API backend service"),
                 )
                 .arg(
-                    Arg::with_name("enable-console-frontend")
+                    Arg::new("enable-console-frontend")
                         .long("--enable-console-frontend")
+                        .action(ArgAction::SetTrue)
                         .requires("ui-dist")
                         .help("enable console frontend serving"),
                 )
                 .arg(
                     // helps when enable-all is active, but you don't want the console
-                    Arg::with_name("disable-console-frontend")
+                    Arg::new("disable-console-frontend")
                         .long("--disable-console-frontend")
+                        .action(ArgAction::SetTrue)
                         .conflicts_with("enable-console-frontend")
                         .conflicts_with("ui-dist")
                         .help("disable console frontend serving"),
                 )
                 .arg(
-                    Arg::with_name("enable-device-registry")
+                    Arg::new("enable-device-registry")
                         .long("--enable-device-registry")
+                        .action(ArgAction::SetTrue)
                         .help("enable device management service"),
                 )
                 .arg(
-                    Arg::with_name("enable-device-state")
+                    Arg::new("enable-device-state")
                         .long("--enable-device-state")
+                        .action(ArgAction::SetTrue)
                         .help("enable device state service"),
                 )
                 .arg(
-                    Arg::with_name("enable-user-authentication-service")
+                    Arg::new("enable-user-authentication-service")
                         .long("--enable-user-authentication-service")
+                        .action(ArgAction::SetTrue)
                         .help("enable user authentication service"),
                 )
                 .arg(
-                    Arg::with_name("enable-authentication-service")
+                    Arg::new("enable-authentication-service")
                         .long("--enable-authentication-service")
+                        .action(ArgAction::SetTrue)
                         .help("enable device authentication service"),
                 )
                 .arg(
-                    Arg::with_name("enable-coap-endpoint")
+                    Arg::new("enable-coap-endpoint")
                         .long("--enable-coap-endpoint")
+                        .action(ArgAction::SetTrue)
                         .help("enable coap endpoint"),
                 )
                 .arg(
-                    Arg::with_name("enable-http-endpoint")
+                    Arg::new("enable-http-endpoint")
                         .long("--enable-http-endpoint")
+                        .action(ArgAction::SetTrue)
                         .help("enable http endpoint"),
                 )
                 .arg(
-                    Arg::with_name("enable-mqtt-endpoint")
+                    Arg::new("enable-mqtt-endpoint")
                         .long("--enable-mqtt-endpoint")
+                        .action(ArgAction::SetTrue)
                         .help("enable mqtt endpoint"),
                 )
                 .arg(
-                    Arg::with_name("enable-mqtt-integration")
+                    Arg::new("enable-mqtt-integration")
                         .long("--enable-mqtt-integration")
+                        .action(ArgAction::SetTrue)
                         .help("enable mqtt integration"),
                 )
                 .arg(
-                    Arg::with_name("enable-websocket-integration")
+                    Arg::new("enable-websocket-integration")
                         .long("--enable-websocket-integration")
+                        .action(ArgAction::SetTrue)
                         .help("enable websocket integration"),
                 )
                 .arg(
-                    Arg::with_name("enable-command-endpoint")
+                    Arg::new("enable-command-endpoint")
                         .long("--enable-command-endpoint")
+                        .action(ArgAction::SetTrue)
                         .help("enable command endpoint"),
                 )
                 .arg(
-                    Arg::with_name("server-key")
+                    Arg::new("server-key")
                         .long("--server-key")
                         .value_name("FILE")
-                        .help("private key to use for service endpoints")
-                        .takes_value(true),
+                        .help("private key to use for service endpoints"),
                 )
                 .arg(
-                    Arg::with_name("server-cert")
+                    Arg::new("server-cert")
                         .long("--server-cert")
                         .value_name("FILE")
-                        .help("public certificate to use for service endpoints")
-                        .takes_value(true),
+                        .help("public certificate to use for service endpoints"),
                 )
                 .arg(
-                    Arg::with_name("database-host")
+                    Arg::new("database-host")
                         .long("--database-host")
                         .value_name("HOST")
-                        .help("hostname of PostgreSQL database")
-                        .takes_value(true),
+                        .help("hostname of PostgreSQL database"),
                 )
                 .arg(
-                    Arg::with_name("database-port")
+                    Arg::new("database-port")
                         .long("--database-port")
+                        .value_parser(value_parser!(u16))
                         .value_name("PORT")
-                        .help("port of PostgreSQL database")
-                        .takes_value(true),
+                        .help("port of PostgreSQL database"),
                 )
                 .arg(
-                    Arg::with_name("database-name")
+                    Arg::new("database-name")
                         .long("--database-name")
                         .value_name("NAME")
-                        .help("name of database to use")
-                        .takes_value(true),
+                        .help("name of database to use"),
                 )
                 .arg(
-                    Arg::with_name("database-user")
+                    Arg::new("database-user")
                         .long("--database-user")
                         .value_name("USER")
-                        .help("username to use with database")
-                        .takes_value(true),
+                        .help("username to use with database"),
                 )
                 .arg(
-                    Arg::with_name("database-password")
+                    Arg::new("database-password")
                         .long("--database-password")
                         .value_name("PASSWORD")
-                        .help("password to use with database")
-                        .takes_value(true),
+                        .help("password to use with database"),
                 )
                 .arg(
-                    Arg::with_name("keycloak-url")
+                    Arg::new("keycloak-url")
                         .long("--keycloak-url")
                         .value_name("URL")
-                        .help("url for Keycloak")
-                        .takes_value(true),
+                        .help("url for Keycloak"),
                 )
                 .arg(
-                    Arg::with_name("keycloak-realm")
+                    Arg::new("keycloak-realm")
                         .long("--keycloak-realm")
                         .value_name("REALM")
-                        .help("Keycloak realm to use")
-                        .takes_value(true),
+                        .help("Keycloak realm to use"),
                 )
                 .arg(
-                    Arg::with_name("keycloak-user")
+                    Arg::new("keycloak-user")
                         .long("--keycloak-user")
                         .value_name("USER")
-                        .help("Keycloak realm admin user")
-                        .takes_value(true),
+                        .help("Keycloak realm admin user"),
                 )
                 .arg(
-                    Arg::with_name("keycloak-password")
+                    Arg::new("keycloak-password")
                         .long("--keycloak-password")
                         .value_name("PASSWORD")
-                        .help("Keycloak realm admin password")
-                        .takes_value(true),
+                        .help("Keycloak realm admin password"),
                 )
                 .arg(
-                    Arg::with_name("drogue-admin-user")
+                    Arg::new("drogue-admin-user")
                         .long("drogue-admin-user")
                         .value_name("USER")
-                        .help("Drogue admin user")
-                        .takes_value(true),
+                        .help("Drogue admin user"),
                 )
                 .arg(
-                    Arg::with_name("drogue-admin-password")
+                    Arg::new("drogue-admin-password")
                         .long("drogue-admin-password")
                         .value_name("PASSWORD")
-                        .help("Drogue admin password")
-                        .takes_value(true),
+                        .help("Drogue admin password"),
                 )
                 .arg(
-                    Arg::with_name("kafka-bootstrap-servers")
+                    Arg::new("kafka-bootstrap-servers")
                         .long("--kafka-bootstrap-servers")
                         .value_name("HOSTS")
-                        .help("Kafka bootstrap servers")
-                        .takes_value(true),
+                        .help("Kafka bootstrap servers"),
                 )
                 .arg(
-                    Arg::with_name("ui-dist")
+                    Arg::new("ui-dist")
                         .long("--ui-dist")
                         .value_name("PATH")
                         .env("UI_DIST")
                         .help("Path to the UI distribution bundle")
-                        .takes_value(true)
                 ),
         )
 }
@@ -260,8 +257,8 @@ async fn main() {
     let matches = app.clone().get_matches();
 
     stderrlog::new()
-        .verbosity((matches.occurrences_of("verbose") + 1) as usize)
-        .quiet(matches.is_present("quiet"))
+        .verbosity((matches.get_count("verbose") + 1) as usize)
+        .quiet(matches.get_flag("quiet"))
         .init()
         .unwrap();
 
@@ -277,7 +274,8 @@ async fn main() {
 async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
     let mut main = Main::from_env()?;
 
-    let tls = matches.is_present("server-cert") && matches.is_present("server-key");
+    let tls = matches.get_one::<String>("server-cert").is_some()
+        && matches.get_one::<String>("server-key").is_some();
     let server: ServerConfig = ServerConfig::new(matches);
     let eps = endpoints(&server, tls);
 
@@ -417,7 +415,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
     let matches = matches.clone();
     let user_auth = user_auth.clone();
 
-    if matches.is_present("enable-device-state") || matches.is_present("enable-all") {
+    if matches.get_flag("enable-device-state") || matches.get_flag("enable-all") {
         log::info!("Enabling device state service");
 
         let kafka = server.kafka.clone();
@@ -445,8 +443,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         drogue_cloud_device_state_service::run(config, &mut main).await?;
     }
 
-    if matches.is_present("enable-user-authentication-service") || matches.is_present("enable-all")
-    {
+    if matches.get_flag("enable-user-authentication-service") || matches.get_flag("enable-all") {
         log::info!("Enabling user authentication service");
         let config = drogue_cloud_user_auth_service::Config {
             http: HttpConfig {
@@ -464,7 +461,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         drogue_cloud_user_auth_service::run::<KeycloakAdminClient>(config, &mut main).await?;
     }
 
-    if matches.is_present("enable-authentication-service") || matches.is_present("enable-all") {
+    if matches.get_flag("enable-authentication-service") || matches.get_flag("enable-all") {
         log::info!("Enabling device authentication service");
         let config = drogue_cloud_authentication_service::Config {
             http: HttpConfig {
@@ -481,7 +478,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         drogue_cloud_authentication_service::run(config, &mut main).await?;
     }
 
-    if matches.is_present("enable-api") || matches.is_present("enable-all") {
+    if matches.get_flag("enable-api") || matches.get_flag("enable-all") {
         log::info!("Enabling composite API service");
         let console_config = {
             let mut console_token_config = token_config.clone();
@@ -559,13 +556,12 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         .start(&mut main)?;
     }
 
-    if matches.is_present("enable-http-endpoint") || matches.is_present("enable-all") {
+    if matches.get_flag("enable-http-endpoint") || matches.get_flag("enable-all") {
         log::info!("Enabling HTTP endpoint");
         let command_source_kafka = command_source("http_endpoint");
         let kafka = server.kafka.clone();
-        let cert_bundle_file: Option<String> =
-            matches.value_of("server-cert").map(|s| s.to_string());
-        let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+        let cert_bundle_file = matches.get_one::<String>("server-cert").cloned();
+        let key_file = matches.get_one("server-key").cloned();
 
         let config = drogue_cloud_http_endpoint::Config {
             http: HttpConfig {
@@ -593,12 +589,11 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         drogue_cloud_http_endpoint::run(config, &mut main).await?;
     }
 
-    if matches.is_present("enable-websocket-integration") || matches.is_present("enable-all") {
+    if matches.get_flag("enable-websocket-integration") || matches.get_flag("enable-all") {
         log::info!("Enabling Websocket integration");
         let bind_addr = server.websocket_integration.clone().into();
-        let cert_bundle_file: Option<String> =
-            matches.value_of("server-cert").map(|s| s.to_string());
-        let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+        let cert_bundle_file = matches.get_one("server-cert").cloned();
+        let key_file: Option<String> = matches.get_one("server-key").cloned();
         let kafka = server.kafka.clone();
         let user_auth = user_auth.clone();
         let config = drogue_cloud_websocket_integration::Config {
@@ -657,14 +652,13 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         let bind_addr_mqtt = server.mqtt.clone().into();
         let bind_addr_mqtt_ws = server.mqtt_ws.clone().into();
         let kafka = server.kafka.clone();
-        let cert_bundle_file: Option<String> =
-            matches.value_of("server-cert").map(|s| s.to_string());
-        let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+        let cert_bundle_file = matches.get_one("server-cert").cloned();
+        let key_file = matches.get_one("server-key").cloned();
 
         let mut mqtt_endpoints: Vec<drogue_cloud_mqtt_endpoint::Config> = vec![];
         let mut mqtt_integrations: Vec<drogue_cloud_mqtt_integration::Config> = vec![];
 
-        if matches.is_present("enable-mqtt-endpoint") || matches.is_present("enable-all") {
+        if matches.get_flag("enable-mqtt-endpoint") || matches.get_flag("enable-all") {
             log::info!("Enabling MQTT endpoint");
 
             let config = drogue_cloud_mqtt_endpoint::Config {
@@ -700,14 +694,13 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             mqtt_endpoints.push(config_ws);
         }
 
-        if matches.is_present("enable-mqtt-integration") || matches.is_present("enable-all") {
+        if matches.get_flag("enable-mqtt-integration") || matches.get_flag("enable-all") {
             log::info!("Enabling MQTT integration");
             let bind_addr_mqtt = server.mqtt_integration.clone().into();
             let bind_addr_mqtt_ws = server.mqtt_integration_ws.clone().into();
             let kafka = server.kafka;
-            let cert_bundle_file: Option<String> =
-                matches.value_of("server-cert").map(|s| s.to_string());
-            let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+            let cert_bundle_file = matches.get_one("server-cert").cloned();
+            let key_file = matches.get_one("server-key").cloned();
             let registry = registry.clone();
             let user_auth = user_auth.clone();
             let config = drogue_cloud_mqtt_integration::Config {
@@ -779,14 +772,13 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         }
     }
 
-    if matches.is_present("enable-coap-endpoint") || matches.is_present("enable-all") {
+    if matches.get_flag("enable-coap-endpoint") || matches.get_flag("enable-all") {
         log::info!("Enabling CoAP endpoint");
         let command_source_kafka = command_source("coap_endpoint");
         let bind_addr = server.coap.clone().into();
         let kafka = server.kafka.clone();
-        let cert_bundle_file: Option<String> =
-            matches.value_of("server-cert").map(|s| s.to_string());
-        let key_file: Option<String> = matches.value_of("server-key").map(|s| s.to_string());
+        let cert_bundle_file = matches.get_one("server-cert").cloned();
+        let key_file = matches.get_one("server-key").cloned();
         let config = drogue_cloud_coap_endpoint::Config {
             auth,
             bind_addr_coap: Some(bind_addr),
@@ -809,12 +801,12 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
 
     // The idea is to run a UI server if explicitly requested, or if a UI dist directory
     // was provided.
-    let frontend = if (matches.is_present("enable-console-frontend")
-        || (matches.is_present("enable-all") && matches.is_present("ui-dist")))
-        && (!matches.is_present("disable-console-frontend"))
+    let frontend = if (matches.get_flag("enable-console-frontend")
+        || (matches.get_flag("enable-all") && matches.get_one::<String>("ui-dist").is_some()))
+        && (!matches.get_flag("disable-console-frontend"))
     {
         log::info!("Enable console frontend");
-        let ui = matches.value_of("ui-dist").unwrap().to_string();
+        let ui: String = matches.get_one("ui-dist").cloned().unwrap();
         let bind_addr: String = server.frontend.clone().into();
 
         main.spawn(async move {

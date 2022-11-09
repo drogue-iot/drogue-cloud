@@ -1,5 +1,4 @@
 use clap::ArgMatches;
-use core::str::FromStr;
 use drogue_cloud_service_api::{
     endpoints::*,
     kafka::{KafkaClientConfig, KafkaConfig},
@@ -69,15 +68,21 @@ pub struct Drogue {
 impl ServerConfig {
     pub fn new(matches: &ArgMatches) -> ServerConfig {
         let iface = matches
-            .value_of("bind-address")
+            .get_one::<String>("bind-address")
+            .map(|s| s.as_str())
             .unwrap_or("localhost")
             .to_string();
+
+        let with_tls = matches.get_one::<String>("server-cert").is_some()
+            && matches.get_one::<String>("server-key").is_some();
+
         ServerConfig {
-            tls_insecure: matches.is_present("insecure"),
+            tls_insecure: matches.get_flag("insecure"),
             tls_ca_certificates: vec![],
             kafka: KafkaClientConfig {
                 bootstrap_servers: matches
-                    .value_of("kafka-bootstrap-servers")
+                    .get_one::<String>("kafka-bootstrap-servers")
+                    .map(|s| s.as_str())
                     .unwrap_or("localhost:9092")
                     .to_string(),
                 properties: HashMap::new(),
@@ -85,50 +90,62 @@ impl ServerConfig {
             database: Database {
                 endpoint: Endpoint {
                     host: matches
-                        .value_of("database-host")
+                        .get_one::<String>("database-host")
+                        .map(|s| s.as_str())
                         .unwrap_or("localhost")
                         .to_string(),
-                    port: u16::from_str(matches.value_of("database-port").unwrap_or("5432"))
-                        .unwrap(),
+                    port: matches
+                        .get_one::<u16>("database-port")
+                        .copied()
+                        .unwrap_or(5432u16),
                 },
                 db: matches
-                    .value_of("database-name")
+                    .get_one::<String>("database-name")
+                    .map(|s| s.as_str())
                     .unwrap_or("drogue")
                     .to_string(),
                 user: matches
-                    .value_of("database-user")
+                    .get_one::<String>("database-user")
+                    .map(|s| s.as_str())
                     .unwrap_or("admin")
                     .to_string(),
                 password: matches
-                    .value_of("database-password")
+                    .get_one::<String>("database-password")
+                    .map(|s| s.as_str())
                     .unwrap_or("admin123456")
                     .to_string(),
             },
             keycloak: Keycloak {
                 url: matches
-                    .value_of("keycloak-url")
+                    .get_one::<String>("keycloak-url")
+                    .map(|s| s.as_str())
                     .unwrap_or("http://localhost:8081")
                     .to_string(),
                 realm: matches
-                    .value_of("keycloak-realm")
+                    .get_one::<String>("keycloak-realm")
+                    .map(|s| s.as_str())
                     .unwrap_or("drogue")
                     .to_string(),
                 user: matches
-                    .value_of("keycloak-user")
+                    .get_one::<String>("keycloak-user")
+                    .map(|s| s.as_str())
                     .unwrap_or("admin")
                     .to_string(),
                 password: matches
-                    .value_of("keycloak-password")
+                    .get_one::<String>("keycloak-password")
+                    .map(|s| s.as_str())
                     .unwrap_or("admin123456")
                     .to_string(),
             },
             drogue: Drogue {
                 admin_user: matches
-                    .value_of("drogue-admin-user")
+                    .get_one::<String>("drogue-admin-user")
+                    .map(|s| s.as_str())
                     .unwrap_or("admin")
                     .to_string(),
                 admin_password: matches
-                    .value_of("drogue-admin-password")
+                    .get_one::<String>("drogue-admin-password")
+                    .map(|s| s.as_str())
                     .unwrap_or("admin123456")
                     .to_string(),
             },
@@ -142,27 +159,15 @@ impl ServerConfig {
             },
             mqtt: Endpoint {
                 host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    8883
-                } else {
-                    1883
-                },
+                port: if with_tls { 8883 } else { 1883 },
             },
             mqtt_ws: Endpoint {
                 host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    20443
-                } else {
-                    20880
-                },
+                port: if with_tls { 20443 } else { 20880 },
             },
             mqtt_ws_browser: Endpoint {
                 host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    21443
-                } else {
-                    21880
-                },
+                port: if with_tls { 21443 } else { 21880 },
             },
             http: Endpoint {
                 host: iface.to_string(),
@@ -170,11 +175,7 @@ impl ServerConfig {
             },
             coap: Endpoint {
                 host: iface.to_string(),
-                port: if matches.is_present("server-cert") && matches.is_present("server-key") {
-                    5684
-                } else {
-                    5683
-                },
+                port: if with_tls { 5684 } else { 5683 },
             },
             mqtt_integration: Endpoint {
                 host: iface.to_string(),

@@ -1,5 +1,7 @@
 use crate::config::Database;
-use diesel_migrations::{EmbeddedMigrations, HarnessWithOutput, MigrationHarness};
+use diesel_migrations::{
+    embed_migrations, EmbeddedMigrations, HarnessWithOutput, MigrationHarness,
+};
 use tokio::runtime::Handle;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../database-common/migrations");
