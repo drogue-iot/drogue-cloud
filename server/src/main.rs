@@ -48,6 +48,7 @@ fn args() -> Command {
                 .global(true)
                 .long("quiet")
                 .short('q')
+                .action(clap::ArgAction::SetFalse)
                 .conflicts_with("verbose")
                 .help("Be quiet.")
         )
@@ -56,31 +57,31 @@ fn args() -> Command {
                 .about("run server")
                 .arg(
                     Arg::new("insecure")
-                        .long("--insecure")
+                        .long("insecure")
                         .action(ArgAction::SetTrue)
                         .help("Run insecure, like disabling TLS checks")
                 )
                 .arg(
                     Arg::new("bind-address")
-                        .long("--bind-address")
+                        .long("bind-address")
                         .help("bind to specific network address (default localhost)")
                         .value_name("ADDRESS"),
                 )
                 .arg(
                     Arg::new("enable-all")
-                        .long("--enable-all")
+                        .long("enable-all")
                         .action(ArgAction::SetTrue)
                         .help("enable all services (except console-frontend)"),
                 )
                 .arg(
                     Arg::new("enable-api")
-                        .long("--enable-api")
+                        .long("enable-api")
                         .action(ArgAction::SetTrue)
                         .help("enable API backend service"),
                 )
                 .arg(
                     Arg::new("enable-console-frontend")
-                        .long("--enable-console-frontend")
+                        .long("enable-console-frontend")
                         .action(ArgAction::SetTrue)
                         .requires("ui-dist")
                         .help("enable console frontend serving"),
@@ -88,7 +89,7 @@ fn args() -> Command {
                 .arg(
                     // helps when enable-all is active, but you don't want the console
                     Arg::new("disable-console-frontend")
-                        .long("--disable-console-frontend")
+                        .long("disable-console-frontend")
                         .action(ArgAction::SetTrue)
                         .conflicts_with("enable-console-frontend")
                         .conflicts_with("ui-dist")
@@ -96,128 +97,128 @@ fn args() -> Command {
                 )
                 .arg(
                     Arg::new("enable-device-registry")
-                        .long("--enable-device-registry")
+                        .long("enable-device-registry")
                         .action(ArgAction::SetTrue)
                         .help("enable device management service"),
                 )
                 .arg(
                     Arg::new("enable-device-state")
-                        .long("--enable-device-state")
+                        .long("enable-device-state")
                         .action(ArgAction::SetTrue)
                         .help("enable device state service"),
                 )
                 .arg(
                     Arg::new("enable-user-authentication-service")
-                        .long("--enable-user-authentication-service")
+                        .long("enable-user-authentication-service")
                         .action(ArgAction::SetTrue)
                         .help("enable user authentication service"),
                 )
                 .arg(
                     Arg::new("enable-authentication-service")
-                        .long("--enable-authentication-service")
+                        .long("enable-authentication-service")
                         .action(ArgAction::SetTrue)
                         .help("enable device authentication service"),
                 )
                 .arg(
                     Arg::new("enable-coap-endpoint")
-                        .long("--enable-coap-endpoint")
+                        .long("enable-coap-endpoint")
                         .action(ArgAction::SetTrue)
                         .help("enable coap endpoint"),
                 )
                 .arg(
                     Arg::new("enable-http-endpoint")
-                        .long("--enable-http-endpoint")
+                        .long("enable-http-endpoint")
                         .action(ArgAction::SetTrue)
                         .help("enable http endpoint"),
                 )
                 .arg(
                     Arg::new("enable-mqtt-endpoint")
-                        .long("--enable-mqtt-endpoint")
+                        .long("enable-mqtt-endpoint")
                         .action(ArgAction::SetTrue)
                         .help("enable mqtt endpoint"),
                 )
                 .arg(
                     Arg::new("enable-mqtt-integration")
-                        .long("--enable-mqtt-integration")
+                        .long("enable-mqtt-integration")
                         .action(ArgAction::SetTrue)
                         .help("enable mqtt integration"),
                 )
                 .arg(
                     Arg::new("enable-websocket-integration")
-                        .long("--enable-websocket-integration")
+                        .long("enable-websocket-integration")
                         .action(ArgAction::SetTrue)
                         .help("enable websocket integration"),
                 )
                 .arg(
                     Arg::new("enable-command-endpoint")
-                        .long("--enable-command-endpoint")
+                        .long("enable-command-endpoint")
                         .action(ArgAction::SetTrue)
                         .help("enable command endpoint"),
                 )
                 .arg(
                     Arg::new("server-key")
-                        .long("--server-key")
+                        .long("server-key")
                         .value_name("FILE")
                         .help("private key to use for service endpoints"),
                 )
                 .arg(
                     Arg::new("server-cert")
-                        .long("--server-cert")
+                        .long("server-cert")
                         .value_name("FILE")
                         .help("public certificate to use for service endpoints"),
                 )
                 .arg(
                     Arg::new("database-host")
-                        .long("--database-host")
+                        .long("database-host")
                         .value_name("HOST")
                         .help("hostname of PostgreSQL database"),
                 )
                 .arg(
                     Arg::new("database-port")
-                        .long("--database-port")
+                        .long("database-port")
                         .value_parser(value_parser!(u16))
                         .value_name("PORT")
                         .help("port of PostgreSQL database"),
                 )
                 .arg(
                     Arg::new("database-name")
-                        .long("--database-name")
+                        .long("database-name")
                         .value_name("NAME")
                         .help("name of database to use"),
                 )
                 .arg(
                     Arg::new("database-user")
-                        .long("--database-user")
+                        .long("database-user")
                         .value_name("USER")
                         .help("username to use with database"),
                 )
                 .arg(
                     Arg::new("database-password")
-                        .long("--database-password")
+                        .long("database-password")
                         .value_name("PASSWORD")
                         .help("password to use with database"),
                 )
                 .arg(
                     Arg::new("keycloak-url")
-                        .long("--keycloak-url")
+                        .long("keycloak-url")
                         .value_name("URL")
                         .help("url for Keycloak"),
                 )
                 .arg(
                     Arg::new("keycloak-realm")
-                        .long("--keycloak-realm")
+                        .long("keycloak-realm")
                         .value_name("REALM")
                         .help("Keycloak realm to use"),
                 )
                 .arg(
                     Arg::new("keycloak-user")
-                        .long("--keycloak-user")
+                        .long("keycloak-user")
                         .value_name("USER")
                         .help("Keycloak realm admin user"),
                 )
                 .arg(
                     Arg::new("keycloak-password")
-                        .long("--keycloak-password")
+                        .long("keycloak-password")
                         .value_name("PASSWORD")
                         .help("Keycloak realm admin password"),
                 )
@@ -235,13 +236,13 @@ fn args() -> Command {
                 )
                 .arg(
                     Arg::new("kafka-bootstrap-servers")
-                        .long("--kafka-bootstrap-servers")
+                        .long("kafka-bootstrap-servers")
                         .value_name("HOSTS")
                         .help("Kafka bootstrap servers"),
                 )
                 .arg(
                     Arg::new("ui-dist")
-                        .long("--ui-dist")
+                        .long("ui-dist")
                         .value_name("PATH")
                         .env("UI_DIST")
                         .help("Path to the UI distribution bundle")
