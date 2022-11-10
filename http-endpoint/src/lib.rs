@@ -107,8 +107,8 @@ pub async fn run(mut config: Config, startup: &mut dyn Startup) -> anyhow::Resul
     }
 
     // If allowed methods are not set let's add them
-    if config.http.cors.allowed_methods.is_none() {
-        config.http.cors.set_allowed_methods(vec!["POST"]);
+    if let Some(ref mut cors_config) = config.http.cors {
+        cors_config.set_allowed_methods(vec!["POST"]);
     }
 
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
