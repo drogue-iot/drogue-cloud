@@ -1464,8 +1464,9 @@ dependencies = [
 
 [[package]]
 name = "drogue-client"
-version = "0.11.0-alpha.1"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=78aaf1b0ab7524f428efec5a9de75a1242701951#78aaf1b0ab7524f428efec5a9de75a1242701951"
+version = "0.11.0-alpha.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95e3401e1625131aa51ec890389d0581d7e870f2a3bae15e1212413451d10be0"
 dependencies = [
  "async-trait",
  "base64 0.13.1",
@@ -3611,9 +3612,9 @@ dependencies = [
 
 [[package]]
 name = "ntex"
-version = "0.5.28"
+version = "0.5.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bc8fb9eb84b4e52c9761c2a5e0a9d2524d3b8f8ec48c032b7a35a139c97cec3"
+checksum = "fefbce7f4163b09dfa46220fce6384696a67f798622e041d667b8d8e16ace28b"
 dependencies = [
  "async-channel",
  "async-oneshot",
@@ -3698,9 +3699,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-h2"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb48fa13738d75a3f29da4285c9da1695e08902810fd45cff296a8febe9b2983"
+checksum = "037fdb13a4a7c8fe8aff961050a97733534b211b58ba913151dd8ade3c800dd6"
 dependencies = [
  "bitflags",
  "fxhash",
@@ -3719,9 +3720,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-http"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "816d61a0dbc466191611d82a56039bab35fe2e0c01bee6f5a251f7fc66998fd7"
+checksum = "739288d0c34b2016aedfc874918266364caf912f05d602a35f40af98022c7d92"
 dependencies = [
  "fxhash",
  "http",
