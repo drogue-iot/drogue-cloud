@@ -15,7 +15,7 @@ use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaSt
 use drogue_cloud_service_api::{kafka::KafkaClientConfig, webapp::HttpServer};
 use drogue_cloud_service_common::actix::http::CorsConfig;
 use drogue_cloud_service_common::{
-    actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
+    actix::http::{HttpBuilder, HttpConfig},
     app::{Main, Startup, StartupExt, SubMain},
     auth::openid::{
         AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
@@ -553,7 +553,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             registry(cfg);
             command(cfg);
         })
-        .cors(CorsBuilder::Permissive)
+        .cors(CorsConfig::permissive())
         .start(&mut main)?;
     }
 
@@ -572,10 +572,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 key_file,
                 bind_addr: server.http.clone().into(),
                 metrics_namespace: Some("http_endpoint".into()),
-                cors: CorsConfig {
-                    allow_any_origin: true,
-                    ..Default::default()
-                },
+                cors: Some(CorsConfig::permissive()),
                 ..Default::default()
             },
             auth: auth.clone(),
