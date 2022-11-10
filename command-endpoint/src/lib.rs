@@ -114,7 +114,9 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // main server
 
     let (cfg, checks) = configurator(config.clone()).await?;
-    HttpBuilder::new(config.http, Some(startup.runtime_config()), cfg).start(startup)?;
+    HttpBuilder::new(config.http, Some(startup.runtime_config()), cfg)
+        .default_cors(CorsConfig::permissive())
+        .start(startup)?;
 
     // spawn
 
