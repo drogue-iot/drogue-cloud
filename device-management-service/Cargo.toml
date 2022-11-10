@@ -13,7 +13,7 @@ async-trait = "0.1"
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
 deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
-drogue-client = "0.11.0-alpha.1"
+drogue-client = "0.11.0-alpha.2"
 futures = "0.3"
 hostname-validator = "1.1.0"
 http = "0.2"
