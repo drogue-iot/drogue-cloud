@@ -1,0 +1,59 @@
+[package]
+name = "drogue-cloud-command-routing-service"
+description = "Command routing service"
+version = "0.11.0"
+authors = ["Dejan Bosanac<dbosanac@redhat.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+bytes = "1"
+chrono = { version = "0.4", features = ["serde"] }
+deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
+drogue-client = "0.11.0-alpha.1"
+futures = "0.3"
+http = "0.2"
+humantime-serde = "1"
+indexmap = { version = "1", features = ["serde"] }
+log = "0.4"
+pem = "1"
+pin-project = "1"
+prometheus = { version = "^0.13", default-features = false }
+rand = "0.8"
+reqwest = "0.11"
+serde = "1"
+serde_json = "1"
+thiserror = "1"
+tokio = "1"
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+tracing = "0.1"
+url = "2"
+uuid = "1"
+x509-parser = "0.14"
+
+drogue-cloud-admin-service = { path = "../admin-service" }
+drogue-cloud-database-common = { path = "../database-common" }
+drogue-cloud-endpoint-common = { path = "../endpoint-common" }
+drogue-cloud-registry-events = { path = "../registry-events" }
+drogue-cloud-service-api = { path = "../service-api", features = ["actix"] }
+drogue-cloud-service-common = { path = "../service-common" }
+
+[dev-dependencies]
+actix-http = "3"
+actix-rt = "2"
+base64 = "0.13"
+deadpool = "0.9"
+deadpool-postgres = { version = "0.10", features = ["serde", "rt_tokio_1"] }
+env_logger = "0.9"
+form_urlencoded = "1"
+maplit = "1"
+openid = "0.10"
+serial_test = "0.9"
+testcontainers = "0.12"
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = { version = "0.7", features = ["runtime", "with-serde_json-1"] }
+lazy_static = "1"
+
+drogue-cloud-test-common = { path = "../test-common", features = ["actix", "drogue-cloud-endpoint-common"] }

@@ -32,6 +32,7 @@ drogue-cloud-access-token-service = { path = "../access-token-service" }
 drogue-cloud-authentication-service = { path = "../authentication-service" }
 drogue-cloud-coap-endpoint = { path = "../coap-endpoint" }
 drogue-cloud-command-endpoint = { path = "../command-endpoint" }
+drogue-cloud-command-routing-service = { path = "../command-routing-service" }
 drogue-cloud-console-backend = { path = "../console-backend" }
 drogue-cloud-database-common = { path = "../database-common" }
 drogue-cloud-device-management-service = { path = "../device-management-service" }

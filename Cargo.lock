@@ -1650,6 +1650,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "drogue-cloud-command-routing-service"
+version = "0.11.0"
+dependencies = [
+ "actix-http",
+ "actix-rt",
+ "anyhow",
+ "async-trait",
+ "base64 0.13.1",
+ "bytes",
+ "chrono",
+ "deadpool",
+ "deadpool-postgres",
+ "drogue-client",
+ "drogue-cloud-admin-service",
+ "drogue-cloud-database-common",
+ "drogue-cloud-endpoint-common",
+ "drogue-cloud-registry-events",
+ "drogue-cloud-service-api",
+ "drogue-cloud-service-common",
+ "drogue-cloud-test-common",
+ "env_logger",
+ "form_urlencoded",
+ "futures",
+ "http",
+ "humantime-serde",
+ "indexmap",
+ "lazy_static",
+ "log",
+ "maplit",
+ "openid",
+ "pem",
+ "pin-project",
+ "prometheus",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "testcontainers",
+ "thiserror",
+ "tokio",
+ "tokio-postgres",
+ "tracing",
+ "url",
+ "uuid",
+ "x509-parser",
+]
+
+[[package]]
 name = "drogue-cloud-console-backend"
 version = "0.11.0"
 dependencies = [
@@ -2247,6 +2296,7 @@ dependencies = [
  "drogue-cloud-authentication-service",
  "drogue-cloud-coap-endpoint",
  "drogue-cloud-command-endpoint",
+ "drogue-cloud-command-routing-service",
  "drogue-cloud-console-backend",
  "drogue-cloud-database-common",
  "drogue-cloud-device-management-service",

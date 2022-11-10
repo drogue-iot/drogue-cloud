@@ -31,6 +31,7 @@ pub struct ServerConfig {
     pub mqtt_integration_ws_browser: Endpoint,
     pub websocket_integration: Endpoint,
     pub command: Endpoint,
+    pub command_routing: Endpoint,
     pub registry: Endpoint,
     pub device_auth: Endpoint,
     pub user_auth: Endpoint,
@@ -210,8 +211,12 @@ impl ServerConfig {
                 port: 10006,
             },
             device_state: Endpoint {
-                host: iface,
+                host: iface.to_string(),
                 port: 10007,
+            },
+            command_routing: Endpoint {
+                host: iface,
+                port: 10008,
             },
         }
     }

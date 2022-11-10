@@ -6,6 +6,7 @@ members = [
     "authentication-service",
     "coap-endpoint",
     "command-endpoint",
+    "command-routing-service",
     "console-backend",
     "console-common",
     "database-common",

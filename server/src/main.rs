@@ -6,9 +6,10 @@ use crate::{config::*, keycloak::*};
 use anyhow::anyhow;
 use clap::{crate_version, value_parser, Arg, ArgAction, ArgMatches, Command};
 use drogue_cloud_authentication_service::service::AuthenticationServiceConfig;
+use drogue_cloud_command_routing_service::service::postgres::PostgresServiceConfiguration as CommandRoutingPostgresServiceConfiguration;
 use drogue_cloud_database_common::postgres;
 use drogue_cloud_device_management_service::service::PostgresManagementServiceConfig;
-use drogue_cloud_device_state_service::service::postgres::PostgresServiceConfiguration;
+use drogue_cloud_device_state_service::service::postgres::PostgresServiceConfiguration as DeviceStatePostgresServiceConfiguration;
 use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSourceConfig};
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, Transport};
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
@@ -94,6 +95,12 @@ fn args() -> Command {
                         .conflicts_with("enable-console-frontend")
                         .conflicts_with("ui-dist")
                         .help("disable console frontend serving"),
+                )
+                .arg(
+                    Arg::new("enable-command-routing")
+                        .long("enable-command-routing")
+                        .action(ArgAction::SetTrue)
+                        .help("enable command routing service"),
                 )
                 .arg(
                     Arg::new("enable-device-registry")
@@ -430,7 +437,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             },
 
             oauth: oauth.clone(),
-            service: PostgresServiceConfiguration {
+            service: DeviceStatePostgresServiceConfiguration {
                 session_timeout: Duration::from_secs(10),
                 pg: pg.clone(),
             },
@@ -442,6 +449,34 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         };
 
         drogue_cloud_device_state_service::run(config, &mut main).await?;
+    }
+
+    if matches.get_flag("enable-command-routing") || matches.get_flag("enable-all") {
+        log::info!("Enabling command routing service");
+
+        let kafka = server.kafka.clone();
+        let config = drogue_cloud_command_routing_service::Config {
+            http: HttpConfig {
+                bind_addr: server.command_routing.clone().into(),
+                disable_tls: true,
+                workers: Some(1),
+                metrics_namespace: Some("command_routing_service".into()),
+                ..Default::default()
+            },
+
+            oauth: oauth.clone(),
+            service: CommandRoutingPostgresServiceConfiguration {
+                session_timeout: Duration::from_secs(10),
+                pg: pg.clone(),
+            },
+            instance: "drogue".to_string(),
+            check_kafka_topic_ready: false,
+            kafka_downstream_config: kafka,
+            endpoint_pool: Default::default(),
+            registry: registry.clone(),
+        };
+
+        drogue_cloud_command_routing_service::run(config, &mut main).await?;
     }
 
     if matches.get_flag("enable-user-authentication-service") || matches.get_flag("enable-all") {
