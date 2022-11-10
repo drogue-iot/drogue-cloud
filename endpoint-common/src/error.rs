@@ -3,22 +3,21 @@ use drogue_cloud_service_api::webapp::{
     error::PayloadError, http::StatusCode, HttpResponse, ResponseError,
 };
 use serde::{Deserialize, Serialize};
-use snafu::Snafu;
 use std::fmt::Formatter;
 
-#[derive(Debug, Snafu)]
+#[derive(Debug, thiserror::Error)]
 pub enum EndpointError {
-    #[snafu(display("Invalid data format: {}", source))]
+    #[error("Invalid data format: {}", source)]
     InvalidFormat { source: Box<dyn std::error::Error> },
-    #[snafu(display("Invalid data: {}", details))]
+    #[error("Invalid data: {}", details)]
     InvalidRequest { details: String },
-    #[snafu(display("Endpoint configuration error: {}", details))]
+    #[error("Endpoint configuration error: {}", details)]
     ConfigurationError { details: String },
     /// The authentication process failed to evaluate an outcome.
-    #[snafu(display("Failed to authenticate: {}", source))]
+    #[error("Failed to authenticate: {}", source)]
     AuthenticationServiceError { source: Box<dyn std::error::Error> },
     /// The authentication process successfully evaluated that the access is denied.
-    #[snafu(display("Authentication failed"))]
+    #[error("Authentication failed")]
     AuthenticationError,
 }
 
