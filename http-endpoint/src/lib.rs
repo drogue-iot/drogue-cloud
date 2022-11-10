@@ -18,7 +18,7 @@ use drogue_cloud_service_api::{
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::http::{HttpBuilder, HttpConfig},
+    actix::http::{CorsConfig, HttpBuilder, HttpConfig},
     app::{Startup, StartupExt},
     defaults,
     tls::TlsAuthConfig,
@@ -50,7 +50,7 @@ async fn index() -> impl Responder {
     HttpResponse::Ok()
 }
 
-pub async fn run(mut config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
+pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     log::info!("Starting HTTP service endpoint");
 
     let sender = DownstreamSender::new(
@@ -106,11 +106,6 @@ pub async fn run(mut config: Config, startup: &mut dyn Startup) -> anyhow::Resul
         }));
     }
 
-    // If allowed methods are not set let's add them
-    if let Some(ref mut cors_config) = config.http.cors {
-        cors_config.set_allowed_methods(vec!["POST"]);
-    }
-
     let main = HttpBuilder::new(config.http, Some(startup.runtime_config()), move |cfg| {
         cfg.app_data(web::Data::new(sender.clone()))
             .app_data(web::Data::new(http_server_commands.clone()))
@@ -152,6 +147,7 @@ pub async fn run(mut config: Config, startup: &mut dyn Startup) -> anyhow::Resul
         }
         ext.insert(psk);
     })
+    .default_cors(CorsConfig::permissive().set_allowed_methods(vec!["POST"]))
     .run()?;
 
     // command source

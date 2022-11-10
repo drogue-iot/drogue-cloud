@@ -15,6 +15,7 @@ use drogue_cloud_service_api::{
     endpoints::Endpoints, health::HealthChecked, kafka::KafkaClientConfig,
     webapp::web::ServiceConfig,
 };
+use drogue_cloud_service_common::actix::http::CorsConfig;
 use drogue_cloud_service_common::{
     actix::http::{HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
@@ -258,7 +259,9 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // main server
 
     let (cfg, checks) = configurator(config.clone(), endpoints).await?;
-    HttpBuilder::new(config.http.clone(), Some(startup.runtime_config()), cfg).start(startup)?;
+    HttpBuilder::new(config.http.clone(), Some(startup.runtime_config()), cfg)
+        .default_cors(CorsConfig::permissive())
+        .start(startup)?;
     // spawn
 
     startup.check_iter(checks);

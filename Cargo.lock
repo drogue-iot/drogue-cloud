@@ -1420,7 +1420,6 @@ source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=191c1a80e58f1e0c9d
 dependencies = [
  "actix-cors",
  "actix-http",
-
  "actix-service",
  "actix-web",
  "actix-web-extras",
