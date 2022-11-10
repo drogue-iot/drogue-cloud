@@ -48,7 +48,7 @@ fn args() -> Command {
                 .global(true)
                 .long("quiet")
                 .short('q')
-                .action(clap::ArgAction::SetFalse)
+                .action(clap::ArgAction::SetTrue)
                 .conflicts_with("verbose")
                 .help("Be quiet.")
         )
