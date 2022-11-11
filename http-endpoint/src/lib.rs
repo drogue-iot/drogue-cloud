@@ -18,7 +18,7 @@ use drogue_cloud_service_api::{
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
-    actix::http::{CorsConfig, HttpBuilder, HttpConfig},
+    actix::http::{HttpBuilder, HttpConfig},
     app::{Startup, StartupExt},
     defaults,
     tls::TlsAuthConfig,
@@ -147,7 +147,6 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         }
         ext.insert(psk);
     })
-    .default_cors(CorsConfig::permissive().set_allowed_methods(vec!["POST"]))
     .run()?;
 
     // command source

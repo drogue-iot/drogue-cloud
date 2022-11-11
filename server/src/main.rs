@@ -553,7 +553,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             registry(cfg);
             command(cfg);
         })
-        .cors(CorsConfig::permissive())
+        .default_cors(CorsConfig::permissive())
         .start(&mut main)?;
     }
 

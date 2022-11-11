@@ -11,9 +11,8 @@ use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
     webapp::{self as actix_web, web::ServiceConfig},
 };
-use drogue_cloud_service_common::actix::http::CorsConfig;
 use drogue_cloud_service_common::{
-    actix::http::{HttpBuilder, HttpConfig},
+    actix::http::{CorsConfig, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
     actix_auth::authorization::ApplicationAuthorizer,
     app::{Startup, StartupExt},
