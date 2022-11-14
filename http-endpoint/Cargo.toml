@@ -13,7 +13,7 @@ anyhow = "1"
 async-trait = "0.1"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.6", features = ["actix"] }
-drogue-client = "0.11.0-alpha.2"
+drogue-client = "0.11"
 drogue-ttn = "0.6"
 futures = "0.3"
 futures-core = "0.3"

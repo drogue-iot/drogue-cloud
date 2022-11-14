@@ -73,7 +73,7 @@ web-sys = { version = "0.3", features = [
 
 drogue-cloud-service-api = { path = "../service-api", default-features = false }
 drogue-cloud-console-common = { path = "../console-common" }
-drogue-client = { version = "0.11.0-alpha.2", default-features = false, features = ["wasm"] }
+drogue-client = { version = "0.11", default-features = false, features = ["wasm"] }
 
 # we need to override the feature flags of the defaults
 openidconnect = { version = "=2.2.0", default-features = false, features = ["reqwest", "rustls-tls", "rustcrypto"] }
@@ -98,7 +98,7 @@ lto = true
 #drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "3e0fdb91305803c51946f8a818e4f053ab88c2c3" } # FIXME: awaiting release 0.11.0
 #drogue-client = { path = "../../drogue-client" }
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "8dbdb44e778f1bafbae2b767994e84aa0f4d224d" } # FIXME: awaiting release 0.3.0
+#drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "8dbdb44e778f1bafbae2b767994e84aa0f4d224d" } # FIXME: awaiting release 0.3.0
 #drogue-bazaar = { path = "../../drogue-bazaar" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
