@@ -1,9 +1,9 @@
 //! Common authn/authz logic
 
 use crate::{error::ServiceError, models::app::MemberEntry};
-use drogue_client::user::v1::authz::{Outcome, Permission};
+use drogue_client::user::v1::authz::{Outcome, Permission, ResourcePermission};
+use drogue_client::admin::v1::Role;
 use drogue_cloud_service_api::{
-    admin::Role,
     auth::user::{IsAdmin, UserInformation},
 };
 use indexmap::map::IndexMap;
@@ -39,37 +39,44 @@ pub fn authorize(
         return Outcome::Allow;
     }
 
-    // check the owner
-    match (resource.owner(), identity.user_id()) {
-        // If there is no owner -> allow access
-        (None, _) => Outcome::Allow,
-        // If there is an owner and an authenticated user and both match -> allow access
-        (Some(owner), Some(user)) if owner == user => Outcome::Allow,
-        // We must be owner, but are not -> deny
-        _ if permission == Permission::Owner => Outcome::Deny,
-        // Check the member list
-        (Some(_), user) => {
-            // If we don't have a user, look for the anonymous mapping
-            let user = user.unwrap_or_default();
-            // If there is a member in the list which matches the user ...
-            if let Some(member) = resource.members().get(user) {
-                match permission {
-                    // this should already be covered be the rule above
-                    Permission::Owner => Outcome::Deny,
-                    Permission::Admin => match member.role {
-                        Role::Admin => Outcome::Allow,
-                        _ => Outcome::Deny,
-                    },
-                    Permission::Write => match member.role {
-                        Role::Admin | Role::Manager => Outcome::Allow,
-                        _ => Outcome::Deny,
-                    },
-                    Permission::Read => Outcome::Allow,
+    match permission {
+        Permission::Resource(permission) => {
+
+            // check the owner
+            match (resource.owner(), identity.user_id()) {
+                // If there is no owner -> allow access
+                (None, _) => Outcome::Allow,
+                // If there is an owner and an authenticated user and both match -> allow access
+                (Some(owner), Some(user)) if owner == user => Outcome::Allow,
+                // We must be owner, but are not -> deny
+                _ if permission == ResourcePermission::Own => Outcome::Deny,
+                // Check the member list
+                (Some(_), user) => {
+                    // If we don't have a user, look for the anonymous mapping
+                    let user = user.unwrap_or_default();
+                    // If there is a member in the list which matches the user ...
+                    if let Some(member) = resource.members().get(user) {
+                        match permission {
+                            // this should already be covered be the rule above
+                            ResourcePermission::Own => Outcome::Deny,
+                            ResourcePermission::Read => match member.role {
+                                Role::Reader | Role::Manager => Outcome::Allow,
+                                _ => Outcome::Deny,
+                            },
+                            ResourcePermission::Write => match member.role {
+                                Role::Manager => Outcome::Allow,
+                                _ => Outcome::Deny,
+                            },
+                            Permission::Read => Outcome::Allow,
+                        }
+                    } else {
+                        Outcome::Deny
+                    }
                 }
-            } else {
-                Outcome::Deny
             }
-        }
+        },
+        // TODO: implement permission check for access tokens operations
+        Permission::Token(t) => todo!()
     }
 }
 

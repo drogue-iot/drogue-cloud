@@ -12,7 +12,7 @@ use chrono::{DateTime, TimeZone, Utc};
 use cloudevents::AttributesReader;
 use drogue_client::{
     integration::ws::v1::client,
-    user::{self, v1::authz},
+    user::{self, v1::authz, v1::authz::ResourcePermission},
 };
 use drogue_cloud_service_api::{auth::user::UserInformation, webapp::http::ws::CloseCode};
 use drogue_cloud_service_common::auth::openid::{self, CustomClaims};
@@ -60,7 +60,7 @@ impl AuthContext {
             .user_auth
             .authorize(authz::AuthorizationRequest {
                 application: self.application.clone(),
-                permission: authz::Permission::Read,
+                permission: authz::Permission::Resource(ResourcePermission::Subscribe),
                 user_id: user.user_id().map(ToString::to_string),
                 roles: user.roles().clone(),
             })

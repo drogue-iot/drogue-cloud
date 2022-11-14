@@ -6,7 +6,7 @@ mod wshandler;
 use crate::service::Service;
 use actix::Actor;
 use actix_web::web;
-use drogue_client::user::v1::authz::Permission;
+use drogue_client::user::v1::authz::{Permission, ResourcePermission};
 use drogue_cloud_service_api::{
     kafka::KafkaClientConfig,
     webapp::{self as actix_web},
@@ -91,7 +91,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
             web::scope("/{application}")
                 .wrap(ApplicationAuthorizer::wrapping(
                     user_auth.clone(),
-                    Permission::Read,
+                    Permission::Resource(ResourcePermission::Subscribe),
                 ))
                 .wrap(AuthN::from((
                     authenticator.clone(),
