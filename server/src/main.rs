@@ -454,7 +454,6 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
     if matches.get_flag("enable-command-routing") || matches.get_flag("enable-all") {
         log::info!("Enabling command routing service");
 
-        let kafka = server.kafka.clone();
         let config = drogue_cloud_command_routing_service::Config {
             http: HttpConfig {
                 bind_addr: server.command_routing.clone().into(),
@@ -470,9 +469,6 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 pg: pg.clone(),
             },
             instance: "drogue".to_string(),
-            check_kafka_topic_ready: false,
-            kafka_downstream_config: kafka,
-            endpoint_pool: Default::default(),
             registry: registry.clone(),
         };
 

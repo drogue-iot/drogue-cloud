@@ -4,12 +4,7 @@ pub mod service;
 use crate::service::{postgres::PostgresServiceConfiguration, DeviceStateService};
 use actix_web::web;
 use drogue_client::registry;
-use drogue_cloud_endpoint_common::{
-    sender::{DownstreamSender, ExternalClientPoolConfig},
-    sink::KafkaSink,
-};
 use drogue_cloud_service_api::{
-    kafka::KafkaClientConfig,
     webapp::{self as actix_web},
 };
 use drogue_cloud_service_common::{
@@ -17,7 +12,7 @@ use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
     auth::openid::{Authenticator, AuthenticatorConfig},
     client::ClientConfig,
-    defaults, openid_auth,
+    openid_auth,
 };
 use futures::FutureExt;
 use serde::Deserialize;
@@ -30,11 +25,6 @@ pub struct Config {
     pub service: PostgresServiceConfiguration,
 
     pub instance: String,
-    #[serde(default = "defaults::check_kafka_topic_ready")]
-    pub check_kafka_topic_ready: bool,
-    pub kafka_downstream_config: KafkaClientConfig,
-    #[serde(default)]
-    pub endpoint_pool: ExternalClientPoolConfig,
 
     pub registry: ClientConfig,
 
@@ -77,21 +67,10 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // set up registry client
     let registry: registry::v1::Client = config.registry.into_client().await?;
 
-    // downstream sender
-
-    let sender = DownstreamSender::new(
-        KafkaSink::from_config(
-            config.kafka_downstream_config,
-            config.check_kafka_topic_ready,
-        )?,
-        config.instance,
-        config.endpoint_pool,
-    )?;
-
     // service
 
     let service =
-        service::postgres::PostgresDeviceStateService::new(config.service, sender, registry)?;
+        service::postgres::PostgresDeviceStateService::new(config.service, registry)?;
     startup.check(service.clone());
 
     let pruner = service::postgres::run_pruner(service.clone()).boxed();

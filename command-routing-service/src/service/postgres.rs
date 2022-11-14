@@ -6,7 +6,7 @@ use deadpool_postgres::{Pool, Transaction};
 use drogue_client::registry::v1::Application;
 use drogue_cloud_database_common::{postgres, Client, DatabaseService};
 use drogue_cloud_endpoint_common::sender::{
-    DownstreamSender, Publish, PublishError, PublishId, PublishOptions, PublishOutcome, Publisher,
+    Publish, PublishId, PublishOptions
 };
 use drogue_cloud_service_api::health::HealthChecked;
 use futures::StreamExt;
@@ -33,7 +33,6 @@ const fn default_session_timeout() -> Duration {
 #[derive(Clone)]
 pub struct PostgresDeviceStateService {
     pool: Pool,
-    sender: DownstreamSender,
     registry: Arc<dyn ApplicationLookup>,
     timeout: chrono::Duration,
 }
@@ -41,7 +40,6 @@ pub struct PostgresDeviceStateService {
 impl PostgresDeviceStateService {
     pub fn new(
         config: PostgresServiceConfiguration,
-        sender: DownstreamSender,
         registry: impl ApplicationLookup + 'static,
     ) -> anyhow::Result<Self> {
         let pool = config.pg.create_pool()?;
@@ -50,7 +48,6 @@ impl PostgresDeviceStateService {
 
         Ok(Self {
             pool,
-            sender,
             registry: Arc::new(registry),
             timeout,
         })
@@ -512,25 +509,26 @@ WHERE
     }
 
     /// send a single event downstream.
-    async fn send_event<B>(&self, publish: Publish<'_>, body: B) -> Result<(), ServiceError>
+    async fn send_event<B>(&self, _publish: Publish<'_>, _body: B) -> Result<(), ServiceError>
     where
         B: AsRef<[u8]> + Send + Sync,
     {
-        let outcome = self.sender.publish(publish, body).await;
+        Ok(())
+        // let outcome = self.sender.publish(publish, body).await;
 
-        log::debug!("Publish outcome: {outcome:?}");
+        // log::debug!("Publish outcome: {outcome:?}");
 
-        match outcome {
-            Err(PublishError::Spec(err)) => {
-                log::debug!("Failed to publish event due to misconfigured spec section: {err}");
-                Ok(())
-            }
-            Err(err) => Err(ServiceError::Publish(err)),
-            Ok(PublishOutcome::Accepted) => Ok(()),
-            Ok(PublishOutcome::Rejected | PublishOutcome::QueueFull) => Err(
-                ServiceError::Internal(format!("Unable to send event: {outcome:?}")),
-            ),
-        }
+        // match outcome {
+        //     Err(PublishError::Spec(err)) => {
+        //         log::debug!("Failed to publish event due to misconfigured spec section: {err}");
+        //         Ok(())
+        //     }
+        //     Err(err) => Err(ServiceError::Publish(err)),
+        //     Ok(PublishOutcome::Accepted) => Ok(()),
+        //     Ok(PublishOutcome::Rejected | PublishOutcome::QueueFull) => Err(
+        //         ServiceError::Internal(format!("Unable to send event: {outcome:?}")),
+        //     ),
+        // }
     }
 }
 
