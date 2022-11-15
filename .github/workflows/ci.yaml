@@ -474,10 +474,12 @@ jobs:
           if [[ "${{ needs.prepare.outputs.prerelease }}" == "true" ]]; then
             OPTS="${OPTS} -p"
           fi
+          INSTALLERS=$(find installer/build -type f -name "drogue-install-*.zip" -printf "%p ")
+          SERVER_BINS=$(find server-binaries -type f -printf "%p ")
           gh release create \
             $OPTS \
             --title "${{ needs.prepare.outputs.version }}" \
             -F /tmp/notes.md \
             $TAG \
-            $(find installer/build -type f -name "drogue-install-*.zip" -printf "-a %p ") \
-            $(find server-binaries -type f -printf "-a %p ")
+            $INSTALLERS \
+            $SERVER_BINS
