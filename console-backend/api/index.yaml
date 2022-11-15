@@ -892,7 +892,7 @@ components:
       additionalProperties: true
       description: A JSON object containing arbritrary data attached to a device.
       properties:
-        credentials:
+        authentication:
           type: object
           additionalProperties: false
           properties:
@@ -941,6 +941,7 @@ components:
           - $ref: '#/components/schemas/UserCredential'
           - $ref: '#/components/schemas/PassCredential'
           - $ref: '#/components/schemas/CertCredential'
+          - $ref: '#/components/schemas/PSKCredential'
 
     Password:
       description: A password, either plain or hashed.
@@ -984,6 +985,33 @@ components:
               type: string
             password:
               $ref: '#/components/schemas/Password'
+
+    PSKCredential:
+      type: object
+      description: A pre shared key used for TLS-PSK encryption.
+      additionalProperties: false
+      required:
+        - key
+      properties:
+        key:
+          type: string
+          description: Base64 encoded key.
+        validity:
+          $ref: '#/components/schemas/Validity'
+
+    Validity:
+      type: object
+      description: Timestamps constraining the validity of a PSK.
+      additionalProperties: false
+      properties:
+        notBefore:
+          type: string
+          description: RFC 3339 encoded date. Before this date the key will be invalid.
+          example: 2022-10-05T07:05:26Z
+        notAfter:
+          type: string
+          description: RFC 3339 encoded date. After this date the key will be invalid.
+          example: 2022-10-06T07:05:26Z
 
     PassCredential:
       type: object
