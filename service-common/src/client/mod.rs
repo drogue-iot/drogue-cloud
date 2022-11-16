@@ -1,5 +1,6 @@
 //! Clients for services.
 
+mod command_routing;
 mod device_auth;
 mod device_state;
 

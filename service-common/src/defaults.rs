@@ -71,6 +71,11 @@ pub fn keycloak_url() -> Url {
 }
 
 #[inline]
+pub fn command_routing_url() -> Url {
+    Url::parse("http://command-routing-service").unwrap()
+}
+
+#[inline]
 pub fn device_state_url() -> Url {
     Url::parse("http://device-state-service").unwrap()
 }

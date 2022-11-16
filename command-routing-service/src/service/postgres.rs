@@ -31,13 +31,13 @@ const fn default_session_timeout() -> Duration {
 }
 
 #[derive(Clone)]
-pub struct PostgresDeviceStateService {
+pub struct PostgresCommandRoutingService {
     pool: Pool,
     registry: Arc<dyn ApplicationLookup>,
     timeout: chrono::Duration,
 }
 
-impl PostgresDeviceStateService {
+impl PostgresCommandRoutingService {
     pub fn new(
         config: PostgresServiceConfiguration,
         registry: impl ApplicationLookup + 'static,
@@ -54,34 +54,37 @@ impl PostgresDeviceStateService {
     }
 }
 
-impl DatabaseService for PostgresDeviceStateService {
+impl DatabaseService for PostgresCommandRoutingService {
     fn pool(&self) -> &Pool {
         &self.pool
     }
 }
 
-impl HealthChecked for PostgresDeviceStateService {}
+impl HealthChecked for PostgresCommandRoutingService {}
 
 #[async_trait]
-impl DeviceStateService for PostgresDeviceStateService {
+impl CommandRoutingService for PostgresCommandRoutingService {
     async fn init(&self) -> Result<InitResponse, ServiceError> {
         let c = self.pool.get().await?;
 
         let session = Uuid::new_v4();
+        let url = "http://localhost:10009";
         let now = Utc::now();
 
         c.execute(
             r#"
 INSERT INTO
-    sessions
+    command_sessions
 (
     ID,
+    URL,
     LAST_PING
 ) VALUES (
     $1,
-    $2
+    $2,
+    $3
 )"#,
-            &[&session, &now],
+            &[&session, &url, &now],
         )
         .await?;
 
@@ -97,7 +100,7 @@ INSERT INTO
         application: String,
         device: String,
         token: String,
-        state: DeviceState,
+        state: CommandRoute,
     ) -> Result<CreateResponse, ServiceError> {
         let app = match self.registry.lookup(&application).await? {
             Some(app) => app,
@@ -281,7 +284,7 @@ WHERE
         &self,
         application: String,
         device: String,
-    ) -> Result<Option<DeviceStateResponse>, ServiceError> {
+    ) -> Result<Option<CommandRouteResponse>, ServiceError> {
         let c = self.pool.get().await?;
 
         let stmt = c
@@ -307,8 +310,8 @@ WHERE
 
                 if !lost {
                     let created = row.try_get("CREATED")?;
-                    match row.try_get::<_, Option<Json<DeviceState>>>("DATA") {
-                        Ok(Some(Json(state))) => Ok(Some(DeviceStateResponse { state, created })),
+                    match row.try_get::<_, Option<Json<CommandRoute>>>("DATA") {
+                        Ok(Some(Json(state))) => Ok(Some(CommandRouteResponse { state, created })),
                         Ok(None) => Ok(None),
                         Err(err) => {
                             log::warn!("Failed to decode data: {err}");
@@ -324,7 +327,7 @@ WHERE
     }
 }
 
-impl PostgresDeviceStateService {
+impl PostgresCommandRoutingService {
     pub async fn prune(&self) -> Result<(), ServiceError> {
         log::info!("Start pruning sessions");
 
@@ -421,7 +424,7 @@ WHERE
 
         // we are rather conservative here, as we need to delete the record in any case
         let state = if let Some(data) = data {
-            match serde_json::from_value::<DeviceState>(data) {
+            match serde_json::from_value::<CommandRoute>(data) {
                 Ok(data) => Some(data),
                 Err(err) => {
                     log::info!("Failed to extra data for sending event: {err}");
@@ -532,7 +535,7 @@ WHERE
     }
 }
 
-pub async fn run_pruner(service: PostgresDeviceStateService) -> anyhow::Result<()> {
+pub async fn run_pruner(service: PostgresCommandRoutingService) -> anyhow::Result<()> {
     let period = service.timeout.to_std()?;
 
     loop {

@@ -1,16 +1,16 @@
-use crate::service::DeviceStateService;
+use crate::service::CommandRoutingService;
 use drogue_cloud_service_api::{
-    services::device_state::*,
+    services::command_routing::*,
     webapp::{web, *},
 };
 
-pub async fn init(service: web::Data<dyn DeviceStateService>) -> Result<HttpResponse, Error> {
+pub async fn init(service: web::Data<dyn CommandRoutingService>) -> Result<HttpResponse, Error> {
     let response = service.init().await?;
     Ok(HttpResponse::Created().json(response))
 }
 
 pub async fn create(
-    service: web::Data<dyn DeviceStateService>,
+    service: web::Data<dyn CommandRoutingService>,
     path: web::Path<(String, String, String)>,
     body: web::Json<CreateRequest>,
 ) -> Result<HttpResponse, Error> {
@@ -26,7 +26,7 @@ pub async fn create(
 }
 
 pub async fn delete(
-    service: web::Data<dyn DeviceStateService>,
+    service: web::Data<dyn CommandRoutingService>,
     path: web::Path<(String, String, String)>,
     body: web::Json<DeleteRequest>,
 ) -> Result<HttpResponse, Error> {
@@ -38,7 +38,7 @@ pub async fn delete(
 }
 
 pub async fn get(
-    service: web::Data<dyn DeviceStateService>,
+    service: web::Data<dyn CommandRoutingService>,
     path: web::Path<(String, String)>,
 ) -> Result<HttpResponse, Error> {
     let (application, device) = path.into_inner();
@@ -49,7 +49,7 @@ pub async fn get(
 }
 
 pub async fn ping(
-    service: web::Data<dyn DeviceStateService>,
+    service: web::Data<dyn CommandRoutingService>,
     instance: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let response = service.ping(instance.into_inner()).await?;

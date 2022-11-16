@@ -6,11 +6,11 @@ pub use error::*;
 
 use async_trait::async_trait;
 use drogue_client::{error::ClientError, registry};
-use drogue_cloud_service_api::services::device_state::*;
+use drogue_cloud_service_api::services::command_routing::*;
 use serde::Deserialize;
 
 #[async_trait]
-pub trait DeviceStateService: Send + Sync {
+pub trait CommandRoutingService: Send + Sync {
     /// Create a new session.
     async fn init(&self) -> Result<InitResponse, ServiceError>;
 
@@ -28,7 +28,7 @@ pub trait DeviceStateService: Send + Sync {
         application: String,
         device: String,
         token: String,
-        state: DeviceState,
+        state: CommandRoute,
     ) -> Result<CreateResponse, ServiceError>;
 
     /// Delete the state of the item, for this session.
@@ -56,7 +56,7 @@ pub trait DeviceStateService: Send + Sync {
         &self,
         application: String,
         device: String,
-    ) -> Result<Option<DeviceStateResponse>, ServiceError>;
+    ) -> Result<Option<CommandRouteResponse>, ServiceError>;
 }
 
 #[async_trait]

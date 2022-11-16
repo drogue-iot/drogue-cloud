@@ -1,7 +1,7 @@
 pub mod endpoints;
 pub mod service;
 
-use crate::service::{postgres::PostgresServiceConfiguration, DeviceStateService};
+use crate::service::{postgres::PostgresServiceConfiguration, CommandRoutingService};
 use actix_web::web;
 use drogue_client::registry;
 use drogue_cloud_service_api::{
@@ -38,10 +38,10 @@ macro_rules! app {
         use $crate::endpoints;
 
         $cfg.app_data($data.clone()).service(
-            web::scope("/api/state/v1alpha1")
+            web::scope("/api/routes/v1alpha1")
                 .wrap($auth)
                 .service(
-                    web::resource("/states/{application}/{device}")
+                    web::resource("/routes/{application}/{command}")
                         .route(web::get().to(endpoints::get)),
                 )
                 .service(web::resource("/sessions").route(web::put().to(endpoints::init)))
@@ -49,7 +49,7 @@ macro_rules! app {
                     web::resource("/sessions/{session}").route(web::post().to(endpoints::ping)),
                 )
                 .service(
-                    web::resource("/sessions/{session}/states/{application}/{device}")
+                    web::resource("/routes/{session}/states/{application}/{command}")
                         .route(web::put().to(endpoints::create))
                         .route(web::delete().to(endpoints::delete)),
                 ),
@@ -70,13 +70,13 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // service
 
     let service =
-        service::postgres::PostgresDeviceStateService::new(config.service, registry)?;
+        service::postgres::PostgresCommandRoutingService::new(config.service, registry)?;
     startup.check(service.clone());
 
     let pruner = service::postgres::run_pruner(service.clone()).boxed();
 
-    let service: Arc<dyn DeviceStateService> = Arc::new(service);
-    let service: web::Data<dyn DeviceStateService> = web::Data::from(service);
+    let service: Arc<dyn CommandRoutingService> = Arc::new(service);
+    let service: web::Data<dyn CommandRoutingService> = web::Data::from(service);
 
     // monitoring
 
