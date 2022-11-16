@@ -4,6 +4,7 @@ mod command_routing;
 mod device_auth;
 mod device_state;
 
+pub use command_routing::*;
 pub use device_auth::*;
 pub use device_state::*;
 

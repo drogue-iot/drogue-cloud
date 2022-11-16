@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod client;
+pub mod command_routing;
 pub mod defaults;
 pub mod endpoints;
 pub mod error;
