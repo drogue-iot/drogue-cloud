@@ -194,11 +194,12 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt update
-          sudo apt install -y build-essential curl tzdata libssl-dev pkg-config libsasl2-dev librdkafka-dev libpq-dev libpqxx-dev
+          sudo apt install -y build-essential curl tzdata libssl-dev pkg-config libsasl2-dev librdkafka-dev libpq-dev libpqxx-dev libkrb5-dev postgresql-server-dev-14
 
       - name: Build binary
         run: |
-          PQ_LIB_STATIC=1 SASL2_STATIC=1 OPENSSL_STATIC=1 cargo build --release --features static -p drogue-cloud-server
+          # FIXME: this should build everything static, but in fact, it doesn't
+          env RUSTFLAGS="-L /usr/lib/postgresql/14/lib" PKG_CONFIG_ALL_STATIC=1 cargo build --release -p drogue-cloud-server
 
       - name: Build frontend
         run: |
