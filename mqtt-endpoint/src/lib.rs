@@ -15,7 +15,7 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_mqtt_common::server::build;
 use drogue_cloud_service_common::{
     app::{Startup, StartupExt},
-    state::StateController,
+    state::StateController, command_routing::CommandRoutingController,
 };
 use futures_util::TryFutureExt;
 use lazy_static::lazy_static;
@@ -39,6 +39,8 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // state service
 
     let (states, runner) = StateController::new(config.state.clone()).await?;
+    let (command_router, command_runner) = CommandRoutingController::new(config.command_routing.clone()).await?;
+
 
     let app = App {
         config: config.endpoint.clone(),
@@ -58,6 +60,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         commands: commands.clone(),
 
         states,
+        command_router,
         disable_psk: config.disable_tls_psk,
     };
 

@@ -15,6 +15,8 @@ use drogue_cloud_mqtt_common::server::{MqttServerOptions, Transport};
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
 use drogue_cloud_service_api::{kafka::KafkaClientConfig, webapp::HttpServer};
 use drogue_cloud_service_common::actix::http::CorsConfig;
+use drogue_cloud_service_common::client::CommandRoutingClientConfig;
+use drogue_cloud_service_common::command_routing::CommandRoutingControllerConfiguration;
 use drogue_cloud_service_common::{
     actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
     app::{Main, Startup, StartupExt, SubMain},
@@ -416,6 +418,20 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         ..Default::default()
     };
 
+    let command_router = CommandRoutingControllerConfiguration {
+        client: CommandRoutingClientConfig {
+            url: Url::parse(&format!(
+                "http://{}:{}",
+                server.command_routing.host, server.command_routing.port
+            ))
+            .unwrap(),
+            token_config: Some(token_config.clone()),
+            ..Default::default()
+        },
+        init_delay: Some(Duration::from_secs(2)),
+        ..Default::default()
+    };
+
     let oauth = oauth.clone();
     let server = server.clone();
     let auth = auth.clone();
@@ -713,6 +729,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 check_kafka_topic_ready: false,
                 endpoint_pool: Default::default(),
                 state: state.clone(),
+                command_routing: command_router.clone(),
             };
 
             mqtt_endpoints.push(config.clone());

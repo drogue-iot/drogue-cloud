@@ -75,7 +75,7 @@ impl CommandRoutingClient {
 
     #[instrument(err)]
     pub async fn init(&self) -> Result<InitResponse, ClientError> {
-        let url = self.url.join("/api/state/v1alpha1/sessions")?;
+        let url = self.url.join("/api/routes/v1alpha1/sessions")?;
 
         let req = self
             .client

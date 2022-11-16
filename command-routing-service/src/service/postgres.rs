@@ -77,7 +77,7 @@ INSERT INTO
     command_sessions
 (
     ID,
-    URL,
+    SESSION_URL,
     LAST_PING
 ) VALUES (
     $1,

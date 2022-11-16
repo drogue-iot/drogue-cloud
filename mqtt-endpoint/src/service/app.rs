@@ -20,7 +20,7 @@ use drogue_cloud_service_api::{
     auth::device::authn::{PreSharedKeyOutcome, PreSharedKeyResponse},
     services::device_state::LastWillTestament,
 };
-use drogue_cloud_service_common::state::{CreateOptions, CreationOutcome, StateController};
+use drogue_cloud_service_common::{state::{CreateOptions, CreationOutcome, StateController}, command_routing::CommandRoutingController};
 use std::fmt::Debug;
 use tracing::instrument;
 
@@ -31,6 +31,7 @@ pub struct App {
     pub authenticator: DeviceAuthenticator,
     pub commands: Commands,
     pub states: StateController,
+    pub command_router: CommandRoutingController,
     pub disable_psk: bool,
 }
 

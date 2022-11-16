@@ -3,6 +3,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::command_routing::CommandRoutingControllerConfiguration;
 use drogue_cloud_service_common::defaults;
 use drogue_cloud_service_common::state::StateControllerConfiguration;
 use serde::Deserialize;
@@ -80,6 +81,8 @@ pub struct Config {
     pub endpoint_pool: ExternalClientPoolConfig,
 
     pub state: StateControllerConfiguration,
+
+    pub command_routing: CommandRoutingControllerConfiguration,
 }
 
 impl TlsConfig for Config {
