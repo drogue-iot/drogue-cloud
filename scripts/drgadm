@@ -12,8 +12,9 @@ Usage: drgadm <command>
 Drogue IoT cloud admin tool
 
 Commands:
-    deploy       Deploy Drogue IoT to your cluster
-    examples     Show some examples to try
+    deploy            Deploy Drogue IoT to your cluster
+    examples          Show some examples to try
+    migrate <appId>   Migrate device credentials to the new format (0.11)
 
 EOF
     exit 1
