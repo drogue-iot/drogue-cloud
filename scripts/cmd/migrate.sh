@@ -34,10 +34,11 @@ do
 
   if [ "$hascreds" = "true" ]
   then
-    DATA=$(echo "$DATA" | jq '.spec.authentication = .spec.credentials | del(.spec.credentials)')
+    DATA=$(echo "$DATA" | jq '.spec.authentication += .spec.credentials')
     echo "$DATA" | drg apply -f -
+    progress "Device $dev updated."
   else
-      echo "No credentials field for device $dev"
+      progress "No credentials field for device $dev"
   fi
 
 done
