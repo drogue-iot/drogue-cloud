@@ -349,7 +349,7 @@ impl PostgresCommandRoutingService {
 SELECT
     ID
 FROM
-    sessions
+    command_sessions
 WHERE
     LAST_PING + $1::text::interval <= $2
 ORDER BY
@@ -378,31 +378,31 @@ FOR UPDATE SKIP LOCKED
     async fn prune_session(&self, t: Transaction<'_>, id: Uuid) -> Result<(), ServiceError> {
         log::info!("Pruning session: {id}");
 
-        let deleted = t
-            .query_raw(
-                r#"
-DELETE FROM
-    states
-WHERE
-    SESSION = $1
-RETURNING
-    APPLICATION, DEVICE, DATA
-"#,
-                &[&id],
-            )
-            .await?;
+//         let deleted = t
+//             .query_raw(
+//                 r#"
+// DELETE FROM
+//     states
+// WHERE
+//     SESSION = $1
+// RETURNING
+//     APPLICATION, DEVICE, DATA
+// "#,
+//                 &[&id],
+//             )
+//             .await?;
 
-        let mut deleted = Box::pin(deleted);
+//         let mut deleted = Box::pin(deleted);
 
-        while let Some(row) = deleted.next().await.transpose()? {
-            self.send_disconnect_from_delete(row, DeleteOptions { skip_lwt: false })
-                .await?;
-        }
+//         while let Some(row) = deleted.next().await.transpose()? {
+//             self.send_disconnect_from_delete(row, DeleteOptions { skip_lwt: false })
+//                 .await?;
+//         }
 
         t.execute(
             r#"
 DELETE FROM
-    sessions
+    command_sessions
 WHERE
     id = $1
 "#,
