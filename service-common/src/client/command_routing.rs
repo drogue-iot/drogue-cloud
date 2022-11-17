@@ -95,7 +95,7 @@ impl CommandRoutingClient {
     #[instrument(level = "debug", err)]
     pub async fn ping(&self, session: &str) -> Result<PingResponse, ClientError> {
         let url = self.url.join(&format!(
-            "/api/state/v1alpha1/sessions/{}",
+            "/api/routes/v1alpha1/sessions/{}",
             percent_encode(session.as_bytes(), NON_ALPHANUMERIC)
         ))?;
 

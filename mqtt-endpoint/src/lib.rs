@@ -123,6 +123,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     let srv = srv.err_into();
     startup.spawn(srv);
     startup.spawn(runner.run());
+    startup.spawn(command_runner.run());
     startup.check(command_source);
 
     // exiting

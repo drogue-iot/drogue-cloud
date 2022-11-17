@@ -222,7 +222,7 @@ RETURNING
             .execute(
                 r#"
 UPDATE
-    sessions
+    command_sessions
 SET
     LAST_PING = $2
 WHERE
@@ -239,42 +239,49 @@ WHERE
             .await?;
 
         if r > 0 {
-            // TODO: consider using a LIMIT on the query
-            let r = c
-                .query(
-                    r#"
-SELECT
-    APPLICATION,
-    DEVICE
-FROM
-    states
-WHERE
-        SESSION = $1::text::uuid
-    AND
-        LOST = true
-"#,
-                    &[&session],
-                )
-                .await?;
 
-            // convert rows to response
-
-            let mut lost_ids = Vec::new();
-            for row in r {
-                let application = row.try_get("APPLICATION")?;
-                let device = row.try_get("DEVICE")?;
-                lost_ids.push(Id {
-                    application,
-                    device,
-                });
-            }
-
-            // return
-
+            let lost_ids = Vec::new();
             Ok(PingResponse {
                 expires: now + self.timeout,
                 lost_ids,
             })
+
+//             // TODO: consider using a LIMIT on the query
+//             let r = c
+//                 .query(
+//                     r#"
+// SELECT
+//     APPLICATION,
+//     DEVICE
+// FROM
+//     states
+// WHERE
+//         SESSION = $1::text::uuid
+//     AND
+//         LOST = true
+// "#,
+//                     &[&session],
+//                 )
+//                 .await?;
+
+//             // convert rows to response
+
+//             let mut lost_ids = Vec::new();
+//             for row in r {
+//                 let application = row.try_get("APPLICATION")?;
+//                 let device = row.try_get("DEVICE")?;
+//                 lost_ids.push(Id {
+//                     application,
+//                     device,
+//                 });
+//             }
+
+//             // return
+
+//             Ok(PingResponse {
+//                 expires: now + self.timeout,
+//                 lost_ids,
+//             })
         } else {
             Err(ServiceError::NotInitialized)
         }
