@@ -188,7 +188,7 @@ impl CommandRoutingClient {
         device: &str,
     ) -> Result<Url, ClientError> {
         Ok(self.url.join(&format!(
-            "/api/state/v1alpha1/sessions/{}/states/{}/{}",
+            "/api/routes/v1alpha1/sessions/{}/routes/{}/{}",
             percent_encode(session.as_bytes(), NON_ALPHANUMERIC),
             percent_encode(application.as_bytes(), NON_ALPHANUMERIC),
             percent_encode(device.as_bytes(), NON_ALPHANUMERIC)

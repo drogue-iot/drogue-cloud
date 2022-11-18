@@ -140,12 +140,10 @@ impl CommandRoutingController {
         application: &registry::v1::Application,
         device: &registry::v1::Device,
         max_attempts: usize,
-        opts: CreateOptions,
     ) -> CreationOutcome {
         let state = CommandRoute {
             device_uid: device.metadata.uid.clone(),
             endpoint: self.endpoint.clone(),
-            lwt: opts.lwt,
         };
 
         let token = Uuid::new_v4().to_string();

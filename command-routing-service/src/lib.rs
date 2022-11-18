@@ -41,7 +41,7 @@ macro_rules! app {
             web::scope("/api/routes/v1alpha1")
                 .wrap($auth)
                 .service(
-                    web::resource("/routes/{application}/{command}")
+                    web::resource("/routes/{application}/{device}")
                         .route(web::get().to(endpoints::get)),
                 )
                 .service(web::resource("/sessions").route(web::put().to(endpoints::init)))
@@ -49,7 +49,7 @@ macro_rules! app {
                     web::resource("/sessions/{session}").route(web::post().to(endpoints::ping)),
                 )
                 .service(
-                    web::resource("/routes/{session}/states/{application}/{command}")
+                    web::resource("/sessions/{session}/routes/{application}/{device}")
                         .route(web::put().to(endpoints::create))
                         .route(web::delete().to(endpoints::delete)),
                 ),

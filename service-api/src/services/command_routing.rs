@@ -22,8 +22,6 @@ pub struct Id {
 pub struct CommandRoute {
     pub device_uid: String,
     pub endpoint: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub lwt: Option<LastWillTestament>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

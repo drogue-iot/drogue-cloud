@@ -131,6 +131,7 @@ impl App {
             device,
             self.commands.clone(),
             *state,
+            self.command_router.clone(),
         ))
     }
 

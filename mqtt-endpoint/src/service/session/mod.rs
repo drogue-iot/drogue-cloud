@@ -27,7 +27,7 @@ use drogue_cloud_service_api::{
 };
 use drogue_cloud_service_common::{
     state::{State, StateHandle},
-    Id,
+    Id, command_routing::CommandRoutingController,
 };
 use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
@@ -57,6 +57,7 @@ pub struct Session {
     device_cache: DeviceCache<registry::v1::Device>,
     id: Id,
     handle: Cell<Option<StateHandle>>,
+    command_router: CommandRoutingController,
     disconnect: DisconnectHandle,
 }
 
@@ -71,6 +72,7 @@ impl Session {
         device: registry::v1::Device,
         commands: Commands,
         state: State,
+        command_router: CommandRoutingController,
     ) -> Self {
         let id = Id::new(
             application.metadata.name.clone(),
@@ -114,6 +116,7 @@ impl Session {
             device_cache,
             id,
             handle: Cell::new(Some(handle)),
+            command_router,
             disconnect: DisconnectHandle::new(),
         }
     }
@@ -135,6 +138,9 @@ impl Session {
             }
             Entry::Vacant(entry) => {
                 log::debug!("Subscribe device '{:?}' to receive commands", self.id);
+
+                self.command_router.create(&self.application, &self.device, 10).await;
+
                 let subscription = InboxSubscription::new(
                     filter,
                     self.commands.clone(),

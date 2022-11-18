@@ -99,10 +99,10 @@ INSERT INTO
         session: String,
         application: String,
         device: String,
-        token: String,
-        state: CommandRoute,
+        _token: String,
+        _state: CommandRoute,
     ) -> Result<CreateResponse, ServiceError> {
-        let app = match self.registry.lookup(&application).await? {
+        let _app = match self.registry.lookup(&application).await? {
             Some(app) => app,
             None => {
                 log::info!("Application not found: {application}");
@@ -110,66 +110,36 @@ INSERT INTO
             }
         };
 
-        let mut c = self.pool.get().await?;
+        let c = self.pool.get().await?;
 
-        let t = c.transaction().await?;
+        let _now = Utc::now();
 
-        let now = Utc::now();
+        let command = "*".to_string();
 
-        let r = t
-            .query_opt(
+        let r = c
+            .execute(
                 r#"
 INSERT INTO
-    states
+    command_routes
 (
     SESSION,
     APPLICATION,
     DEVICE,
-    TOKEN,
-    CREATED,
-    DATA
+    COMMAND
 ) VALUES (
     $1::text::uuid,
     $2,
     $3,
-    $4,
-    $5,
-    $6
-)
-ON CONFLICT (APPLICATION, DEVICE)
-    DO UPDATE
-        SET lost = true
-RETURNING
-    LOST
-"#,
-                &[&session, &application, &device, &token, &now, &Json(&state)],
+    $4
+)"#,
+                &[&session, &application, &device, &command],
             )
             .await?;
 
-        match r {
-            Some(row) => {
-                let lost: bool = row.try_get("LOST")?;
-                Ok(match lost {
-                    false => {
-                        self.send_connection_event(
-                            &app,
-                            PublishId {
-                                name: device,
-                                uid: Some(state.device_uid),
-                            },
-                            true,
-                        )
-                        .await?;
-                        t.commit().await?;
-                        CreateResponse::Created
-                    }
-                    true => {
-                        t.commit().await?;
-                        CreateResponse::Occupied
-                    }
-                })
-            }
-            None => Err(ServiceError::Internal("Failed to insert state".to_string())),
+        if r > 0 {
+            Ok(CreateResponse::Created)
+        } else {
+            Ok(CreateResponse::Occupied)
         }
     }
 
@@ -455,14 +425,6 @@ WHERE
             uid: state.as_ref().map(|state| state.device_uid.clone()),
         };
 
-        if !opts.skip_lwt {
-            // send LWT event, if we have some
-            if let Some(lwt) = state.as_ref().and_then(|s| s.lwt.as_ref()) {
-                self.send_lwt_event(&application, device.clone(), lwt)
-                    .await?;
-            }
-        }
-
         // send connection event
 
         self.send_connection_event(&application, device, false)
@@ -471,28 +433,6 @@ WHERE
         // done
 
         Ok(())
-    }
-
-    async fn send_lwt_event(
-        &self,
-        application: &Application,
-        device: PublishId,
-        lwt: &LastWillTestament,
-    ) -> Result<(), ServiceError> {
-        self.send_event(
-            Publish {
-                application,
-                device: device.clone(),
-                sender: device,
-                channel: lwt.channel.clone(),
-                options: PublishOptions {
-                    content_type: lwt.content_type.clone(),
-                    ..Default::default()
-                },
-            },
-            &lwt.payload,
-        )
-        .await
     }
 
     async fn send_connection_event(
