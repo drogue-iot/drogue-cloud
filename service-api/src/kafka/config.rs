@@ -52,7 +52,7 @@ pub struct KafkaConfig {
     pub topic: String,
 }
 
-impl<'a> Deref for KafkaConfig {
+impl Deref for KafkaConfig {
     type Target = KafkaClientConfig;
 
     fn deref(&self) -> &Self::Target {

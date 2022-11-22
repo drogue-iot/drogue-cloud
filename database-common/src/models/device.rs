@@ -290,7 +290,7 @@ WHERE APP=$1
             .name(&name)
             .labels(&labels.0)
             .lock(lock)
-            .sort(&["NAME"])
+            .sort(["NAME"])
             .limit(limit)
             .offset(offset);
 

@@ -334,12 +334,10 @@ impl Client {
         let info = res.text().await.unwrap_or_default();
 
         match code {
-            StatusCode::NOT_IMPLEMENTED => {
-                return Err(ReconcileError::Permanent(format!(
-                    "Implementation error: {}: {}",
-                    code, info
-                )))
-            }
+            StatusCode::NOT_IMPLEMENTED => Err(ReconcileError::Permanent(format!(
+                "Implementation error: {}: {}",
+                code, info
+            ))),
             code if code.is_server_error() => Err(ReconcileError::Temporary(format!(
                 "Request failed: {}: {}",
                 code, info
@@ -569,13 +567,13 @@ impl Client {
         paths: &[&str],
     ) -> Result<Value, ReconcileError> {
         let mut json = json!({
-            "end_device": serde_json::to_value(&v)?,
+            "end_device": serde_json::to_value(v)?,
             "field_mask": {
                 "paths": paths,
             }
         });
 
-        json["end_device"]["ids"] = serde_json::to_value(&ids)?;
+        json["end_device"]["ids"] = serde_json::to_value(ids)?;
 
         Ok(json)
     }

@@ -112,7 +112,8 @@ impl ClientCertificateRetriever for ntex::io::IoBoxed {
             peer_cert_chain.as_ref(),
         ) {
             (Some(peer_cert), Some(peer_cert_chain)) => {
-                let mut certs = (&peer_cert_chain.0)
+                let mut certs = peer_cert_chain
+                    .0
                     .iter()
                     .map(|cert| cert.to_der())
                     .collect::<Result<Vec<_>, _>>()

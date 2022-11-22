@@ -62,7 +62,7 @@ pub struct Identity {
 
 impl Identity {
     pub fn parse(s: &str) -> Result<Identity, ()> {
-        if let Some((d, a)) = s.split_once("@") {
+        if let Some((d, a)) = s.split_once('@') {
             Ok(Identity {
                 application: a.to_string(),
                 device: d.to_string(),

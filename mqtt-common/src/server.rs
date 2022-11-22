@@ -88,7 +88,7 @@ where
         .handshake_timeout(
             opts.handshake_timeout
                 .map(|s| Seconds(s.as_secs() as u16))
-                .unwrap_or(Seconds(15).into()),
+                .unwrap_or_else(|| Seconds(15)),
         )
         // MQTTv3
         .v3(v3::MqttServer::new(fn_factory_with_config(move |_| {
