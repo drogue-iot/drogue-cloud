@@ -98,6 +98,8 @@ impl App {
             None => Default::default(),
         };
 
+        log::debug!("MQTT dialect: {dialect:?}");
+
         // acquire session
 
         let opts = CreateOptions { lwt };
