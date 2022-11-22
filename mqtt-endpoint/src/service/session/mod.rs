@@ -5,8 +5,12 @@ mod inbox;
 
 use self::disconnect::*;
 use crate::{
-    auth::DeviceAuthenticator, config::EndpointConfig,
-    service::session::dialect::DefaultTopicParser, CONNECTIONS_COUNTER,
+    auth::DeviceAuthenticator,
+    config::EndpointConfig,
+    service::session::dialect::{
+        DefaultTopicParser, ParsedSubscribeTopic, SubscriptionTopicEncoder,
+    },
+    CONNECTIONS_COUNTER,
 };
 use async_trait::async_trait;
 use cache::DeviceCache;
@@ -33,10 +37,7 @@ use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
 use ntex_mqtt::{
     types::QoS,
-    v5::{
-        self,
-        codec::{self, DisconnectReasonCode},
-    },
+    v5::codec::{self, DisconnectReasonCode},
 };
 use std::{
     cell::Cell,
@@ -118,12 +119,15 @@ impl Session {
         }
     }
 
-    async fn subscribe_inbox<F: Into<String>>(
+    /// Subscribe to a command inbox
+    async fn subscribe_inbox<F>(
         &self,
         topic_filter: F,
         filter: CommandFilter,
-        force_device: bool,
-    ) {
+        encoder: SubscriptionTopicEncoder,
+    ) where
+        F: Into<String>,
+    {
         let topic_filter = topic_filter.into();
         let mut reader = self.inbox_reader.lock().await;
 
@@ -139,7 +143,7 @@ impl Session {
                     filter,
                     self.commands.clone(),
                     self.sink.clone(),
-                    force_device,
+                    encoder,
                 )
                 .await;
                 entry.insert(subscription);
@@ -154,6 +158,10 @@ impl Session {
     ) -> Result<(String, Arc<registry::v1::Device>), PublishError> {
         match self.dialect.parse_publish(publish.topic().path()) {
             Ok(topic) => match topic.device {
+                None => Ok((topic.channel.to_string(), self.device.clone())),
+                Some(device) if device == self.id.device_id => {
+                    Ok((topic.channel.to_string(), self.device.clone()))
+                }
                 Some(device) => self
                     .device_cache
                     .fetch(device, |device| {
@@ -170,7 +178,6 @@ impl Session {
                     })
                     .await
                     .map(|r| (topic.channel.to_string(), r)),
-                None => Ok((topic.channel.to_string(), self.device.clone())),
             },
             Err(_) => Err(PublishError::TopicNameInvalid),
         }
@@ -247,47 +254,27 @@ impl mqtt::Session for Session {
         if sub.id().is_some() {
             log::info!("Rejecting request with subscription IDs");
             for mut sub in sub {
-                sub.fail(v5::codec::SubscribeAckReason::SubscriptionIdentifiersNotSupported);
+                sub.fail(codec::SubscribeAckReason::SubscriptionIdentifiersNotSupported);
             }
             return Ok(());
         }
 
         for mut sub in sub {
-            match sub.topic().split('/').collect::<Vec<_>>().as_slice() {
-                ["command", "inbox", "#"] | ["command", "inbox", "+", "#"] => {
+            log::debug!("Checking subscription request: {sub:?}");
+
+            match self.dialect.parse_subscribe(sub.topic()) {
+                Ok(ParsedSubscribeTopic { filter, encoder }) => {
                     self.subscribe_inbox(
                         sub.topic().to_string(),
-                        CommandFilter::wildcard(self.id.app_id.clone(), self.id.device_id.clone()),
-                        false,
+                        filter.into_command_filter(&self.id),
+                        encoder,
                     )
                     .await;
                     sub.confirm(QoS::AtMostOnce);
                 }
-                ["command", "inbox", "", "#"] => {
-                    self.subscribe_inbox(
-                        sub.topic().to_string(),
-                        CommandFilter::device(self.id.app_id.clone(), self.id.device_id.clone()),
-                        false,
-                    )
-                    .await;
-                    sub.confirm(QoS::AtMostOnce);
-                }
-                ["command", "inbox", device, "#"] => {
-                    self.subscribe_inbox(
-                        sub.topic().to_string(),
-                        CommandFilter::proxied_device(
-                            self.id.app_id.clone(),
-                            self.id.device_id.clone(),
-                            *device,
-                        ),
-                        true,
-                    )
-                    .await;
-                    sub.confirm(QoS::AtMostOnce);
-                }
-                _ => {
-                    log::info!("Subscribing to topic {:?} not allowed", sub.topic());
-                    sub.fail(v5::codec::SubscribeAckReason::UnspecifiedError);
+                Err(err) => {
+                    log::info!("Subscribing to topic {:?} not allowed: {err}", sub.topic());
+                    sub.fail(codec::SubscribeAckReason::UnspecifiedError);
                 }
             }
         }
@@ -310,7 +297,7 @@ impl mqtt::Session for Session {
                         "Tried to unsubscribe from not-subscribed inbox reader: {:?}",
                         self.device.metadata.name
                     );
-                    unsub.fail(v5::codec::UnsubscribeAckReason::NoSubscriptionExisted);
+                    unsub.fail(codec::UnsubscribeAckReason::NoSubscriptionExisted);
                 }
             }
         }

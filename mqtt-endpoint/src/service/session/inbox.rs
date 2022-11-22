@@ -1,3 +1,4 @@
+use crate::service::session::dialect::SubscriptionTopicEncoder;
 use drogue_cloud_endpoint_common::command::{
     Command, CommandFilter, Commands, Subscription, SubscriptionHandle,
 };
@@ -26,7 +27,7 @@ impl InboxSubscription {
         filter: CommandFilter,
         commands: Commands,
         sink: mqtt::Sink,
-        force_device: bool,
+        encoder: SubscriptionTopicEncoder,
     ) -> Self {
         // TODO: try to reduce cloning
 
@@ -40,7 +41,7 @@ impl InboxSubscription {
         ntex::rt::spawn(async move {
             log::debug!("Starting inbox command loop: {:?}", sub_filter);
             while let Some(cmd) = receiver.recv().await {
-                match Self::send_command(&sink, force_device, cmd).await {
+                match Self::send_command(&sink, cmd, &encoder).await {
                     Ok(_) => {
                         log::debug!("Command sent to device subscription {:?}", sub_filter);
                     }
@@ -60,14 +61,12 @@ impl InboxSubscription {
 
     async fn send_command(
         sink: &mqtt::Sink,
-        force_device: bool,
         cmd: Command,
+        encoder: &SubscriptionTopicEncoder,
     ) -> Result<(), String> {
-        let topic = if force_device || cmd.address.gateway_id != cmd.address.device_id {
-            format!("command/inbox/{}/{}", cmd.address.device_id, cmd.command)
-        } else {
-            format!("command/inbox//{}", cmd.command)
-        };
+        let topic = encoder.encode_command_topic(&cmd);
+
+        log::debug!("Topic '{topic}' for command: {cmd:?} (encoder: {encoder:?})");
 
         let topic = ByteString::from(topic);
 

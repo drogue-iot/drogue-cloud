@@ -13,9 +13,8 @@ use drogue_cloud_endpoint_common::{auth::AuthConfig, command::KafkaCommandSource
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, Transport};
 use drogue_cloud_registry_events::sender::KafkaSenderConfig; //, stream::KafkaStreamConfig};
 use drogue_cloud_service_api::{kafka::KafkaClientConfig, webapp::HttpServer};
-use drogue_cloud_service_common::actix::http::CorsConfig;
 use drogue_cloud_service_common::{
-    actix::http::{HttpBuilder, HttpConfig},
+    actix::http::{CorsConfig, HttpBuilder, HttpConfig},
     app::{Main, Startup, StartupExt, SubMain},
     auth::openid::{
         AuthenticatorClientConfig, AuthenticatorConfig, AuthenticatorGlobalConfig, TokenConfig,
@@ -257,11 +256,15 @@ async fn main() {
     let mut app = args();
     let matches = app.clone().get_matches();
 
-    stderrlog::new()
-        .verbosity((matches.get_count("verbose") + 1) as usize)
-        .quiet(matches.get_flag("quiet"))
-        .init()
-        .unwrap();
+    let level = match (matches.get_flag("quiet"), matches.get_count("verbose")) {
+        (true, _) => log::LevelFilter::Off,
+        (false, 0) => log::LevelFilter::Warn,
+        (false, 1) => log::LevelFilter::Info,
+        (false, 2) => log::LevelFilter::Debug,
+        (false, _) => log::LevelFilter::Trace,
+    };
+
+    env_logger::builder().filter_level(level).init();
 
     if let Some(matches) = matches.subcommand_matches("run") {
         cmd_run(matches).await.unwrap();
