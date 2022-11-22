@@ -12,7 +12,7 @@ async-trait = "0.1"
 base64 = "0.13"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.6", features = ["actix", "reqwest", "rdkafka"] }
-drogue-client = "0.11"
+drogue-client = "0.12"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"

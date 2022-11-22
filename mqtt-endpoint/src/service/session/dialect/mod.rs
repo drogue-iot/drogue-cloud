@@ -101,7 +101,7 @@ pub struct DefaultCommandTopicEncoder(bool);
 
 impl DefaultTopicParser for MqttDialect {
     fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError> {
-        match &self {
+        match self {
             Self::DrogueV1 => {
                 // This should mimic the behavior of the current parser
                 let topic = path.split('/').collect::<Vec<_>>();

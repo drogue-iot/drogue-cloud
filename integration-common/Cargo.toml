@@ -10,7 +10,7 @@ async-trait = "0.1"
 base64 = "0.13"
 bytes = "1.0.1"
 cloudevents-sdk = { version = "0.6", features = ["rdkafka"] }
-drogue-client = "0.11"
+drogue-client = "0.12"
 futures = "0.3"
 log = "0.4"
 reqwest = "0.11"

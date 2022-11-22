@@ -40,7 +40,7 @@ drogue-cloud-mqtt-common = { path = "../mqtt-common" }
 drogue-cloud-endpoint-common = { path = "../endpoint-common", features = ["ntex"] }
 drogue-cloud-service-api = { path = "../service-api" }
 drogue-cloud-service-common = { path = "../service-common" }
-drogue-client = "0.11"
+drogue-client = "0.12"
 
 [dependencies.open-ssl]
 version = "0.10"

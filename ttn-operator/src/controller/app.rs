@@ -281,9 +281,9 @@ impl<'a> ApplicationReconciler<'a> {
     ) -> Result<String, ReconcileError> {
         // find a current password
 
-        let password = match gateway.get_credentials() {
-            Some(creds) => creds.iter().find_map(|cred| match cred {
-                registry::v1::Credential::Password(pwd) => Some(pwd.clone()),
+        let password = match gateway.get_authentication() {
+            Some(Ok(auth)) => auth.credentials.into_iter().find_map(|cred| match cred {
+                registry::v1::Credential::Password(pwd) => Some(pwd),
                 _ => None,
             }),
             _ => None,

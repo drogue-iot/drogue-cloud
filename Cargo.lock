@@ -1416,8 +1416,7 @@ checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
 [[package]]
 name = "drogue-bazaar"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93982b1db27a0bedaa3141f0bb950e0110d6e23707368054e39e675c63648bf3"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=d19ad32f200938aeb5d7081ee3385ee40c5ae0ff#d19ad32f200938aeb5d7081ee3385ee40c5ae0ff"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -1465,9 +1464,8 @@ dependencies = [
 
 [[package]]
 name = "drogue-client"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "353ac8ab54ba31ff137171ae4710a97d10d1e9d2cf5df86a54ad666ee046ec5e"
+version = "0.12.0"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=798c968f0a63a0debcff9965c66b361e85946458#798c968f0a63a0debcff9965c66b361e85946458"
 dependencies = [
  "async-trait",
  "base64 0.13.1",
@@ -2272,6 +2270,7 @@ dependencies = [
  "ntex",
  "ntex-rt",
  "pq-sys",
+ "rdkafka",
  "rdkafka-sys",
  "reqwest",
  "sasl2-sys",

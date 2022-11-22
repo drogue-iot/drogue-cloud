@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
 use drogue_client::{
-    registry::{self, v1::Password, v1::PreSharedKey},
+    registry::{self, v1::DeviceSpecAuthentication, v1::Password, v1::PreSharedKey},
     Dialect, Translator,
 };
 use drogue_cloud_database_common::{
@@ -24,7 +24,7 @@ use rustls::{server::AllowAnyAuthenticatedClient, Certificate, RootCertStore};
 use rustls_pemfile::Item;
 use serde::Deserialize;
 use sha_crypt::sha512_check;
-use std::{io::Cursor, time::SystemTime};
+use std::{io::Cursor, ops::Add, time::Duration, time::SystemTime};
 use tracing::instrument;
 
 macro_rules! pass {
@@ -366,16 +366,17 @@ fn locate_psk(device: &registry::v1::Device) -> Option<PreSharedKey> {
 
     let now = Utc::now();
 
-    let credentials = match device.get_credentials() {
-        Some(creds) => creds,
-        None => {
+    let authentication = match device.get_authentication() {
+        Some(Ok(authentication)) => authentication,
+        _ => {
             log::debug!("Missing or invalid device credentials section");
             return None;
         }
     };
 
     // Select eligible candidate keys
-    let mut candidates: Vec<&PreSharedKey> = credentials
+    let mut candidates: Vec<&PreSharedKey> = authentication
+        .credentials
         .iter()
         .flat_map(|c| match c {
             // match passwords
@@ -402,11 +403,15 @@ fn validate_credential(
         return false;
     }
 
-    let credentials = match device.get_credentials() {
-        Some(creds) => creds,
-        None => {
-            log::debug!("Missing or invalid device credentials section");
+    let authentication = match device.get_authentication() {
+        Some(Ok(auth)) => auth,
+        Some(Err(err)) => {
+            log::info!("Invalid device credentials section: {err}");
             return false;
+        }
+        None => {
+            log::debug!("Missing device credentials section");
+            Default::default()
         }
     };
 
@@ -414,18 +419,21 @@ fn validate_credential(
 
     match cred {
         authn::Credential::Password(provided_password) => {
-            validate_password(device, &credentials, provided_device, &provided_password)
+            validate_password(device, &authentication, provided_device, &provided_password)
         }
         authn::Credential::UsernamePassword {
             username: provided_username,
             password: provided_password,
             ..
-        } => {
-            validate_username_password(device, &credentials, &provided_username, &provided_password)
-        }
+        } => validate_username_password(
+            device,
+            &authentication,
+            &provided_username,
+            &provided_password,
+        ),
         authn::Credential::Certificate(chain) => {
             let now = Utc::now();
-            validate_certificate(app, device, &credentials, chain, &now)
+            validate_certificate(app, device, &authentication, chain, &now)
         }
     }
 }
@@ -442,11 +450,11 @@ fn password_matches(expected: &Password, provided: &str) -> bool {
 #[instrument(ret)]
 fn validate_password(
     device: &registry::v1::Device,
-    credentials: &[registry::v1::Credential],
+    authentication: &DeviceSpecAuthentication,
     provided_device: &str,
     provided_password: &str,
 ) -> bool {
-    credentials.iter().any(|c| match c {
+    authentication.credentials.iter().any(|c| match c {
         // match passwords
         registry::v1::Credential::Password(stored_password) => {
             password_matches(stored_password, provided_password)
@@ -476,11 +484,11 @@ fn validate_password(
 #[instrument(ret)]
 fn validate_username_password(
     device: &registry::v1::Device,
-    credentials: &[registry::v1::Credential],
+    authentication: &DeviceSpecAuthentication,
     provided_username: &str,
     provided_password: &str,
 ) -> bool {
-    credentials.iter().any(|c| match c {
+    authentication.credentials.iter().any(|c| match c {
         // match passwords if the provided username is equal to the device id
         registry::v1::Credential::Password(stored_password)
             if provided_username == device.metadata.name =>
@@ -506,7 +514,7 @@ fn validate_username_password(
 fn validate_certificate(
     app: &registry::v1::Application,
     _device: &registry::v1::Device,
-    _credentials: &[registry::v1::Credential],
+    authentication: &DeviceSpecAuthentication,
     provided_chain: Vec<Vec<u8>>,
     now: &DateTime<Utc>,
 ) -> bool {
@@ -558,6 +566,10 @@ fn validate_trust_anchor(
             return false;
         }
 
+        // convert "now"
+        let now: SystemTime =
+            SystemTime::UNIX_EPOCH.add(Duration::from_millis(now.timestamp_millis() as u64));
+
         // create root from trust anchor entry
         let mut roots = RootCertStore::empty();
 
@@ -586,7 +598,7 @@ fn validate_trust_anchor(
         let v = AllowAnyAuthenticatedClient::new(roots);
         let end = &presented_certs[presented_certs.len() - 1];
         let intermediates = &presented_certs[..presented_certs.len() - 1];
-        match v.verify_client_cert(end, intermediates, SystemTime::now()) {
+        match v.verify_client_cert(end, intermediates, now) {
             Ok(_) => true,
             Err(err) => {
                 log::debug!("Failed to verify client certificate: {}", err);

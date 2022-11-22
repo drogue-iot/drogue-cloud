@@ -13,7 +13,7 @@ anyhow = "1"
 chrono = "0.4"
 cloudevents-sdk = { version = "0.6"}
 dotenv = "0.15"
-drogue-client = "0.11"
+drogue-client = "0.12"
 env_logger = "0.9"
 futures = "0.3.1"
 lazy_static = "1.4.0"
