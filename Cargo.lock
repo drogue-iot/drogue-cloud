@@ -1911,6 +1911,7 @@ dependencies = [
  "log",
  "lru",
  "mime",
+ "mqtt-protocol",
  "ntex",
  "ntex-tls",
  "openid",
@@ -2264,6 +2265,7 @@ dependencies = [
  "drogue-cloud-service-common",
  "drogue-cloud-user-auth-service",
  "drogue-cloud-websocket-integration",
+ "env_logger",
  "futures",
  "keycloak",
  "log",
@@ -2274,7 +2276,6 @@ dependencies = [
  "reqwest",
  "sasl2-sys",
  "serde_json",
- "stderrlog",
  "tokio",
  "url",
 ]
@@ -3575,6 +3576,19 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.42.0",
+]
+
+[[package]]
+name = "mqtt-protocol"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca0b17380dc69fbcf5f967828cfd10e55028ba83a57da1f580c5b0792ab807ac"
+dependencies = [
+ "byteorder",
+ "lazy_static",
+ "log",
+ "regex",
+ "thiserror",
 ]
 
 [[package]]
@@ -5284,19 +5298,6 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
-
-[[package]]
-name = "stderrlog"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69a26bbf6de627d389164afa9783739b56746c6c72c4ed16539f4ff54170327b"
-dependencies = [
- "atty",
- "chrono",
- "log",
- "termcolor",
- "thread_local",
-]
 
 [[package]]
 name = "stringprep"
