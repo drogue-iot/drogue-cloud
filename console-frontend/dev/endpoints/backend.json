@@ -2,7 +2,7 @@
   "url": "http://localhost:8011",
   "openid": {
     "client_id": "drogue",
-    "issuer_url": "http://localhost:8080/realms/drogue"
+    "issuer_url": "http://localhost:8081/realms/drogue"
   },
   "x_login_note": "Foo bar <strong>Foo bar</strong>",
   "x_footer_band": [
