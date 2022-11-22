@@ -16,7 +16,7 @@ diesel_migrations = { version = "2", features = ["postgres"] }
 dotenv = "0.15"
 env_logger = "0.9"
 futures = "0.3"
-keycloak = "19"
+keycloak = "20"
 log = "0.4"
 ntex = "0.5"
 ntex-rt = "0.4"
