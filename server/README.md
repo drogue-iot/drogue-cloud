@@ -96,3 +96,9 @@ You can generate a self-signed certificate amd private key with:
 ```shell
 openssl req -newkey rsa:4096  -x509  -sha512 -nodes -out certificate.pem -keyout key.pem
 ```
+
+Creating certificates/keys can also be done using:
+
+```shell
+make -C test-cert-generator/scripts EGEN=../../server/certs CERT_ALTNAMES=DNS:localhost, DNS:brocken, DNS:brocken.fritz.box
+```

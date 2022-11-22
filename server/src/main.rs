@@ -1,5 +1,6 @@
 mod config;
 mod db;
+mod kafka;
 mod keycloak;
 
 use crate::{config::*, keycloak::*};
@@ -306,6 +307,8 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         topic: "iot-commands".to_string(),
         consumer_group: consumer_group.to_string(),
     };
+
+    kafka::create_topics(server.kafka.clone(), ["iot-commands"]).await?;
 
     let token_config = TokenConfig {
         client_id: "services".to_string(),
