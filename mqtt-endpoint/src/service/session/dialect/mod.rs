@@ -154,6 +154,28 @@ impl DefaultTopicParser for MqttDialect {
                     }),
                 }
             }
+            Self::WebOfThings { .. } => {
+                let topic = path.split_once('/');
+                log::debug!("Topic: {:?}", topic);
+
+                match topic {
+                    // No topic at all
+                    None if path.is_empty() => Err(ParseError::Empty),
+                    None => Ok(ParsedPublishTopic {
+                        channel: "",
+                        device: Some(path),
+                    }),
+                    Some(("", _)) => Err(ParseError::Syntax),
+                    Some((device, path)) => Ok(ParsedPublishTopic {
+                        channel: path,
+                        device: Some(device),
+                    }),
+                }
+            }
+            Self::Cumulocity => {
+                log::debug!("c8y: {path}");
+                Err(ParseError::Syntax)
+            }
         }
     }
 
@@ -192,6 +214,22 @@ impl DefaultTopicParser for MqttDialect {
                     }),
                     _ => Err(ParseError::Syntax),
                 }
+            }
+            Self::WebOfThings { node_wot_bug } => match path.split_once('/') {
+                Some((device, filter)) => Ok(ParsedSubscribeTopic {
+                    filter: SubscribeFilter {
+                        device: DeviceFilter::ProxiedDevice(device),
+                        command: Some(filter),
+                    },
+                    encoder: SubscriptionTopicEncoder::new(WoTCommandTopicEncoder {
+                        node_wot_bug: *node_wot_bug,
+                    }),
+                }),
+                _ => Err(ParseError::Syntax),
+            },
+            Self::Cumulocity => {
+                log::debug!("c8y: {path}");
+                Err(ParseError::Syntax)
             }
         }
     }
