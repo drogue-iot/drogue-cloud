@@ -1,4 +1,6 @@
-use crate::command::{Command, CommandAddress, CommandDispatcher};
+use crate::command::{
+    Command, CommandAddress, CommandDispatcher, CommandNameFilter, CommandTarget,
+};
 use async_trait::async_trait;
 use drogue_cloud_service_common::Id;
 use std::{
@@ -7,8 +9,10 @@ use std::{
     hash::Hash,
     sync::Arc,
 };
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::sync::Mutex;
+use tokio::sync::{
+    mpsc::{channel, Receiver},
+    Mutex,
+};
 
 /// A filter for commands
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -16,6 +20,7 @@ pub struct CommandFilter {
     pub application: String,
     pub gateway: String,
     pub device: Option<String>,
+    pub command_filter: Option<String>,
 }
 
 impl CommandFilter {
@@ -29,6 +34,7 @@ impl CommandFilter {
             application: application.into(),
             gateway: gateway.into(),
             device: None,
+            command_filter: None,
         }
     }
 
@@ -43,6 +49,7 @@ impl CommandFilter {
             application: application.into(),
             gateway: gateway.into(),
             device: Some(device.into()),
+            command_filter: None,
         }
     }
 
@@ -57,11 +64,25 @@ impl CommandFilter {
             application: application.into(),
             gateway: device.clone(),
             device: Some(device),
+            command_filter: None,
+        }
+    }
+
+    /// Override the current command filter.
+    ///
+    /// The command filter is an MQTT topic filter applied to the command name.
+    pub fn with_filter<T>(self, command_filter: T) -> Self
+    where
+        T: Into<Option<String>>,
+    {
+        Self {
+            command_filter: command_filter.into(),
+            ..self
         }
     }
 }
 
-type CommandMap<T> = Arc<Mutex<HashMap<T, HashMap<usize, Sender<Command>>>>>;
+type CommandMap<T> = Arc<Mutex<HashMap<T, HashMap<usize, CommandTarget>>>>;
 
 /// Command dispatching implementation.
 #[derive(Clone, Debug)]
@@ -102,21 +123,48 @@ impl Commands {
 
         let (tx, rx) = channel(32);
 
+        // create a filter, if that would fail, we silently ignore it and never match.
+        let command_filter = CommandNameFilter::from(&filter.command_filter);
+
+        // if the device is set, and equal to the gateway, it is the same
+        let filter = match filter.device {
+            Some(device) if device == filter.gateway => {
+                let filter = CommandFilter {
+                    device: None,
+                    ..filter
+                };
+                log::debug!("Cleanup filter to: {filter:?}");
+                filter
+            }
+            _ => filter,
+        };
+
         let id = match filter.device.clone() {
             Some(device) => {
                 let mut devices = self.devices.lock().await;
+                let address =
+                    CommandAddress::new(filter.application.clone(), filter.gateway.clone(), device);
+
                 Self::add_entry(
                     &mut devices,
-                    CommandAddress::new(filter.application.clone(), filter.gateway.clone(), device),
-                    tx,
+                    address,
+                    CommandTarget {
+                        tx,
+                        filter: command_filter,
+                    },
                 )
             }
             None => {
                 let mut gateways = self.wildcards.lock().await;
+                let id = Id::new(filter.application.clone(), filter.gateway.clone());
+
                 Self::add_entry(
                     &mut gateways,
-                    Id::new(filter.application.clone(), filter.gateway.clone()),
-                    tx,
+                    id,
+                    CommandTarget {
+                        tx,
+                        filter: command_filter,
+                    },
                 )
             }
         };
@@ -168,6 +216,8 @@ impl Commands {
     where
         K: Eq + Hash + Debug,
     {
+        log::debug!("Adding entry for: {key:?}");
+
         let map = match map.entry(key) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(HashMap::new()),
@@ -175,6 +225,7 @@ impl Commands {
 
         loop {
             let id: usize = rand::random();
+
             match map.entry(id) {
                 Entry::Vacant(entry) => {
                     // entry was free, we can insert
@@ -220,17 +271,7 @@ impl CommandDispatcher for Commands {
                 msg.command,
                 msg.address
             );
-            for sender in senders.values() {
-                num += 1;
-                match sender.send(msg.clone()).await {
-                    Ok(_) => {
-                        log::debug!("Command sent");
-                    }
-                    Err(e) => {
-                        log::error!("Failed to send a command {:?}", e);
-                    }
-                }
-            }
+            num += dispatch_command(senders.values(), &msg).await;
         }
 
         if let Some(senders) = self.wildcards.lock().await.get(&Id::new(
@@ -242,21 +283,37 @@ impl CommandDispatcher for Commands {
                 msg.command,
                 msg.address
             );
-            for sender in senders.values() {
-                num += 1;
-                match sender.send(msg.clone()).await {
-                    Ok(_) => {
-                        log::debug!("Command sent");
-                    }
-                    Err(e) => {
-                        log::error!("Failed to send a command {:?}", e);
-                    }
-                }
-            }
+            num += dispatch_command(senders.values(), &msg).await;
         }
 
         log::debug!("Sent to {} receivers", num);
     }
+}
+
+/// Dispatch a command to a list of senders/devices.
+async fn dispatch_command<'a, I>(senders: I, msg: &Command) -> usize
+where
+    I: IntoIterator<Item = &'a CommandTarget>,
+{
+    let mut num = 0;
+
+    for sender in senders {
+        if !sender.filter.matches(&msg.command) {
+            continue;
+        }
+
+        num += 1;
+        match sender.tx.send(msg.clone()).await {
+            Ok(_) => {
+                log::debug!("Command sent");
+            }
+            Err(e) => {
+                log::error!("Failed to send a command {:?}", e);
+            }
+        }
+    }
+
+    num
 }
 
 #[cfg(test)]
@@ -408,6 +465,28 @@ mod test {
         )
     }
 
+    fn cmds<G, D, C, I>(gateway: G, device: D, commands: I) -> Vec<Command>
+    where
+        G: Into<String>,
+        D: Into<String>,
+        C: Into<String>,
+        I: IntoIterator<Item = C>,
+    {
+        let gateway = gateway.into();
+        let device = device.into();
+
+        commands
+            .into_iter()
+            .map(|command| {
+                Command::new(
+                    CommandAddress::new(APP, gateway.clone(), device.clone()),
+                    command.into(),
+                    None,
+                )
+            })
+            .collect()
+    }
+
     #[tokio::test]
     async fn test_filters() {
         let _ = env_logger::try_init();
@@ -485,6 +564,91 @@ mod test {
             gw1_d1.commands,
             vec![cmd("gw1", "d1", "gw1-d1")],
             "gw1_d1 outcome"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_command_filters() {
+        let _ = env_logger::try_init();
+
+        let (handles, d1f1, d1f2, d1f3, d1f4) = {
+            let commands = Commands::new();
+
+            let d1f1 = CommandFilter::device(APP, "d1").with_filter("#".to_string());
+            let d1f2 = CommandFilter::device(APP, "d1").with_filter("foo".to_string());
+            let d1f3 = CommandFilter::device(APP, "d1").with_filter("bar/+/baz".to_string());
+            let d1f4 = CommandFilter::device(APP, "d1").with_filter("bar/baz/#".to_string());
+
+            let mut handles = vec![];
+
+            let (d1f1, _, handle) = mock_receiver(commands.subscribe(d1f1).await);
+            handles.push(handle);
+            let (d1f2, _, handle) = mock_receiver(commands.subscribe(d1f2).await);
+            handles.push(handle);
+            let (d1f3, _, handle) = mock_receiver(commands.subscribe(d1f3).await);
+            handles.push(handle);
+            let (d1f4, _, handle) = mock_receiver(commands.subscribe(d1f4).await);
+            handles.push(handle);
+
+            // send commands
+
+            commands.send(cmd("d1", "d1", "foo-bar-baz")).await;
+
+            commands.send(cmd("d1", "d1", "foo")).await;
+
+            commands.send(cmd("d1", "d1", "bar/abc/baz")).await;
+
+            commands.send(cmd("d1", "d1", "bar/baz/a")).await;
+            commands.send(cmd("d1", "d1", "bar/baz/a/b/c")).await;
+
+            // return
+
+            (handles, d1f1, d1f2, d1f3, d1f4)
+        };
+
+        // wait for all receivers to complete
+
+        select_all(handles).await.0.unwrap();
+
+        // access data
+
+        let d1f1 = d1f1.lock().await;
+        let d1f2 = d1f2.lock().await;
+        let d1f3 = d1f3.lock().await;
+        let d1f4 = d1f4.lock().await;
+
+        assert!(d1f1.finished);
+        assert_eq!(
+            d1f1.commands,
+            cmds(
+                "d1",
+                "d1",
+                [
+                    "foo-bar-baz",
+                    "foo",
+                    "bar/abc/baz",
+                    "bar/baz/a",
+                    "bar/baz/a/b/c"
+                ]
+            ),
+            "d1f1 outcome"
+        );
+
+        assert!(d1f2.finished);
+        assert_eq!(d1f2.commands, cmds("d1", "d1", ["foo"]), "d1f2 outcome");
+
+        assert!(d1f3.finished);
+        assert_eq!(
+            d1f3.commands,
+            cmds("d1", "d1", ["bar/abc/baz",]),
+            "d1f3 outcome"
+        );
+
+        assert!(d1f4.finished);
+        assert_eq!(
+            d1f4.commands,
+            cmds("d1", "d1", ["bar/baz/a", "bar/baz/a/b/c"]),
+            "d1f4 outcome"
         );
     }
 }

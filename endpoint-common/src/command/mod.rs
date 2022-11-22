@@ -1,8 +1,10 @@
 mod commands;
 mod source;
+mod target;
 
 pub use commands::*;
 pub use source::*;
+pub use target::*;
 
 use async_trait::async_trait;
 use cloudevents::{event::ExtensionValue, AttributesReader, Event};
