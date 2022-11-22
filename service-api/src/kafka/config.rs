@@ -31,13 +31,6 @@ impl Default for KafkaClientConfig {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct KafkaConfig {
-    #[serde(flatten)]
-    pub client: KafkaClientConfig,
-    pub topic: String,
-}
-
 #[cfg(feature = "rdkafka")]
 impl From<KafkaClientConfig> for rdkafka::ClientConfig {
     fn from(cfg: KafkaClientConfig) -> Self {
@@ -50,6 +43,13 @@ impl From<KafkaClientConfig> for rdkafka::ClientConfig {
 
         result
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct KafkaConfig {
+    #[serde(flatten)]
+    pub client: KafkaClientConfig,
+    pub topic: String,
 }
 
 impl<'a> Deref for KafkaConfig {
