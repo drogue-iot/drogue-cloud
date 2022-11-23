@@ -1,0 +1,43 @@
+[#applications]
+= Applications
+
+An application is the container for devices.A user can have multiple applications, but each device belongs to
+a single application.
+
+== Creating a new application
+
+Create a new application using the following command:
+
+[source,bash]
+----
+drg create app my-app
+----
+
+This will create a new application named `my-app`. If the application name is already used, you will receive an
+error, as application names are unique.
+
+== Modifying an application
+
+Applications are defined by a JSON structure. It is possible to edit this structure in YAML format (for easier editing)
+using the following command:
+
+[source,bash]
+----
+drg edit app my-app
+----
+
+This will open an editor, and allow you to make modifications to the YAML source. When you close the editor, the change
+will be sent to the server for updating.
+
+== Deleting an application
+
+An existing application can be deleted using the following command:
+
+[source,bash]
+----
+drg delete app my-app
+----
+
+NOTE: Deleting an application may be delayed, as first all devices which require to be cleaned up will be processed. Once
+this is finished, the application might require cleanup too. Only once all resources are properly cleaned up, the
+application will be actually deleted.
