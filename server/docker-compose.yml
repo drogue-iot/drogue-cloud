@@ -8,11 +8,10 @@ services:
       - POSTGRESQL_DATABASE=drogue
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD", "pg_isready"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+    volumes:
+      - type: bind
+        source: ./initdb
+        target: /docker-entrypoint-initdb.d
 
   kafka:
     image: docker.io/bitnami/kafka:3.3.1
