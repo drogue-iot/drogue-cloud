@@ -694,6 +694,8 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
             config_ws.disable_client_certificates = true;
             config_ws.mqtt.transport = Transport::Websocket;
             config_ws.mqtt.bind_addr = Some(bind_addr_mqtt_ws);
+            // and use a new kafka group id
+            config_ws.command_source_kafka.consumer_group = "mqtt_endpoint_ws".to_string();
 
             mqtt_endpoints.push(config_ws);
         }
