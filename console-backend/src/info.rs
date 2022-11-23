@@ -21,7 +21,8 @@ impl DemoFetcher {
     }
 }
 
-pub async fn get_info(
+#[get("/drogue-endpoints")]
+pub async fn get_public_endpoints(
     endpoints: web::Data<Endpoints>,
     demos: web::Data<DemoFetcher>,
 ) -> impl Responder {
@@ -30,11 +31,6 @@ pub async fn get_info(
         demos: demos.get_ref().get_demos().await,
     };
     HttpResponse::Ok().json(info)
-}
-
-#[get("/drogue-endpoints")]
-pub async fn get_public_endpoints(endpoints: web::Data<Endpoints>) -> impl Responder {
-    HttpResponse::Ok().json(endpoints)
 }
 
 #[get("/drogue-version")]

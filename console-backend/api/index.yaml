@@ -360,30 +360,6 @@ paths:
   # ## Admin
   #
 
-  /api/admin/v1alpha1/user/whoami:
-    get:
-      tags:
-        - User administration
-      description: Get information about the current user.
-      responses:
-        200:
-          description: Information about the current user.
-          content:
-            'application/json':
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: |
-                      The ID of the current user.
-
-                      NOTE: This ID may be different to the name of the user.
-                required:
-                  - id
-        403:
-          description: In case the user is not logged in.
-
   /api/admin/v1alpha1/apps/{application}/transfer-ownership:
     parameters:
       - $ref: '#/components/parameters/ApplicationName'

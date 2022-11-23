@@ -1,4 +1,3 @@
-mod admin;
 mod api;
 mod demos;
 mod info;
@@ -222,19 +221,7 @@ pub async fn configurator(
                             >),
                         )),
                 )
-                .service(
-                    web::scope("/api/admin/v1alpha1")
-                        .wrap(auth.clone())
-                        .service(web::resource("/user/whoami").route(web::get().to(admin::whoami))),
-                )
                 // everything from here on is unauthenticated or not using the middleware
-                .service(
-                    web::scope("/api/console/v1alpha1").service(
-                        web::resource("/info")
-                            .wrap(auth)
-                            .route(web::get().to(info::get_info)),
-                    ),
-                )
                 .service(index)
                 .service(
                     web::scope("/.well-known")
