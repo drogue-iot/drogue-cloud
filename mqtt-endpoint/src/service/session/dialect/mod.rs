@@ -1,21 +1,47 @@
 mod az;
+mod c8y;
+mod drogue;
 mod encoder;
+mod plain;
 mod wot;
 
+pub use az::*;
+pub use c8y::*;
+pub use drogue::*;
 pub use encoder::*;
+pub use plain::*;
 pub use wot::*;
 
 use drogue_client::registry::v1::MqttDialect;
 use drogue_cloud_endpoint_common::command::CommandFilter;
+use drogue_cloud_mqtt_common::error::ServerError;
+use drogue_cloud_mqtt_common::mqtt::Connect;
 use drogue_cloud_service_common::Id;
-use std::{borrow::Cow, fmt::Debug};
+use std::{borrow::Cow, fmt::Debug, sync::Arc};
 use thiserror::Error;
 
-/// A topic parser for the default session.
-pub trait DefaultTopicParser {
+pub trait ConnectValidator {
+    fn validate_connect(&self, connect: &Connect) -> Result<(), ServerError>;
+}
+
+/// Reject cleanSession=false
+pub struct RejectResumeSession;
+
+impl ConnectValidator for RejectResumeSession {
+    fn validate_connect(&self, connect: &Connect) -> Result<(), ServerError> {
+        match connect.clean_session() {
+            true => Ok(()),
+            false => Err(ServerError::UnsupportedOperation),
+        }
+    }
+}
+
+pub trait PublishTopicParser {
     /// Parse a topic from a PUB request
     fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError>;
+}
 
+pub trait SubscribeTopicParser {
     /// Parse a topic from a SUB request
     fn parse_subscribe<'a>(&self, path: &'a str) -> Result<ParsedSubscribeTopic<'a>, ParseError>;
 }
@@ -74,195 +100,98 @@ pub enum DeviceFilter<'a> {
     ProxiedDevice(&'a str),
 }
 
-impl DefaultTopicParser for MqttDialect {
-    fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError> {
-        match self {
-            Self::DrogueV1 => {
-                // This should mimic the behavior of the current parser
-                let topic = path.split('/').collect::<Vec<_>>();
-                log::debug!("Topic: {topic:?}",);
+pub trait DialectBuilder {
+    fn create(&self) -> Dialect;
+}
 
-                match topic.as_slice() {
-                    [""] => Err(ParseError::Empty),
-                    [channel] => Ok(ParsedPublishTopic {
-                        channel,
-                        device: None,
-                        properties: vec![],
-                    }),
-                    [channel, as_device] => Ok(ParsedPublishTopic {
-                        channel,
-                        device: Some(as_device),
-                        properties: vec![],
-                    }),
-                    _ => Err(ParseError::Syntax),
-                }
-            }
-            Self::PlainTopic {
-                device_prefix: false,
-            } => {
-                // Plain topic, just take the complete path
-                match path {
-                    "" => Err(ParseError::Empty),
-                    path => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: None,
-                        properties: vec![],
-                    }),
-                }
-            }
-            Self::PlainTopic {
-                device_prefix: true,
-            } => {
-                // Plain topic (with device prefix). Strip the device, and then just take the complete path
+#[derive(Clone)]
+pub struct Dialect {
+    connect: Arc<dyn ConnectValidator>,
+    publish: Arc<dyn PublishTopicParser>,
+    subscribe: Arc<dyn SubscribeTopicParser>,
+}
 
-                let topic = path.split_once('/');
-                log::debug!("Topic: {topic:?}",);
-
-                match topic {
-                    // No topic at all
-                    None if path.is_empty() => Err(ParseError::Empty),
-                    None => Err(ParseError::Syntax),
-                    Some(("", path)) => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: None,
-                        properties: vec![],
-                    }),
-                    Some((device, path)) => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: Some(device),
-                        properties: vec![],
-                    }),
-                }
-            }
-            Self::WebOfThings { .. } => {
-                let topic = path.split_once('/');
-                log::debug!("Topic: {topic:?}",);
-
-                match topic {
-                    // No topic at all
-                    None if path.is_empty() => Err(ParseError::Empty),
-                    None => Ok(ParsedPublishTopic {
-                        channel: "",
-                        device: Some(path),
-                        properties: vec![],
-                    }),
-                    Some(("", _)) => Err(ParseError::Syntax),
-                    Some((device, path)) => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: Some(device),
-                        properties: vec![],
-                    }),
-                }
-            }
-            Self::Cumulocity => {
-                let topic = path.split('/').collect::<Vec<_>>();
-                log::debug!("C8Y: {topic:?}",);
-
-                match topic.as_slice() {
-                    [""] => Err(ParseError::Empty),
-                    ["s", "us"] => Ok(ParsedPublishTopic {
-                        channel: "c8y",
-                        device: None,
-                        properties: vec![],
-                    }),
-                    ["s", "us", as_device] => Ok(ParsedPublishTopic {
-                        channel: "c8y",
-                        device: Some(as_device),
-                        properties: vec![],
-                    }),
-                    _ => Err(ParseError::Syntax),
-                }
-            }
-            Self::Azure => {
-                let (channel, properties) = az::split_topic(path);
-
-                if channel.is_empty() {
-                    return Err(ParseError::Empty);
-                }
-
-                log::debug!("Azure: {channel} - properties: {properties:?}");
-
-                Ok(ParsedPublishTopic {
-                    channel,
-                    device: None,
-                    properties,
-                })
-            }
+impl Dialect {
+    pub fn new<C, P, S>(connect: C, publish: P, subscribe: S) -> Self
+    where
+        C: ConnectValidator + 'static,
+        P: PublishTopicParser + 'static,
+        S: SubscribeTopicParser + 'static,
+    {
+        Self {
+            connect: Arc::new(connect),
+            publish: Arc::new(publish),
+            subscribe: Arc::new(subscribe),
         }
     }
 
-    fn parse_subscribe<'a>(&self, path: &'a str) -> Result<ParsedSubscribeTopic<'a>, ParseError> {
-        // TODO: replace .collect() with .as_slice() after "split_as_slice" #96137
+    /// Parse a topic from a PUB request
+    pub fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError> {
+        self.publish.parse_publish(path)
+    }
+
+    /// Parse a topic from a SUB request
+    pub fn parse_subscribe<'a>(
+        &self,
+        path: &'a str,
+    ) -> Result<ParsedSubscribeTopic<'a>, ParseError> {
+        self.subscribe.parse_subscribe(path)
+    }
+
+    pub fn validate_connect(&self, connect: &Connect) -> Result<(), ServerError> {
+        self.connect.validate_connect(connect)
+    }
+}
+
+impl<CSP> From<CSP> for Dialect
+where
+    CSP: ConnectValidator + PublishTopicParser + SubscribeTopicParser + 'static,
+{
+    fn from(composite: CSP) -> Self {
+        let subscribe = Arc::new(composite);
+        Self {
+            connect: subscribe.clone(),
+            publish: subscribe.clone(),
+            subscribe,
+        }
+    }
+}
+
+impl<C, SP> From<(C, SP)> for Dialect
+where
+    C: ConnectValidator + 'static,
+    SP: PublishTopicParser + SubscribeTopicParser + 'static,
+{
+    fn from((connect, composite): (C, SP)) -> Self {
+        let subscribe = Arc::new(composite);
+        Self {
+            connect: Arc::new(connect),
+            publish: subscribe.clone(),
+            subscribe,
+        }
+    }
+}
+
+impl DialectBuilder for MqttDialect {
+    fn create(&self) -> Dialect {
         match self {
-            Self::DrogueV1 | Self::PlainTopic { .. } => {
-                match path.split('/').collect::<Vec<_>>().as_slice() {
-                    // subscribe to commands for all proxied devices and ourself
-                    ["command", "inbox", "#"] | ["command", "inbox", "+", "#"] => {
-                        Ok(ParsedSubscribeTopic {
-                            filter: SubscribeFilter {
-                                device: DeviceFilter::Wildcard,
-                                command: None,
-                            },
-                            encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(
-                                false,
-                            )),
-                        })
-                    }
-                    // subscribe to commands directly for us
-                    ["command", "inbox", "", "#"] => Ok(ParsedSubscribeTopic {
-                        filter: SubscribeFilter {
-                            device: DeviceFilter::Device,
-                            command: None,
-                        },
-                        encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(false)),
-                    }),
-                    // subscribe to commands for a specific device
-                    ["command", "inbox", device, "#"] => Ok(ParsedSubscribeTopic {
-                        filter: SubscribeFilter {
-                            device: DeviceFilter::ProxiedDevice(device),
-                            command: None,
-                        },
-                        encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(true)),
-                    }),
-                    _ => Err(ParseError::Syntax),
-                }
-            }
-            Self::WebOfThings { node_wot_bug } => match path.split_once('/') {
-                Some((device, filter)) => Ok(ParsedSubscribeTopic {
-                    filter: SubscribeFilter {
-                        device: DeviceFilter::ProxiedDevice(device),
-                        command: Some(filter),
-                    },
-                    encoder: SubscriptionTopicEncoder::new(WoTCommandTopicEncoder {
-                        node_wot_bug: *node_wot_bug,
-                    }),
-                }),
-                _ => Err(ParseError::Syntax),
-            },
-            Self::Cumulocity => {
-                log::debug!("c8y: {path}");
-                match path.split('/').collect::<Vec<_>>().as_slice() {
-                    [] => Err(ParseError::Empty),
-                    ["s", "e"] => Ok(ParsedSubscribeTopic {
-                        filter: SubscribeFilter {
-                            device: DeviceFilter::Device,
-                            command: None,
-                        },
-                        encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(false)),
-                    }),
-                    _ => Err(ParseError::Syntax),
-                }
-            }
-            Self::Azure => {
-                log::debug!("Azure: {path}");
-                Ok(ParsedSubscribeTopic {
-                    filter: SubscribeFilter {
-                        device: DeviceFilter::Device,
-                        command: Some(path),
-                    },
-                    encoder: SubscriptionTopicEncoder::new(PlainTopicEncoder),
-                })
-            }
+            Self::DrogueV1 => (RejectResumeSession, DrogueV1).into(),
+            Self::PlainTopic { device_prefix } => Dialect::new(
+                RejectResumeSession,
+                PlainTopic {
+                    device_prefix: *device_prefix,
+                },
+                DrogueV1,
+            ),
+            Self::WebOfThings { node_wot_bug } => (
+                RejectResumeSession,
+                WebOfThings {
+                    node_wot_bug: *node_wot_bug,
+                },
+            )
+                .into(),
+            Self::Cumulocity => (RejectResumeSession, Cumulocity).into(),
+            Self::Azure => Azure.into(),
         }
     }
 }
@@ -417,6 +346,6 @@ mod test {
     }
 
     fn assert_parse(spec: &MqttSpec, path: &str, expected: Result<ParsedPublishTopic, ParseError>) {
-        assert_eq!(spec.dialect.parse_publish(path), expected);
+        assert_eq!(spec.dialect.create().parse_publish(path), expected);
     }
 }

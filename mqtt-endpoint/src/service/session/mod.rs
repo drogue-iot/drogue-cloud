@@ -1,5 +1,5 @@
 mod cache;
-mod dialect;
+pub mod dialect;
 mod disconnect;
 mod inbox;
 
@@ -7,9 +7,7 @@ use self::disconnect::*;
 use crate::{
     auth::DeviceAuthenticator,
     config::EndpointConfig,
-    service::session::dialect::{
-        DefaultTopicParser, ParsedSubscribeTopic, SubscriptionTopicEncoder,
-    },
+    service::session::dialect::{Dialect, ParsedSubscribeTopic, SubscriptionTopicEncoder},
     CONNECTIONS_COUNTER,
 };
 use async_trait::async_trait;
@@ -57,7 +55,7 @@ pub struct Session {
     sender: DownstreamSender,
     application: registry::v1::Application,
     device: Arc<registry::v1::Device>,
-    dialect: registry::v1::MqttDialect,
+    dialect: Dialect,
     commands: Commands,
     auth: DeviceAuthenticator,
     sink: Sink,
@@ -75,7 +73,7 @@ impl Session {
         sender: DownstreamSender,
         sink: Sink,
         application: registry::v1::Application,
-        dialect: registry::v1::MqttDialect,
+        dialect: Dialect,
         device: registry::v1::Device,
         commands: Commands,
         state: State,

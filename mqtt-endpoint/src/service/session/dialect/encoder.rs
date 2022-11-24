@@ -32,25 +32,6 @@ pub trait TopicEncoder: Debug {
     fn encode_command_topic(&self, command: &Command) -> String;
 }
 
-/// The default (Drogue V1) encoder, which expects the command inbox pattern.
-#[derive(Debug)]
-pub struct DefaultCommandTopicEncoder(pub bool);
-
-impl TopicEncoder for DefaultCommandTopicEncoder {
-    fn encode_command_topic(&self, command: &Command) -> String {
-        // if we are forced to report the device part, or the device id is not equal to the
-        // connected device, then we need to add it.
-        if self.0 || command.address.gateway_id != command.address.device_id {
-            format!(
-                "command/inbox/{}/{}",
-                command.address.device_id, command.command
-            )
-        } else {
-            format!("command/inbox//{}", command.command)
-        }
-    }
-}
-
 /// An encoder which uses the plain command name as topic.
 #[derive(Debug)]
 pub struct PlainTopicEncoder;

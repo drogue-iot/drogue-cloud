@@ -1,4 +1,46 @@
+use super::*;
 use std::borrow::Cow;
+
+/// Azure IoT dialect.
+pub struct Azure;
+
+impl ConnectValidator for Azure {
+    fn validate_connect(&self, _connect: &Connect) -> Result<(), ServerError> {
+        // we accept everything
+        Ok(())
+    }
+}
+
+impl PublishTopicParser for Azure {
+    fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError> {
+        let (channel, properties) = split_topic(path);
+
+        if channel.is_empty() {
+            return Err(ParseError::Empty);
+        }
+
+        log::debug!("Azure: {channel} - properties: {properties:?}");
+
+        Ok(ParsedPublishTopic {
+            channel,
+            device: None,
+            properties,
+        })
+    }
+}
+
+impl SubscribeTopicParser for Azure {
+    fn parse_subscribe<'a>(&self, path: &'a str) -> Result<ParsedSubscribeTopic<'a>, ParseError> {
+        log::debug!("Azure: {path}");
+        Ok(ParsedSubscribeTopic {
+            filter: SubscribeFilter {
+                device: DeviceFilter::Device,
+                command: Some(path),
+            },
+            encoder: SubscriptionTopicEncoder::new(PlainTopicEncoder),
+        })
+    }
+}
 
 /// Split an Azure topic, which might carry a "bag of properties" as the last topic segment
 pub fn split_topic(path: &str) -> (&str, Vec<(Cow<str>, Cow<str>)>) {

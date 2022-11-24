@@ -1,4 +1,8 @@
-use crate::{auth::DeviceAuthenticator, config::EndpointConfig, service::session::Session};
+use crate::{
+    auth::DeviceAuthenticator,
+    config::EndpointConfig,
+    service::session::{dialect::DialectBuilder, Session},
+};
 use async_trait::async_trait;
 use drogue_client::{
     registry::v1::{Application, Device, MqttSpec},
@@ -13,6 +17,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::{
     error::ServerError,
+    mqtt,
     mqtt::{AckOptions, Connect, ConnectAck, Service, Sink},
 };
 use drogue_cloud_service_api::{
@@ -71,7 +76,6 @@ impl App {
         fields(
             application = %application.metadata.name,
             device = %device.metadata.name,
-            lwt = ?lwt,
         ),
         err(Debug)
     )]
@@ -79,8 +83,7 @@ impl App {
         &self,
         application: Application,
         device: Device,
-        sink: Sink,
-        lwt: Option<LastWillTestament>,
+        connect: &Connect<'_>,
     ) -> Result<Session, ServerError> {
         // eval dialect
         let dialect = match device
@@ -99,6 +102,16 @@ impl App {
         };
 
         log::debug!("MQTT dialect: {dialect:?}");
+
+        let dialect = dialect.create();
+
+        // prepare
+
+        let sink = connect.sink();
+        let lwt = Self::make_lwt(&connect);
+        log::info!("LWT: {lwt:?}");
+
+        dialect.validate_connect(connect)?;
 
         // acquire session
 
@@ -227,14 +240,11 @@ impl Service<Session> for App {
                 device,
                 r#as: _,
             }) => {
-                let session = self
-                    .create_session(
-                        application,
-                        device,
-                        connect.sink(),
-                        Self::make_lwt(&connect),
-                    )
-                    .await?;
+                if !connect.clean_session() {
+                    return Err(ServerError::UnsupportedOperation);
+                }
+
+                let session = self.create_session(application, device, &connect).await?;
 
                 Ok(ConnectAck {
                     session,
