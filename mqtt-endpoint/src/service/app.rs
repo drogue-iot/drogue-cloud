@@ -40,7 +40,13 @@ pub struct App {
 
 impl App {
     /// authenticate a client
-    #[instrument]
+    #[instrument(skip_all, fields(
+        username,
+        has_password = password.is_some(),
+        client_id,
+        has_certs = certs.is_some(),
+        has_verified_identity = verified_identity.is_some(),
+    ), err)]
     pub async fn authenticate(
         &self,
         username: Option<&str>,
@@ -102,15 +108,17 @@ impl App {
 
         log::debug!("MQTT dialect: {dialect:?}");
 
+        // validate
+
         let dialect = dialect.create();
+
+        dialect.validate_connect(connect)?;
 
         // prepare
 
         let sink = connect.sink();
         let lwt = Self::make_lwt(&connect);
         log::info!("LWT: {lwt:?}");
-
-        dialect.validate_connect(connect)?;
 
         // acquire session
 
@@ -168,6 +176,7 @@ impl App {
         }
     }
 
+    #[instrument(skip(self))]
     async fn lookup_identity(&self, identity: &Identity) -> Option<VerifiedIdentity> {
         if let Ok(PreSharedKeyResponse {
             outcome:
@@ -239,10 +248,6 @@ impl Service<Session> for App {
                 device,
                 r#as: _,
             }) => {
-                if !connect.clean_session() {
-                    return Err(ServerError::UnsupportedOperation);
-                }
-
                 let session = self.create_session(application, device, &connect).await?;
 
                 Ok(ConnectAck {

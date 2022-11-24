@@ -263,11 +263,7 @@ impl DeviceAuthenticator {
         C: AsRef<str> + Debug,
     {
         log::debug!(
-            "Authenticate MQTT - username: {:?}, password: {:?}, client_id: {:?}, certs: {:?}",
-            username,
-            password,
-            client_id,
-            certs
+            "Authenticate MQTT - username: {username:?}, password: {password:?}, client_id: {client_id:?}, certs: {certs:?}, verified_identity: {verified_identity:?}",
         );
 
         match (
