@@ -17,8 +17,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::{
     error::ServerError,
-    mqtt,
-    mqtt::{AckOptions, Connect, ConnectAck, Service, Sink},
+    mqtt::{AckOptions, Connect, ConnectAck, Service},
 };
 use drogue_cloud_service_api::{
     auth::device::authn::Outcome as AuthOutcome,
