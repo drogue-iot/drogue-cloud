@@ -4,6 +4,8 @@ use crate::service::session::dialect::TopicEncoder;
 use drogue_cloud_endpoint_common::command::Command;
 
 /// Web of Things dialect.
+///
+/// NOTE: This is experimental.
 pub struct WebOfThings {
     pub node_wot_bug: bool,
 }

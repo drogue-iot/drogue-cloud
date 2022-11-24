@@ -2,6 +2,8 @@ use super::*;
 use std::borrow::Cow;
 
 /// Azure IoT dialect.
+///
+/// NOTE: This is experimental.
 pub struct Azure;
 
 impl ConnectValidator for Azure {

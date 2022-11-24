@@ -1,6 +1,8 @@
 use super::*;
 
 /// Cumulocity dialect.
+///
+/// NOTE: This is experimental.
 pub struct Cumulocity;
 
 impl PublishTopicParser for Cumulocity {
