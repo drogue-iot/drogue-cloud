@@ -303,6 +303,8 @@ impl DeviceAuthenticator {
             }
             // Client cert only
             (None, None, _, Some(certs), None) => self.authenticate_cert(certs.0).await,
+            // Client cert plus username
+            (Some(_username), None, _, Some(certs), None) => self.authenticate_cert(certs.0).await,
             // TLS-PSK verified identity
             (None, None, _, None, Some(verified_identity)) => {
                 self.authenticate_verified_identity(verified_identity)

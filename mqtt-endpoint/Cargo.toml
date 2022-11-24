@@ -33,6 +33,7 @@ serde_json = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = { version = "0.1", features = ["log-always"] }
+url = "2"
 uuid = { version = "1", features = ["v4"] }
 webpki = "0.22"
 

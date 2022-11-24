@@ -188,10 +188,6 @@ impl Service<Session> for App {
     ) -> Result<ConnectAck<Session>, ServerError> {
         log::info!("new connection: {:?}", connect);
 
-        if !connect.clean_session() {
-            return Err(ServerError::UnsupportedOperation);
-        }
-
         let certs = connect.io().client_certs();
         let verified_identity = if self.disable_psk {
             None
@@ -246,6 +242,7 @@ impl Service<Session> for App {
                         wildcard_subscription_available: Some(true),
                         shared_subscription_available: Some(false),
                         subscription_identifiers_available: Some(false),
+                        session_present: false,
                         ..Default::default()
                     },
                 })

@@ -1465,7 +1465,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.12.0"
-source = "git+https://github.com/drogue-iot/drogue-client?rev=798c968f0a63a0debcff9965c66b361e85946458#798c968f0a63a0debcff9965c66b361e85946458"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=c3e5fc6e0ef1781f8362394a114b72738990d00d#c3e5fc6e0ef1781f8362394a114b72738990d00d"
 dependencies = [
  "async-trait",
  "base64 0.13.1",
@@ -2103,6 +2103,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tracing",
+ "url",
  "uuid",
  "webpki",
 ]
