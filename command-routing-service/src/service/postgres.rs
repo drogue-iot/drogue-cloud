@@ -348,26 +348,13 @@ FOR UPDATE SKIP LOCKED
     async fn prune_session(&self, t: Transaction<'_>, id: Uuid) -> Result<(), ServiceError> {
         log::info!("Pruning session: {id}");
 
-//         let deleted = t
-//             .query_raw(
-//                 r#"
-// DELETE FROM
-//     states
-// WHERE
-//     SESSION = $1
-// RETURNING
-//     APPLICATION, DEVICE, DATA
-// "#,
-//                 &[&id],
-//             )
-//             .await?;
-
-//         let mut deleted = Box::pin(deleted);
-
-//         while let Some(row) = deleted.next().await.transpose()? {
-//             self.send_disconnect_from_delete(row, DeleteOptions { skip_lwt: false })
-//                 .await?;
-//         }
+        t.execute(
+            r#"
+DELETE FROM
+    command_routes
+WHERE
+    SESSION = $1
+"#, &[&id]).await?;
 
         t.execute(
             r#"
