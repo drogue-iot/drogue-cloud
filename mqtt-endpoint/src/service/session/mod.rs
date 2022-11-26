@@ -27,7 +27,7 @@ use drogue_cloud_service_api::{
 };
 use drogue_cloud_service_common::{
     state::{State, StateHandle},
-    Id, command_routing::CommandRoutingController,
+    Id, command_routing::{CommandRoutingController, CreationOutcome},
 };
 use futures::{lock::Mutex, TryFutureExt};
 use inbox::InboxSubscription;
@@ -126,7 +126,7 @@ impl Session {
         topic_filter: F,
         filter: CommandFilter,
         force_device: bool,
-    ) {
+    ) -> Result<(), ServerError> {
         let topic_filter = topic_filter.into();
         let mut reader = self.inbox_reader.lock().await;
 
@@ -139,18 +139,30 @@ impl Session {
             Entry::Vacant(entry) => {
                 log::debug!("Subscribe device '{:?}' to receive commands", self.id);
 
-                self.command_router.create(&self.application, &self.device, 10).await;
+                let route_handle = match self.command_router.create(&self.application, &self.device, 10).await {
+                    CreationOutcome::Created(state) => state,
+                    CreationOutcome::Occupied => {
+                        return Err(ServerError::StateError("State still occupied".to_string()));
+                    }
+                    CreationOutcome::Failed => {
+                        return Err(ServerError::InternalError(
+                            "Failed to contact state service".to_string(),
+                        ));
+                    }
+                };
 
                 let subscription = InboxSubscription::new(
                     filter,
                     self.commands.clone(),
                     self.sink.clone(),
                     force_device,
+                    route_handle,
                 )
                 .await;
                 entry.insert(subscription);
             }
         }
+        Ok(())
     }
 
     #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
@@ -309,6 +321,7 @@ impl mqtt::Session for Session {
             match subscriptions.remove(unsub.topic().as_ref()) {
                 Some(subscription) => {
                     subscription.close().await;
+                    self.command_router.delete(&self.application.metadata.name, &self.device.metadata.name, "123").await;
                     unsub.success();
                 }
                 None => {

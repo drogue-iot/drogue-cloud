@@ -32,7 +32,7 @@ pub async fn delete(
 ) -> Result<HttpResponse, Error> {
     let (instance, application, device) = path.into_inner();
     service
-        .delete(instance, application, device, body.0.token, body.0.options)
+        .delete(instance, application, device, body.0.token)
         .await?;
     Ok(HttpResponse::NoContent().finish())
 }

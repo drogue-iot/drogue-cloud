@@ -1,5 +1,5 @@
 use crate::command_routing::CommandRoutingController;
-use drogue_cloud_service_api::services::command_routing::{DeleteOptions, Id};
+use drogue_cloud_service_api::services::command_routing::Id;
 use futures::channel::oneshot::{channel, Receiver, Sender};
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -61,7 +61,7 @@ impl Mux {
 }
 
 pub struct State {
-    pub(crate) handle: StateHandle,
+    pub(crate) handle: RouteHandle,
     pub(crate) watcher: StateWatcher,
 }
 
@@ -83,12 +83,12 @@ impl StateWatcher {
 }
 
 impl State {
-    pub fn split(self) -> (StateHandle, StateWatcher) {
+    pub fn split(self) -> (RouteHandle, StateWatcher) {
         (self.handle, self.watcher)
     }
 }
 
-pub struct StateHandle {
+pub struct RouteHandle {
     pub(crate) mux: Arc<Mutex<Mux>>,
     pub(crate) deleted: bool,
     pub(crate) application: String,
@@ -97,14 +97,14 @@ pub struct StateHandle {
     pub(crate) state: CommandRoutingController,
 }
 
-impl StateHandle {
-    pub async fn delete(&mut self, opts: DeleteOptions) {
+impl RouteHandle {
+    pub async fn delete(&mut self) {
         if self.deleted {
             return;
         }
 
         self.state
-            .delete(&self.application, &self.device, &self.token, opts)
+            .delete(&self.application, &self.device, &self.token)
             .await;
 
         self.mux
@@ -123,7 +123,7 @@ impl StateHandle {
     }
 }
 
-impl Drop for StateHandle {
+impl Drop for RouteHandle {
     fn drop(&mut self) {
         if !self.deleted {
             let state = self.state.clone();
@@ -138,7 +138,7 @@ impl Drop for StateHandle {
 
             tokio::spawn(async move {
                 state
-                    .delete(&application, &device, &token, Default::default())
+                    .delete(&application, &device, &token)
                     .await;
 
                 mux.lock().await.deleted(id, &token).await;

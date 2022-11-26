@@ -75,13 +75,4 @@ pub struct PingResponse {
 #[serde(rename_all = "camelCase")]
 pub struct DeleteRequest {
     pub token: String,
-    #[serde(default)]
-    pub options: DeleteOptions,
-}
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeleteOptions {
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub skip_lwt: bool,
 }

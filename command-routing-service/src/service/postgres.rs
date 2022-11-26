@@ -149,36 +149,23 @@ INSERT INTO
         application: String,
         device: String,
         token: String,
-        opts: DeleteOptions,
     ) -> Result<(), ServiceError> {
-        let mut c = self.pool.get().await?;
-        let t = c.transaction().await?;
+        let c = self.pool.get().await?;
 
-        let row = t
-            .query_opt(
+        c.execute(
                 r#"
 DELETE FROM
-    states
+    command_routes
 WHERE
         SESSION = $1::text::uuid
     AND
         APPLICATION = $2
     AND
         DEVICE = $3
-    AND
-        TOKEN = $4
-RETURNING
-    APPLICATION, DEVICE, DATA
 "#,
-                &[&session, &application, &device, &token],
+                &[&session, &application, &device],
             )
             .await?;
-
-        if let Some(row) = row {
-            self.send_disconnect_from_delete(row, opts).await?;
-        }
-
-        t.commit().await?;
 
         Ok(())
     }
@@ -378,7 +365,6 @@ WHERE
     async fn send_disconnect_from_delete(
         &self,
         row: Row,
-        opts: DeleteOptions,
     ) -> Result<(), ServiceError> {
         let application: String = row.try_get("APPLICATION")?;
         let device: String = row.try_get("DEVICE")?;

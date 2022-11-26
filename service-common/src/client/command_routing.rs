@@ -5,7 +5,7 @@ use drogue_client::{
     openid::{OpenIdTokenProvider, TokenInjector},
 };
 use drogue_cloud_service_api::services::command_routing::{
-    CreateRequest, CreateResponse, DeleteOptions, DeleteRequest, CommandRoute, InitResponse,
+    CreateRequest, CreateResponse, DeleteRequest, CommandRoute, InitResponse,
     PingResponse,
 };
 use k8s_openapi::percent_encoding::{percent_encode, NON_ALPHANUMERIC};
@@ -155,7 +155,6 @@ impl CommandRoutingClient {
         application: &str,
         device: &str,
         token: &str,
-        opts: &DeleteOptions,
     ) -> Result<(), ClientError> {
         let url = self.state_url(session, application, device)?;
 
@@ -167,7 +166,6 @@ impl CommandRoutingClient {
             .await?
             .json(&DeleteRequest {
                 token: token.to_string(),
-                options: opts.clone(),
             });
 
         let response: Response = req

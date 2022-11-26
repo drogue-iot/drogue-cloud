@@ -41,7 +41,6 @@ pub trait CommandRoutingService: Send + Sync {
         application: String,
         device: String,
         token: String,
-        opts: DeleteOptions,
     ) -> Result<(), ServiceError>;
 
     /// Refresh the session timeout and retrieve lost items.

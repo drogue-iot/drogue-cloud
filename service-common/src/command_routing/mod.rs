@@ -11,9 +11,9 @@ use drogue_client::{
     error::{ClientError, ErrorInformation},
     registry,
 };
-use drogue_cloud_service_api::services::{command_routing::{
-    self, DeleteOptions, CommandRoute, Id, InitResponse, LastWillTestament,
-}};
+use drogue_cloud_service_api::{services::{command_routing::{
+    self, CommandRoute, Id, InitResponse, LastWillTestament,
+}}, webapp::Route};
 use futures::{channel::mpsc::UnboundedReceiver, stream::FusedStream};
 use std::{
     ops::{Deref, DerefMut},
@@ -167,7 +167,7 @@ impl CommandRoutingController {
                         device: device.metadata.name.to_string(),
                     };
                     return CreationOutcome::Created(Box::new(State {
-                        handle: StateHandle {
+                        handle: RouteHandle {
                             mux: self.mux.clone(),
                             deleted: false,
                             application: application.metadata.name.clone(),
@@ -201,12 +201,12 @@ impl CommandRoutingController {
                     // with our token. If that call is successful, it will clean up the mess.
                     // If that call isn't successful, then we panic, and the (pod) session timeout
                     // will clean up for us.
+                    println!("Failed to create state: {err}. Trying to recover...");
                     log::info!("Failed to create state: {err}. Trying to recover...");
                     self.delete(
                         &application.metadata.name,
                         &device.metadata.name,
-                        &token,
-                        Default::default(),
+                        &token
                     )
                     .await;
                     return CreationOutcome::Failed;
@@ -219,14 +219,14 @@ impl CommandRoutingController {
     ///
     /// This function will shut down the runner in case the state service cannot be contacted,
     /// even after re-trying. And if even that fails, it will **abort** the process.
-    pub async fn delete(&self, application: &str, device: &str, token: &str, opts: DeleteOptions) {
+    pub async fn delete(&self, application: &str, device: &str, token: &str) {
         let mut attempts = self.retry_deletes;
         let delay = Duration::from_millis(250);
 
         loop {
             match self
                 .client
-                .delete(&self.session, application, device, token, &opts)
+                .delete(&self.session, application, device, token)
                 .await
             {
                 Ok(_) => break,
