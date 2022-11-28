@@ -139,7 +139,7 @@ impl Session {
             Entry::Vacant(entry) => {
                 log::debug!("Subscribe device '{:?}' to receive commands", self.id);
 
-                let route_handle = match self.command_router.create(&self.application, &self.device, 10).await {
+                let _route_handle = match self.command_router.create(&self.application, &self.device, 10).await {
                     CreationOutcome::Created(state) => state,
                     CreationOutcome::Occupied => {
                         return Err(ServerError::StateError("State still occupied".to_string()));
@@ -156,7 +156,6 @@ impl Session {
                     self.commands.clone(),
                     self.sink.clone(),
                     force_device,
-                    route_handle,
                 )
                 .await;
                 entry.insert(subscription);
@@ -273,7 +272,7 @@ impl mqtt::Session for Session {
         for mut sub in sub {
             match sub.topic().split('/').collect::<Vec<_>>().as_slice() {
                 ["command", "inbox", "#"] | ["command", "inbox", "+", "#"] => {
-                    self.subscribe_inbox(
+                    let _ = self.subscribe_inbox(
                         sub.topic().to_string(),
                         CommandFilter::wildcard(self.id.app_id.clone(), self.id.device_id.clone()),
                         false,
@@ -282,7 +281,7 @@ impl mqtt::Session for Session {
                     sub.confirm(QoS::AtMostOnce);
                 }
                 ["command", "inbox", "", "#"] => {
-                    self.subscribe_inbox(
+                    let _ = self.subscribe_inbox(
                         sub.topic().to_string(),
                         CommandFilter::device(self.id.app_id.clone(), self.id.device_id.clone()),
                         false,
@@ -291,7 +290,7 @@ impl mqtt::Session for Session {
                     sub.confirm(QoS::AtMostOnce);
                 }
                 ["command", "inbox", device, "#"] => {
-                    self.subscribe_inbox(
+                    let _ = self.subscribe_inbox(
                         sub.topic().to_string(),
                         CommandFilter::proxied_device(
                             self.id.app_id.clone(),

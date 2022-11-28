@@ -3,19 +3,12 @@ use super::*;
 use async_trait::async_trait;
 use chrono::Utc;
 use deadpool_postgres::{Pool, Transaction};
-use drogue_client::registry::v1::Application;
 use drogue_cloud_database_common::{postgres, Client, DatabaseService};
-use drogue_cloud_endpoint_common::sender::{
-    Publish, PublishId, PublishOptions
-};
 use drogue_cloud_service_api::health::HealthChecked;
-use futures::StreamExt;
-use serde_json::Value;
 use std::{sync::Arc, time::Duration};
 use tokio::time::sleep;
 use tokio_postgres::{
     types::{Json, Type},
-    Row,
 };
 use uuid::Uuid;
 
@@ -148,7 +141,6 @@ INSERT INTO
         session: String,
         application: String,
         device: String,
-        token: String,
     ) -> Result<(), ServiceError> {
         let c = self.pool.get().await?;
 
@@ -202,43 +194,6 @@ WHERE
                 expires: now + self.timeout,
                 lost_ids,
             })
-
-//             // TODO: consider using a LIMIT on the query
-//             let r = c
-//                 .query(
-//                     r#"
-// SELECT
-//     APPLICATION,
-//     DEVICE
-// FROM
-//     states
-// WHERE
-//         SESSION = $1::text::uuid
-//     AND
-//         LOST = true
-// "#,
-//                     &[&session],
-//                 )
-//                 .await?;
-
-//             // convert rows to response
-
-//             let mut lost_ids = Vec::new();
-//             for row in r {
-//                 let application = row.try_get("APPLICATION")?;
-//                 let device = row.try_get("DEVICE")?;
-//                 lost_ids.push(Id {
-//                     application,
-//                     device,
-//                 });
-//             }
-
-//             // return
-
-//             Ok(PingResponse {
-//                 expires: now + self.timeout,
-//                 lost_ids,
-//             })
         } else {
             Err(ServiceError::NotInitialized)
         }
@@ -358,102 +313,8 @@ WHERE
 
         Ok(())
     }
-
-    /// Send a disconnected event, from a delete operation.
-    ///
-    /// The provided row must contain the following fields: APPLICATION, DEVICE, DATA.
-    async fn send_disconnect_from_delete(
-        &self,
-        row: Row,
-    ) -> Result<(), ServiceError> {
-        let application: String = row.try_get("APPLICATION")?;
-        let device: String = row.try_get("DEVICE")?;
-        let data: Option<Value> = row.try_get("DATA")?;
-
-        log::info!("Destroying state: {application}/{device}: {data:?}");
-
-        // we are rather conservative here, as we need to delete the record in any case
-        let state = if let Some(data) = data {
-            match serde_json::from_value::<CommandRoute>(data) {
-                Ok(data) => Some(data),
-                Err(err) => {
-                    log::info!("Failed to extra data for sending event: {err}");
-                    None
-                }
-            }
-        } else {
-            None
-        };
-
-        let application = match self.registry.lookup(&application).await? {
-            Some(app) => app,
-            None => {
-                log::info!("Application no longer found: {application}");
-                return Ok(());
-            }
-        };
-
-        let device = PublishId {
-            name: device,
-            uid: state.as_ref().map(|state| state.device_uid.clone()),
-        };
-
-        // send connection event
-
-        self.send_connection_event(&application, device, false)
-            .await?;
-
-        // done
-
-        Ok(())
-    }
-
-    async fn send_connection_event(
-        &self,
-        application: &Application,
-        device: PublishId,
-        connected: bool,
-    ) -> Result<(), ServiceError> {
-        self.send_event(
-            Publish {
-                application,
-                device: device.clone(),
-                sender: device,
-                channel: "connection".to_string(),
-                options: PublishOptions {
-                    r#type: Some(CONNECTION_TYPE_EVENT.to_string()),
-                    content_type: Some("application/json".to_string()),
-                    ..Default::default()
-                },
-            },
-            serde_json::to_vec(&ConnectionEvent { connected })?,
-        )
-        .await
-    }
-
-    /// send a single event downstream.
-    async fn send_event<B>(&self, _publish: Publish<'_>, _body: B) -> Result<(), ServiceError>
-    where
-        B: AsRef<[u8]> + Send + Sync,
-    {
-        Ok(())
-        // let outcome = self.sender.publish(publish, body).await;
-
-        // log::debug!("Publish outcome: {outcome:?}");
-
-        // match outcome {
-        //     Err(PublishError::Spec(err)) => {
-        //         log::debug!("Failed to publish event due to misconfigured spec section: {err}");
-        //         Ok(())
-        //     }
-        //     Err(err) => Err(ServiceError::Publish(err)),
-        //     Ok(PublishOutcome::Accepted) => Ok(()),
-        //     Ok(PublishOutcome::Rejected | PublishOutcome::QueueFull) => Err(
-        //         ServiceError::Internal(format!("Unable to send event: {outcome:?}")),
-        //     ),
-        // }
-    }
 }
+
 
 pub async fn run_pruner(service: PostgresCommandRoutingService) -> anyhow::Result<()> {
     let period = service.timeout.to_std()?;

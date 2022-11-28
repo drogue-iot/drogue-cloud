@@ -1,4 +1,3 @@
-use crate::serde::is_default;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

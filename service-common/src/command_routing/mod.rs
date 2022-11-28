@@ -13,7 +13,7 @@ use drogue_client::{
 };
 use drogue_cloud_service_api::{services::{command_routing::{
     self, CommandRoute, Id, InitResponse, LastWillTestament,
-}}, webapp::Route};
+}}};
 use futures::{channel::mpsc::UnboundedReceiver, stream::FusedStream};
 use std::{
     ops::{Deref, DerefMut},

@@ -40,7 +40,6 @@ pub trait CommandRoutingService: Send + Sync {
         instance: String,
         application: String,
         device: String,
-        token: String,
     ) -> Result<(), ServiceError>;
 
     /// Refresh the session timeout and retrieve lost items.

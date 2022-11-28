@@ -28,11 +28,10 @@ pub async fn create(
 pub async fn delete(
     service: web::Data<dyn CommandRoutingService>,
     path: web::Path<(String, String, String)>,
-    body: web::Json<DeleteRequest>,
 ) -> Result<HttpResponse, Error> {
     let (instance, application, device) = path.into_inner();
     service
-        .delete(instance, application, device, body.0.token)
+        .delete(instance, application, device)
         .await?;
     Ok(HttpResponse::NoContent().finish())
 }
