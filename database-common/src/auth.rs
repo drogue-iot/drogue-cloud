@@ -1,11 +1,11 @@
 //! Common authn/authz logic
 
-use crate::{error::ServiceError, models::app::MemberEntry};
-use drogue_client::user::v1::authz::{Outcome, Permission, ResourcePermission};
-use drogue_client::admin::v1::Role;
-use drogue_cloud_service_api::{
-    auth::user::{IsAdmin, UserInformation},
+use crate::error::ServiceError;
+use drogue_client::admin::v1::{MemberEntry, Role};
+use drogue_client::user::v1::authz::{
+    ApplicationPermission, DevicePermission, Outcome, Permission,
 };
+use drogue_cloud_service_api::auth::user::{IsAdmin, UserInformation};
 use indexmap::map::IndexMap;
 use std::fmt::Debug;
 
@@ -26,7 +26,7 @@ pub fn authorize(
     identity: &UserInformation,
     permission: Permission,
 ) -> Outcome {
-    log::debug!(
+    log::warn!(
         "authorizing - resource: {:?}, identity: {:?}, permission: {:?}",
         resource,
         identity,
@@ -39,44 +39,79 @@ pub fn authorize(
         return Outcome::Allow;
     }
 
-    match permission {
-        Permission::Resource(permission) => {
+    // check the owner
+    match (resource.owner(), identity.user_id()) {
+        // If there is no owner -> allow access
+        (None, _) => return Outcome::Allow,
+        // If there is an owner and an authenticated user and both match -> allow access
+        // as the owner have all permissions on a resource
+        (Some(owner), Some(user)) if owner == user => return Outcome::Allow,
+        // The current user is not the owner, carry on..
+        _ => {}
+    }
 
-            // check the owner
-            match (resource.owner(), identity.user_id()) {
-                // If there is no owner -> allow access
-                (None, _) => Outcome::Allow,
-                // If there is an owner and an authenticated user and both match -> allow access
-                (Some(owner), Some(user)) if owner == user => Outcome::Allow,
-                // We must be owner, but are not -> deny
-                _ if permission == ResourcePermission::Own => Outcome::Deny,
-                // Check the member list
-                (Some(_), user) => {
-                    // If we don't have a user, look for the anonymous mapping
-                    let user = user.unwrap_or_default();
-                    // If there is a member in the list which matches the user ...
-                    if let Some(member) = resource.members().get(user) {
-                        match permission {
-                            // this should already be covered be the rule above
-                            ResourcePermission::Own => Outcome::Deny,
-                            ResourcePermission::Read => match member.role {
-                                Role::Reader | Role::Manager => Outcome::Allow,
-                                _ => Outcome::Deny,
-                            },
-                            ResourcePermission::Write => match member.role {
-                                Role::Manager => Outcome::Allow,
-                                _ => Outcome::Deny,
-                            },
-                            Permission::Read => Outcome::Allow,
-                        }
-                    } else {
-                        Outcome::Deny
+    // Check the member list
+    // If we don't have a user, look for the anonymous mapping
+    let user = identity.user_id().unwrap_or_default();
+    // If there is a member in the list which matches the user ...
+    if let Some(member) = resource.members().get(user) {
+        match permission {
+            Permission::App(permission) => {
+                match permission {
+                    // this should already be covered be the rule above
+                    ApplicationPermission::Transfer => Outcome::Deny,
+                    // short of transferring the app, the admin can do anything
+                    _ if member.roles.contains(&Role::Admin) => Outcome::Allow,
+                    // Read is allowed for Reader, Writer and Manager
+                    ApplicationPermission::Read
+                        if member.roles.contains(&Role::Reader)
+                            || member.roles.contains(&Role::Manager) =>
+                    {
+                        Outcome::Allow
                     }
+                    // Write is allowed for Admin and Manager
+                    ApplicationPermission::Write if member.roles.contains(&Role::Manager) => {
+                        Outcome::Allow
+                    }
+
+                    ApplicationPermission::Command if member.roles.contains(&Role::Publisher) => {
+                        Outcome::Allow
+                    }
+                    ApplicationPermission::Subscribe
+                        if member.roles.contains(&Role::Subscriber) =>
+                    {
+                        Outcome::Allow
+                    }
+                    _ => Outcome::Deny,
                 }
             }
-        },
-        // TODO: implement permission check for access tokens operations
-        Permission::Token(t) => todo!()
+            Permission::Device(permission) => {
+                // When it comes to devices the admin can do anything
+                if member.roles.contains(&Role::Admin) {
+                    return Outcome::Allow;
+                }
+                match permission {
+                    DevicePermission::Read
+                        if member.roles.contains(&Role::Reader)
+                            || member.roles.contains(&Role::Manager) =>
+                    {
+                        Outcome::Allow
+                    }
+                    DevicePermission::Write
+                    | DevicePermission::Create
+                    | DevicePermission::Delete
+                        if member.roles.contains(&Role::Manager) =>
+                    {
+                        Outcome::Allow
+                    }
+                    _ => Outcome::Deny,
+                }
+            }
+            // TODO: implement permission check for access tokens operations
+            Permission::Token(permission) => todo!(),
+        }
+    } else {
+        Outcome::Deny
     }
 }
 
@@ -110,159 +145,5 @@ where
     match authorize(resource, identity, permission) {
         Outcome::Allow => Ok(()),
         Outcome::Deny => Err(f()),
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use drogue_cloud_service_api::auth::user::UserDetails;
-
-    #[derive(Debug)]
-    struct MockResource {
-        owner: String,
-        members: IndexMap<String, MemberEntry>,
-    }
-
-    impl Resource for MockResource {
-        fn owner(&self) -> Option<&str> {
-            Some(&self.owner)
-        }
-
-        fn members(&self) -> &IndexMap<String, MemberEntry> {
-            &self.members
-        }
-    }
-
-    macro_rules! resource {
-        ($owner:literal, [$( $id:literal => $role:expr),*]) => {
-            {
-                #[allow(unused_mut)]
-                let mut members = IndexMap::new();
-                $(
-                    members.insert($id.into(), MemberEntry { role: $role });
-                )*
-                MockResource {
-                    owner: $owner.into(),
-                    members,
-                }
-            }
-
-        };
-    }
-
-    macro_rules! test_auth {
-        ($user:expr, $resource:expr, [$( $perm:expr => $outcome:expr ),*]) => {
-            {
-                let user = $user;
-                let resource = $resource;
-                $(assert_eq!(authorize(&user, &resource, $perm), $outcome, "Expected outcome '{:?}' for permission '{:?}'", $outcome, $perm);)*
-            }
-        };
-    }
-
-    fn user(id: &str, roles: &[&str]) -> UserInformation {
-        UserInformation::Authenticated(UserDetails {
-            user_id: id.into(),
-            roles: roles.iter().map(ToString::to_string).collect(),
-        })
-    }
-
-    #[test]
-    fn test_auth_owner() {
-        test_auth!(
-            resource!("foo", []),
-            user("foo", &[]),
-            [
-                Permission::Owner => Outcome::Allow,
-                Permission::Admin => Outcome::Allow,
-                Permission::Write => Outcome::Allow,
-                Permission::Read => Outcome::Allow
-            ]
-        )
-    }
-
-    #[test]
-    fn test_auth_sys_admin() {
-        test_auth!(
-            resource!("foo", []),
-            user("bar", &["drogue-admin"]),
-            [
-                Permission::Owner => Outcome::Allow,
-                Permission::Admin => Outcome::Allow,
-                Permission::Write => Outcome::Allow,
-                Permission::Read => Outcome::Allow
-            ]
-        )
-    }
-
-    #[test]
-    fn test_auth_resource_admin() {
-        test_auth!(
-            resource!("foo", ["bar" => Role::Admin]),
-            user("bar", &[]),
-            [
-                Permission::Owner => Outcome::Deny,
-                Permission::Admin => Outcome::Allow,
-                Permission::Write => Outcome::Allow,
-                Permission::Read => Outcome::Allow
-            ]
-        )
-    }
-
-    #[test]
-    fn test_auth_resource_manager() {
-        test_auth!(
-            resource!("foo", ["bar" => Role::Manager]),
-            user("bar", &[]),
-            [
-                Permission::Owner => Outcome::Deny,
-                Permission::Admin => Outcome::Deny,
-                Permission::Write => Outcome::Allow,
-                Permission::Read => Outcome::Allow
-            ]
-        )
-    }
-
-    #[test]
-    fn test_auth_resource_reader() {
-        test_auth!(
-            resource!("foo", ["bar" => Role::Reader]),
-            user("bar", &[]),
-            [
-                Permission::Owner => Outcome::Deny,
-                Permission::Admin => Outcome::Deny,
-                Permission::Write => Outcome::Deny,
-                Permission::Read => Outcome::Allow
-            ]
-        )
-    }
-
-    #[test]
-    fn test_auth_anon() {
-        test_auth!(
-            resource!("foo", ["" => Role::Reader]),
-            UserInformation::Anonymous,
-            [
-                Permission::Owner => Outcome::Deny,
-                Permission::Admin => Outcome::Deny,
-                Permission::Write => Outcome::Deny,
-                Permission::Read => Outcome::Allow
-            ]
-        )
-    }
-
-    #[test]
-    fn test_reject_anon() {
-        test_auth!(
-            resource!("foo", ["bar" => Role::Reader]),
-            UserInformation::Anonymous,
-            [
-                Permission::Owner => Outcome::Deny,
-                Permission::Admin => Outcome::Deny,
-                Permission::Write => Outcome::Deny,
-                Permission::Read => Outcome::Deny
-            ]
-        )
     }
 }

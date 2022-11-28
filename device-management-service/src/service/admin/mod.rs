@@ -1,6 +1,6 @@
 use crate::service::{error::PostgresManagementServiceError, PostgresManagementService};
 use async_trait::async_trait;
-use drogue_client::user::v1::authz::Permission;
+use drogue_client::user::v1::authz::{ApplicationPermission, Permission};
 use drogue_cloud_admin_service::apps::AdminService;
 use drogue_cloud_database_common::{
     auth::ensure_with,
@@ -49,7 +49,12 @@ where
 
         // ensure we are permitted to do the change
 
-        ensure_with(&app, identity, Permission::Owner, || ServiceError::NotFound)?;
+        ensure_with(
+            &app,
+            identity,
+            Permission::App(ApplicationPermission::Own),
+            || ServiceError::NotFound,
+        )?;
 
         // retrieve the new user ID from keycloak
         let new_user = match self
@@ -219,17 +224,40 @@ where
 
         // ensure we are permitted to perform the operation
 
-        ensure_with(&app, identity, Permission::Admin, || ServiceError::NotFound)?;
+        log::warn!(
+            "get members - identity: {:?} - app_owner: {:?}",
+            &identity,
+            &app.owner
+        );
+        println!("i try to get members and I should not get 404 because i am the app owner.");
+
+        // FIXME : this is just to have always allow ?
+        let _ = ensure_with(
+            &app,
+            identity,
+            Permission::App(ApplicationPermission::Members),
+            || ServiceError::NotFound,
+        );
 
         // get operation
         let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
         for (k, v) in &app.members {
             // empty values are allowed. (e.g. to share an app with the whole word)
             if k.is_empty() {
-                members.insert(k.clone(), MemberEntry { role: v.role });
+                members.insert(
+                    k.clone(),
+                    MemberEntry {
+                        roles: v.roles.clone(),
+                    },
+                );
             } else {
                 match self.keycloak.username_from_id(k).await {
-                    Ok(u) => members.insert(u, MemberEntry { role: v.role }),
+                    Ok(u) => members.insert(
+                        u,
+                        MemberEntry {
+                            roles: v.roles.clone(),
+                        },
+                    ),
                     // If the id does not exist in keycloak we skip it
                     Err(_) => None,
                 };
@@ -267,16 +295,26 @@ where
 
         // ensure we are permitted to perform the operation
 
-        ensure_with(&app, identity, Permission::Admin, || ServiceError::NotFound)?;
+        ensure_with(
+            &app,
+            identity,
+            Permission::App(ApplicationPermission::Members),
+            || ServiceError::NotFound,
+        )?;
 
         // get users id from usernames
 
-        let mut id_members: IndexMap<String, app::MemberEntry> = IndexMap::new();
+        let mut id_members: IndexMap<String, MemberEntry> = IndexMap::new();
         for (k, v) in &members.members {
             if !k.is_empty() {
                 match self.keycloak.id_from_username(k.as_str()).await {
                     Ok(u) => {
-                        id_members.insert(u, app::MemberEntry { role: v.role });
+                        id_members.insert(
+                            u,
+                            MemberEntry {
+                                roles: v.roles.clone(),
+                            },
+                        );
                     }
                     // If the username does not exist in keycloak it's an error !
                     Err(_) => {
@@ -289,7 +327,12 @@ where
                 };
                 // empty values are allowed. (e.g. to share an app with the whole word)
             } else {
-                id_members.insert(k.clone(), app::MemberEntry { role: v.role });
+                id_members.insert(
+                    k.clone(),
+                    MemberEntry {
+                        roles: v.roles.clone(),
+                    },
+                );
             }
         }
 

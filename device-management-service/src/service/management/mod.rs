@@ -6,6 +6,7 @@ use crate::{
 use async_trait::async_trait;
 use chrono::Utc;
 use core::pin::Pin;
+use drogue_client::user::v1::authz::{ApplicationPermission, DevicePermission};
 use drogue_client::{registry, user::v1::authz::Permission};
 use drogue_cloud_database_common::{
     auth::{ensure, ensure_with},
@@ -172,7 +173,7 @@ where
             .await?;
 
         if let Some(app) = &app {
-            ensure(app, identity, Permission::Read)?;
+            ensure(app, identity, Permission::App(ApplicationPermission::Read))?;
         }
 
         Ok(app.map(Into::into))
@@ -206,7 +207,11 @@ where
                     // Using ensure call here is just a safeguard! The list operation must only return
                     // entries the user has access to. Otherwise the limit/offset functionality
                     // won't work
-                    let result = match ensure(&app, &identity, Permission::Read) {
+                    let result = match ensure(
+                        &app,
+                        &identity,
+                        Permission::App(ApplicationPermission::Read),
+                    ) {
                         Ok(_) => Some(app.into()),
                         Err(_) => None,
                     };
@@ -275,7 +280,11 @@ where
             ));
         }
 
-        ensure(&current, identity, Permission::Admin)?;
+        ensure(
+            &current,
+            identity,
+            Permission::App(ApplicationPermission::Delete),
+        )?;
 
         utils::check_preconditions(&params.preconditions, &current)?;
         // there is no need to use the provided constraints, we as locked the entry "for update"
@@ -363,9 +372,12 @@ where
         };
 
         // ensure we have access to the application, but don't confirm the device if we don't
-        ensure_with(&app, identity, Permission::Write, || {
-            ServiceError::ReferenceNotFound
-        })?;
+        ensure_with(
+            &app,
+            identity,
+            Permission::Device(DevicePermission::Create),
+            || ServiceError::ReferenceNotFound,
+        )?;
 
         let name = device.name.clone();
         // assign a new UID
@@ -427,7 +439,12 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, identity, Permission::Read, || ServiceError::NotFound)?;
+        ensure_with(
+            &app,
+            identity,
+            Permission::Device(DevicePermission::Read),
+            || ServiceError::NotFound,
+        )?;
 
         let device = PostgresDeviceAccessor::new(&c)
             .get(app_id, device_id, Lock::None)
@@ -455,7 +472,12 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, &identity, Permission::Read, || ServiceError::NotFound)?;
+        ensure_with(
+            &app,
+            &identity,
+            Permission::Device(DevicePermission::Read),
+            || ServiceError::NotFound,
+        )?;
 
         Ok(Box::pin(
             PostgresDeviceAccessor::new(&c)
@@ -491,9 +513,12 @@ where
         }?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&current, identity, Permission::Write, || {
-            ServiceError::NotFound
-        })?;
+        ensure_with(
+            &current,
+            identity,
+            Permission::Device(DevicePermission::Write),
+            || ServiceError::NotFound,
+        )?;
 
         let accessor = PostgresDeviceAccessor::new(&t);
 
@@ -601,7 +626,12 @@ where
             .ok_or(ServiceError::NotFound)?;
 
         // ensure we have access, but don't confirm the device if we don't
-        ensure_with(&app, identity, Permission::Write, || ServiceError::NotFound)?;
+        ensure_with(
+            &app,
+            identity,
+            Permission::Device(DevicePermission::Delete),
+            || ServiceError::NotFound,
+        )?;
 
         // check the preconditions
         utils::check_preconditions(&params.preconditions, &current)?;

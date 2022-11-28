@@ -6,6 +6,7 @@ mod x509;
 
 use crate::{service::error::PostgresManagementServiceError, utils::epoch};
 use deadpool_postgres::{Pool, Transaction};
+use drogue_client::user::v1::authz::ApplicationPermission;
 use drogue_client::{registry, user::v1::authz::Permission, Translator};
 use drogue_cloud_database_common::{
     auth::ensure,
@@ -232,7 +233,11 @@ where
         }?;
 
         if let Some(identity) = identity {
-            ensure(&current, identity, Permission::Write)?;
+            ensure(
+                &current,
+                identity,
+                Permission::App(ApplicationPermission::Write),
+            )?;
         }
 
         utils::check_versions(expected_uid, expected_resource_version, &current)?;
