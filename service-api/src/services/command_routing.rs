@@ -35,7 +35,6 @@ pub struct LastWillTestament {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandRouteResponse {
-    pub created: DateTime<Utc>,
     pub state: CommandRoute,
 }
 

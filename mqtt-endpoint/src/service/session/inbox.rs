@@ -2,11 +2,13 @@ use drogue_cloud_endpoint_common::command::{
     Command, CommandFilter, Commands, Subscription, SubscriptionHandle,
 };
 use drogue_cloud_mqtt_common::mqtt;
+use drogue_cloud_service_common::command_routing::State;
 use ntex::util::{ByteString, Bytes};
 
 pub struct InboxSubscription {
     filter: CommandFilter,
     handle: Option<InboxSubscriptionHandle>,
+    route_state: Box<State>,
 }
 
 struct InboxSubscriptionHandle {
@@ -27,6 +29,7 @@ impl InboxSubscription {
         commands: Commands,
         sink: mqtt::Sink,
         force_device: bool,
+        route_state: Box<State>,
     ) -> Self {
         // TODO: try to reduce cloning
 
@@ -55,6 +58,7 @@ impl InboxSubscription {
         Self {
             filter,
             handle: Some(InboxSubscriptionHandle { handle, commands }),
+            route_state,
         }
     }
 
@@ -106,6 +110,7 @@ impl Drop for InboxSubscription {
             ntex::rt::spawn(async move {
                 handle.close().await;
             });
+            drop(&self.route_state);
         } else {
             log::debug!(
                 "Dropping inbox reader for {:?} (already closed)",

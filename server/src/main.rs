@@ -418,16 +418,18 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
         ..Default::default()
     };
 
+    let command_router_client = CommandRoutingClientConfig {
+        url: Url::parse(&format!(
+            "http://{}:{}",
+            server.command_routing.host, server.command_routing.port
+        ))
+        .unwrap(),
+        token_config: Some(token_config.clone()),
+        ..Default::default()
+    };
+
     let command_router = CommandRoutingControllerConfiguration {
-        client: CommandRoutingClientConfig {
-            url: Url::parse(&format!(
-                "http://{}:{}",
-                server.command_routing.host, server.command_routing.port
-            ))
-            .unwrap(),
-            token_config: Some(token_config.clone()),
-            ..Default::default()
-        },
+        client: command_router_client.clone(),
         init_delay: Some(Duration::from_secs(2)),
         ..Default::default()
     };
@@ -570,6 +572,7 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                 command_kafka_sink: kafka,
                 user_auth,
                 endpoint_pool: Default::default(),
+                command_routing_client: command_router_client.clone(),
             }
         };
 

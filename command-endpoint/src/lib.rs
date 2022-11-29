@@ -9,7 +9,7 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_service_api::{
     health::HealthChecked,
     kafka::KafkaClientConfig,
-    webapp::{self as actix_web, web::ServiceConfig},
+    webapp::{self as actix_web, web::ServiceConfig}, services::command_routing,
 };
 use drogue_cloud_service_common::{
     actix::http::{CorsBuilder, HttpBuilder, HttpConfig},
@@ -20,7 +20,7 @@ use drogue_cloud_service_common::{
         openid::{Authenticator, AuthenticatorConfig},
         pat,
     },
-    client::ClientConfig,
+    client::{ClientConfig, CommandRoutingClientConfig, CommandRoutingClient},
     defaults,
 };
 use serde::Deserialize;
@@ -49,6 +49,9 @@ pub struct Config {
 
     #[serde(default)]
     pub http: HttpConfig,
+
+    #[serde(default)]
+    pub command_routing_client: CommandRoutingClientConfig,
 }
 
 #[derive(Debug)]
@@ -84,11 +87,14 @@ pub async fn configurator(
     let client = reqwest::Client::new();
     let registry: registry::v1::Client = config.registry.into_client().await?;
 
+    let command_routing_client = CommandRoutingClient::from_config(config.command_routing_client).await?;
+
     Ok((
         move |cfg: &mut ServiceConfig| {
             cfg.app_data(web::Data::new(sender.clone()))
                 .app_data(web::Data::new(registry.clone()))
                 .app_data(web::Data::new(client.clone()))
+                .app_data(web::Data::new(command_routing_client.clone()))
                 .service(web::resource("/").route(web::get().to(index)))
                 .service(
                     web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")

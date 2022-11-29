@@ -139,7 +139,7 @@ impl Session {
             Entry::Vacant(entry) => {
                 log::debug!("Subscribe device '{:?}' to receive commands", self.id);
 
-                let _route_handle = match self.command_router.create(&self.application, &self.device, 10).await {
+                let route_state = match self.command_router.create(&self.application, &self.device, 10).await {
                     CreationOutcome::Created(state) => state,
                     CreationOutcome::Occupied => {
                         return Err(ServerError::StateError("State still occupied".to_string()));
@@ -156,6 +156,7 @@ impl Session {
                     self.commands.clone(),
                     self.sink.clone(),
                     force_device,
+                    route_state,
                 )
                 .await;
                 entry.insert(subscription);

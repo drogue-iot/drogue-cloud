@@ -8,7 +8,7 @@ use drogue_cloud_service_api::health::HealthChecked;
 use std::{sync::Arc, time::Duration};
 use tokio::time::sleep;
 use tokio_postgres::{
-    types::{Json, Type},
+    types::Type,
 };
 use uuid::Uuid;
 
@@ -143,7 +143,6 @@ INSERT INTO
         device: String,
     ) -> Result<(), ServiceError> {
         let c = self.pool.get().await?;
-
         c.execute(
                 r#"
 DELETE FROM
@@ -209,12 +208,14 @@ WHERE
         let stmt = c
             .prepare_typed(
                 r#"
-SELECT CREATED, LOST, DATA FROM
-    states
+SELECT CR.DEVICE, CS.SESSION_URL FROM
+    command_sessions CS, command_routes CR
 WHERE
-        APPLICATION = $1
+        CR.APPLICATION = $1
     AND
-        DEVICE = $2
+        CR.DEVICE = $2
+    AND
+        CR.SESSION = CS.ID
 "#,
                 &[Type::VARCHAR, Type::VARCHAR],
             )
@@ -225,21 +226,15 @@ WHERE
         match row {
             None => Ok(None),
             Some(row) => {
-                let lost: bool = row.try_get("LOST")?;
-
-                if !lost {
-                    let created = row.try_get("CREATED")?;
-                    match row.try_get::<_, Option<Json<CommandRoute>>>("DATA") {
-                        Ok(Some(Json(state))) => Ok(Some(CommandRouteResponse { state, created })),
-                        Ok(None) => Ok(None),
-                        Err(err) => {
-                            log::warn!("Failed to decode data: {err}");
-                            Ok(None)
-                        }
-                    }
-                } else {
-                    // we found something, but marked as lost
-                    Ok(None)
+                match row.get("SESSION_URL") {
+                    Some(session_url) => {
+                        let route = CommandRoute {
+                            device_uid: device,
+                            endpoint: session_url,
+                        };
+                        Ok(Some(CommandRouteResponse {state: route}))
+                    },
+                    None => Ok(None)
                 }
             }
         }

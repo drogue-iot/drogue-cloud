@@ -6,7 +6,7 @@ use drogue_client::{
 };
 use drogue_cloud_service_api::services::command_routing::{
     CreateRequest, CreateResponse, DeleteRequest, CommandRoute, InitResponse,
-    PingResponse,
+    PingResponse, CommandRouteResponse,
 };
 use k8s_openapi::percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use reqwest::{Response, StatusCode};
@@ -123,7 +123,7 @@ impl CommandRoutingClient {
         token: &str,
         state: CommandRoute,
     ) -> Result<CreateResponse, ClientError> {
-        let url = self.state_url(session, application, device)?;
+        let url = self.session_url(session, application, device)?;
 
         let req = self
             .client
@@ -156,7 +156,8 @@ impl CommandRoutingClient {
         device: &str,
         token: &str,
     ) -> Result<(), ClientError> {
-        let url = self.state_url(session, application, device)?;
+
+        let url = self.session_url(session, application, device)?;
 
         let req = self
             .client
@@ -179,7 +180,33 @@ impl CommandRoutingClient {
         }
     }
 
-    fn state_url(
+    #[instrument(err)]
+    pub async fn get(
+        &self,
+        application: &str,
+        device: &str,
+    ) -> Result<CommandRouteResponse, ClientError> {
+        let url = self.route_url(application, device)?;
+
+        let req = self
+            .client
+            .get(url)
+            .propagate_current_context()
+            .inject_token(&self.token_provider)
+            .await?;
+
+        let response: Response = req
+            .send()
+            .await
+            .map_err(|err| ClientError::Client(Box::new(err)))?;
+
+        match response.status() {
+            StatusCode::OK => handle_response(response, StatusCode::OK).await,
+            code => super::default_error(code, response).await,
+        }
+    }
+
+    fn session_url(
         &self,
         session: &str,
         application: &str,
@@ -188,6 +215,18 @@ impl CommandRoutingClient {
         Ok(self.url.join(&format!(
             "/api/routes/v1alpha1/sessions/{}/routes/{}/{}",
             percent_encode(session.as_bytes(), NON_ALPHANUMERIC),
+            percent_encode(application.as_bytes(), NON_ALPHANUMERIC),
+            percent_encode(device.as_bytes(), NON_ALPHANUMERIC)
+        ))?)
+    }
+
+    fn route_url(
+        &self,
+        application: &str,
+        device: &str,
+    ) -> Result<Url, ClientError> {
+        Ok(self.url.join(&format!(
+            "/api/routes/v1alpha1/routes/{}/{}",
             percent_encode(application.as_bytes(), NON_ALPHANUMERIC),
             percent_encode(device.as_bytes(), NON_ALPHANUMERIC)
         ))?)

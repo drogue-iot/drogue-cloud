@@ -2,6 +2,7 @@ use drogue_client::registry;
 use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
 use drogue_cloud_service_api::webapp::{http::header, web, HttpRequest, HttpResponse};
+use drogue_cloud_service_common::{client::CommandRoutingClient, app};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -13,6 +14,7 @@ pub struct CommandQuery {
 pub async fn command(
     sender: web::Data<UpstreamSender>,
     client: web::Data<reqwest::Client>,
+    command_routing_client: web::Data<CommandRoutingClient>,
     path: web::Path<(String, String)>,
     web::Query(opts): web::Query<CommandQuery>,
     req: HttpRequest,
@@ -32,6 +34,9 @@ pub async fn command(
         registry.get_app(&app_name),
         registry.get_device_and_gateways(&app_name, &device_name)
     );
+
+    let resp = command_routing_client.get(&app_name, &device_name).await;
+    log::debug!("RESP {:?}", resp);
 
     match response {
         Ok((Some(application), Some(device_gateways))) => {
