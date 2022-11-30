@@ -90,9 +90,10 @@ impl Service<Session> for App {
 
         let user = if let Some(auth) = &self.authenticator {
             // authenticate
-            self.authenticate(&connect, auth)
-                .await
-                .map_err(|_| ServerError::AuthenticationFailed)?
+            self.authenticate(&connect, auth).await.map_err(|err| {
+                log::debug!("Failed to perform authentication: {err}");
+                ServerError::AuthenticationFailed
+            })?
         } else {
             // we are running without authentication
             UserInformation::Anonymous
