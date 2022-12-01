@@ -22,16 +22,24 @@ pub enum PublishError {
     ProtocolError,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ServerError {
+    #[error("internal error: {0}")]
     InternalError(String),
+    #[error("protocol error")]
     ProtocolError,
+    #[error("unsupported operation")]
     UnsupportedOperation,
+    #[error("authentication failed")]
     AuthenticationFailed,
+    #[error("not authorized")]
     NotAuthorized,
+    #[error("publish error {0}")]
     PublishError(PublishError),
+    #[error("configuration error {0}")]
     Configuration(String),
     /// Failed to acquire state
+    #[error("state error {0}")]
     StateError(String),
 }
 
@@ -86,6 +94,8 @@ impl MqttResponse<v5::PublishAck, v5::PublishAck> for PublishError {
 
 impl<St> MqttResponse<v3::Handshake, v3::HandshakeAck<St>> for ServerError {
     fn ack(&self, ack: v3::Handshake) -> v3::HandshakeAck<St> {
+        log::debug!("Handshake outcome (v3): {self}");
+
         match self {
             Self::AuthenticationFailed => ack.bad_username_or_pwd(),
             Self::NotAuthorized => ack.not_authorized(),
@@ -96,6 +106,8 @@ impl<St> MqttResponse<v3::Handshake, v3::HandshakeAck<St>> for ServerError {
 
 impl<St> MqttResponse<v5::Handshake, v5::HandshakeAck<St>> for ServerError {
     fn ack(&self, ack: v5::Handshake) -> v5::HandshakeAck<St> {
+        log::debug!("Handshake outcome (v5): {self}");
+
         match self {
             Self::AuthenticationFailed => {
                 ack.failed(v5::codec::ConnectAckReason::BadUserNameOrPassword)
