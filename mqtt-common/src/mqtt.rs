@@ -67,9 +67,14 @@ where
     A: Service<S>,
     S: Session,
 {
+    log::debug!("handling connect (v3)");
+
     match app.connect(Connect::V3(&mut connect)).await {
         Ok(ack) => Ok(connect.ack(ack.session, ack.ack.session_present)),
-        Err(_) => Ok(connect.bad_username_or_pwd()),
+        Err(err) => {
+            log::debug!("Failed to process connect: {err:?}");
+            Ok(connect.bad_username_or_pwd())
+        }
     }
 }
 
@@ -81,11 +86,16 @@ where
     A: Service<S>,
     S: Session,
 {
+    log::debug!("handling connect (v5)");
+
     match app.connect(Connect::V5(&mut connect)).await {
         Ok(connect_ack) => Ok(connect.ack(connect_ack.session).with(|ack| {
             *ack = connect_ack.ack;
         })),
-        Err(_) => Ok(connect.failed(ConnectAckReason::BadUserNameOrPassword)),
+        Err(err) => {
+            log::debug!("Failed to process connect: {err:?}");
+            Ok(connect.failed(ConnectAckReason::BadUserNameOrPassword))
+        }
     }
 }
 
