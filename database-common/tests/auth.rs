@@ -13,6 +13,7 @@ use indexmap::IndexMap;
 struct MockResource {
     owner: String,
     members: IndexMap<String, MemberEntry>,
+    name: String,
 }
 
 impl Resource for MockResource {
@@ -22,6 +23,9 @@ impl Resource for MockResource {
 
     fn members(&self) -> &IndexMap<String, MemberEntry> {
         &self.members
+    }
+    fn name(&self) -> &String {
+        &self.name
     }
 }
 

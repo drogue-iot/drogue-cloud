@@ -3,7 +3,7 @@ use chrono::Utc;
 use drogue_cloud_service_api::webapp::ResponseError;
 use drogue_cloud_service_api::{
     auth::user::{UserDetails, UserInformation},
-    token::{AccessToken, AccessTokenCreated, AccessTokenCreationOptions, AccessTokenData},
+    token::{AccessToken, AccessTokenCreationOptions, AccessTokenData, CreatedAccessToken},
 };
 use drogue_cloud_service_common::keycloak::{error::Error, KeycloakClient};
 use serde_json::Value;
@@ -19,7 +19,7 @@ pub trait AccessTokenService: Clone {
         &self,
         identity: &UserInformation,
         opts: AccessTokenCreationOptions,
-    ) -> Result<AccessTokenCreated, Self::Error>;
+    ) -> Result<CreatedAccessToken, Self::Error>;
     async fn delete(&self, identity: &UserInformation, prefix: String) -> Result<(), Self::Error>;
     async fn list(&self, identity: &UserInformation) -> Result<Vec<AccessToken>, Self::Error>;
 
@@ -77,7 +77,7 @@ where
         &self,
         identity: &UserInformation,
         opts: AccessTokenCreationOptions,
-    ) -> Result<AccessTokenCreated, Self::Error> {
+    ) -> Result<CreatedAccessToken, Self::Error> {
         let user_id = match identity.user_id() {
             Some(user_id) => user_id,
             None => return Err(Error::NotAuthorized),
@@ -94,6 +94,7 @@ where
             hashed_token: token.1,
             created: Utc::now(),
             description: opts.description,
+            scopes: opts.scopes,
         };
 
         let prefix = &token.0.prefix;
@@ -165,6 +166,7 @@ where
                                 prefix: prefix.into(),
                                 created: data.created,
                                 description: data.description,
+                                scopes: data.scopes,
                             });
                         }
                         or => log::debug!("Value: {:?}", or),
@@ -234,9 +236,9 @@ where
 
         log::debug!("Looking for attribute: {}", key);
 
-        let expected_hash = match user.attributes.and_then(|mut a| a.remove(&key)) {
+        let (expected_hash, scopes) = match user.attributes.and_then(|mut a| a.remove(&key)) {
             Some(value) => match Self::decode_data(value) {
-                Ok(data) => data.hashed_token,
+                Ok(data) => (data.hashed_token, data.scopes),
                 Err(_) => return Ok(None),
             },
             None => return Ok(None),
@@ -256,7 +258,8 @@ where
             true => {
                 let details = UserDetails {
                     user_id,
-                    roles: vec![], // FIXME: we should be able to store scopes/roles as well
+                    roles: vec![], // FIXME: we should be able to store scopes/roles as well,
+                    scopes,
                 };
                 Some(details)
             }

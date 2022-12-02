@@ -29,7 +29,7 @@ log = "0.4"
 md5 = "0.7"
 monaco = { version = "0.3", features = ["yew-components"] }
 once_cell = "1"
-patternfly-yew = "0.2.0"
+patternfly-yew = "0.2.3"
 percent-encoding = "2.1"
 pretty-hex = "0.3"
 reqwest = "0.11"
@@ -92,13 +92,13 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "32c809e030ca9ec5f7785dc7e0a78d574b9830f8" } # FIXME: awaiting release
-#patternfly-yew = { path = "../../patternfly-yew" }
+patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "331782836f0ed67bc6ab41ef71497c970176e9d4" } # FIXME: awaiting release
+#patternfly-yew = { path = "../../../patternfly-yew" }
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "798c968f0a63a0debcff9965c66b361e85946458" } # FIXME: awaiting release 0.12.0
+drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "fdebb42a6cbaa872a779e892fefe0f687b34fa4b" } # FIXME: awaiting release 0.12.0
 #drogue-client = { path = "../../drogue-client" }
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "d19ad32f200938aeb5d7081ee3385ee40c5ae0ff" } # FIXME: awaiting release 0.4.0
+drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "8c6f6f6456a18fd8ab41ca2a64b45b154a94f4aa" } # FIXME: awaiting release 0.4.0
 #drogue-bazaar = { path = "../../drogue-bazaar" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release

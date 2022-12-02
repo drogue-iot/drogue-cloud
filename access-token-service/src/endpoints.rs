@@ -22,7 +22,7 @@ impl<S: AccessTokenService> Deref for WebData<S> {
 pub async fn create<S>(
     user: UserInformation,
     service: web::Data<WebData<S>>,
-    opts: web::Query<AccessTokenCreationOptions>,
+    opts: web::Json<AccessTokenCreationOptions>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: AccessTokenService + 'static,

@@ -19,7 +19,7 @@ pub struct Admin {
 
     members: Option<Users>,
     new_member_id: String,
-    new_member_role: Role,
+    new_member_roles: Vec<Role>,
 
     new_owner: String,
     pending_transfer: bool,
@@ -42,7 +42,7 @@ pub enum Msg {
     SetMembers(Members),
     AddMember,
     DeleteMember(String),
-    NewMemberRole(Role),
+    NewMemberRoles(Vec<Role>),
     NewMemberId(String),
     NewOwner(String),
     TransferOwner,
@@ -56,7 +56,7 @@ pub enum Msg {
 #[derive(Clone, Debug)]
 struct User {
     id: String,
-    role: Role,
+    roles: Vec<Role>,
     on_delete: Callback<()>,
 }
 
@@ -76,7 +76,13 @@ impl TableRenderer for User {
                     self.id.clone().into()
                 }
             }
-            1 => self.role.into(),
+            1 => self
+                .roles
+                .iter()
+                .map(|r| r.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+                .into(),
             _ => return html! {},
         }
     }
@@ -105,7 +111,7 @@ impl Component for Admin {
             fetch: None,
             members: None,
             new_member_id: Default::default(),
-            new_member_role: Role::Reader,
+            new_member_roles: Vec::new(),
             new_owner: Default::default(),
             stop: false,
             pending_transfer: false,
@@ -127,9 +133,9 @@ impl Component for Admin {
                 self.fetch = None;
             }
             Msg::AddMember => {
-                let (id, entry) = (&self.new_member_id, &self.new_member_role);
+                let (id, roles) = (&self.new_member_id, &self.new_member_roles);
                 if let Some(m) = self.members.as_mut() {
-                    if let Err(e) = m.add(id.clone(), *entry, ctx.link()) {
+                    if let Err(e) = m.add(id.clone(), roles.clone(), ctx.link()) {
                         error("Failed to add user", e);
                     } else {
                         match self.submit(ctx) {
@@ -150,7 +156,7 @@ impl Component for Admin {
             }
 
             Msg::NewMemberId(id) => self.new_member_id = id,
-            Msg::NewMemberRole(role) => self.new_member_role = role,
+            Msg::NewMemberRoles(roles) => self.new_member_roles = roles,
 
             Msg::NewOwner(id) => self.new_owner = id,
             Msg::TransferOwner => match self.transfer(ctx) {
@@ -207,7 +213,7 @@ impl Component for Admin {
                                     header={{html_nested!{
                                         <TableHeader>
                                             <TableColumn label="User name"/>
-                                            <TableColumn label="Role"/>
+                                            <TableColumn label="Roles"/>
                                         </TableHeader>
                                     }}}
                             />
@@ -224,11 +230,15 @@ impl Component for Admin {
                                     </ToolbarItem>
                                     <ToolbarItem>
                                         <Select<Role>
-                                                placeholder="Select user role"
-                                                variant={SelectVariant::Single(ctx.link().callback(Msg::NewMemberRole))}>
-                                            <SelectOption<Role> value={Role::Reader} description="Read-only access" />
-                                            <SelectOption<Role> value={Role::Manager} description="Read-write access" />
-                                            <SelectOption<Role> value={Role::Admin} description="Administrative access" />
+                                                placeholder="Select user roles"
+                                                multiple=true
+                                                variant={SelectVariant::Checkbox(ctx.link().callback(Msg::NewMemberRoles))}
+                                                badge={BadgeVariant::Values}>
+                                            <SelectOption<Role> value={Role::Reader} description="Read-only for app and devices details" />
+                                            <SelectOption<Role> value={Role::Manager} description="Read-write for app and devices details" />
+                                            <SelectOption<Role> value={Role::Subscriber} description="Consume app events" />
+                                            <SelectOption<Role> value={Role::Publisher} description="Publish commands" />
+                                            <SelectOption<Role> value={Role::Admin} description="All access" />
                                         </Select<Role>>
                                     </ToolbarItem>
                                     <ToolbarItem>
@@ -449,10 +459,10 @@ impl Users {
     pub fn from(members: Members, app: String, link: &Scope<Admin>) -> Self {
         let mut new_members: Vec<User> = Vec::new();
 
-        for (user, role) in members.members {
+        for (user, roles) in members.members {
             new_members.push(User {
                 id: user.clone(),
-                role: role.role,
+                roles: roles.roles,
                 on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
             });
         }
@@ -469,7 +479,12 @@ impl Users {
         let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
 
         for u in &self.members {
-            members.insert(u.id.clone(), MemberEntry { role: u.role });
+            members.insert(
+                u.id.clone(),
+                MemberEntry {
+                    roles: u.roles.clone(),
+                },
+            );
         }
 
         Members {
@@ -482,11 +497,11 @@ impl Users {
         self.members.retain(|u| *u.id != id);
     }
 
-    pub fn add(&mut self, id: String, role: Role, link: &Scope<Admin>) -> Result<()> {
+    pub fn add(&mut self, id: String, roles: Vec<Role>, link: &Scope<Admin>) -> Result<()> {
         let copy_id = id.clone();
         let user = User {
             id: id.clone(),
-            role,
+            roles,
             on_delete: link.callback(move |_| Msg::DeleteMember(copy_id.clone())),
         };
 
@@ -502,7 +517,7 @@ impl Users {
         let user = &User {
             id,
             // does not matter for the equal operation. See PartialEq impl above.
-            role: Role::Reader,
+            roles: vec![],
             on_delete: Default::default(),
         };
         return self.members.contains(user);

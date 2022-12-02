@@ -69,6 +69,10 @@ impl Resource for Application {
     fn members(&self) -> &IndexMap<String, MemberEntry> {
         &self.members
     }
+
+    fn name(&self) -> &String {
+        &self.name
+    }
 }
 
 /// Extract a section from the application data. Prevents cloning the whole struct.

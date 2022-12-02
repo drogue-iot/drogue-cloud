@@ -13,12 +13,13 @@ use std::fmt::Debug;
 pub trait Resource: Debug {
     fn owner(&self) -> Option<&str>;
     fn members(&self) -> &IndexMap<String, MemberEntry>;
+    fn name(&self) -> &String;
 }
 
 /// Authorize an operation.
 ///
-/// Currently, this is a rather simple approach. If the resource has an owner, the owners must match
-/// to grant access.
+/// If the UserInformation contains scopes, they are checked first
+/// Then the members for an application are checked against the current user
 ///
 /// NOTE: This logic must be aligned with [`super::models::sql::SelectBuilder::auth()`]
 pub fn authorize(
@@ -32,6 +33,27 @@ pub fn authorize(
         identity,
         permission
     );
+
+    // If there are some limiting claims provided, we need to check them first.
+    if let Some(claims) = identity.token_scopes() {
+        // the access token claims app creation permission
+        if permission == Permission::App(ApplicationPermission::Create) && !claims.create {
+            return Outcome::Deny;
+        }
+
+        if let Some(claimed_roles) = claims.applications.get(resource.name()) {
+            // first check against the claimed roles
+            match permission_table(permission, claimed_roles) {
+                // if the claimed roles pass, we carry on to  check against the actual user's role
+                // to make sure the token isn't trying to escalate permissions
+                Outcome::Allow => {}
+                Outcome::Deny => return Outcome::Deny,
+            }
+        } else {
+            // If the application is not even in the claims, don't bother checking anything
+            return Outcome::Deny;
+        }
+    }
 
     // if we are "admin", grant access
     if identity.is_admin() {
@@ -55,63 +77,57 @@ pub fn authorize(
     let user = identity.user_id().unwrap_or_default();
     // If there is a member in the list which matches the user ...
     if let Some(member) = resource.members().get(user) {
-        match permission {
-            Permission::App(permission) => {
-                match permission {
-                    // this should already be covered be the rule above
-                    ApplicationPermission::Transfer => Outcome::Deny,
-                    // short of transferring the app, the admin can do anything
-                    _ if member.roles.contains(&Role::Admin) => Outcome::Allow,
-                    // Read is allowed for Reader, Writer and Manager
-                    ApplicationPermission::Read
-                        if member.roles.contains(&Role::Reader)
-                            || member.roles.contains(&Role::Manager) =>
-                    {
-                        Outcome::Allow
-                    }
-                    // Write is allowed for Admin and Manager
-                    ApplicationPermission::Write if member.roles.contains(&Role::Manager) => {
-                        Outcome::Allow
-                    }
-
-                    ApplicationPermission::Command if member.roles.contains(&Role::Publisher) => {
-                        Outcome::Allow
-                    }
-                    ApplicationPermission::Subscribe
-                        if member.roles.contains(&Role::Subscriber) =>
-                    {
-                        Outcome::Allow
-                    }
-                    _ => Outcome::Deny,
-                }
-            }
-            Permission::Device(permission) => {
-                // When it comes to devices the admin can do anything
-                if member.roles.contains(&Role::Admin) {
-                    return Outcome::Allow;
-                }
-                match permission {
-                    DevicePermission::Read
-                        if member.roles.contains(&Role::Reader)
-                            || member.roles.contains(&Role::Manager) =>
-                    {
-                        Outcome::Allow
-                    }
-                    DevicePermission::Write
-                    | DevicePermission::Create
-                    | DevicePermission::Delete
-                        if member.roles.contains(&Role::Manager) =>
-                    {
-                        Outcome::Allow
-                    }
-                    _ => Outcome::Deny,
-                }
-            }
-            // TODO: implement permission check for access tokens operations
-            Permission::Token(permission) => todo!(),
-        }
+        permission_table(permission, &member.roles)
     } else {
         Outcome::Deny
+    }
+}
+
+fn permission_table(permission: Permission, roles: &[Role]) -> Outcome {
+    match permission {
+        Permission::App(permission) => {
+            match permission {
+                // this should already be covered be the rule above
+                ApplicationPermission::Transfer => Outcome::Deny,
+                // short of transferring the app, the admin can do anything
+                _ if roles.contains(&Role::Admin) => Outcome::Allow,
+                // Read is allowed for Reader, Writer and Manager
+                ApplicationPermission::Read
+                    if roles.contains(&Role::Reader) || roles.contains(&Role::Manager) =>
+                {
+                    Outcome::Allow
+                }
+                // Write is allowed for Admin and Manager
+                ApplicationPermission::Write if roles.contains(&Role::Manager) => Outcome::Allow,
+
+                ApplicationPermission::Command if roles.contains(&Role::Publisher) => {
+                    Outcome::Allow
+                }
+                ApplicationPermission::Subscribe if roles.contains(&Role::Subscriber) => {
+                    Outcome::Allow
+                }
+                _ => Outcome::Deny,
+            }
+        }
+        Permission::Device(permission) => {
+            // When it comes to devices the admin can do anything
+            if roles.contains(&Role::Admin) {
+                return Outcome::Allow;
+            }
+            match permission {
+                DevicePermission::Read
+                    if roles.contains(&Role::Reader) || roles.contains(&Role::Manager) =>
+                {
+                    Outcome::Allow
+                }
+                DevicePermission::Write | DevicePermission::Create | DevicePermission::Delete
+                    if roles.contains(&Role::Manager) =>
+                {
+                    Outcome::Allow
+                }
+                _ => Outcome::Deny,
+            }
+        }
     }
 }
 

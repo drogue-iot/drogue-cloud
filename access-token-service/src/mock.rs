@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use drogue_cloud_service_api::webapp::ResponseError;
 use drogue_cloud_service_api::{
     auth::user::{UserDetails, UserInformation},
-    token::{AccessToken, AccessTokenCreated, AccessTokenCreationOptions},
+    token::{AccessToken, AccessTokenCreationOptions, CreatedAccessToken},
 };
 use std::fmt::Formatter;
 
@@ -29,7 +29,7 @@ impl AccessTokenService for MockAccessTokenService {
         &self,
         _: &UserInformation,
         _: AccessTokenCreationOptions,
-    ) -> Result<AccessTokenCreated, Self::Error> {
+    ) -> Result<CreatedAccessToken, Self::Error> {
         todo!()
     }
 

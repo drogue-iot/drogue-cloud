@@ -1416,6 +1416,7 @@ checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
 [[package]]
 name = "drogue-bazaar"
 version = "0.3.0"
+source = "git+https://github.com/drogue-iot/drogue-bazaar?rev=8c6f6f6456a18fd8ab41ca2a64b45b154a94f4aa#8c6f6f6456a18fd8ab41ca2a64b45b154a94f4aa"
 dependencies = [
  "actix-cors",
  "actix-http",
@@ -1464,6 +1465,7 @@ dependencies = [
 [[package]]
 name = "drogue-client"
 version = "0.12.0"
+source = "git+https://github.com/drogue-iot/drogue-client?rev=fdebb42a6cbaa872a779e892fefe0f687b34fa4b#fdebb42a6cbaa872a779e892fefe0f687b34fa4b"
 dependencies = [
  "async-trait",
  "base64 0.13.1",

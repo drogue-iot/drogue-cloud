@@ -6,7 +6,7 @@ use drogue_cloud_database_common::{
     auth::ensure_with,
     error::ServiceError,
     models::{
-        app::{self, ApplicationAccessor, PostgresApplicationAccessor},
+        app::{ApplicationAccessor, PostgresApplicationAccessor},
         Lock,
     },
 };
@@ -52,7 +52,7 @@ where
         ensure_with(
             &app,
             identity,
-            Permission::App(ApplicationPermission::Own),
+            Permission::App(ApplicationPermission::Transfer),
             || ServiceError::NotFound,
         )?;
 
