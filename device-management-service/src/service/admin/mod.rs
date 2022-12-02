@@ -224,20 +224,12 @@ where
 
         // ensure we are permitted to perform the operation
 
-        log::warn!(
-            "get members - identity: {:?} - app_owner: {:?}",
-            &identity,
-            &app.owner
-        );
-        println!("i try to get members and I should not get 404 because i am the app owner.");
-
-        // FIXME : this is just to have always allow ?
-        let _ = ensure_with(
+        ensure_with(
             &app,
             identity,
             Permission::App(ApplicationPermission::Members),
             || ServiceError::NotFound,
-        );
+        )?;
 
         // get operation
         let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
