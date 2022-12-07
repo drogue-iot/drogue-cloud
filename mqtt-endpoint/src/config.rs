@@ -3,6 +3,8 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::server::{MqttServerOptions, TlsConfig};
 use drogue_cloud_service_api::kafka::KafkaClientConfig;
+use drogue_cloud_service_common::actix::http::HttpConfig;
+use drogue_cloud_service_common::auth::openid::AuthenticatorConfig;
 use drogue_cloud_service_common::command_routing::CommandRoutingControllerConfiguration;
 use drogue_cloud_service_common::defaults;
 use drogue_cloud_service_common::state::StateControllerConfiguration;
@@ -83,6 +85,11 @@ pub struct Config {
     pub state: StateControllerConfiguration,
 
     pub command_routing: CommandRoutingControllerConfiguration,
+
+    #[serde(default)]
+    pub http: HttpConfig,
+
+    pub oauth: AuthenticatorConfig,
 }
 
 impl TlsConfig for Config {

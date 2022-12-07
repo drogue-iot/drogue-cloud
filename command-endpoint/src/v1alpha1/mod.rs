@@ -2,7 +2,7 @@ use drogue_client::registry;
 use drogue_cloud_endpoint_common::{error::HttpEndpointError, sender::UpstreamSender};
 use drogue_cloud_integration_common::{self, commands::CommandOptions};
 use drogue_cloud_service_api::webapp::{http::header, web, HttpRequest, HttpResponse};
-use drogue_cloud_service_common::{client::CommandRoutingClient, app};
+use drogue_cloud_service_common::{client::CommandRoutingClient};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
@@ -35,8 +35,25 @@ pub async fn command(
         registry.get_device_and_gateways(&app_name, &device_name)
     );
 
-    let resp = command_routing_client.get(&app_name, &device_name).await;
-    log::debug!("RESP {:?}", resp);
+    // TODO handle response and use proper url
+    let _resp = command_routing_client.get(&app_name, &device_name).await;
+    let builder = client.request(reqwest::Method::POST, "http://localhost:20001");
+    let content_type = req
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let _res = drogue_cloud_integration_common::commands::sender::send_with_builder(
+        builder,
+        CommandOptions {
+            application: app_name.clone(),
+            device: device_name.clone(),
+            command: opts.command.clone(),
+            content_type,
+        },
+        body.clone(),
+    )
+    .await;
 
     match response {
         Ok((Some(application), Some(device_gateways))) => {

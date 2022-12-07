@@ -3,7 +3,7 @@ mod config;
 mod service;
 
 pub use config::Config;
-use drogue_cloud_service_api::auth::device::authn::{PreSharedKeyOutcome, PreSharedKeyResponse};
+use drogue_cloud_service_api::{auth::device::authn::{PreSharedKeyOutcome, PreSharedKeyResponse}};
 
 use crate::{auth::DeviceAuthenticator, service::App};
 use drogue_cloud_endpoint_common::{
@@ -20,6 +20,7 @@ use drogue_cloud_service_common::{
 use futures_util::TryFutureExt;
 use lazy_static::lazy_static;
 use prometheus::{labels, opts, register_int_gauge, IntGauge};
+use ntex::{web::{*, types::State}, util::Bytes};
 
 lazy_static! {
     pub static ref CONNECTIONS_COUNTER: IntGauge = register_int_gauge!(opts!(
@@ -33,6 +34,29 @@ lazy_static! {
     .unwrap();
 }
 
+#[macro_export]
+macro_rules! app {
+    ($cfg:expr, $data:expr, $auth: expr) => {{
+
+        $cfg.app_data($data.clone()).service(
+            web::scope("/api/commands/v1alpha1")
+                .wrap($auth)
+                .service(
+                    web::resource("/command").route(web::post().to(ping)),
+                ),
+        )
+    }};
+}
+
+pub async fn command(
+    req: HttpRequest,
+    body: Bytes,
+) -> Result<HttpResponse, Error> {
+    println!("{:?}", req);
+    println!("{:?}", body);
+    Ok(HttpResponse::Ok().finish())
+}
+
 pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()> {
     let commands = Commands::new();
 
@@ -40,7 +64,6 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
     let (states, runner) = StateController::new(config.state.clone()).await?;
     let (command_router, command_runner) = CommandRoutingController::new(config.command_routing.clone()).await?;
-
 
     let app = App {
         config: config.endpoint.clone(),
@@ -113,15 +136,34 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // command source
 
     let command_source = KafkaCommandSource::new(
-        commands,
+        commands.clone(),
         config.kafka_command_config,
         config.command_source_kafka,
     )?;
+
+    //let service: Arc<dyn CommandDispatcher> = Arc::new(commands.clone());
+    //let service: State<CommandDispatcher> = State::from(commands.clone());
+
+    // monitoring
+
+    // main server
+
+    let service_authenticator = config.oauth.into_client().await?;
+    log::info!("Authenticator: {service_authenticator:?}");
+    let _service_authenticator = service_authenticator.map(State::new);
+
+    let main = server(move|| {
+        ntex::web::App::new()
+        .service(resource("/").to(command))
+    })
+    .bind("127.0.0.1:20001")?
+    .run();
 
     // run
 
     let srv = srv.err_into();
     startup.spawn(srv);
+    startup.spawn(main.err_into());
     startup.spawn(runner.run());
     startup.spawn(command_runner.run());
     startup.check(command_source);

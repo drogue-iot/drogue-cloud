@@ -9,7 +9,7 @@ use drogue_cloud_endpoint_common::{
 use drogue_cloud_service_api::{
     health::HealthChecked,
     kafka::KafkaClientConfig,
-    webapp::{self as actix_web, web::ServiceConfig}, services::command_routing,
+    webapp::{self as actix_web, web::ServiceConfig},
 };
 use drogue_cloud_service_common::{
     actix::http::{CorsBuilder, HttpBuilder, HttpConfig},

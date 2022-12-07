@@ -9,8 +9,9 @@ use drogue_cloud_service_api::webapp::web;
 use drogue_cloud_service_common::reqwest::to_method;
 use reqwest::{
     header::{HeaderName, HeaderValue},
-    Response, StatusCode,
+    Response, StatusCode, RequestBuilder,
 };
+use serde_json::json;
 use std::{fmt::Formatter, str::FromStr};
 use thiserror::Error;
 use url::Url;
@@ -111,6 +112,31 @@ where
     }
 
     Ok(builder)
+}
+
+pub async fn send_with_builder(
+    builder: RequestBuilder,
+    command: CommandOptions,
+    payload: web::Bytes,
+) -> Result<(), Error> {
+    let payload = base64::encode(payload);
+
+    let builder = builder.json(&json!({
+        "application": command.application,
+        "device": command.device,
+        "command": command.command,
+        "payload": payload,
+    }));
+
+    let resp = builder
+        .send()
+        .await
+        .map_err(|err| Error::Transport(Box::new(err)))?;
+
+    match resp.status() {
+        code if code.is_success() => Ok(()),
+        _ => Err(default_error(resp).await),
+    }
 }
 
 pub(crate) async fn default_error(resp: Response) -> Error {

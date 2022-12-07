@@ -1,4 +1,4 @@
-mod sender;
+pub mod sender;
 
 use drogue_client::{registry, Translator};
 use drogue_cloud_endpoint_common::{

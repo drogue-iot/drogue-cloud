@@ -718,6 +718,14 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                     bind_addr: Some(bind_addr_mqtt),
                     ..Default::default()
                 },
+                http: HttpConfig {
+                    bind_addr: "localhost:20001".into(),
+                    disable_tls: true,
+                    workers: Some(1),
+                    ..Default::default()
+                },
+
+                oauth: oauth.clone(),
                 endpoint: Default::default(),
                 auth,
                 disable_tls: !(key_file.is_some() && cert_bundle_file.is_some()),

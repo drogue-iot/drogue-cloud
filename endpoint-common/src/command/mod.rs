@@ -107,6 +107,6 @@ impl TryFrom<Event> for Command {
 
 /// Internally dispatch commands to the correct device.
 #[async_trait]
-pub trait CommandDispatcher {
+pub trait CommandDispatcher: Send + Sync {
     async fn send(&self, msg: Command);
 }
