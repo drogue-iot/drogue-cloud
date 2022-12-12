@@ -4,10 +4,11 @@ mod service;
 
 pub use config::Config;
 use drogue_cloud_service_api::{auth::device::authn::{PreSharedKeyOutcome, PreSharedKeyResponse}};
+use serde_json::Value;
 
 use crate::{auth::DeviceAuthenticator, service::App};
 use drogue_cloud_endpoint_common::{
-    command::{Commands, KafkaCommandSource},
+    command::{Commands, KafkaCommandSource, CommandAddress, Command},
     psk::Identity,
     sender::DownstreamSender,
     sink::KafkaSink,
@@ -54,6 +55,16 @@ pub async fn command(
 ) -> Result<HttpResponse, Error> {
     println!("{:?}", req);
     println!("{:?}", body);
+    let value: Value = serde_json::from_str(std::str::from_utf8(&body).unwrap())?;
+    println!("{}", value["application"]);
+    let address = CommandAddress::new(value["application"].to_string(), value["device"].to_string(), value["device"].to_string());
+    let cmd = Command {
+        address,
+        command: value["command"].to_string(),
+        payload: Some(Vec::from(value["payload"].to_string().as_bytes())),
+    };
+    println!("Command! {:?}", cmd);
+
     Ok(HttpResponse::Ok().finish())
 }
 
