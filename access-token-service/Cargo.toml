@@ -19,6 +19,7 @@ env_logger = "0.9"
 futures = "0.3"
 futures-core = "0.3"
 futures-util = "0.3"
+indexmap = { version = "1", features = ["serde"] }
 log = "0.4"
 native-tls = "0.2"
 rand = "0.8"

@@ -35,7 +35,7 @@ pub fn authorize(
     );
 
     // If there are some limiting claims provided, we need to check them first.
-    if let Some(claims) = identity.token_scopes() {
+    if let Some(claims) = identity.token_claims() {
         // the access token claims app creation permission
         if permission == Permission::App(ApplicationPermission::Create) && !claims.create {
             return Outcome::Deny;
@@ -43,7 +43,7 @@ pub fn authorize(
 
         if let Some(claimed_roles) = claims.applications.get(resource.name()) {
             // first check against the claimed roles
-            match permission_table(permission, claimed_roles) {
+            match permission_table(permission, &claimed_roles.0) {
                 // if the claimed roles pass, we carry on to  check against the actual user's role
                 // to make sure the token isn't trying to escalate permissions
                 Outcome::Allow => {}
@@ -77,7 +77,7 @@ pub fn authorize(
     let user = identity.user_id().unwrap_or_default();
     // If there is a member in the list which matches the user ...
     if let Some(member) = resource.members().get(user) {
-        permission_table(permission, &member.roles)
+        permission_table(permission, &member.roles.0)
     } else {
         Outcome::Deny
     }
@@ -87,8 +87,8 @@ fn permission_table(permission: Permission, roles: &[Role]) -> Outcome {
     match permission {
         Permission::App(permission) => {
             match permission {
-                // this should already be covered be the rule above
-                ApplicationPermission::Transfer => Outcome::Deny,
+                // these should already by the owner rule
+                ApplicationPermission::Transfer | ApplicationPermission::Delete => Outcome::Deny,
                 // short of transferring the app, the admin can do anything
                 _ if roles.contains(&Role::Admin) => Outcome::Allow,
                 // Read is allowed for Reader, Writer and Manager

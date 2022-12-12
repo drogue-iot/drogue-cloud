@@ -233,7 +233,7 @@ impl Component for Admin {
                                                 placeholder="Select user roles"
                                                 multiple=true
                                                 variant={SelectVariant::Checkbox(ctx.link().callback(Msg::NewMemberRoles))}
-                                                badge={BadgeVariant::Values}>
+                                                chip={ChipVariant::Values}>
                                             <SelectOption<Role> value={Role::Reader} description="Read-only for app and devices details" />
                                             <SelectOption<Role> value={Role::Manager} description="Read-write for app and devices details" />
                                             <SelectOption<Role> value={Role::Subscriber} description="Consume app events" />

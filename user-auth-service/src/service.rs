@@ -64,7 +64,7 @@ impl From<Context> for UserInformation {
                 user_id,
                 roles: ctx.0.roles,
                 // fixme
-                scopes: None,
+                claims: None,
             }),
             _ => Self::Anonymous,
         }

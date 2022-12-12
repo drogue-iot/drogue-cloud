@@ -29,6 +29,7 @@ impl AccessTokenService for MockAccessTokenService {
         &self,
         _: &UserInformation,
         _: AccessTokenCreationOptions,
+        _: &drogue_client::registry::v1::Client,
     ) -> Result<CreatedAccessToken, Self::Error> {
         todo!()
     }
