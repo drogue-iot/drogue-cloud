@@ -29,6 +29,37 @@ impl IntoPropValue<openid::Config> for &LoginInformation {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Properties)]
+pub struct AppMainProps {
+    info: LoginInformation,
+}
+
+#[function_component(AppMain)]
+fn app_main(props: &AppMainProps) -> Html {
+    let agent = use_auth_agent().expect("Must be nested under the OAuth2 component");
+
+    let logout = Callback::from(move |_| agent.logout());
+
+    let info = &props.info;
+
+    html!(
+        <>
+            <Authenticated>
+                <ContextProvider<SharedData<ExampleData>>>
+                    <Console
+                        backend={info.backend.clone()}
+                        endpoints={info.endpoints.clone()}
+                        on_logout={logout}
+                        />
+                </ContextProvider<SharedData<ExampleData>>>
+            </Authenticated>
+            <NotAuthenticated>
+                <Placeholder info={info.backend.clone()} />
+            </NotAuthenticated>
+        </>
+    )
+}
+
 pub struct Application {
     login_info: Option<Result<LoginInformation, BackendError>>,
 }
@@ -37,8 +68,6 @@ pub struct Application {
 pub enum Msg {
     /// Set client
     SetInfo(Result<LoginInformation, BackendError>),
-    /// Trigger logout
-    Logout,
 }
 
 impl Component for Application {
@@ -56,9 +85,6 @@ impl Component for Application {
             Msg::SetInfo(info) => {
                 self.login_info = Some(info);
             }
-            Msg::Logout => {
-                OAuth2Dispatcher::<openid::Client>::new().logout();
-            }
         }
         true
     }
@@ -66,8 +92,8 @@ impl Component for Application {
     fn view(&self, ctx: &Context<Self>) -> Html {
         html! (
             <>
-                <BackdropViewer/>
-                <ToastViewer/>
+                <BackdropViewer>
+                    <ToastViewer>
 
                 {
                     match &self.login_info {
@@ -76,16 +102,7 @@ impl Component for Application {
                                 <OAuth2
                                     config={info}
                                     >
-                                    <Authenticated>
-                                        <Console
-                                            backend={info.backend.clone()}
-                                            endpoints={info.endpoints.clone()}
-                                            on_logout={ctx.link().callback(|_|Msg::Logout)}
-                                            />
-                                    </Authenticated>
-                                    <NotAuthenticated>
-                                        <Placeholder info={info.backend.clone()} />
-                                    </NotAuthenticated>
+                                    <AppMain {info}/>
                                 </OAuth2>
                             )
                         },
@@ -103,6 +120,8 @@ impl Component for Application {
                     }
                 }
 
+                    </ToastViewer>
+                </BackdropViewer>
             </>
         )
     }

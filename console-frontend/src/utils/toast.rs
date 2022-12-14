@@ -43,10 +43,6 @@ impl ToastBuilder {
         });
         self
     }
-
-    pub fn toast(self) {
-        ToastDispatcher::default().toast(self.into())
-    }
 }
 
 impl From<ToastBuilder> for Toast {

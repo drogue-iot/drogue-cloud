@@ -1,36 +1,28 @@
-use crate::backend::AuthenticatedBackend;
 use crate::{
-    backend::BackendInformation,
+    backend::{AuthenticatedBackend, BackendInformation},
     components::about::AboutModal,
-    data::SharedDataBridge,
     examples::{self, Examples},
     pages::{self, apps::ApplicationContext, spy::Spy},
-    utils::url_decode,
+    utils::{context::ContextListener, url_decode},
 };
 use drogue_cloud_console_common::EndpointInformation;
 use patternfly_yew::*;
 use std::ops::Deref;
 use yew::prelude::*;
+use yew_nested_router::prelude::{Switch as RouterSwitch, *};
 use yew_oauth2::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Target, Debug, Clone, PartialEq, Eq)]
 pub enum AppRoute {
-    #[to = "/spy"]
     Spy,
-    #[to = "/examples{*}"]
     Examples(Examples),
-    #[to = "/tokens"]
     AccessTokens,
-    #[to = "/token"]
     CurrentToken,
-    #[to = "/transfer/{name}"]
-    Ownership(String),
-    #[to = "/apps{*}"]
+    #[target(rename = "transfer")]
+    Ownership(#[target(value)] String),
     Applications(pages::apps::Pages),
-    #[to = "/devices{*}"]
     Devices(pages::devices::Pages),
-    #[to = "/!"]
+    #[target(index)]
     Overview,
 }
 
@@ -42,10 +34,11 @@ pub struct Props {
 }
 
 pub struct Console {
-    _app_ctx_bridge: SharedDataBridge<ApplicationContext>,
     app_ctx: ApplicationContext,
 
-    auth: ContextValue<OAuth2Context>,
+    auth: ContextListener<OAuth2Context>,
+    backdropper: ContextListener<Backdropper>,
+    router: ContextListener<RouterContext<AppRoute>>,
 }
 
 pub enum Msg {
@@ -53,7 +46,6 @@ pub enum Msg {
     About,
     CurrentToken,
     SetAppCtx(ApplicationContext),
-    Auth(OAuth2Context),
 }
 
 impl Component for Console {
@@ -63,13 +55,13 @@ impl Component for Console {
     fn create(ctx: &Context<Self>) -> Self {
         let app_ctx_bridge = SharedDataBridge::from(ctx.link(), Msg::SetAppCtx);
 
-        let auth = ctx.use_context(Msg::Auth);
-
         Self {
             _app_ctx_bridge: app_ctx_bridge,
             app_ctx: Default::default(),
 
-            auth,
+            auth: ContextListener::new(ctx),
+            backdropper: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
         }
     }
 
@@ -78,16 +70,14 @@ impl Component for Console {
             Msg::Logout => {
                 ctx.props().on_logout.emit(());
             }
-            Msg::About => BackdropDispatcher::default().open(Backdrop {
+            Msg::About => self.backdropper.open(Backdrop {
                 content: (html! {
                     <AboutModal
                         backend={self.backend(ctx.props())}
                         />
                 }),
             }),
-            Msg::CurrentToken => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
-                Route::from(AppRoute::CurrentToken),
-            )),
+            Msg::CurrentToken => self.router.go(AppRoute::CurrentToken),
             Msg::SetAppCtx(ctx) => {
                 return if self.app_ctx != ctx {
                     self.app_ctx = ctx;
@@ -109,24 +99,24 @@ impl Component for Console {
             <PageSidebar>
                 <Nav>
                     <NavList>
-                        <NavRouterExpandable<AppRoute> title="Home">
+                        <NavExpandable title="Home">
                             <NavRouterItem<AppRoute> to={AppRoute::Overview}>{"Overview"}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Applications(pages::apps::Pages::Index)}>{"Applications"}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Devices(pages::devices::Pages::Index{app})}>{"Devices"}</NavRouterItem<AppRoute>>
-                        </NavRouterExpandable<AppRoute>>
-                        <NavRouterExpandable<AppRoute> title="Getting started">
+                        </NavExpandable>
+                        <NavExpandable title="Getting started">
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Register)}>{Examples::Register.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Consume)}>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Publish)}>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Commands)}>{Examples::Commands.title()}</NavRouterItem<AppRoute>>
-                        </NavRouterExpandable<AppRoute>>
-                        <NavRouterExpandable<AppRoute> title="Tools">
+                        </NavExpandable>
+                        <NavExpandable title="Tools">
                             <NavRouterItem<AppRoute> to={AppRoute::Spy}>{"Spy"}</NavRouterItem<AppRoute>>
-                        </NavRouterExpandable<AppRoute>>
-                        <NavRouterExpandable<AppRoute> title="API">
+                        </NavExpandable>
+                        <NavExpandable title="API">
                             <NavRouterItem<AppRoute> to={AppRoute::AccessTokens}>{"Access tokens"}</NavRouterItem<AppRoute>>
                             <NavItem to="/api" target="_blank">{"API specification"}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAlt}</span></NavItem>
-                        </NavRouterExpandable<AppRoute>>
+                        </NavExpandable>
                     </NavList>
                 </Nav>
             </PageSidebar>
@@ -209,23 +199,23 @@ impl Component for Console {
             let user_toggle = html! (<UserToggle name={full_name.unwrap_or(name)} src={src} />);
             html! (
                 <>
-                <AppLauncher
-                    position={Position::Right}
-                    toggle={Icon::QuestionCircle}
+                    <AppLauncher
+                        position={Position::Right}
+                        toggle={Icon::QuestionCircle}
                     >
-                    <AppLauncherItem external=true href="https://book.drogue.io">{"Documentation"}</AppLauncherItem>
-                    <Divider/>
-                    <AppLauncherItem onclick={ctx.link().callback(|_|Msg::About)}>{"About"}</AppLauncherItem>
-                </AppLauncher>
-                <Dropdown
-                    id="user-dropdown"
-                    plain=true
-                    position={Position::Right}
-                    toggle_style="display: flex;"
-                    toggle={user_toggle}
+                        <AppLauncherItem external=true href="https://book.drogue.io">{"Documentation"}</AppLauncherItem>
+                        <Divider/>
+                        <AppLauncherItem onclick={ctx.link().callback(|_|Msg::About)}>{"About"}</AppLauncherItem>
+                    </AppLauncher>
+                    <Dropdown
+                        id="user-dropdown"
+                        plain=true
+                        position={Position::Right}
+                        toggle_style="display: flex;"
+                        toggle={user_toggle}
                     >
-                {items}
-                </Dropdown>
+                        {items}
+                    </Dropdown>
                 </>
             )
         }];
@@ -239,60 +229,57 @@ impl Component for Console {
         let backend = self.backend(ctx.props());
 
         html! (
-            <Page
-                {logo}
-                {sidebar}
-                tools={Children::new(tools)}
+            <Router<AppRoute>>
+                <Page
+                    {logo}
+                    {sidebar}
+                    tools={Children::new(tools)}
                 >
-                    <Router<AppRoute, ()>
-                            redirect = {Router::redirect(|_|AppRoute::Overview)}
-                            render = {Router::render(move |switch: AppRoute| {
-                                match switch {
-                                    AppRoute::Overview => html!{<pages::Overview
-                                        endpoints={endpoints.clone()}/>},
-                                    AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index
-                                        backend={backend.clone()}
-                                    />},
-                                    AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
-                                        backend={backend.clone()}
-                                        endpoints={endpoints.clone()}
-                                        name={url_decode(&name)}
-                                        details={details}
-                                    />},
-                                    AppRoute::Ownership(id) => html!{<pages::apps::ownership::Ownership
-                                        backend={backend.clone()}
-                                        name={url_decode(&id)}
-                                    />},
-                                    AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
-                                        app={app.to_string()}
-                                        backend={backend.clone()}
-                                    />},
-                                    AppRoute::Devices(pages::devices::Pages::Details{app, name, details}) => html!{<pages::devices::Details
-                                        backend={backend.clone()}
-                                        endpoints={endpoints.clone()}
-                                        app={url_decode(&app.to_string())}
-                                        name={url_decode(&name)}
-                                        details={details}
-                                    />},
-                                    AppRoute::Spy => html!{<Spy
-                                        backend={backend.deref().clone()}
-                                        endpoints={endpoints.clone()}
-                                    />},
-                                    AppRoute::AccessTokens => html!{<pages::AccessTokens
-                                        backend={backend.clone()}
-                                    />},
-                                    AppRoute::CurrentToken => html!{<pages::CurrentToken
-                                    />},
-                                    AppRoute::Examples(example) => html!{
-                                        <examples::ExamplePage
-                                            {example}
-                                            backend={backend.clone()}
-                                            />
-                                    },
-                                }
-                            })}
-                        />
-            </Page>
+                    <RouterSwitch<AppRoute> render = {move |switch| { match switch {
+                        AppRoute::Overview => html!{<pages::Overview
+                            endpoints={endpoints.clone()}
+                        />},
+                        AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index
+                            backend={backend.clone()}
+                        />},
+                        AppRoute::Applications(pages::apps::Pages::Details{name, details}) => html!{<pages::apps::Details
+                            backend={backend.clone()}
+                            endpoints={endpoints.clone()}
+                            name={url_decode(&name)}
+                            details={details}
+                        />},
+                        AppRoute::Ownership(id) => html!{<pages::apps::ownership::Ownership
+                            backend={backend.clone()}
+                            name={url_decode(&id)}
+                        />},
+                        AppRoute::Devices(pages::devices::Pages::Index{app}) => html!{<pages::devices::Index
+                            app={app.to_string()}
+                            backend={backend.clone()}
+                        />},
+                        AppRoute::Devices(pages::devices::Pages::Details{app, name, details}) => html!{<pages::devices::Details
+                            backend={backend.clone()}
+                            endpoints={endpoints.clone()}
+                            app={url_decode(&app.to_string())}
+                            name={url_decode(&name)}
+                            details={details}
+                        />},
+                        AppRoute::Spy => html!{<Spy
+                            backend={backend.deref().clone()}
+                            endpoints={endpoints.clone()}
+                        />},
+                        AppRoute::AccessTokens => html!{<pages::AccessTokens
+                            backend={backend.clone()}
+                        />},
+                        AppRoute::CurrentToken => html!{<pages::CurrentToken/>},
+                        AppRoute::Examples(example) => html!{
+                            <examples::ExamplePage
+                                {example}
+                                backend={backend.clone()}
+                                />
+                        },
+                    }}}/>
+                </Page>
+            </Router<AppRoute>>
         )
     }
 }

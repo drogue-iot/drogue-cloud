@@ -1,6 +1,7 @@
 use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
+use crate::utils::context::ContextListener;
 use crate::{
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
@@ -14,7 +15,7 @@ use drogue_client::registry::v1::Application;
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApplicationEntry {
@@ -77,6 +78,9 @@ pub struct Index {
 
     fetch_task: Option<RequestHandle>,
     paging_options: PagingOptions,
+
+    backdropper: ContextListener<Backdropper>,
+    router: ContextListener<RouterContext<AppRoute>>,
 }
 
 impl Component for Index {
@@ -89,6 +93,8 @@ impl Component for Index {
             entries: Vec::new(),
             fetch_task: None,
             paging_options: PagingOptions::default(),
+            backdropper: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
         }
     }
 
@@ -105,23 +111,21 @@ impl Component for Index {
             Msg::Error(msg) => {
                 msg.toast();
             }
-            Msg::ShowOverview(name) => RouteAgentDispatcher::<()>::new().send(
-                RouteRequest::ChangeRoute(Route::from(AppRoute::Applications(Pages::Details {
-                    name,
-                    details: DetailsSection::Overview,
-                }))),
-            ),
+            Msg::ShowOverview(name) => self.router.go(AppRoute::Applications(Pages::Details {
+                name,
+                details: DetailsSection::Overview,
+            })),
             Msg::Delete(name) => match self.delete(ctx, name) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to delete", err),
             },
-            Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
-                content: (html! {
+            Msg::TriggerModal => self.backdropper.open(Backdrop {
+                content: html! {
                     <CreateDialog
                         backend={ctx.props().backend.clone()}
                         on_close={ctx.link().callback_once(move |_| Msg::Load)}
-                        />
-                }),
+                    />
+                },
             }),
             Msg::SetLimit(limit) => {
                 self.paging_options.limit = limit;

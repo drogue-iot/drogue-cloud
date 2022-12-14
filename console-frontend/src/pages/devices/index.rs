@@ -1,20 +1,21 @@
 use crate::backend::AuthenticatedBackend;
+use crate::utils::context::ContextListener;
 use crate::{
     backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle},
     console::AppRoute,
-    data::{SharedDataDispatcher, SharedDataOps},
     error::{error, ErrorNotification, ErrorNotifier},
     pages::{
         apps::ApplicationContext,
         devices::{CloneDialog, CreateDialog, DetailsSection, Pages},
         HasReadyState,
     },
-    utils::{navigate_to, success, url_encode, PagingOptions},
+    utils::{success, url_encode, PagingOptions},
 };
 use drogue_client::registry::v1::{Application, Device};
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_nested_router::prelude::RouterContext;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeviceEntry {
@@ -70,7 +71,7 @@ pub struct Props {
 pub enum Msg {
     LoadApps,
     Load,
-    Navigate(patternfly_yew::Navigation),
+    Navigate(Navigation),
     SetLimit(u32),
     SetData(Vec<DeviceEntry>),
     SetApps(Vec<String>),
@@ -89,6 +90,8 @@ pub enum Msg {
 
 pub struct Index {
     fetch_task: Option<RequestHandle>,
+    backdropper: ContextListener<Backdropper>,
+    router: ContextListener<RouterContext<AppRoute>>,
 
     entries: Vec<DeviceEntry>,
     app: String,
@@ -107,6 +110,8 @@ impl Component for Index {
         let app = ctx.props().app.clone();
 
         Self {
+            backdropper: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
             entries: Vec::new(),
             fetch_task: None,
             app,
@@ -131,7 +136,7 @@ impl Component for Index {
                     Navigation::First => self.paging_options.first(),
                     Navigation::Previous => self.paging_options.previous(),
                     Navigation::Next => self.paging_options.next(),
-                    //fixme the registry must returns the total number of device for that
+                    // fixme the registry must returns the total number of device for that
                     Navigation::Last => self.paging_options.next(),
                     Navigation::Page(page) => self.paging_options.page(page),
                 };
@@ -165,13 +170,13 @@ impl Component for Index {
                     self.paging_options = PagingOptions::default();
                     let ctx = ApplicationContext::Single(app);
                     SharedDataDispatcher::new().set(ctx.clone());
-                    navigate_to(AppRoute::Devices(Pages::Index { app: ctx }));
+                    self.router.go(AppRoute::Devices(Pages::Index { app: ctx }));
                 }
             }
             Msg::Error(msg) => {
                 msg.toast();
             }
-            Msg::ShowOverview(name) => navigate_to(AppRoute::Devices(Pages::Details {
+            Msg::ShowOverview(name) => self.router.go(AppRoute::Devices(Pages::Details {
                 app: ApplicationContext::Single(self.app.clone()),
                 name,
                 details: DetailsSection::Overview,
@@ -179,7 +184,7 @@ impl Component for Index {
             Msg::AppSearch(value) => {
                 self.app_filter = value;
             }
-            Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
+            Msg::TriggerModal => self.backdropper.open(Backdrop {
                 content: (html! {
                     <CreateDialog
                         backend={ctx.props().backend.clone()}
@@ -196,7 +201,7 @@ impl Component for Index {
                 success("Device deleted");
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::Clone(device) => BackdropDispatcher::default().open(Backdrop {
+            Msg::Clone(device) => self.backdropper.open(Backdrop {
                 content: (html! {
                     <CloneDialog
                         backend={ctx.props().backend.clone()}
@@ -210,7 +215,7 @@ impl Component for Index {
         true
     }
 
-    fn changed(&mut self, ctx: &Context<Self>) -> bool {
+    fn changed(&mut self, ctx: &Context<Self>, _: &Self::Properties) -> bool {
         if self.app != ctx.props().app {
             self.app = ctx.props().app.clone();
             ctx.link().send_message(Msg::Load);

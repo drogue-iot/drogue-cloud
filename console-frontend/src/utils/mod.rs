@@ -1,3 +1,4 @@
+pub mod context;
 mod paging;
 mod shell;
 mod toast;
@@ -13,8 +14,6 @@ pub use yaml::*;
 use web_sys::Node;
 use yew::prelude::*;
 use yew::virtual_dom::VNode;
-use yew_router::agent::RouteRequest;
-use yew_router::prelude::*;
 
 /// Macro to make it easier to use `html!` as value for a property.
 ///
@@ -66,12 +65,4 @@ pub fn url_decode<S: AsRef<str>>(s: S) -> String {
     percent_encoding::percent_decode_str(s.as_ref())
         .decode_utf8_lossy()
         .to_string()
-}
-
-/// Navigate the router to the target.
-pub fn navigate_to<SWITCH>(to: SWITCH)
-where
-    SWITCH: 'static + Switch,
-{
-    RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(to)));
 }

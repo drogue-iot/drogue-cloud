@@ -1,3 +1,4 @@
+use crate::utils::context::ContextListener;
 use crate::{
     backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle},
     error::{error, ErrorNotification, ErrorNotifier},
@@ -8,7 +9,7 @@ use http::{Method, StatusCode};
 use patternfly_yew::*;
 use serde_json::json;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::prelude::*;
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
@@ -25,18 +26,23 @@ pub enum Msg {
 }
 
 pub struct CreateDialog {
-    new_device_name: String,
-
     fetch_task: Option<RequestHandle>,
+
+    backdropper: ContextListener<Backdropper>,
+    router: ContextListener<RouterContext<AppRoute>>,
+
+    new_device_name: String,
 }
 
 impl Component for CreateDialog {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(_: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
+            backdropper: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
             new_device_name: Default::default(),
         }
     }
@@ -44,7 +50,7 @@ impl Component for CreateDialog {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                self.backdropper.close();
                 msg.toast();
             }
             Msg::Create => {
@@ -55,15 +61,13 @@ impl Component for CreateDialog {
             }
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                self.backdropper.close();
                 success("Device successfully created");
-                RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
-                    AppRoute::Devices(Pages::Details {
-                        app: ApplicationContext::Single(ctx.props().app.clone()),
-                        name: self.new_device_name.clone(),
-                        details: DetailsSection::Overview,
-                    }),
-                )))
+                self.router.go(AppRoute::Devices(Pages::Details {
+                    app: ApplicationContext::Single(ctx.props().app.clone()),
+                    name: self.new_device_name.clone(),
+                    details: DetailsSection::Overview,
+                }));
             }
             Msg::NewDeviceName(name) => self.new_device_name = name,
         };

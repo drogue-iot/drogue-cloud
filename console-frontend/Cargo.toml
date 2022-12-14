@@ -29,7 +29,7 @@ log = "0.4"
 md5 = "0.7"
 monaco = { version = "0.3", features = ["yew-components"] }
 once_cell = "1"
-patternfly-yew = "0.2.0"
+patternfly-yew = "0.3.0"
 percent-encoding = "2.1"
 pretty-hex = "0.3"
 reqwest = "0.11"
@@ -41,10 +41,9 @@ unicode-segmentation = "1"
 url = "2"
 uuid = { version = "1", features = ["v4", "js"] }
 wasm-logger = "0.2"
-yew = "0.19"
-yew-agent = "0.1"
-yew-oauth2 = { version = "0.4", features = ["openid", "router"] }
-yew-router = { version = "0.16.1", package = "yew-router-nested" }
+yew = "0.20"
+yew-oauth2 = { version = "0.5", features = ["openid", "router"] }
+yew-nested-router = "0.0.3"
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
@@ -79,7 +78,7 @@ drogue-client = { version = "0.12", default-features = false, features = ["wasm"
 openidconnect = { version = "=2.2.0", default-features = false, features = ["reqwest", "rustls-tls", "rustcrypto"] }
 
 [dev-dependencies]
-env_logger = "0.9"
+env_logger = "0.10"
 
 [features]
 default = []
@@ -93,7 +92,7 @@ lto = true
 
 [patch.crates-io]
 #patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "32c809e030ca9ec5f7785dc7e0a78d574b9830f8" } # FIXME: awaiting release
-#patternfly-yew = { path = "../../patternfly-yew" }
+patternfly-yew = { path = "../../patternfly-yew" }
 
 drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "798c968f0a63a0debcff9965c66b361e85946458" } # FIXME: awaiting release 0.12.0
 #drogue-client = { path = "../../drogue-client" }
@@ -101,11 +100,11 @@ drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "79
 drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "d19ad32f200938aeb5d7081ee3385ee40c5ae0ff" } # FIXME: awaiting release 0.4.0
 #drogue-bazaar = { path = "../../drogue-bazaar" }
 
-#monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
+monaco = { git = "https://github.com/siku2/rust-monaco", rev = "7a4b358196922a67a4950a4f372a9962d0366736" } # FIXME: awaiting release 0.4.0
 #monaco = { path = "../../rust-monaco" }
-#yew-router = { git = "https://github.com/ctron/yew-router", rev="e1012d1bb48dfb1e8e78d84eefddd2b96cd13219" }
+#yew-nested-router = { path = "../../yew-nested-router" }
 
-#yew-oauth2 = { path = "../../yew-oauth2" }
+yew-oauth2 = { path = "../../yew-oauth2" }
 #yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "33984827e2ae790202f38edfcdb1dfac10bc7a90" } # FIXME: awaiting release
 
 openidconnect = { git = "https://github.com/ctron/openidconnect-rs", rev = "6ca4a9ab9de35600c44a8b830693137d4769edf4" } # FIXME: https://github.com/ramosbugs/openidconnect-rs/pull/58

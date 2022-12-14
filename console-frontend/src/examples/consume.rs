@@ -1,16 +1,15 @@
+use crate::console::AppRoute;
+use crate::data::SharedData;
+use crate::utils::context::ContextListener;
 use crate::{
-    data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
     html_prop,
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_nested_router::prelude::RouterContext;
 use yew_oauth2::prelude::*;
-use yew_router::{
-    agent::{RouteAgentDispatcher, RouteRequest},
-    route::Route,
-};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -20,7 +19,8 @@ pub struct Props {
 }
 
 pub struct ConsumeData {
-    data_agent: SharedDataDispatcher<ExampleData>,
+    data_agent: ContextListener<SharedData<ExampleData>>,
+    router: ContextListener<RouterContext<AppRoute>>,
 }
 
 pub enum Msg {
@@ -36,9 +36,10 @@ impl Component for ConsumeData {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(_: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
-            data_agent: SharedDataDispatcher::new(),
+            data_agent: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
         }
     }
 
@@ -61,8 +62,7 @@ impl Component for ConsumeData {
             Self::Message::SetDrgToken(drg_token) => self
                 .data_agent
                 .update(move |data| data.drg_token = drg_token),
-            Self::Message::OpenSpy => RouteAgentDispatcher::<()>::new()
-                .send(RouteRequest::ChangeRoute(Route::new_default_state("/spy"))),
+            Self::Message::OpenSpy => self.router.go(AppRoute::Spy),
         }
         false
     }
