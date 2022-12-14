@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::{auth::DeviceAuthenticator, service::App};
 use drogue_cloud_endpoint_common::{
-    command::{Commands, KafkaCommandSource, CommandAddress, Command},
+    command::{Commands, KafkaCommandSource, CommandAddress, Command, CommandDispatcher},
     psk::Identity,
     sender::DownstreamSender,
     sink::KafkaSink,
@@ -50,20 +50,22 @@ macro_rules! app {
 }
 
 pub async fn command(
-    req: HttpRequest,
+    _req: HttpRequest,
     body: Bytes,
+    commands: State<Commands>,
 ) -> Result<HttpResponse, Error> {
-    println!("{:?}", req);
-    println!("{:?}", body);
     let value: Value = serde_json::from_str(std::str::from_utf8(&body).unwrap())?;
-    println!("{}", value["application"]);
-    let address = CommandAddress::new(value["application"].to_string(), value["device"].to_string(), value["device"].to_string());
+    let command: String = value["command"].as_str().unwrap_or("").to_string();
+    let app = value["application"].as_str().unwrap_or("").to_string();
+    let device = value["device"].as_str().unwrap_or("");
+    let address = CommandAddress::new(app, device.to_string(), device.to_string());
+    let payload = base64::decode(value["payload"].as_str().unwrap_or("")).unwrap();
     let cmd = Command {
         address,
-        command: value["command"].to_string(),
-        payload: Some(Vec::from(value["payload"].to_string().as_bytes())),
+        command,
+        payload: Some(Vec::from(payload)),
     };
-    println!("Command! {:?}", cmd);
+    commands.send(cmd).await;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -165,6 +167,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
 
     let main = server(move|| {
         ntex::web::App::new()
+        .app_state(State::new(commands.clone()))
         .service(resource("/").to(command))
     })
     .bind("127.0.0.1:20001")?

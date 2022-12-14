@@ -211,7 +211,6 @@ impl CommandDispatcher for Commands {
         // TODO: try to reduce cloning
 
         log::debug!("Dispatching command to {:?}", msg.address);
-
         let mut num: usize = 0;
 
         if let Some(senders) = self.devices.lock().await.get(&msg.address) {
