@@ -35,7 +35,10 @@ impl Mux {
     /// Handle a lost Id.
     pub(crate) async fn handle_lost(&mut self, id: Id) {
         if let Some(entry) = self.handles.remove(&id) {
-            entry.tx.send(LostCause::Reported).ok();
+            // we only trigger (once), the remote side has to clean up
+            if let Err(cause) = entry.tx.send(LostCause::Reported) {
+                log::warn!("Failed to notify lost state: {cause}");
+            }
         }
     }
 
@@ -44,7 +47,9 @@ impl Mux {
         let (tx, rx) = channel();
 
         if let Some(old) = self.handles.insert(id, MuxEntry { token, tx }) {
-            old.tx.send(LostCause::NewRegistration).ok();
+            if let Err(cause) = old.tx.send(LostCause::NewRegistration) {
+                log::warn!("Failed to notify lost state (added): {cause}");
+            }
         }
 
         StateWatcher { rx }
@@ -54,7 +59,9 @@ impl Mux {
     async fn deleted(&mut self, id: Id, token: &str) {
         if let Entry::Occupied(entry) = self.handles.entry(id) {
             if entry.get().token == token {
-                entry.remove().tx.send(LostCause::Deleted).ok();
+                if let Err(cause) = entry.remove().tx.send(LostCause::Deleted) {
+                    log::warn!("Failed to notify lost state: {cause}");
+                }
             }
         }
     }
@@ -140,6 +147,8 @@ impl Drop for StateHandle {
                 state
                     .delete(&application, &device, &token, Default::default())
                     .await;
+
+                log::debug!("Deleted state, removing internally");
 
                 mux.lock().await.deleted(id, &token).await;
             });
