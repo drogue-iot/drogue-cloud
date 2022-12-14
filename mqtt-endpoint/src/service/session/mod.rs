@@ -89,7 +89,7 @@ impl Session {
                 let cause = watcher.lost().await;
                 log::info!("Lost device state: {id:?} - cause: {cause:?}");
                 match sink.as_ref() {
-                    Sink::V3(sink) => sink.force_close(),
+                    Sink::V3(sink) => sink.close(),
                     Sink::V5(sink) => sink.close_with_reason(codec::Disconnect {
                         reason_code: DisconnectReasonCode::SessionTakenOver,
                         session_expiry_interval_secs: None,
