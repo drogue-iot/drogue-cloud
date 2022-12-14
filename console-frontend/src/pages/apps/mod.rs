@@ -11,34 +11,28 @@ use crate::console::AppRoute;
 use patternfly_yew::*;
 use std::fmt::Formatter;
 use std::str::FromStr;
-use yew_router::prelude::*;
+use yew_nested_router::prelude::*;
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Target, Debug, Clone, PartialEq, Eq)]
 pub enum Pages {
-    #[to = "/{name}/{*:details}"]
+    // #[to = "/{name}/{*:details}"]
     Details {
         name: String,
         details: DetailsSection,
     },
-    #[to = "/"]
+    #[target(index)]
     Index,
 }
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Target, Debug, Clone, PartialEq, Eq)]
 pub enum DetailsSection {
-    #[to = "integrations"]
     Integrations,
-    #[to = "yaml"]
     Yaml,
-    #[to = "debug"]
     Debug,
-    #[to = "administration"]
     Administration,
-    #[end]
+    #[target(index)]
     Overview,
 }
-
-pub type ApplicationTabs = TabsRouter<AppRoute, DetailsSection>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ApplicationContext {

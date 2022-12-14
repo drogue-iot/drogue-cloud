@@ -1,5 +1,6 @@
+use crate::data::SharedData;
+use crate::utils::context::ContextListener;
 use crate::{
-    data::{SharedDataDispatcher, SharedDataOps},
     examples::{data::ExampleData, note_local_certs},
     html_prop,
     utils::{not_empty, shell_quote, shell_single_quote, url_encode},
@@ -23,7 +24,7 @@ impl UseAuthenticationProperties for Props {
 }
 
 pub struct CommandAndControl {
-    data_agent: SharedDataDispatcher<ExampleData>,
+    data_agent: ContextListener<SharedData<ExampleData>>,
 }
 
 #[derive(Clone, Debug)]
@@ -38,9 +39,9 @@ impl Component for CommandAndControl {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(_: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
-            data_agent: SharedDataDispatcher::new(),
+            data_agent: ContextListener::new(ctx),
         }
     }
 

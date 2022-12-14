@@ -9,11 +9,12 @@ pub use consume::*;
 pub use publish::*;
 pub use register::*;
 
+use crate::data::SharedData;
+use crate::utils::context::ContextListener;
 use crate::{
     backend::{
         ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
     },
-    data::SharedDataBridge,
     examples::data::ExampleData,
 };
 use anyhow::Error;
@@ -23,18 +24,14 @@ use http::Method;
 use patternfly_yew::*;
 use std::rc::Rc;
 use yew::prelude::*;
+use yew_nested_router::prelude::*;
 use yew_oauth2::prelude::*;
-use yew_router::prelude::*;
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Target, Debug, Clone, PartialEq, Eq)]
 pub enum Examples {
-    #[to = "/register"]
     Register,
-    #[to = "/consume"]
     Consume,
-    #[to = "/publish"]
     Publish,
-    #[to = "/commands"]
     Commands,
 }
 
@@ -59,10 +56,9 @@ pub struct ExamplePage {
     ft: Option<RequestHandle>,
     endpoints: Option<Endpoints>,
 
-    data: Option<ExampleData>,
-    _data_agent: SharedDataBridge<ExampleData>,
+    data_agent: ContextWrapper<SharedData<ExampleData>>,
 
-    auth: ContextValue<OAuth2Context>,
+    auth: ContextListener<OAuth2Context>,
 }
 
 #[derive(Clone, Debug)]
@@ -71,8 +67,7 @@ pub enum Msg {
     FetchOverviewFailed,
     OverviewUpdate(Rc<Endpoints>),
 
-    ExampleData(ExampleData),
-    SetAuth(OAuth2Context),
+    ExampleData(SharedData<ExampleData>),
 }
 
 impl Component for ExamplePage {
@@ -80,21 +75,15 @@ impl Component for ExamplePage {
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let mut data_agent = SharedDataBridge::from(ctx.link(), Msg::ExampleData);
-        data_agent.request_state();
-
-        let auth = ctx.use_context(Msg::SetAuth);
+        let mut data_agent = ContextWrapper::with(ctx, Msg::ExampleData);
 
         ctx.link().send_message(Msg::FetchOverview);
 
         Self {
             ft: None,
             endpoints: None,
-
-            data: None,
-            _data_agent: data_agent,
-
-            auth,
+            data_agent,
+            auth: ContextListener::new(ctx),
         }
     }
 
@@ -108,10 +97,7 @@ impl Component for ExamplePage {
                 self.endpoints = Some(e.as_ref().clone());
             }
             Msg::ExampleData(data) => {
-                self.data = Some(data);
-            }
-            Msg::SetAuth(auth) => {
-                self.auth.set(auth);
+                self.data_agent.set(data);
             }
         }
         true
@@ -151,11 +137,11 @@ impl ExamplePage {
     fn render_overview(&self, ctx: &Context<Self>) -> Html {
         match (
             &self.endpoints,
-            &self.data,
+            &self.data_agent,
             self.auth.get().and_then(|auth| auth.authentication()),
         ) {
             (Some(endpoints), Some(data), Some(auth)) => {
-                self.render_main(ctx, endpoints.clone(), data.clone(), auth.clone())
+                self.render_main(ctx, endpoints.clone(), &data, auth.clone())
             }
             _ => html! (
                 <div>{"Loading..."}</div>
@@ -167,7 +153,7 @@ impl ExamplePage {
         &self,
         ctx: &Context<Self>,
         endpoints: Endpoints,
-        data: ExampleData,
+        data: &ExampleData,
         auth: Authentication,
     ) -> Html {
         html! (
@@ -188,27 +174,27 @@ impl ExamplePage {
                                     <RegisterDevices
                                         endpoints={endpoints.clone()}
                                         {data}
-                                        />
+                                    />
                                 },
                                 Examples::Consume => html!{
                                     <ConsumeData
                                         endpoints={endpoints.clone()}
                                         {data}
                                         {auth}
-                                        />
+                                    />
                                 },
                                 Examples::Publish => html!{
                                     <PublishData
                                         endpoints={endpoints.clone()}
                                         {data}
-                                        />
+                                    />
                                 },
                                 Examples::Commands => html!{
                                     <CommandAndControl
                                         endpoints={endpoints.clone()}
                                         {data}
                                         {auth}
-                                        />
+                                    />
                                 },
                             }
                         }
@@ -217,9 +203,7 @@ impl ExamplePage {
                 </GridItem>
 
                 <GridItem cols={[2]}>
-                    <CoreExampleData
-                        endpoints={endpoints}
-                        />
+                    <CoreExampleData endpoints={endpoints} />
                 </GridItem>
 
             </Grid>

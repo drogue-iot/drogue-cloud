@@ -2,6 +2,7 @@ use crate::backend::{
     ApiResponse, AuthenticatedBackend, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
 use crate::error::{ErrorNotification, ErrorNotifier};
+use crate::utils::context::ContextListener;
 use crate::utils::{success, url_encode};
 use crate::{
     console::AppRoute,
@@ -13,7 +14,7 @@ use gloo_timers::callback::Timeout;
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::prelude::*;
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
@@ -32,6 +33,7 @@ pub enum Msg {
 }
 
 pub struct Ownership {
+    router: ContextListener<RouterContext<AppRoute>>,
     fetch_task: Option<RequestHandle>,
     timeout: Option<Timeout>,
 
@@ -46,6 +48,7 @@ impl Component for Ownership {
         ctx.link().send_message(Msg::Load);
 
         Self {
+            router: ContextListener::new(ctx),
             fetch_task: None,
             timeout: None,
             transfer_active: false,
@@ -69,12 +72,10 @@ impl Component for Ownership {
             Msg::Error(msg) => {
                 msg.toast();
             }
-            Msg::Done => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
-                Route::from(AppRoute::Applications(Pages::Details {
-                    name: ctx.props().name.clone(),
-                    details: DetailsSection::Overview,
-                })),
-            )),
+            Msg::Done => self.router.go(AppRoute::Applications(Pages::Details {
+                name: ctx.props().name.clone(),
+                details: DetailsSection::Overview,
+            })),
             Msg::TransferPending(pending) => {
                 self.fetch_task = None;
                 self.transfer_active = pending;
@@ -102,7 +103,7 @@ impl Component for Ownership {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        return html! {
+        html! {
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Card title={html_prop!({"Application ownership transfer"})}>
@@ -129,7 +130,7 @@ impl Component for Ownership {
                     </Card>
                 </PageSection>
             </>
-        };
+        }
     }
 }
 

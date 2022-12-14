@@ -3,8 +3,9 @@ mod debug;
 mod delete;
 mod integrations;
 
-use super::{ApplicationTabs, Pages};
+use super::Pages;
 use crate::backend::AuthenticatedBackend;
+use crate::utils::context::ContextListener;
 use crate::{
     backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle},
     console::AppRoute,
@@ -25,8 +26,8 @@ use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::{ops::Deref, rc::Rc};
-use yew::context::ContextHandle;
 use yew::prelude::*;
+use yew_nested_router::target::Mapper;
 use yew_oauth2::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
@@ -39,7 +40,6 @@ pub struct Props {
 
 #[derive(Debug)]
 pub enum Msg {
-    Auth(OAuth2Context),
     Load,
     Reset,
     SetData(Rc<Application>),
@@ -50,8 +50,8 @@ pub enum Msg {
 }
 
 pub struct Details {
-    auth: Option<OAuth2Context>,
-    _auth_handle: Option<ContextHandle<OAuth2Context>>,
+    auth: ContextListener<OAuth2Context>,
+    backdropper: ContextListener<Backdropper>,
 
     fetch_task: Option<RequestHandle>,
     fetch_role: Option<RequestHandle>,
@@ -68,24 +68,19 @@ impl Component for Details {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.link().send_message(Msg::Load);
 
-        let (auth, auth_handle) = ctx.unzipped(Msg::Auth);
-
         Self {
+            auth: ContextListener::new(ctx),
+            backdropper: ContextListener::new(ctx),
             content: None,
             yaml: None,
             fetch_task: None,
             fetch_role: None,
             is_admin: false,
-            auth,
-            _auth_handle: auth_handle,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
-            Msg::Auth(auth) => {
-                self.auth = Some(auth);
-            }
             Msg::Load => match self.load(ctx) {
                 Ok((task, admin_task)) => {
                     self.fetch_task = Some(task);
@@ -118,14 +113,14 @@ impl Component for Details {
                 self.fetch_role = None;
                 self.is_admin = is_admin;
             }
-            Msg::Delete => BackdropDispatcher::default().open(Backdrop {
-                content: (html! {
+            Msg::Delete => self.backdropper.open(Backdrop {
+                content: html! {
                     <DeleteConfirmation
                         backend={ctx.props().backend.clone()}
                         name={ctx.props().name.clone()}
                         on_close={ctx.link().callback_once(move |_| Msg::Load)}
                         />
-                }),
+                },
             }),
         }
         true
@@ -146,15 +141,15 @@ impl Component for Details {
                                         variant={Variant::DangerSecondary}
                                         onclick={ctx.link().callback(|_|Msg::Delete)}
                                 />
-                                    </FlexItem>
-                                </Flex>
+                            </FlexItem>
+                        </Flex>
                      </Content>
                 </PageSection>
-            if let Some(app) = &self.content {
-                { self.render_content(ctx, app) }
-            } else {
-                <PageSection><Grid></Grid></PageSection>
-            }
+                if let Some(app) = &self.content {
+                    { self.render_content(ctx, app) }
+                } else {
+                    <PageSection><Grid></Grid></PageSection>
+                }
             </>
         )
     }
@@ -231,18 +226,16 @@ impl Details {
 
     fn render_content(&self, ctx: &Context<Self>, app: &Application) -> Html {
         let name = app.metadata.name.clone();
-        let transformer = SwitchTransformer::new(
-            |global| match global {
-                AppRoute::Applications(Pages::Details {
-                    name: _name,
-                    details,
-                }) => Some(details),
+
+        let mapper = Mapper::new(
+            |parent: AppRoute| match parent {
+                AppRoute::Devices(Pages::Details { details, .. }) => Some(details),
                 _ => None,
             },
-            move |local| {
+            |child: DetailsSection| {
                 AppRoute::Applications(Pages::Details {
                     name: name.clone(),
-                    details: local,
+                    details: child,
                 })
             },
         );
@@ -269,11 +262,9 @@ impl Details {
         html! (
             <>
                 <PageSection variant={PageSectionVariant::Light}>
-                    <ApplicationTabs
-                        transformer={transformer}
-                        >
+                    <TabsRouter<DetailsSection>>
                         { tabs }
-                    </ApplicationTabs>
+                    </TabsRouter<DetailsSection>>
                 </PageSection>
                 <PageSection>
                 {

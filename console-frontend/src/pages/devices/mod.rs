@@ -14,28 +14,25 @@ pub use index::*;
 use crate::console::AppRoute;
 use crate::pages::apps::ApplicationContext;
 use patternfly_yew::*;
-use yew_router::prelude::*;
+use yew_nested_router::prelude::*;
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Target, Debug, Clone, PartialEq, Eq)]
 pub enum Pages {
-    #[to = "/{app}/{name}/{*:details}"]
     Details {
         app: ApplicationContext,
         name: String,
+        #[target(nested)]
         details: DetailsSection,
     },
-    #[to = "/{app}/"]
-    Index { app: ApplicationContext },
+    Index {
+        app: ApplicationContext,
+    },
 }
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Target, Debug, Clone, PartialEq, Eq)]
 pub enum DetailsSection {
-    #[to = "yaml"]
     Yaml,
-    #[to = "debug"]
     Debug,
-    #[end]
+    #[target(index)]
     Overview,
 }
-
-pub type DevicesTabs = TabsRouter<AppRoute, DetailsSection>;

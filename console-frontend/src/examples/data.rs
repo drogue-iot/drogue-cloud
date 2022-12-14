@@ -1,4 +1,4 @@
-use crate::data::{self, SharedDataBridge, SharedDataOps};
+use crate::data::SharedData;
 use crate::utils::not_empty;
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
@@ -58,7 +58,7 @@ pub struct Props {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    Data(ExampleData),
+    Data(SharedData<ExampleData>),
     ApplicationId(String),
     DeviceId(String),
     Password(String),
@@ -67,8 +67,7 @@ pub enum Msg {
 }
 
 pub struct CoreExampleData {
-    data: Option<ExampleData>,
-    data_agent: SharedDataBridge<ExampleData>,
+    data_agent: ContextWrapper<SharedData<ExampleData>>,
 }
 
 impl Component for CoreExampleData {
@@ -76,16 +75,9 @@ impl Component for CoreExampleData {
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let data_callback = ctx.link().batch_callback(|output| match output {
-            data::Response::State(data) => vec![Msg::Data(data)],
-        });
-        let mut data_agent = SharedDataBridge::new(data_callback);
-        data_agent.request_state();
+        let data_agent = ContextWrapper::with(ctx, Msg::Data);
 
-        Self {
-            data: None,
-            data_agent,
-        }
+        Self { data_agent }
     }
 
     fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
@@ -97,13 +89,13 @@ impl Component for CoreExampleData {
             Msg::LocalCerts(local_certs) => self
                 .data_agent
                 .update(move |mut data| data.enable_local_cert = local_certs),
-            Msg::Data(data) => self.data = Some(data),
+            Msg::Data(data) => self.data_agent.set(data),
         }
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        match &self.data {
+        match &self.data_agent {
             Some(data) => self.render_view(ctx, data),
             _ => html! {},
         }

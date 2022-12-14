@@ -1,52 +1,47 @@
-use crate::{backend::BackendInformation, console::AppRoute, utils::ToHtml};
+use crate::{
+    backend::BackendInformation,
+    console::AppRoute,
+    utils::{context::ContextListener, ToHtml},
+};
 use patternfly_yew::*;
 use std::collections::HashMap;
 use yew::prelude::*;
-use yew_oauth2::{openid, prelude::*};
-use yew_router::prelude::*;
+use yew_nested_router::prelude::{Switch as RouterSwitch, *};
+use yew_oauth2::{agent::OpenIdClient, openid, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq, Eq)]
 pub struct Props {
     pub info: BackendInformation,
 }
 
-pub struct Placeholder {}
-
-pub enum Msg {
-    Login,
+pub struct Placeholder {
+    agent: ContextListener<context::Agent<OpenIdClient>>,
 }
 
 impl Component for Placeholder {
-    type Message = Msg;
+    type Message = ();
     type Properties = Props;
 
-    fn create(_: &Context<Self>) -> Self {
-        Self {}
-    }
-
-    fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
-        match msg {
-            Msg::Login => {
-                OAuth2Dispatcher::<openid::Client>::new().start_login();
-            }
+    fn create(ctx: &Context<Self>) -> Self {
+        Self {
+            agent: ContextListener::new(ctx),
         }
-        true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
         let login = self.render_login(ctx);
 
         html!(
-            <Router<AppRoute, ()>
-                redirect = {Router::redirect(|_|AppRoute::Overview)}
-                render = {Router::render(move |switch: AppRoute| {
+            <RouterSwitch<AppRoute>
+                default = { login.clone() }
+                render = {move |switch| {
                     match switch {
                         AppRoute::Overview => { login.clone() },
                         _ => {
                             html!(<openid::RouterRedirect<AppRoute> logout={AppRoute::Overview} />)
                         }
                     }
-                })}
+                }}
             />
         )
     }
@@ -147,15 +142,13 @@ impl Placeholder {
                         (
                             None,
                             Some(Callback::from(move |_: MouseEvent| {
-                                OAuth2Dispatcher::<openid::Client>::new().start_login_opts(
-                                    LoginOptions {
-                                        query: {
-                                            let mut q = HashMap::new();
-                                            q.insert("kc_idp_hint".to_string(), id.clone());
-                                            q
-                                        },
+                                let _ = self.agent.start_login_opts(LoginOptions {
+                                    query: {
+                                        let mut q = HashMap::new();
+                                        q.insert("kc_idp_hint".to_string(), id.clone());
+                                        q
                                     },
-                                );
+                                });
                             })),
                         )
                     }

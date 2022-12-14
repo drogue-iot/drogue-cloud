@@ -1,4 +1,5 @@
 use crate::backend::Nothing;
+use crate::utils::context::ContextListener;
 use crate::{
     backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle},
     error::{error, ErrorNotification, ErrorNotifier},
@@ -23,18 +24,21 @@ pub enum Msg {
 }
 
 pub struct AccessTokenCreateModal {
-    description: String,
-
     fetch_task: Option<RequestHandle>,
+
+    backdropper: ContextListener<Backdropper>,
+
+    description: String,
 }
 
 impl Component for AccessTokenCreateModal {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(_: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
+            backdropper: ContextListener::new(ctx),
             description: Default::default(),
         }
     }
@@ -42,7 +46,7 @@ impl Component for AccessTokenCreateModal {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                self.backdropper.close();
                 msg.toast();
             }
             Msg::Create => match self.create(ctx, &self.description) {
@@ -50,7 +54,7 @@ impl Component for AccessTokenCreateModal {
                 Err(err) => error("Failed to create", err),
             },
             Msg::Success(token) => {
-                BackdropDispatcher::default().open(Backdrop {
+                self.backdropper.open(Backdrop {
                     content: (html! {
                         <AccessTokenCreatedSuccessModal
                             token_secret={token.token}

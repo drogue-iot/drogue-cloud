@@ -1,27 +1,25 @@
-use super::{DevicesTabs, Pages};
+use super::Pages;
 use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
-use crate::pages::apps;
 use crate::{
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
     html_prop,
     pages::{
-        apps::ApplicationContext, devices::debug, devices::delete::DeleteConfirmation,
-        devices::CloneDialog, devices::DetailsSection,
+        apps::{self, ApplicationContext},
+        devices::{debug, delete::DeleteConfirmation, CloneDialog, DetailsSection},
     },
-    utils::url_encode,
+    utils::{context::ContextListener, url_encode},
 };
 use drogue_client::registry::v1::Device;
 use drogue_cloud_console_common::EndpointInformation;
 use http::Method;
 use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
-use std::ops::Deref;
-use std::rc::Rc;
+use std::{ops::Deref, rc::Rc};
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -46,6 +44,9 @@ pub enum Msg {
 pub struct Details {
     fetch_task: Option<RequestHandle>,
 
+    backdropper: ContextListener<Backdropper>,
+    router: ContextListener<RouterContext<AppRoute>>,
+
     content: Option<Rc<Device>>,
     yaml: Option<TextModel>,
 }
@@ -58,6 +59,8 @@ impl Component for Details {
         ctx.link().send_message(Msg::Load);
 
         Self {
+            backdropper: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
             content: None,
             yaml: None,
             fetch_task: None,
@@ -91,7 +94,7 @@ impl Component for Details {
                 msg.toast();
                 self.fetch_task = None;
             }
-            Msg::Delete => BackdropDispatcher::default().open(Backdrop {
+            Msg::Delete => self.backdropper.open(Backdrop {
                 content: (html! {
                     <DeleteConfirmation
                         backend={ctx.props().backend.clone()}
@@ -101,7 +104,7 @@ impl Component for Details {
                         />
                 }),
             }),
-            Msg::Clone => BackdropDispatcher::default().open(Backdrop {
+            Msg::Clone => self.backdropper.open(Backdrop {
                 content: (html! {
                     <CloneDialog
                         backend={ctx.props().backend.clone()}
@@ -111,18 +114,16 @@ impl Component for Details {
                         />
                 }),
             }),
-            Msg::ShowApp(app) => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
-                Route::from(AppRoute::Applications(apps::Pages::Details {
-                    name: app,
-                    details: apps::DetailsSection::Overview,
-                })),
-            )),
+            Msg::ShowApp(app) => self.router.go(AppRoute::Applications(apps::Pages::Details {
+                name: app,
+                details: apps::DetailsSection::Overview,
+            })),
         }
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        return html! {
+        html! {
             <>
                 <PageSection variant={PageSectionVariant::Light} limit_width=true>
                     <Content>
@@ -130,31 +131,31 @@ impl Component for Details {
                             <FlexItem>
                                 <Title>{ctx.props().name.clone()}</Title>
                             </FlexItem>
-                                <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
-                                    <Button
-                                            label="Clone"
-                                            disabled={self.content.is_none()}
-                                            variant={Variant::Secondary}
-                                            onclick={ctx.link().callback(|_|Msg::Clone)}
-                                    />
-                                </FlexItem>
-                                <FlexItem>
-                                    <Button
-                                            label="Delete"
-                                            variant={Variant::DangerSecondary}
-                                            onclick={ctx.link().callback(|_|Msg::Delete)}
-                                    />
-                                </FlexItem>
+                            <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
+                                <Button
+                                        label="Clone"
+                                        disabled={self.content.is_none()}
+                                        variant={Variant::Secondary}
+                                        onclick={ctx.link().callback(|_|Msg::Clone)}
+                                />
+                            </FlexItem>
+                            <FlexItem>
+                                <Button
+                                        label="Delete"
+                                        variant={Variant::DangerSecondary}
+                                        onclick={ctx.link().callback(|_|Msg::Delete)}
+                                />
+                            </FlexItem>
                         </Flex>
                     </Content>
                 </PageSection>
-            { if let Some(app) = &self.content {
-                self.render_content(ctx, app)
-            } else {
-                html!{<PageSection><Grid></Grid></PageSection>}
-            } }
+                if let Some(app) = &self.content {
+                    { self.render_content(ctx, app) }
+                } else {
+                    <PageSection><Grid></Grid></PageSection>
+                }
             </>
-        };
+        }
     }
 }
 
@@ -215,47 +216,48 @@ impl Details {
     fn render_content(&self, ctx: &Context<Self>, device: &Device) -> Html {
         let app = device.metadata.application.clone();
         let name = device.metadata.name.clone();
-        let transformer = SwitchTransformer::new(
-            |global| match global {
+
+        let mapper = Mapper::new(
+            |parent: AppRoute| match parent {
                 AppRoute::Devices(Pages::Details { details, .. }) => Some(details),
                 _ => None,
             },
-            move |local| {
+            |child: DetailsSection| {
                 AppRoute::Devices(Pages::Details {
                     app: ApplicationContext::Single(app.clone()),
                     name: name.clone(),
-                    details: local,
+                    details: child,
                 })
             },
         );
 
-        return html! {
+        html! {
             <>
-                <PageSection variant={PageSectionVariant::Light}>
-                    <DevicesTabs
-                        transformer={transformer}
-                        >
-                        <TabRouterItem<DetailsSection> to={DetailsSection::Overview} label="Overview"/>
-                        <TabRouterItem<DetailsSection> to={DetailsSection::Yaml} label="YAML"/>
-                        <TabRouterItem<DetailsSection> to={DetailsSection::Debug} label="Events"/>
-                    </DevicesTabs>
-                </PageSection>
-                <PageSection>
-                {
-                    match ctx.props().details {
-                        DetailsSection::Overview => self.render_overview(ctx, device),
-                        DetailsSection::Yaml => self.render_editor(ctx),
-                        DetailsSection::Debug => self.render_debug(ctx),
+                <Scope<AppRoute,DetailsSection> {mapper}>
+                    <PageSection variant={PageSectionVariant::Light}>
+                        <TabsRouter<DetailsSection>>
+                            <TabRouterItem<DetailsSection> to={DetailsSection::Overview} label="Overview"/>
+                            <TabRouterItem<DetailsSection> to={DetailsSection::Yaml} label="YAML"/>
+                            <TabRouterItem<DetailsSection> to={DetailsSection::Debug} label="Events"/>
+                        </TabsRouter<DetailsSection>>
+                    </PageSection>
+                    <PageSection>
+                    {
+                        match ctx.props().details {
+                            DetailsSection::Overview => self.render_overview(ctx, device),
+                            DetailsSection::Yaml => self.render_editor(ctx),
+                            DetailsSection::Debug => self.render_debug(ctx),
+                        }
                     }
-                }
-                </PageSection>
+                    </PageSection>
+                </Scope<AppRoute,DetailsSection>>
             </>
-        };
+        }
     }
 
     fn render_overview(&self, ctx: &Context<Self>, device: &Device) -> Html {
         let app = device.metadata.application.clone();
-        return html! {
+        html! {
             <Grid gutter=true>
                 <GridItem cols={[3]}>
                     <Card
@@ -282,7 +284,7 @@ impl Details {
                     </Card>
                 </GridItem>
             </Grid>
-        };
+        }
     }
 
     fn render_editor(&self, ctx: &Context<Self>) -> Html {
@@ -293,7 +295,7 @@ impl Details {
 
         let options = Rc::new(options);
 
-        return html! {
+        html! {
             <>
             <Stack>
                 <StackItem fill=true>
@@ -310,7 +312,7 @@ impl Details {
                 </StackItem>
             </Stack>
             </>
-        };
+        }
     }
 
     fn render_debug(&self, ctx: &Context<Self>) -> Html {

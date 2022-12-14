@@ -5,9 +5,10 @@ use crate::utils::success;
 use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::prelude::*;
 
 use crate::backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle};
+use crate::utils::context::ContextListener;
 use serde_json::json;
 
 #[derive(Clone, PartialEq, Properties)]
@@ -27,23 +28,28 @@ pub struct CreateDialog {
     new_app_name: String,
 
     fetch_task: Option<RequestHandle>,
+
+    backdropper: ContextListener<Backdropper>,
+    router: ContextListener<RouterContext<AppRoute>>,
 }
 
 impl Component for CreateDialog {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(_: &Context<Self>) -> Self {
+    fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
             new_app_name: Default::default(),
+            backdropper: ContextListener::new(ctx),
+            router: ContextListener::new(ctx),
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                self.backdropper.close();
                 msg.toast();
             }
             Msg::Create => match self.create(ctx, self.new_app_name.clone()) {
@@ -52,14 +58,12 @@ impl Component for CreateDialog {
             },
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                self.backdropper.close();
                 success("Application successfully created");
-                RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
-                    AppRoute::Applications(Pages::Details {
-                        name: self.new_app_name.clone(),
-                        details: DetailsSection::Overview,
-                    }),
-                )))
+                self.router.go(AppRoute::Applications(Pages::Details {
+                    name: self.new_app_name.clone(),
+                    details: DetailsSection::Overview,
+                }));
             }
             Msg::NewAppName(name) => self.new_app_name = name,
         };

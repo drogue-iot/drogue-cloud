@@ -5,6 +5,7 @@ use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
 use crate::error::{error, ErrorNotification, ErrorNotifier};
+use crate::utils::context::ContextListener;
 use create::AccessTokenCreateModal;
 use drogue_cloud_service_api::token::AccessToken;
 use http::Method;
@@ -63,6 +64,9 @@ pub struct AccessTokens {
     tokens: Vec<AccessTokenEntry>,
 
     fetch_task: Option<RequestHandle>,
+
+    backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
 }
 
 impl Component for AccessTokens {
@@ -74,6 +78,9 @@ impl Component for AccessTokens {
         Self {
             tokens: Vec::new(),
             fetch_task: None,
+
+            backdropper: ContextListener::new(ctx),
+            toaster: ContextListener::new(ctx),
         }
     }
 
@@ -96,7 +103,7 @@ impl Component for AccessTokens {
             },
             Msg::Deleted => {
                 self.fetch_task = None;
-                ToastDispatcher::default().toast(Toast {
+                self.toaster.toast(Toast {
                     title: "Deleted access token".into(),
                     body: html! {<p>{"Access token was successfully deleted."}</p>},
                     r#type: Type::Success,
@@ -104,13 +111,13 @@ impl Component for AccessTokens {
                 });
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::CreateModal => BackdropDispatcher::default().open(Backdrop {
-                content: (html! {
+            Msg::CreateModal => self.backdropper.open(Backdrop {
+                content: html! {
                     <AccessTokenCreateModal
                         backend={ctx.props().backend.clone()}
                         on_close={ctx.link().callback_once(move |_| Msg::Load)}
-                        />
-                }),
+                    />
+                },
             }),
         };
         true
