@@ -87,7 +87,7 @@ pub struct Config {
     pub command_routing: CommandRoutingControllerConfiguration,
 
     #[serde(default)]
-    pub http: HttpConfig,
+    pub command_http: HttpConfig,
 
     pub oauth: AuthenticatorConfig,
 }

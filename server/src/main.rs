@@ -718,8 +718,8 @@ async fn cmd_run(matches: &ArgMatches) -> anyhow::Result<()> {
                     bind_addr: Some(bind_addr_mqtt),
                     ..Default::default()
                 },
-                http: HttpConfig {
-                    bind_addr: "localhost:20001".into(),
+                command_http: HttpConfig {
+                    bind_addr: "localhost:20002".into(),
                     disable_tls: true,
                     workers: Some(1),
                     ..Default::default()

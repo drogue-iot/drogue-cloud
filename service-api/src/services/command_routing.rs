@@ -25,6 +25,12 @@ pub struct CommandRoute {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CommandSession {
+    pub session_url: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LastWillTestament {
     pub channel: String,
     pub payload: Vec<u8>,

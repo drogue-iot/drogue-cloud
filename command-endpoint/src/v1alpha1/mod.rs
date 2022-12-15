@@ -36,8 +36,8 @@ pub async fn command(
     );
 
     // TODO handle response and use proper url
-    let _resp = command_routing_client.get(&app_name, &device_name).await;
-    let builder = client.request(reqwest::Method::POST, "http://localhost:20001");
+    let resp = command_routing_client.get(&app_name, &device_name).await.map_err(|err| HttpEndpointError(err.into()))?;
+    let builder = client.request(reqwest::Method::POST, resp.state.endpoint);
     let content_type = req
         .headers()
         .get(header::CONTENT_TYPE)

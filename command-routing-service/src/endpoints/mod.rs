@@ -4,8 +4,11 @@ use drogue_cloud_service_api::{
     webapp::{web, *},
 };
 
-pub async fn init(service: web::Data<dyn CommandRoutingService>) -> Result<HttpResponse, Error> {
-    let response = service.init().await?;
+pub async fn init(
+        service: web::Data<dyn CommandRoutingService>,
+        body: web::Json<CommandSession>,
+) -> Result<HttpResponse, Error> {
+    let response = service.init(body.0.session_url).await?;
     Ok(HttpResponse::Created().json(response))
 }
 

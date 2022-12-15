@@ -57,11 +57,11 @@ impl HealthChecked for PostgresCommandRoutingService {}
 
 #[async_trait]
 impl CommandRoutingService for PostgresCommandRoutingService {
-    async fn init(&self) -> Result<InitResponse, ServiceError> {
+    async fn init(&self, endpoint: String) -> Result<InitResponse, ServiceError> {
         let c = self.pool.get().await?;
 
         let session = Uuid::new_v4();
-        let url = "http://localhost:10009";
+        let url = endpoint;
         let now = Utc::now();
 
         c.execute(

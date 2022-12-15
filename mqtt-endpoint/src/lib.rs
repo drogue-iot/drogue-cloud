@@ -76,7 +76,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
     // state service
 
     let (states, runner) = StateController::new(config.state.clone()).await?;
-    let (command_router, command_runner) = CommandRoutingController::new(config.command_routing.clone()).await?;
+    let (command_router, command_runner) = CommandRoutingController::new(config.command_routing.clone(), format!("http://{}", config.command_http.bind_addr.clone())).await?;
 
     let app = App {
         config: config.endpoint.clone(),
@@ -154,9 +154,6 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         config.command_source_kafka,
     )?;
 
-    //let service: Arc<dyn CommandDispatcher> = Arc::new(commands.clone());
-    //let service: State<CommandDispatcher> = State::from(commands.clone());
-
     // monitoring
 
     // main server
@@ -170,7 +167,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
         .app_state(State::new(commands.clone()))
         .service(resource("/").to(command))
     })
-    .bind("127.0.0.1:20001")?
+    .bind(config.command_http.bind_addr)?
     .run();
 
     // run

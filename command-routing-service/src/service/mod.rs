@@ -12,7 +12,7 @@ use serde::Deserialize;
 #[async_trait]
 pub trait CommandRoutingService: Send + Sync {
     /// Create a new session.
-    async fn init(&self) -> Result<InitResponse, ServiceError>;
+    async fn init(&self, endpoint: String) -> Result<InitResponse, ServiceError>;
 
     /// Create a new state.
     ///

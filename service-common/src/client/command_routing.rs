@@ -6,7 +6,7 @@ use drogue_client::{
 };
 use drogue_cloud_service_api::services::command_routing::{
     CreateRequest, CreateResponse, DeleteRequest, CommandRoute, InitResponse,
-    PingResponse, CommandRouteResponse,
+    PingResponse, CommandRouteResponse, CommandSession,
 };
 use k8s_openapi::percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use reqwest::{Response, StatusCode};
@@ -74,7 +74,7 @@ impl CommandRoutingClient {
     }
 
     #[instrument(err)]
-    pub async fn init(&self) -> Result<InitResponse, ClientError> {
+    pub async fn init(&self, endpoint: String) -> Result<InitResponse, ClientError> {
         let url = self.url.join("/api/routes/v1alpha1/sessions")?;
 
         let req = self
@@ -82,7 +82,10 @@ impl CommandRoutingClient {
             .put(url)
             .propagate_current_context()
             .inject_token(&self.token_provider)
-            .await?;
+            .await?
+            .json(&CommandSession {
+                session_url: endpoint,
+            });
 
         let response: Response = req
             .send()

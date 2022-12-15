@@ -78,7 +78,7 @@ pub enum CreationOutcome {
 }
 
 impl CommandRoutingController {
-    pub async fn new(config: CommandRoutingControllerConfiguration) -> anyhow::Result<(Self, CommandRoutingRunner)> {
+    pub async fn new(config: CommandRoutingControllerConfiguration, endpoint: String) -> anyhow::Result<(Self, CommandRoutingRunner)> {
         let client = CommandRoutingClient::from_config(config.client).await?;
 
         if let Some(init_delay) = config.init_delay {
@@ -92,7 +92,7 @@ impl CommandRoutingController {
         let InitResponse { session, expires } = {
             let mut attempts = config.retry_init;
             loop {
-                match client.init().await {
+                match client.init(endpoint.clone()).await {
                     Ok(response) => break response,
                     Err(err) => {
                         if attempts > 0 {
@@ -119,7 +119,7 @@ impl CommandRoutingController {
                 mux: mux.clone(),
                 client: client.clone(),
                 session: session.clone(),
-                endpoint: config.endpoint,
+                endpoint,
                 retry_deletes: config.retry_deletes,
                 kill_tx: Arc::new(Mutex::new(Some(kill_tx))),
             },
