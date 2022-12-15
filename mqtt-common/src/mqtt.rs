@@ -128,6 +128,8 @@ pub async fn control_v3<S>(
 where
     S: Session,
 {
+    log::trace!("control(v3): {control:?}");
+
     match control {
         v3::ControlMessage::Error(err) => Ok(err.ack()),
         v3::ControlMessage::ProtocolError(err) => Ok(err.ack()),
@@ -168,6 +170,8 @@ pub async fn control_v5<S>(
 where
     S: Session,
 {
+    log::trace!("control(v5): {control:?}");
+
     match control {
         v5::ControlMessage::Auth(a) => {
             // we don't do extended authentication (yet?)
@@ -218,6 +222,13 @@ impl Sink {
         match self {
             Self::V3(sink) => sink.close(),
             Self::V5(sink) => sink.close(),
+        }
+    }
+
+    pub fn is_open(&self) -> bool {
+        match self {
+            Self::V3(sink) => sink.is_open(),
+            Self::V5(sink) => sink.is_open(),
         }
     }
 }

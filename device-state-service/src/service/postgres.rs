@@ -204,6 +204,8 @@ RETURNING
             )
             .await?;
 
+        log::debug!("Delete result: {row:?}");
+
         if let Some(row) = row {
             self.send_disconnect_from_delete(row, opts).await?;
         }

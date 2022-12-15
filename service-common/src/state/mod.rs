@@ -342,7 +342,7 @@ impl StateRunner {
     }
 
     pub async fn handle_lost(&self, lost_ids: Vec<Id>) -> anyhow::Result<()> {
-        log::debug!("Processing lost IDs: {ids:?}");
+        log::debug!("Processing lost IDs: {lost_ids:?}");
 
         for id in lost_ids {
             self.mux.lock().await.handle_lost(id).await;

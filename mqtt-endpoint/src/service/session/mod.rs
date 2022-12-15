@@ -329,6 +329,8 @@ impl mqtt::Session for Session {
 
         if let Some(mut handle) = self.handle.take() {
             handle.delete(DeleteOptions { skip_lwt }).await;
+        } else {
+            log::info!("No handle found when closing");
         }
 
         for (_, v) in self.inbox_reader.lock().await.drain() {
@@ -341,6 +343,8 @@ impl mqtt::Session for Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
+        log::info!("Dropping session: {:?}", self.id);
+
         if let Some(mut handle) = self.handle.take() {
             log::warn!("Late handling session state deletion");
             ntex_rt::spawn(async move {

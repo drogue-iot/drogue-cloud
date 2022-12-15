@@ -37,7 +37,7 @@ impl Mux {
         if let Some(entry) = self.handles.remove(&id) {
             // we only trigger (once), the remote side has to clean up
             if let Err(cause) = entry.tx.send(LostCause::Reported) {
-                log::warn!("Failed to notify lost state: {cause}");
+                log::warn!("Failed to notify lost state: {cause:?}");
             }
         }
     }
@@ -48,7 +48,7 @@ impl Mux {
 
         if let Some(old) = self.handles.insert(id, MuxEntry { token, tx }) {
             if let Err(cause) = old.tx.send(LostCause::NewRegistration) {
-                log::warn!("Failed to notify lost state (added): {cause}");
+                log::warn!("Failed to notify lost state: {cause:?}");
             }
         }
 
@@ -57,11 +57,15 @@ impl Mux {
 
     /// Mark the handle deleted.
     async fn deleted(&mut self, id: Id, token: &str) {
+        log::debug!("Marking entry as deleted: {id:?} / {token}");
         if let Entry::Occupied(entry) = self.handles.entry(id) {
+            log::debug!("Current token: {}", entry.get().token);
             if entry.get().token == token {
                 if let Err(cause) = entry.remove().tx.send(LostCause::Deleted) {
-                    log::warn!("Failed to notify lost state: {cause}");
+                    log::warn!("Failed to notify lost state: {cause:?}");
                 }
+            } else {
+                log::debug!("Token mismatch: {} != {}", entry.get().token, token);
             }
         }
     }
@@ -105,14 +109,21 @@ pub struct StateHandle {
 }
 
 impl StateHandle {
+    pub fn token(&self) -> String {
+        self.token.clone()
+    }
+
     pub async fn delete(&mut self, opts: DeleteOptions) {
         if self.deleted {
+            log::debug!("State already deleted, skipping");
             return;
         }
 
         self.state
             .delete(&self.application, &self.device, &self.token, opts)
             .await;
+
+        log::debug!("Deleted state, removing internally");
 
         self.mux
             .lock()
@@ -133,6 +144,8 @@ impl StateHandle {
 impl Drop for StateHandle {
     fn drop(&mut self) {
         if !self.deleted {
+            log::debug!("Deleting while dropping");
+
             let state = self.state.clone();
             let application = self.application.clone();
             let device = self.device.clone();
@@ -148,7 +161,7 @@ impl Drop for StateHandle {
                     .delete(&application, &device, &token, Default::default())
                     .await;
 
-                log::debug!("Deleted state, removing internally");
+                log::debug!("Deleted state (while dropping), removing internally");
 
                 mux.lock().await.deleted(id, &token).await;
             });
