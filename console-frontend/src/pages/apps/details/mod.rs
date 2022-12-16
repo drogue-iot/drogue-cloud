@@ -59,6 +59,7 @@ pub struct Details {
 
     content: Option<Rc<Application>>,
     yaml: Option<TextModel>,
+    editor: Rc<CodeEditorOptions>,
     is_admin: bool,
 }
 
@@ -69,6 +70,14 @@ impl Component for Details {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.link().send_message(Msg::Load);
 
+        let editor = Rc::new(
+            CodeEditorOptions::default()
+                .with_scroll_beyond_last_line(false)
+                .with_language("yaml".to_owned())
+                .with_builtin_theme(BuiltinTheme::VsDark)
+                .with_automatic_layout(true),
+        );
+
         Self {
             auth: ContextListener::unwrap(ctx),
             backdropper: ContextListener::unwrap(ctx),
@@ -78,6 +87,7 @@ impl Component for Details {
             fetch_task: None,
             fetch_role: None,
             is_admin: false,
+            editor,
         }
     }
 
@@ -354,21 +364,17 @@ impl Details {
                 backend={ctx.props().backend.deref().clone()}
                 application={application.metadata.name.clone()}
                 endpoints={ctx.props().endpoints.clone()}
-                />
+            />
         )
     }
 
     fn render_editor(&self, ctx: &Context<Self>) -> Html {
-        let options = CodeEditorOptions::default()
-            .with_scroll_beyond_last_line(false)
-            .with_language("yaml".to_owned())
-            .with_builtin_theme(BuiltinTheme::VsDark);
-
+        let classes = classes!("monaco-wrapper");
         html! (
             <>
             <Stack>
                 <StackItem fill=true>
-                    <CodeEditor model={self.yaml.clone()} options={options.to_sys_options()}/>
+                    <CodeEditor {classes} model={self.yaml.clone()} options={self.editor.to_sys_options()}/>
                 </StackItem>
                 <StackItem>
                     <Form>
