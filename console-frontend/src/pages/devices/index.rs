@@ -190,14 +190,12 @@ impl Component for Index {
             Msg::AppSearch(value) => {
                 self.app_filter = value;
             }
-            Msg::TriggerModal => self.backdropper.get().open(Backdrop {
-                content: (html! {
-                    <CreateDialog
-                        backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                        app={self.app.clone()}
-                        />
-                }),
+            Msg::TriggerModal => self.backdropper.get().open(html! {
+                <CreateDialog
+                    backend={ctx.props().backend.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                    app={self.app.clone()}
+                />
             }),
             Msg::Delete(name) => match self.delete(ctx, name) {
                 Ok(task) => self.fetch_task = Some(task),
@@ -207,15 +205,13 @@ impl Component for Index {
                 success(&self.toaster.get(), "Device deleted");
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::Clone(device) => self.backdropper.get().open(Backdrop {
-                content: (html! {
-                    <CloneDialog
-                        backend={ctx.props().backend.clone()}
-                        data={device}
-                        app={ctx.props().app.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                        />
-                }),
+            Msg::Clone(device) => self.backdropper.get().open(html! {
+                <CloneDialog
+                    backend={ctx.props().backend.clone()}
+                    data={ device.clone()}
+                    app={ctx.props().app.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                />
             }),
         };
         true

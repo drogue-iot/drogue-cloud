@@ -91,7 +91,7 @@ opt-level = 's'
 lto = true
 
 [patch.crates-io]
-#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "32c809e030ca9ec5f7785dc7e0a78d574b9830f8" } # FIXME: awaiting release
+#patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "3bafdf75226fa9a42383eaa1b5235f8fffa932f2" } # FIXME: awaiting release
 patternfly-yew = { path = "../../patternfly-yew" }
 
 drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "798c968f0a63a0debcff9965c66b361e85946458" } # FIXME: awaiting release 0.12.0
@@ -102,9 +102,10 @@ drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "d1
 
 monaco = { git = "https://github.com/siku2/rust-monaco", rev = "7a4b358196922a67a4950a4f372a9962d0366736" } # FIXME: awaiting release 0.4.0
 #monaco = { path = "../../rust-monaco" }
-yew-nested-router = { path = "../../yew-nested-router" }
+#yew-nested-router = { path = "../../yew-nested-router" }
+yew-nested-router = { git = "https://github.com/ctron/yew-nested-router", rev = "006bcbea181e0e958d4336e9060e184234b9e7ed" } # FIXME: awaiting release 0.0.4
 
-yew-oauth2 = { path = "../../yew-oauth2" }
-#yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "33984827e2ae790202f38edfcdb1dfac10bc7a90" } # FIXME: awaiting release
+#yew-oauth2 = { path = "../../yew-oauth2" }
+yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "91e2293db66d4aa1763cd4f7277b7e10046435d1" } # FIXME: awaiting release
 
 openidconnect = { git = "https://github.com/ctron/openidconnect-rs", rev = "6ca4a9ab9de35600c44a8b830693137d4769edf4" } # FIXME: https://github.com/ramosbugs/openidconnect-rs/pull/58

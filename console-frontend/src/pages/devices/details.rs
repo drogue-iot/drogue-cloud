@@ -96,25 +96,21 @@ impl Component for Details {
                 msg.toast(&self.toaster.get());
                 self.fetch_task = None;
             }
-            Msg::Delete => self.backdropper.get().open(Backdrop {
-                content: (html! {
-                    <DeleteConfirmation
-                        backend={ctx.props().backend.clone()}
-                        name={ctx.props().name.clone()}
-                        app_name={ctx.props().app.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                        />
-                }),
+            Msg::Delete => self.backdropper.get().open(html! {
+                <DeleteConfirmation
+                    backend={ctx.props().backend.clone()}
+                    name={ctx.props().name.clone()}
+                    app_name={ctx.props().app.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                />
             }),
-            Msg::Clone => self.backdropper.get().open(Backdrop {
-                content: (html! {
-                    <CloneDialog
-                        backend={ctx.props().backend.clone()}
-                        data={self.content.as_ref().unwrap().as_ref().clone()}
-                        app={ctx.props().app.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                        />
-                }),
+            Msg::Clone => self.backdropper.get().open(html! {
+               <CloneDialog
+                    backend={ctx.props().backend.clone()}
+                    data={self.content.as_ref().unwrap().as_ref().clone()}
+                    app={ctx.props().app.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                />
             }),
             Msg::ShowApp(app) => {
                 self.router

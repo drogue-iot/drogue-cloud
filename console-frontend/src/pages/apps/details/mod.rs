@@ -115,14 +115,12 @@ impl Component for Details {
                 self.fetch_role = None;
                 self.is_admin = is_admin;
             }
-            Msg::Delete => self.backdropper.get().open(Backdrop {
-                content: html! {
-                    <DeleteConfirmation
-                        backend={ctx.props().backend.clone()}
-                        name={ctx.props().name.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                        />
-                },
+            Msg::Delete => self.backdropper.get().open(html! {
+                <DeleteConfirmation
+                    backend={ctx.props().backend.clone()}
+                    name={ctx.props().name.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                />
             }),
         }
         true

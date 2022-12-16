@@ -53,7 +53,11 @@ where
     }
 
     pub fn unwrap<COMP: BaseComponent>(ctx: &Context<COMP>) -> Self {
-        Self::new(ctx).unwrap()
+        Self::new(ctx).expect("Unable to find context")
+    }
+
+    pub fn expect<COMP: BaseComponent>(ctx: &Context<COMP>, msg: &str) -> Self {
+        Self::new(ctx).expect(msg)
     }
 
     pub fn get(&self) -> Ref<C> {

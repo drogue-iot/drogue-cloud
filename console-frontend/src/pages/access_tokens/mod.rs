@@ -111,13 +111,11 @@ impl Component for AccessTokens {
                 });
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::CreateModal => self.backdropper.get().open(Backdrop {
-                content: html! {
-                    <AccessTokenCreateModal
-                        backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                    />
-                },
+            Msg::CreateModal => self.backdropper.get().open(html! {
+                <AccessTokenCreateModal
+                    backend={ctx.props().backend.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                />
             }),
         };
         true

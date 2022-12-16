@@ -3635,6 +3635,7 @@ dependencies = [
 [[package]]
 name = "yew-nested-router"
 version = "0.0.3"
+source = "git+https://github.com/ctron/yew-nested-router?rev=006bcbea181e0e958d4336e9060e184234b9e7ed#006bcbea181e0e958d4336e9060e184234b9e7ed"
 dependencies = [
  "gloo-history",
  "gloo-utils",
@@ -3647,6 +3648,7 @@ dependencies = [
 [[package]]
 name = "yew-nested-router-macros"
 version = "0.0.3"
+source = "git+https://github.com/ctron/yew-nested-router?rev=006bcbea181e0e958d4336e9060e184234b9e7ed#006bcbea181e0e958d4336e9060e184234b9e7ed"
 dependencies = [
  "convert_case",
  "darling",
@@ -3658,6 +3660,7 @@ dependencies = [
 [[package]]
 name = "yew-oauth2"
 version = "0.5.0"
+source = "git+https://github.com/ctron/yew-oauth2?rev=91e2293db66d4aa1763cd4f7277b7e10046435d1#91e2293db66d4aa1763cd4f7277b7e10046435d1"
 dependencies = [
  "async-trait",
  "gloo-storage",

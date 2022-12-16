@@ -1,3 +1,4 @@
+use crate::console::AppRoute;
 use crate::{backend::BackendInformation, components::placeholder::Placeholder, console::Console};
 use async_trait::async_trait;
 use drogue_client::error::ErrorInformation;
@@ -11,6 +12,7 @@ use serde::Deserialize;
 use url::Url;
 use wasm_bindgen_futures::spawn_local;
 use yew::{html::IntoPropValue, prelude::*};
+use yew_nested_router::prelude::*;
 use yew_oauth2::{openid::*, prelude::*};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -46,16 +48,23 @@ fn app_main(props: &AppMainProps) -> Html {
 
     html!(
         <>
-            <Authenticated>
-                <Console
-                    backend={info.backend.clone()}
-                    endpoints={info.endpoints.clone()}
-                    on_logout={logout}
-                />
-            </Authenticated>
-            <NotAuthenticated>
-                <Placeholder info={info.backend.clone()} />
-            </NotAuthenticated>
+            <Router<AppRoute> default={AppRoute::Overview}>
+                <ToastViewer>
+                    // The backdrop viewer must be the inner part, being wrapped by all contexts it might use
+                    <BackdropViewer>
+                        <Authenticated>
+                            <Console
+                                backend={info.backend.clone()}
+                                endpoints={info.endpoints.clone()}
+                                on_logout={logout}
+                            />
+                        </Authenticated>
+                        <NotAuthenticated>
+                            <Placeholder info={info.backend.clone()} />
+                        </NotAuthenticated>
+                    </BackdropViewer>
+                </ToastViewer>
+            </Router<AppRoute>>
         </>
     )
 }
@@ -90,40 +99,30 @@ impl Component for Application {
     }
 
     fn view(&self, _: &Context<Self>) -> Html {
-        html! (
-            <>
-                <BackdropViewer>
-                    <ToastViewer>
-
-                {
-                    match &self.login_info {
-                        Some(Ok(info)) => {
-                            html!(
-                                <OAuth2
-                                    config={info}
-                                    >
-                                    <AppMain info={info.clone()}/>
-                                </OAuth2>
-                            )
-                        },
-                        Some(Err(err)) => {
-                            html!(<>
-                                <h1>{ "OAuth2 client error" } </h1>
-                                <div>
-                                    { err }
-                                </div>
-                            </>)
-                        },
-                        None => {
-                            html!()
-                        },
-                    }
-                }
-
-                    </ToastViewer>
-                </BackdropViewer>
-            </>
-        )
+        match &self.login_info {
+            Some(Ok(info)) => {
+                html!(
+                    <OAuth2
+                        config={info}
+                        >
+                        <AppMain info={info.clone()}/>
+                    </OAuth2>
+                )
+            }
+            Some(Err(err)) => {
+                html!(
+                    <>
+                        <h1>{ "OAuth2 client error" } </h1>
+                        <div>
+                            { err }
+                        </div>
+                    </>
+                )
+            }
+            None => {
+                html!()
+            }
+        }
     }
 }
 
