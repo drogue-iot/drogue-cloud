@@ -90,8 +90,8 @@ impl Component for Console {
                     <NavList>
                         <NavExpandable title="Home">
                             <NavRouterItem<AppRoute> to={AppRoute::Overview}>{"Overview"}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to={AppRoute::Applications(pages::apps::Pages::Index)}>{"Applications"}</NavRouterItem<AppRoute>>
-                            <NavRouterItem<AppRoute> to={AppRoute::Devices(pages::devices::Pages::Index{app})}>{"Devices"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Applications(pages::apps::Pages::Index)} predicate={AppRoute::is_applications}>{"Applications"}</NavRouterItem<AppRoute>>
+                            <NavRouterItem<AppRoute> to={AppRoute::Devices(pages::devices::Pages::Index{app})} predicate={AppRoute::is_devices}>{"Devices"}</NavRouterItem<AppRoute>>
                         </NavExpandable>
                         <NavExpandable title="Getting started">
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Register)}>{Examples::Register.title()}</NavRouterItem<AppRoute>>
