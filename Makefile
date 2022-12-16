@@ -13,7 +13,7 @@ all: build test
 CURRENT_DIR ?= $(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 TOP_DIR ?= $(CURRENT_DIR)
 IMAGE_TAG ?= latest
-BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.2.4
+BUILDER_IMAGE ?= ghcr.io/drogue-iot/builder:0.2.5
 
 # Control the build options (release, debug, perf)
 BUILD_PROFILE ?= release
