@@ -1,5 +1,5 @@
 use crate::backend::AuthenticatedBackend;
-use crate::utils::context::ContextListener;
+use crate::utils::context::{ContextListener, MutableContext};
 use crate::{
     backend::{ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle},
     console::AppRoute,
@@ -91,7 +91,9 @@ pub enum Msg {
 pub struct Index {
     fetch_task: Option<RequestHandle>,
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
     router: ContextListener<RouterContext<AppRoute>>,
+    app_ctx: ContextListener<MutableContext<ApplicationContext>>,
 
     entries: Vec<DeviceEntry>,
     app: String,
@@ -110,8 +112,10 @@ impl Component for Index {
         let app = ctx.props().app.clone();
 
         Self {
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
+            app_ctx: ContextListener::unwrap(ctx),
             entries: Vec::new(),
             fetch_task: None,
             app,
@@ -125,11 +129,11 @@ impl Component for Index {
         match msg {
             Msg::LoadApps => match self.load_apps(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to fetch", err),
+                Err(err) => error(&self.toaster.get(), "Failed to fetch", err),
             },
             Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to fetch", err),
+                Err(err) => error(&self.toaster.get(), "Failed to fetch", err),
             },
             Msg::Navigate(opts) => {
                 self.paging_options = match opts {
@@ -169,14 +173,16 @@ impl Component for Index {
                     //reset paging options
                     self.paging_options = PagingOptions::default();
                     let ctx = ApplicationContext::Single(app);
-                    SharedDataDispatcher::new().set(ctx.clone());
-                    self.router.go(AppRoute::Devices(Pages::Index { app: ctx }));
+                    self.app_ctx.get().set(ctx.clone());
+                    self.router
+                        .get()
+                        .push(AppRoute::Devices(Pages::Index { app: ctx }));
                 }
             }
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
             }
-            Msg::ShowOverview(name) => self.router.go(AppRoute::Devices(Pages::Details {
+            Msg::ShowOverview(name) => self.router.get().push(AppRoute::Devices(Pages::Details {
                 app: ApplicationContext::Single(self.app.clone()),
                 name,
                 details: DetailsSection::Overview,
@@ -184,30 +190,30 @@ impl Component for Index {
             Msg::AppSearch(value) => {
                 self.app_filter = value;
             }
-            Msg::TriggerModal => self.backdropper.open(Backdrop {
+            Msg::TriggerModal => self.backdropper.get().open(Backdrop {
                 content: (html! {
                     <CreateDialog
                         backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         app={self.app.clone()}
                         />
                 }),
             }),
             Msg::Delete(name) => match self.delete(ctx, name) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to delete", err),
+                Err(err) => error(&self.toaster.get(), "Failed to delete", err),
             },
             Msg::DeletionComplete => {
-                success("Device deleted");
+                success(&self.toaster.get(), "Device deleted");
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::Clone(device) => self.backdropper.open(Backdrop {
+            Msg::Clone(device) => self.backdropper.get().open(Backdrop {
                 content: (html! {
                     <CloneDialog
                         backend={ctx.props().backend.clone()}
                         data={device}
                         app={ctx.props().app.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
@@ -329,9 +335,10 @@ impl Index {
                             let name = device.metadata.name.clone();
                             let name_copy = device.metadata.name.clone();
                             let device_copy = device.clone();
-                            let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
-                            let on_delete = link.callback_once(move |_| Msg::Delete(name_copy));
-                            let on_clone = link.callback_once(move |_| Msg::Clone(device_copy));
+                            let on_overview =
+                                link.callback(move |_| Msg::ShowOverview(name.clone()));
+                            let on_delete = link.callback(move |_| Msg::Delete(name_copy.clone()));
+                            let on_clone = link.callback(move |_| Msg::Clone(device_copy.clone()));
 
                             DeviceEntry {
                                 device,

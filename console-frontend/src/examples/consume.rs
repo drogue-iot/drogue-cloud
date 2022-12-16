@@ -1,9 +1,9 @@
-use crate::console::AppRoute;
-use crate::data::SharedData;
-use crate::utils::context::ContextListener;
+use crate::utils::context::MutableContext;
 use crate::{
+    console::AppRoute,
     examples::{data::ExampleData, note_local_certs},
     html_prop,
+    utils::context::ContextListener,
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
@@ -19,7 +19,7 @@ pub struct Props {
 }
 
 pub struct ConsumeData {
-    data_agent: ContextListener<SharedData<ExampleData>>,
+    data: ContextListener<MutableContext<ExampleData>>,
     router: ContextListener<RouterContext<AppRoute>>,
 }
 
@@ -38,31 +38,35 @@ impl Component for ConsumeData {
 
     fn create(ctx: &Context<Self>) -> Self {
         Self {
-            data_agent: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            data: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
         }
     }
 
     fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Self::Message::SetBinaryMode(binary_mode) => self
-                .data_agent
+                .data
+                .get()
                 .update(move |data| data.binary_mode = binary_mode),
             Self::Message::SetSharedConsumerMode(shared_consumer_mode) => {
-                self.data_agent
+                self.data
+                    .get()
                     .update(move |data| match shared_consumer_mode {
                         true => data.consumer_group = Some(String::from("group-id")),
                         false => data.consumer_group = None,
                     })
             }
             Self::Message::SetConsumerGroup(group) => {
-                self.data_agent
+                self.data
+                    .get()
                     .update(|data| data.consumer_group = Some(group));
             }
             Self::Message::SetDrgToken(drg_token) => self
-                .data_agent
+                .data
+                .get()
                 .update(move |data| data.drg_token = drg_token),
-            Self::Message::OpenSpy => self.router.go(AppRoute::Spy),
+            Self::Message::OpenSpy => self.router.get().push(AppRoute::Spy),
         }
         false
     }

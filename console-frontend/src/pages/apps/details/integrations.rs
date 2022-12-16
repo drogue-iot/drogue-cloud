@@ -20,7 +20,6 @@ use monaco::{
 };
 use patternfly_yew::*;
 use serde_json::json;
-use std::rc::Rc;
 use wasm_bindgen::JsValue;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
@@ -117,11 +116,9 @@ impl IntegrationDetails<'_> {
             options = options.with_language(language.to_owned());
         }
 
-        let options = Rc::new(options);
-
         if let Ok(model) = model {
             html! {
-                <CodeEditor model={model} options={options} />
+                <CodeEditor model={model} options={options.to_sys_options()} />
             }
         } else {
             html! {

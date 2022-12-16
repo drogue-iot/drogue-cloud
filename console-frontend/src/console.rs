@@ -1,3 +1,4 @@
+use crate::utils::context::MutableContext;
 use crate::{
     backend::{AuthenticatedBackend, BackendInformation},
     components::about::AboutModal,
@@ -7,6 +8,7 @@ use crate::{
 };
 use drogue_cloud_console_common::EndpointInformation;
 use patternfly_yew::*;
+use std::fmt::Debug;
 use std::ops::Deref;
 use yew::prelude::*;
 use yew_nested_router::prelude::{Switch as RouterSwitch, *};
@@ -34,7 +36,7 @@ pub struct Props {
 }
 
 pub struct Console {
-    app_ctx: ApplicationContext,
+    app_ctx: MutableContext<ApplicationContext>,
 
     auth: ContextListener<OAuth2Context>,
     backdropper: ContextListener<Backdropper>,
@@ -45,7 +47,7 @@ pub enum Msg {
     Logout,
     About,
     CurrentToken,
-    SetAppCtx(ApplicationContext),
+    SetAppCtx(Box<dyn FnOnce(&mut ApplicationContext)>),
 }
 
 impl Component for Console {
@@ -53,15 +55,12 @@ impl Component for Console {
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let app_ctx_bridge = SharedDataBridge::from(ctx.link(), Msg::SetAppCtx);
-
         Self {
-            _app_ctx_bridge: app_ctx_bridge,
-            app_ctx: Default::default(),
+            app_ctx: MutableContext::new(Default::default(), ctx.link().callback(Msg::SetAppCtx)),
 
-            auth: ContextListener::new(ctx),
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            auth: ContextListener::unwrap(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
         }
     }
 
@@ -70,31 +69,23 @@ impl Component for Console {
             Msg::Logout => {
                 ctx.props().on_logout.emit(());
             }
-            Msg::About => self.backdropper.open(Backdrop {
+            Msg::About => self.backdropper.get().open(Backdrop {
                 content: (html! {
                     <AboutModal
                         backend={self.backend(ctx.props())}
                         />
                 }),
             }),
-            Msg::CurrentToken => self.router.go(AppRoute::CurrentToken),
-            Msg::SetAppCtx(ctx) => {
-                return if self.app_ctx != ctx {
-                    self.app_ctx = ctx;
-                    true
-                } else {
-                    false
-                };
-            }
-            Msg::Auth(auth) => {
-                self.auth.set(auth);
+            Msg::CurrentToken => self.router.get().push(AppRoute::CurrentToken),
+            Msg::SetAppCtx(mutator) => {
+                return self.app_ctx.apply(mutator);
             }
         }
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let app = self.app_ctx.clone();
+        let app = self.app_ctx.context.clone();
         let sidebar = html_nested! (
             <PageSidebar>
                 <Nav>
@@ -124,7 +115,7 @@ impl Component for Console {
 
         let tools = vec![{
             let (id, name, full_name, account_url, email) =
-                if let Some(claims) = self.auth.as_ref().and_then(|auth| auth.claims()) {
+                if let Some(claims) = self.auth.get().claims() {
                     let id = claims.subject().to_string();
                     let name = claims
                         .preferred_username()
@@ -144,7 +135,13 @@ impl Component for Console {
                         }
                         issuer.to_string()
                     };
-                    (id, name, full_name, Some(account_url), claims.email())
+                    (
+                        id,
+                        name,
+                        full_name,
+                        Some(account_url),
+                        claims.email().cloned(),
+                    )
                 } else {
                     (String::new(), String::new(), None, None, None)
                 };
@@ -222,7 +219,7 @@ impl Component for Console {
 
         let endpoints = ctx.props().endpoints.clone();
 
-        let logo = html_nested! (
+        let logo = html! (
             <Logo src="/images/logo.png" alt="Drogue IoT" />
         );
 
@@ -289,7 +286,8 @@ impl Console {
         props.backend.authenticated(
             self.auth
                 .get()
-                .and_then(|auth| auth.authentication().cloned())
+                .authentication()
+                .cloned()
                 .unwrap_or_default(),
         )
     }

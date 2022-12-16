@@ -43,6 +43,10 @@ impl ToastBuilder {
         });
         self
     }
+
+    pub fn toast(self, toaster: &Toaster) {
+        toaster.toast(self.into())
+    }
 }
 
 impl From<ToastBuilder> for Toast {
@@ -79,10 +83,10 @@ impl ToastMessage for Html {
     }
 }
 
-pub fn success<M: ToastMessage>(body: M) {
+pub fn success<M: ToastMessage>(toaster: &Toaster, body: M) {
     ToastBuilder::success()
         .title("Success")
         .body(body.into_html())
         .timeout(Duration::from_secs(3))
-        .toast();
+        .toast(toaster);
 }

@@ -13,7 +13,7 @@ use wasm_bindgen_futures::spawn_local;
 use yew::{html::IntoPropValue, prelude::*};
 use yew_oauth2::{openid::*, prelude::*};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LoginInformation {
     backend: BackendInformation,
     endpoints: EndpointInformation,
@@ -38,20 +38,20 @@ pub struct AppMainProps {
 fn app_main(props: &AppMainProps) -> Html {
     let agent = use_auth_agent().expect("Must be nested under the OAuth2 component");
 
-    let logout = Callback::from(move |_| agent.logout());
+    let logout = Callback::from(move |()| {
+        let _ = agent.logout();
+    });
 
     let info = &props.info;
 
     html!(
         <>
             <Authenticated>
-                <ContextProvider<SharedData<ExampleData>>>
-                    <Console
-                        backend={info.backend.clone()}
-                        endpoints={info.endpoints.clone()}
-                        on_logout={logout}
-                        />
-                </ContextProvider<SharedData<ExampleData>>>
+                <Console
+                    backend={info.backend.clone()}
+                    endpoints={info.endpoints.clone()}
+                    on_logout={logout}
+                />
             </Authenticated>
             <NotAuthenticated>
                 <Placeholder info={info.backend.clone()} />
@@ -89,7 +89,7 @@ impl Component for Application {
         true
     }
 
-    fn view(&self, ctx: &Context<Self>) -> Html {
+    fn view(&self, _: &Context<Self>) -> Html {
         html! (
             <>
                 <BackdropViewer>
@@ -102,7 +102,7 @@ impl Component for Application {
                                 <OAuth2
                                     config={info}
                                     >
-                                    <AppMain {info}/>
+                                    <AppMain info={info.clone()}/>
                                 </OAuth2>
                             )
                         },

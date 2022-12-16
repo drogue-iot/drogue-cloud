@@ -13,7 +13,6 @@ pub use index::*;
 
 use crate::console::AppRoute;
 use crate::pages::apps::ApplicationContext;
-use patternfly_yew::*;
 use yew_nested_router::prelude::*;
 
 #[derive(Target, Debug, Clone, PartialEq, Eq)]

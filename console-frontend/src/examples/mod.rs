@@ -9,13 +9,13 @@ pub use consume::*;
 pub use publish::*;
 pub use register::*;
 
-use crate::data::SharedData;
-use crate::utils::context::ContextListener;
+use crate::utils::context::MutableContext;
 use crate::{
     backend::{
         ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
     },
     examples::data::ExampleData,
+    utils::context::ContextListener,
 };
 use anyhow::Error;
 use data::CoreExampleData;
@@ -56,18 +56,15 @@ pub struct ExamplePage {
     ft: Option<RequestHandle>,
     endpoints: Option<Endpoints>,
 
-    data_agent: ContextWrapper<SharedData<ExampleData>>,
-
     auth: ContextListener<OAuth2Context>,
+    data: MutableContext<ExampleData>,
 }
 
-#[derive(Clone, Debug)]
 pub enum Msg {
     FetchOverview,
     FetchOverviewFailed,
     OverviewUpdate(Rc<Endpoints>),
-
-    ExampleData(SharedData<ExampleData>),
+    SetExampleData(Box<dyn FnOnce(&mut ExampleData)>),
 }
 
 impl Component for ExamplePage {
@@ -75,15 +72,16 @@ impl Component for ExamplePage {
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let mut data_agent = ContextWrapper::with(ctx, Msg::ExampleData);
-
         ctx.link().send_message(Msg::FetchOverview);
 
         Self {
             ft: None,
             endpoints: None,
-            data_agent,
-            auth: ContextListener::new(ctx),
+            data: MutableContext::new(
+                ExampleData::default(),
+                ctx.link().callback(Msg::SetExampleData),
+            ),
+            auth: ContextListener::unwrap(ctx),
         }
     }
 
@@ -96,24 +94,27 @@ impl Component for ExamplePage {
             Msg::OverviewUpdate(e) => {
                 self.endpoints = Some(e.as_ref().clone());
             }
-            Msg::ExampleData(data) => {
-                self.data_agent.set(data);
+            Msg::SetExampleData(mutator) => {
+                return self.data.apply(mutator);
             }
         }
         true
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        let context = self.data.clone();
         html! (
             <>
-                <PageSection variant={PageSectionVariant::Light} limit_width=true>
-                    <Content>
-                        <h1>{"Getting started"}</h1>
-                    </Content>
-                </PageSection>
-                <PageSection>
-                    { self.render_overview(ctx) }
-                </PageSection>
+                <ContextProvider<MutableContext<ExampleData>> {context}>
+                    <PageSection variant={PageSectionVariant::Light} limit_width=true>
+                        <Content>
+                            <h1>{"Getting started"}</h1>
+                        </Content>
+                    </PageSection>
+                    <PageSection>
+                        { self.render_overview(ctx) }
+                    </PageSection>
+                </ContextProvider<MutableContext<ExampleData>>>
             </>
         )
     }
@@ -135,13 +136,9 @@ impl ExamplePage {
     }
 
     fn render_overview(&self, ctx: &Context<Self>) -> Html {
-        match (
-            &self.endpoints,
-            &self.data_agent,
-            self.auth.get().and_then(|auth| auth.authentication()),
-        ) {
-            (Some(endpoints), Some(data), Some(auth)) => {
-                self.render_main(ctx, endpoints.clone(), &data, auth.clone())
+        match (&self.endpoints, self.auth.get().authentication()) {
+            (Some(endpoints), Some(auth)) => {
+                self.render_main(ctx, endpoints.clone(), &self.data.context, auth.clone())
             }
             _ => html! (
                 <div>{"Loading..."}</div>
@@ -173,26 +170,26 @@ impl ExamplePage {
                                 Examples::Register => html!{
                                     <RegisterDevices
                                         endpoints={endpoints.clone()}
-                                        {data}
+                                        data={data.clone()}
                                     />
                                 },
                                 Examples::Consume => html!{
                                     <ConsumeData
                                         endpoints={endpoints.clone()}
-                                        {data}
+                                        data={data.clone()}
                                         {auth}
                                     />
                                 },
                                 Examples::Publish => html!{
                                     <PublishData
                                         endpoints={endpoints.clone()}
-                                        {data}
+                                        data={data.clone()}
                                     />
                                 },
                                 Examples::Commands => html!{
                                     <CommandAndControl
                                         endpoints={endpoints.clone()}
-                                        {data}
+                                        data={data.clone()}
                                         {auth}
                                     />
                                 },

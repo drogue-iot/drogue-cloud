@@ -5,7 +5,6 @@ mod app;
 mod backend;
 mod components;
 mod console;
-mod data;
 mod error;
 mod examples;
 mod pages;
