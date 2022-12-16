@@ -1,3 +1,4 @@
+use crate::utils::context::ContextListener;
 use crate::{backend::BackendInformation, error::error, utils::not_empty};
 use cloudevents::{
     event::{Data, ExtensionValue},
@@ -36,6 +37,8 @@ pub struct Spy {
     oauth2: Option<OAuth2Context>,
     _oauth2_handle: Option<ContextHandle<OAuth2Context>>,
     events: SharedTableModel<Entry>,
+
+    toaster: ContextListener<Toaster>,
 
     application: String,
     device: String,
@@ -78,6 +81,7 @@ impl Component for Spy {
             _ => (None, None),
         };
         Self {
+            toaster: ContextListener::unwrap(ctx),
             events: Default::default(),
             ws: None,
             oauth2,
@@ -121,10 +125,11 @@ impl Component for Spy {
                 }
             }
             Msg::Error(err) => {
-                error("Failed to process event", err);
+                error(&self.toaster.get(), "Failed to process event", err);
             }
             Msg::Failed(err) => {
                 error(
+                    &self.toaster.get(),
                     "Source error",
                     format!("Connection to the websocket service failed ({err})"),
                 );

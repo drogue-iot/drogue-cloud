@@ -46,12 +46,12 @@ impl<S1: ToString, S2: ToString> From<(S1, S2)> for ErrorNotification {
     }
 }
 
-pub fn error<T, E>(title: T, error: E)
+pub fn error<T, E>(toaster: &Toaster, title: T, error: E)
 where
     T: ToString,
     E: ErrorProvider,
 {
-    ErrorNotification::from((title.to_string(), error.description())).toast();
+    ErrorNotification::from((title.to_string(), error.description())).toast(toaster);
 }
 
 impl ErrorProvider for &str {

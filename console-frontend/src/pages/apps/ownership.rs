@@ -34,6 +34,8 @@ pub enum Msg {
 
 pub struct Ownership {
     router: ContextListener<RouterContext<AppRoute>>,
+    toaster: ContextListener<Toaster>,
+
     fetch_task: Option<RequestHandle>,
     timeout: Option<Timeout>,
 
@@ -48,7 +50,8 @@ impl Component for Ownership {
         ctx.link().send_message(Msg::Load);
 
         Self {
-            router: ContextListener::new(ctx),
+            router: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
             fetch_task: None,
             timeout: None,
             transfer_active: false,
@@ -59,35 +62,42 @@ impl Component for Ownership {
         match msg {
             Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to load transfer state", err),
+                Err(err) => error(&self.toaster.get(), "Failed to load transfer state", err),
             },
             Msg::Accept => match self.accept(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to fetch", err),
+                Err(err) => error(&self.toaster.get(), "Failed to fetch", err),
             },
             Msg::Decline => match self.cancel(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to cancel", err),
+                Err(err) => error(&self.toaster.get(), "Failed to cancel", err),
             },
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
             }
-            Msg::Done => self.router.go(AppRoute::Applications(Pages::Details {
-                name: ctx.props().name.clone(),
-                details: DetailsSection::Overview,
-            })),
+            Msg::Done => self
+                .router
+                .get()
+                .push(AppRoute::Applications(Pages::Details {
+                    name: ctx.props().name.clone(),
+                    details: DetailsSection::Overview,
+                })),
             Msg::TransferPending(pending) => {
                 self.fetch_task = None;
                 self.transfer_active = pending;
                 if !pending {
                     error(
+                        &self.toaster.get(),
                         "Transfer unavailable",
                         "This application transfer is not active. Maybe it was cancelled",
                     );
                 }
             }
             Msg::Success => {
-                success("Ownership transfer completed. You are now the owner of this application.");
+                success(
+                    &self.toaster.get(),
+                    "Ownership transfer completed. You are now the owner of this application.",
+                );
 
                 // Set a timeout before leaving the page.
                 let link = ctx.link().clone();

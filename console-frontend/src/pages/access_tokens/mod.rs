@@ -79,8 +79,8 @@ impl Component for AccessTokens {
             tokens: Vec::new(),
             fetch_task: None,
 
-            backdropper: ContextListener::new(ctx),
-            toaster: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
         }
     }
 
@@ -88,22 +88,22 @@ impl Component for AccessTokens {
         match msg {
             Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to fetch", err),
+                Err(err) => error(&self.toaster.get(), "Failed to fetch", err),
             },
             Msg::SetData(tokens) => {
                 self.tokens = tokens;
                 self.fetch_task = None;
             }
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
             }
             Msg::Delete(token) => match self.delete(ctx, token) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to delete token", err),
+                Err(err) => error(&self.toaster.get(), "Failed to delete token", err),
             },
             Msg::Deleted => {
                 self.fetch_task = None;
-                self.toaster.toast(Toast {
+                self.toaster.get().toast(Toast {
                     title: "Deleted access token".into(),
                     body: html! {<p>{"Access token was successfully deleted."}</p>},
                     r#type: Type::Success,
@@ -111,11 +111,11 @@ impl Component for AccessTokens {
                 });
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::CreateModal => self.backdropper.open(Backdrop {
+            Msg::CreateModal => self.backdropper.get().open(Backdrop {
                 content: html! {
                     <AccessTokenCreateModal
                         backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                     />
                 },
             }),
@@ -180,7 +180,7 @@ impl AccessTokens {
                         .into_iter()
                         .map(move |token| AccessTokenEntry {
                             token: token.clone(),
-                            on_delete: link.clone().callback_once(|_| Msg::Delete(token)),
+                            on_delete: link.clone().callback(move |_| Msg::Delete(token.clone())),
                         })
                         .collect();
                     Msg::SetData(tokens)

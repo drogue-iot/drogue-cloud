@@ -8,7 +8,6 @@ pub use details::*;
 pub use index::*;
 
 use crate::console::AppRoute;
-use patternfly_yew::*;
 use std::fmt::Formatter;
 use std::str::FromStr;
 use yew_nested_router::prelude::*;
@@ -18,6 +17,7 @@ pub enum Pages {
     // #[to = "/{name}/{*:details}"]
     Details {
         name: String,
+        #[target(nested)]
         details: DetailsSection,
     },
     #[target(index)]

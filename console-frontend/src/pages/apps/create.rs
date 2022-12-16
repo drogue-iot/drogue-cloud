@@ -30,6 +30,7 @@ pub struct CreateDialog {
     fetch_task: Option<RequestHandle>,
 
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
     router: ContextListener<RouterContext<AppRoute>>,
 }
 
@@ -41,29 +42,32 @@ impl Component for CreateDialog {
         Self {
             fetch_task: None,
             new_app_name: Default::default(),
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                self.backdropper.close();
-                msg.toast();
+                self.backdropper.get().close();
+                msg.toast(&self.toaster.get());
             }
             Msg::Create => match self.create(ctx, self.new_app_name.clone()) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to create", err),
+                Err(err) => error(&self.toaster.get(), "Failed to create", err),
             },
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                self.backdropper.close();
-                success("Application successfully created");
-                self.router.go(AppRoute::Applications(Pages::Details {
-                    name: self.new_app_name.clone(),
-                    details: DetailsSection::Overview,
-                }));
+                self.backdropper.get().close();
+                success(&self.toaster.get(), "Application successfully created");
+                self.router
+                    .get()
+                    .push(AppRoute::Applications(Pages::Details {
+                        name: self.new_app_name.clone(),
+                        details: DetailsSection::Overview,
+                    }));
             }
             Msg::NewAppName(name) => self.new_app_name = name,
         };
@@ -88,7 +92,7 @@ impl Component for CreateDialog {
                         <Button
                             variant={Variant::Primary}
                             disabled={!is_valid || self.fetch_task.is_some()}
-                            r#type="submit"
+                            r#type={ButtonType::Submit}
                             onclick={ctx.link().callback(|_|Msg::Create)}
                             form="create-form"
                         >

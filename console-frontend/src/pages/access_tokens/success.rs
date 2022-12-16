@@ -21,7 +21,7 @@ pub fn access_token_created_success_modal(props: &Props) -> Html {
                 footer={html!(
                     <Button
                         variant={Variant::Primary}
-                        r#type="submit"
+                        r#type={ButtonType::Submit}
                         onclick={close}
                     >
                         {"Close"}

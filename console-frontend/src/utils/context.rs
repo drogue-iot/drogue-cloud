@@ -1,5 +1,7 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
+use std::fmt::Debug;
 use std::ops::Deref;
+use std::rc::Rc;
 use yew::{BaseComponent, Callback, Context, ContextHandle};
 
 pub struct ContextListener<C>
@@ -15,7 +17,7 @@ struct Inner<C>
 where
     C: Clone + PartialEq + 'static,
 {
-    context: RefCell<C>,
+    context: Rc<RefCell<Option<C>>>,
 }
 
 impl<C> Inner<C>
@@ -23,29 +25,7 @@ where
     C: Clone + PartialEq + 'static,
 {
     fn replace(&self, context: C) {
-        self.context.replace(context);
-    }
-
-    fn get(&self) -> &C {
-        &self.context
-    }
-}
-
-impl<C> ContextListener<Option<C>>
-where
-    C: Clone + PartialEq + 'static,
-{
-    pub fn new<COMP: BaseComponent>(ctx: &Context<COMP>) -> Self {
-        let mut inner = Inner::default();
-        let (context, handle) = ctx.link().context::<C>(Callback::from(|context| {
-            inner.replace(Some(context));
-        }));
-
-        inner.context = context.clone();
-        Self {
-            inner,
-            _handle: handle,
-        }
+        self.context.replace(Some(context));
     }
 }
 
@@ -53,41 +33,70 @@ impl<C> ContextListener<C>
 where
     C: Clone + PartialEq + 'static,
 {
-    pub fn new<COMP: BaseComponent>(ctx: &Context<COMP>) -> Self {
-        let mut inner = Inner::default();
-        let (context, handle) = ctx.link().context::<C>(Callback::from(|context| {
-            inner.replace(context);
-        }));
+    pub fn new<COMP: BaseComponent>(ctx: &Context<COMP>) -> Option<Self> {
+        let context = Rc::new(RefCell::new(None));
+        let inner = Inner::<C> {
+            context: context.clone(),
+        };
 
-        inner.context = context.clone();
-        Self {
-            inner,
-            _handle: handle,
-        }
+        ctx.link()
+            .context::<C>(Callback::from(move |value| {
+                context.deref().replace(Some(value));
+            }))
+            .map(|(context, handle)| {
+                inner.replace(context.clone());
+                Self {
+                    inner,
+                    _handle: handle,
+                }
+            })
+    }
+
+    pub fn unwrap<COMP: BaseComponent>(ctx: &Context<COMP>) -> Self {
+        Self::new(ctx).unwrap()
+    }
+
+    pub fn get(&self) -> Ref<C> {
+        Ref::map(self.inner.context.deref().borrow(), |c| c.as_ref().unwrap())
     }
 }
 
-impl<C> Deref for ContextListener<C>
+#[derive(Clone, Debug, PartialEq)]
+pub struct MutableContext<T>
 where
-    C: Clone + PartialEq + 'static,
+    T: Clone + Debug + PartialEq,
 {
-    type Target = C;
+    pub context: T,
+    setter: Callback<Box<dyn FnOnce(&mut T)>>,
+}
 
-    fn deref(&self) -> &Self::Target {
-        self.inner.get()
+impl<T> MutableContext<T>
+where
+    T: Clone + Debug + PartialEq,
+{
+    pub fn new(context: T, setter: Callback<Box<dyn FnOnce(&mut T)>>) -> Self {
+        Self { context, setter }
+    }
+
+    pub fn update<F>(&self, updater: F)
+    where
+        F: FnOnce(&mut T) + 'static,
+    {
+        self.setter.emit(Box::new(updater));
+    }
+
+    pub fn apply(&mut self, mutator: Box<dyn FnOnce(&mut T)>) -> bool {
+        let old = self.context.clone();
+        mutator(&mut self.context);
+        self.context != old
     }
 }
 
-#[cfg(test)]
-mod test {
-
-    use super::*;
-
-    #[test]
-    fn test() {
-        let inner = Inner::<Option<String>>::default();
-        assert_eq!(inner.get(), &None);
-        inner.replace(Some("foo".to_string()));
-        assert_eq!(inner.get(), &Some("foo".to_string()));
+impl<T> MutableContext<T>
+where
+    T: Clone + Debug + PartialEq + 'static,
+{
+    pub fn set(&self, value: T) {
+        self.update(|v| *v = value);
     }
 }

@@ -27,6 +27,7 @@ pub struct AccessTokenCreateModal {
     fetch_task: Option<RequestHandle>,
 
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
 
     description: String,
 }
@@ -38,7 +39,8 @@ impl Component for AccessTokenCreateModal {
     fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
-            backdropper: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
             description: Default::default(),
         }
     }
@@ -46,15 +48,15 @@ impl Component for AccessTokenCreateModal {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                self.backdropper.close();
-                msg.toast();
+                self.backdropper.get().close();
+                msg.toast(&self.toaster.get());
             }
             Msg::Create => match self.create(ctx, &self.description) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to create", err),
+                Err(err) => error(&self.toaster.get(), "Failed to create", err),
             },
             Msg::Success(token) => {
-                self.backdropper.open(Backdrop {
+                self.backdropper.get().open(Backdrop {
                     content: (html! {
                         <AccessTokenCreatedSuccessModal
                             token_secret={token.token}
@@ -78,7 +80,7 @@ impl Component for AccessTokenCreateModal {
                         <Button
                             variant={Variant::Primary}
                             disabled={self.fetch_task.is_some()}
-                            r#type="submit"
+                            r#type={ButtonType::Submit}
                             onclick={ctx.link().callback(|_|Msg::Create)}
                             form="create-form"
                             id="confirm-create-token"

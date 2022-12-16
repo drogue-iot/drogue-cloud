@@ -102,7 +102,7 @@ drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "d1
 
 monaco = { git = "https://github.com/siku2/rust-monaco", rev = "7a4b358196922a67a4950a4f372a9962d0366736" } # FIXME: awaiting release 0.4.0
 #monaco = { path = "../../rust-monaco" }
-#yew-nested-router = { path = "../../yew-nested-router" }
+yew-nested-router = { path = "../../yew-nested-router" }
 
 yew-oauth2 = { path = "../../yew-oauth2" }
 #yew-oauth2 = { git = "https://github.com/ctron/yew-oauth2", rev = "33984827e2ae790202f38edfcdb1dfac10bc7a90" } # FIXME: awaiting release

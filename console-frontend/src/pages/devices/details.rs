@@ -45,6 +45,7 @@ pub struct Details {
     fetch_task: Option<RequestHandle>,
 
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
     router: ContextListener<RouterContext<AppRoute>>,
 
     content: Option<Rc<Device>>,
@@ -59,8 +60,9 @@ impl Component for Details {
         ctx.link().send_message(Msg::Load);
 
         Self {
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
             content: None,
             yaml: None,
             fetch_task: None,
@@ -71,7 +73,7 @@ impl Component for Details {
         match msg {
             Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to load", err),
+                Err(err) => error(&self.toaster.get(), "Failed to load", err),
             },
             Msg::SetData(content) => {
                 self.content = Some(content);
@@ -86,38 +88,42 @@ impl Component for Details {
                     let new_content = model.get_value();
                     match self.update_yaml(ctx, &new_content) {
                         Ok(task) => self.fetch_task = Some(task),
-                        Err(err) => error("Failed to update", err),
+                        Err(err) => error(&self.toaster.get(), "Failed to update", err),
                     }
                 }
             }
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
                 self.fetch_task = None;
             }
-            Msg::Delete => self.backdropper.open(Backdrop {
+            Msg::Delete => self.backdropper.get().open(Backdrop {
                 content: (html! {
                     <DeleteConfirmation
                         backend={ctx.props().backend.clone()}
                         name={ctx.props().name.clone()}
                         app_name={ctx.props().app.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
-            Msg::Clone => self.backdropper.open(Backdrop {
+            Msg::Clone => self.backdropper.get().open(Backdrop {
                 content: (html! {
                     <CloneDialog
                         backend={ctx.props().backend.clone()}
                         data={self.content.as_ref().unwrap().as_ref().clone()}
                         app={ctx.props().app.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
-            Msg::ShowApp(app) => self.router.go(AppRoute::Applications(apps::Pages::Details {
-                name: app,
-                details: apps::DetailsSection::Overview,
-            })),
+            Msg::ShowApp(app) => {
+                self.router
+                    .get()
+                    .push(AppRoute::Applications(apps::Pages::Details {
+                        name: app,
+                        details: apps::DetailsSection::Overview,
+                    }))
+            }
         }
         true
     }
@@ -217,12 +223,12 @@ impl Details {
         let app = device.metadata.application.clone();
         let name = device.metadata.name.clone();
 
-        let mapper = Mapper::new(
+        let mapper = Mapper::new_callback(
             |parent: AppRoute| match parent {
                 AppRoute::Devices(Pages::Details { details, .. }) => Some(details),
                 _ => None,
             },
-            |child: DetailsSection| {
+            move |child: DetailsSection| {
                 AppRoute::Devices(Pages::Details {
                     app: ApplicationContext::Single(app.clone()),
                     name: name.clone(),
@@ -265,7 +271,7 @@ impl Details {
                     >
                     <DescriptionList>
                         <DescriptionGroup term="Application">
-                            <a onclick={ctx.link().callback_once(move |_| Msg::ShowApp(app))}>
+                            <a onclick={ctx.link().callback(move |_| Msg::ShowApp(app.clone()))}>
                                 {&device.metadata.application}</a>
                         </DescriptionGroup>
                         <DescriptionGroup term="Name">
@@ -293,13 +299,11 @@ impl Details {
             .with_language("yaml".to_owned())
             .with_builtin_theme(BuiltinTheme::VsDark);
 
-        let options = Rc::new(options);
-
         html! {
             <>
             <Stack>
                 <StackItem fill=true>
-                    <CodeEditor model={self.yaml.clone()} options={options} />
+                    <CodeEditor model={self.yaml.clone()} options={options.to_sys_options()} />
                 </StackItem>
                 <StackItem>
                     <Form>

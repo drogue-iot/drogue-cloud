@@ -1,8 +1,8 @@
-use crate::data::SharedData;
-use crate::utils::context::ContextListener;
+use crate::utils::context::MutableContext;
 use crate::{
     examples::{data::ExampleData, note_local_certs},
     html_prop,
+    utils::context::ContextListener,
     utils::{not_empty, shell_quote, shell_single_quote, url_encode},
 };
 use drogue_cloud_service_api::endpoints::Endpoints;
@@ -24,7 +24,7 @@ impl UseAuthenticationProperties for Props {
 }
 
 pub struct CommandAndControl {
-    data_agent: ContextListener<SharedData<ExampleData>>,
+    data: ContextListener<MutableContext<ExampleData>>,
 }
 
 #[derive(Clone, Debug)]
@@ -41,23 +41,26 @@ impl Component for CommandAndControl {
 
     fn create(ctx: &Context<Self>) -> Self {
         Self {
-            data_agent: ContextListener::new(ctx),
+            data: ContextListener::unwrap(ctx),
         }
     }
 
     fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Self::Message::CommandEmptyMessage(cmd_empty_message) => self
-                .data_agent
+                .data
+                .get()
                 .update(move |data| data.cmd_empty_message = cmd_empty_message),
             Self::Message::DrgToken(drg_token) => self
-                .data_agent
+                .data
+                .get()
                 .update(move |data| data.drg_token = drg_token),
             Self::Message::CommandName(name) => {
-                self.data_agent.update(|mut data| data.cmd_name = name)
+                self.data.get().update(|mut data| data.cmd_name = name)
             }
             Self::Message::CommandPayload(payload) => self
-                .data_agent
+                .data
+                .get()
                 .update(|mut data| data.cmd_payload = payload),
         }
         true

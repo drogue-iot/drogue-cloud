@@ -27,7 +27,7 @@ use monaco::{api::*, sys::editor::BuiltinTheme, yew::CodeEditor};
 use patternfly_yew::*;
 use std::{ops::Deref, rc::Rc};
 use yew::prelude::*;
-use yew_nested_router::target::Mapper;
+use yew_nested_router::{target::Mapper, Scope};
 use yew_oauth2::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
@@ -52,6 +52,7 @@ pub enum Msg {
 pub struct Details {
     auth: ContextListener<OAuth2Context>,
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
 
     fetch_task: Option<RequestHandle>,
     fetch_role: Option<RequestHandle>,
@@ -69,8 +70,9 @@ impl Component for Details {
         ctx.link().send_message(Msg::Load);
 
         Self {
-            auth: ContextListener::new(ctx),
-            backdropper: ContextListener::new(ctx),
+            auth: ContextListener::unwrap(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
             content: None,
             yaml: None,
             fetch_task: None,
@@ -86,7 +88,7 @@ impl Component for Details {
                     self.fetch_task = Some(task);
                     self.fetch_role = Some(admin_task);
                 }
-                Err(err) => error("Failed to load", err),
+                Err(err) => error(&self.toaster.get(), "Failed to load", err),
             },
             Msg::SetData(content) => {
                 self.content = Some(content);
@@ -101,24 +103,24 @@ impl Component for Details {
                     let new_content = model.get_value();
                     match self.update_yaml(ctx, &new_content) {
                         Ok(task) => self.fetch_task = Some(task),
-                        Err(err) => error("Failed to update", err),
+                        Err(err) => error(&self.toaster.get(), "Failed to update", err),
                     }
                 }
             }
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
                 self.fetch_task = None;
             }
             Msg::SetAdmin(is_admin) => {
                 self.fetch_role = None;
                 self.is_admin = is_admin;
             }
-            Msg::Delete => self.backdropper.open(Backdrop {
+            Msg::Delete => self.backdropper.get().open(Backdrop {
                 content: html! {
                     <DeleteConfirmation
                         backend={ctx.props().backend.clone()}
                         name={ctx.props().name.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 },
             }),
@@ -227,12 +229,12 @@ impl Details {
     fn render_content(&self, ctx: &Context<Self>, app: &Application) -> Html {
         let name = app.metadata.name.clone();
 
-        let mapper = Mapper::new(
+        let mapper = Mapper::new_callback(
             |parent: AppRoute| match parent {
-                AppRoute::Devices(Pages::Details { details, .. }) => Some(details),
+                AppRoute::Applications(Pages::Details { details, .. }) => Some(details),
                 _ => None,
             },
-            |child: DetailsSection| {
+            move |child: DetailsSection| {
                 AppRoute::Applications(Pages::Details {
                     name: name.clone(),
                     details: child,
@@ -261,22 +263,24 @@ impl Details {
 
         html! (
             <>
-                <PageSection variant={PageSectionVariant::Light}>
-                    <TabsRouter<DetailsSection>>
-                        { tabs }
-                    </TabsRouter<DetailsSection>>
-                </PageSection>
-                <PageSection>
-                {
-                    match ctx.props().details {
-                        DetailsSection::Overview => self.render_overview(app),
-                        DetailsSection::Integrations => self.render_integrations(ctx, app),
-                        DetailsSection::Yaml => self.render_editor(ctx),
-                        DetailsSection::Debug => self.render_debug(ctx, app),
-                        DetailsSection::Administration => self.render_admin(ctx, ),
+                <Scope<AppRoute, DetailsSection> {mapper}>
+                    <PageSection variant={PageSectionVariant::Light}>
+                        <TabsRouter<DetailsSection>>
+                            { tabs }
+                        </TabsRouter<DetailsSection>>
+                    </PageSection>
+                    <PageSection>
+                    {
+                        match ctx.props().details {
+                            DetailsSection::Overview => self.render_overview(app),
+                            DetailsSection::Integrations => self.render_integrations(ctx, app),
+                            DetailsSection::Yaml => self.render_editor(ctx),
+                            DetailsSection::Debug => self.render_debug(ctx, app),
+                            DetailsSection::Administration => self.render_admin(ctx, ),
+                        }
                     }
-                }
-                </PageSection>
+                    </PageSection>
+                </Scope<AppRoute,DetailsSection>>
             </>
         )
     }
@@ -332,13 +336,9 @@ impl Details {
     }
 
     fn render_integrations(&self, ctx: &Context<Self>, application: &Application) -> Html {
-        let token = self
-            .auth
-            .as_ref()
-            .and_then(|auth| auth.access_token())
-            .unwrap_or("<token>");
-
-        let claims = self.auth.as_ref().and_then(|auth| auth.claims());
+        let auth = self.auth.get();
+        let token = auth.access_token().unwrap_or("<token>");
+        let claims = auth.claims();
 
         IntegrationDetails {
             backend: &ctx.props().backend,
@@ -366,13 +366,11 @@ impl Details {
             .with_language("yaml".to_owned())
             .with_builtin_theme(BuiltinTheme::VsDark);
 
-        let options = Rc::new(options);
-
         html! (
             <>
             <Stack>
                 <StackItem fill=true>
-                    <CodeEditor model={self.yaml.clone()} options={options}/>
+                    <CodeEditor model={self.yaml.clone()} options={options.to_sys_options()}/>
                 </StackItem>
                 <StackItem>
                     <Form>

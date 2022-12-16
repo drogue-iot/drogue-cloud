@@ -6,7 +6,7 @@ use crate::{
 use patternfly_yew::*;
 use std::collections::HashMap;
 use yew::prelude::*;
-use yew_nested_router::prelude::{Switch as RouterSwitch, *};
+use yew_nested_router::prelude::Switch as RouterSwitch;
 use yew_oauth2::{agent::OpenIdClient, openid, prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq, Eq)]
@@ -18,14 +18,27 @@ pub struct Placeholder {
     agent: ContextListener<context::Agent<OpenIdClient>>,
 }
 
+pub enum Msg {
+    Login(LoginOptions),
+}
+
 impl Component for Placeholder {
-    type Message = ();
+    type Message = Msg;
     type Properties = Props;
 
     fn create(ctx: &Context<Self>) -> Self {
         Self {
-            agent: ContextListener::new(ctx),
+            agent: ContextListener::unwrap(ctx),
         }
+    }
+
+    fn update(&mut self, _: &Context<Self>, msg: Self::Message) -> bool {
+        match msg {
+            Msg::Login(opts) => {
+                let _ = self.agent.get().start_login_opts(opts);
+            }
+        }
+        false
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
@@ -70,7 +83,7 @@ impl Placeholder {
             .map(|note| note.to_html())
             .unwrap_or_else(Self::default_login_note);
 
-        let onclick = ctx.link().callback(|_| Msg::Login);
+        let onclick = ctx.link().callback(|_| Msg::Login(Default::default()));
         let title = html_nested! {<Title size={Size::XXLarge}>{"Login to the console"}</Title>};
 
         html! (
@@ -139,18 +152,16 @@ impl Placeholder {
                     Some(href) => (Some(href.clone()), None),
                     None => {
                         let id = idp.id.clone();
-                        (
-                            None,
-                            Some(Callback::from(move |_: MouseEvent| {
-                                let _ = self.agent.start_login_opts(LoginOptions {
-                                    query: {
-                                        let mut q = HashMap::new();
-                                        q.insert("kc_idp_hint".to_string(), id.clone());
-                                        q
-                                    },
-                                });
-                            })),
-                        )
+                        let onclick = ctx.link().callback(move |_| {
+                            Msg::Login(LoginOptions {
+                                query: {
+                                    let mut q = HashMap::new();
+                                    q.insert("kc_idp_hint".to_string(), id.clone());
+                                    q
+                                },
+                            })
+                        });
+                        (None, Some(onclick))
                     }
                 };
 

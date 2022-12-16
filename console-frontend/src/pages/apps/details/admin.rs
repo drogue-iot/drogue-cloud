@@ -1,5 +1,6 @@
 use crate::backend::{ApiError, ApiResponse, Json, JsonHandlerScopeExt, Nothing, RequestHandle};
 use crate::html_prop;
+use crate::utils::context::ContextListener;
 use crate::utils::{success, ToastBuilder};
 use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
@@ -16,6 +17,7 @@ use yew::{prelude::*, Html};
 
 pub struct Admin {
     fetch: Option<RequestHandle>,
+    toaster: ContextListener<Toaster>,
 
     members: Option<Users>,
     new_member_id: String,
@@ -103,6 +105,7 @@ impl Component for Admin {
 
         Self {
             fetch: None,
+            toaster: ContextListener::unwrap(ctx),
             members: None,
             new_member_id: Default::default(),
             new_member_role: Role::Reader,
@@ -120,7 +123,7 @@ impl Component for Admin {
                     self.fetch = Some(members);
                     self.transfer_fetch = Some(transfer);
                 }
-                Err(err) => error("Failed to load", err),
+                Err(err) => error(&self.toaster.get(), "Failed to load", err),
             },
             Msg::SetMembers(members) => {
                 self.members = Some(Users::from(members, ctx.props().name.clone(), ctx.link()));
@@ -130,11 +133,11 @@ impl Component for Admin {
                 let (id, entry) = (&self.new_member_id, &self.new_member_role);
                 if let Some(m) = self.members.as_mut() {
                     if let Err(e) = m.add(id.clone(), *entry, ctx.link()) {
-                        error("Failed to add user", e);
+                        error(&self.toaster.get(), "Failed to add user", e);
                     } else {
                         match self.submit(ctx) {
                             Ok(task) => self.fetch = Some(task),
-                            Err(err) => error("Failed to update", err),
+                            Err(err) => error(&self.toaster.get(), "Failed to update", err),
                         }
                     }
                 }
@@ -144,7 +147,7 @@ impl Component for Admin {
                     m.delete(id);
                     match self.submit(ctx) {
                         Ok(task) => self.fetch = Some(task),
-                        Err(err) => error("Failed to update", err),
+                        Err(err) => error(&self.toaster.get(), "Failed to update", err),
                     }
                 }
             }
@@ -155,7 +158,7 @@ impl Component for Admin {
             Msg::NewOwner(id) => self.new_owner = id,
             Msg::TransferOwner => match self.transfer(ctx) {
                 Ok(task) => self.fetch = Some(task),
-                Err(err) => error("Failed to transfer app", err),
+                Err(err) => error(&self.toaster.get(), "Failed to transfer app", err),
             },
             Msg::TransferPending(transfer) => {
                 self.transfer_fetch = None;
@@ -172,10 +175,10 @@ impl Component for Admin {
             }
             Msg::CancelTransfer => match self.cancel_transfer(ctx) {
                 Ok(task) => self.transfer_fetch = Some(task),
-                Err(err) => error("Failed to cancel", err),
+                Err(err) => error(&self.toaster.get(), "Failed to cancel", err),
             },
             Msg::Error(err) => {
-                err.toast();
+                err.toast(&self.toaster.get());
                 self.reset(ctx);
             }
             Msg::Reset => {
@@ -184,14 +187,14 @@ impl Component for Admin {
             Msg::Stop(err) => {
                 self.stop = true;
                 if let Some(err) = err {
-                    err.toast();
+                    err.toast(&self.toaster.get());
                 }
             }
         }
         true
     }
 
-    fn changed(&mut self, _: &Context<Self>) -> bool {
+    fn changed(&mut self, _: &Context<Self>, _: &Self::Properties) -> bool {
         !self.stop
     }
 
@@ -322,6 +325,7 @@ impl Admin {
 
     fn submit(&self, ctx: &Context<Self>) -> Result<RequestHandle, anyhow::Error> {
         if let Some(m) = &self.members {
+            let toaster = self.toaster.get().clone();
             let members = m.serialize();
             Ok(ctx.props().backend.request(
                 Method::PUT,
@@ -334,7 +338,7 @@ impl Admin {
                 vec![],
                 ctx.callback_api::<(), _>(move |response| match response {
                     ApiResponse::Success(_, StatusCode::NO_CONTENT) => {
-                        success("Application members saved.");
+                        success(&toaster, "Application members saved.");
                         Msg::LoadMembers
                     }
                     ApiResponse::Success(_, code) => Msg::Error(
@@ -365,6 +369,8 @@ impl Admin {
             .map(|console| format!("{}/transfer/{}", console, url_encode(&ctx.props().name)))
             .unwrap_or_else(|| "Error while creating the link".into());
 
+        let toaster = self.toaster.get().clone();
+
         Ok(ctx.props().backend.request(
             Method::PUT,
             format!(
@@ -386,7 +392,10 @@ impl Admin {
                             </p>
                         </Content>
                     };
-                    ToastBuilder::success().title("Success").body(body).toast();
+                    ToastBuilder::success()
+                        .title("Success")
+                        .body(body)
+                        .toast(&toaster);
                     Msg::Reset
                 }
                 ApiResponse::Success(_, code) => {

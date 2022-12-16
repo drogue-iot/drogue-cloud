@@ -2,6 +2,7 @@ use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
 use crate::error::{error, ErrorNotification, ErrorNotifier};
+use crate::utils::context::ContextListener;
 use drogue_cloud_service_api::version::Version;
 use http::Method;
 use patternfly_yew::*;
@@ -19,6 +20,7 @@ pub enum Msg {
 }
 
 pub struct AboutModal {
+    toaster: ContextListener<Toaster>,
     info: Option<Version>,
     task: Option<RequestHandle>,
 }
@@ -30,6 +32,7 @@ impl Component for AboutModal {
     fn create(ctx: &Context<Self>) -> Self {
         ctx.link().send_message(Msg::FetchInfo);
         Self {
+            toaster: ContextListener::unwrap(ctx),
             info: None,
             task: None,
         }
@@ -39,11 +42,11 @@ impl Component for AboutModal {
         match msg {
             Msg::FetchInfo => match self.fetch_info(ctx) {
                 Ok(task) => self.task = Some(task),
-                Err(err) => error("Failed to fetch information", err),
+                Err(err) => error(&self.toaster.get(), "Failed to fetch information", err),
             },
             Msg::Info(info) => self.info = Some(info),
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
             }
         }
         true

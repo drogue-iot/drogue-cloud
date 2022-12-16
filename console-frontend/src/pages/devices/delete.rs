@@ -32,6 +32,7 @@ pub enum Msg {
 pub struct DeleteConfirmation {
     fetch_task: Option<RequestHandle>,
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
     router: ContextListener<RouterContext<AppRoute>>,
 }
 
@@ -42,32 +43,33 @@ impl Component for DeleteConfirmation {
     fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                self.backdropper.close();
-                msg.toast();
+                self.backdropper.get().close();
+                msg.toast(&self.toaster.get());
             }
             Msg::Delete => match self.delete(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to Delete", err),
+                Err(err) => error(&self.toaster.get(), "Failed to Delete", err),
             },
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                self.backdropper.close();
-                success("Device deleted");
-                self.router.go(AppRoute::Devices(Pages::Index {
+                self.backdropper.get().close();
+                success(&self.toaster.get(), "Device deleted");
+                self.router.get().push(AppRoute::Devices(Pages::Index {
                     app: ApplicationContext::Single(ctx.props().app_name.clone()),
                 }));
             }
             Msg::Cancel => {
                 ctx.props().on_close.emit(());
-                self.backdropper.close();
+                self.backdropper.get().close();
             }
         };
         true

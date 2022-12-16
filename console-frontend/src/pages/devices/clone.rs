@@ -30,6 +30,7 @@ pub struct CloneDialog {
     fetch_task: Option<RequestHandle>,
 
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
     router: ContextListener<RouterContext<AppRoute>>,
 
     new_device_name: String,
@@ -42,8 +43,9 @@ impl Component for CloneDialog {
     fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
             new_device_name: Default::default(),
         }
     }
@@ -51,20 +53,20 @@ impl Component for CloneDialog {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                self.backdropper.close();
-                msg.toast();
+                self.backdropper.get().close();
+                msg.toast(&self.toaster.get());
             }
             Msg::Create => {
                 match self.create(ctx, self.new_device_name.clone(), ctx.props().app.clone()) {
                     Ok(task) => self.fetch_task = Some(task),
-                    Err(err) => error("Failed to create", err),
+                    Err(err) => error(&self.toaster.get(), "Failed to create", err),
                 }
             }
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                self.backdropper.close();
-                success("Device cloned");
-                self.router.go(AppRoute::Devices(Pages::Details {
+                self.backdropper.get().close();
+                success(&self.toaster.get(), "Device cloned");
+                self.router.get().push(AppRoute::Devices(Pages::Details {
                     app: ApplicationContext::Single(ctx.props().app.clone()),
                     name: self.new_device_name.clone(),
                     details: DetailsSection::Overview,
@@ -91,7 +93,7 @@ impl Component for CloneDialog {
                         <Button
                             variant={Variant::Primary}
                             disabled={!is_valid || self.fetch_task.is_some()}
-                            r#type="submit"
+                            r#type={ButtonType::Submit}
                             onclick={ctx.link().callback(|_|Msg::Create)}
                             form="create-form"
                         >

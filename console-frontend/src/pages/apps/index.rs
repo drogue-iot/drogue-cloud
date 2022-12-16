@@ -80,6 +80,7 @@ pub struct Index {
     paging_options: PagingOptions,
 
     backdropper: ContextListener<Backdropper>,
+    toaster: ContextListener<Toaster>,
     router: ContextListener<RouterContext<AppRoute>>,
 }
 
@@ -93,8 +94,9 @@ impl Component for Index {
             entries: Vec::new(),
             fetch_task: None,
             paging_options: PagingOptions::default(),
-            backdropper: ContextListener::new(ctx),
-            router: ContextListener::new(ctx),
+            backdropper: ContextListener::unwrap(ctx),
+            toaster: ContextListener::unwrap(ctx),
+            router: ContextListener::unwrap(ctx),
         }
     }
 
@@ -102,28 +104,32 @@ impl Component for Index {
         match msg {
             Msg::Load => match self.load(ctx) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to fetch", err),
+                Err(err) => error(&self.toaster.get(), "Failed to fetch", err),
             },
             Msg::SetData(keys) => {
                 self.entries = keys;
                 self.fetch_task = None;
             }
             Msg::Error(msg) => {
-                msg.toast();
+                msg.toast(&self.toaster.get());
             }
-            Msg::ShowOverview(name) => self.router.go(AppRoute::Applications(Pages::Details {
-                name,
-                details: DetailsSection::Overview,
-            })),
+            Msg::ShowOverview(name) => {
+                self.router
+                    .get()
+                    .push(AppRoute::Applications(Pages::Details {
+                        name,
+                        details: DetailsSection::Overview,
+                    }))
+            }
             Msg::Delete(name) => match self.delete(ctx, name) {
                 Ok(task) => self.fetch_task = Some(task),
-                Err(err) => error("Failed to delete", err),
+                Err(err) => error(&self.toaster.get(), "Failed to delete", err),
             },
-            Msg::TriggerModal => self.backdropper.open(Backdrop {
+            Msg::TriggerModal => self.backdropper.get().open(Backdrop {
                 content: html! {
                     <CreateDialog
                         backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                     />
                 },
             }),
@@ -143,7 +149,7 @@ impl Component for Index {
                 ctx.link().send_message(Msg::Load);
             }
             Msg::DeletionComplete => {
-                success("Application deleted");
+                success(&self.toaster.get(), "Application deleted");
                 ctx.link().send_message(Msg::Load);
             }
         };
@@ -225,12 +231,13 @@ impl Index {
                             let name = app.metadata.name.clone();
                             let name_copy = app.metadata.name.clone();
 
-                            let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
+                            let on_overview =
+                                link.callback(move |_| Msg::ShowOverview(name.clone()));
 
                             ApplicationEntry {
                                 app,
                                 on_overview,
-                                on_delete: link.callback_once(move |_| Msg::Delete(name_copy)),
+                                on_delete: link.callback(move |_| Msg::Delete(name_copy.clone())),
                             }
                         })
                         .collect();
