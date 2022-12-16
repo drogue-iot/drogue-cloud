@@ -69,12 +69,10 @@ impl Component for Console {
             Msg::Logout => {
                 ctx.props().on_logout.emit(());
             }
-            Msg::About => self.backdropper.get().open(Backdrop {
-                content: (html! {
-                    <AboutModal
-                        backend={self.backend(ctx.props())}
-                        />
-                }),
+            Msg::About => self.backdropper.get().open(html! {
+                <AboutModal
+                    backend={self.backend(ctx.props())}
+                />
             }),
             Msg::CurrentToken => self.router.get().push(AppRoute::CurrentToken),
             Msg::SetAppCtx(mutator) => {
@@ -224,9 +222,10 @@ impl Component for Console {
         );
 
         let backend = self.backend(ctx.props());
+        let context = self.app_ctx.clone();
 
         html! (
-            <Router<AppRoute>>
+            <ContextProvider<MutableContext<ApplicationContext>> {context}>
                 <Page
                     {logo}
                     {sidebar}
@@ -276,7 +275,7 @@ impl Component for Console {
                         },
                     }}}/>
                 </Page>
-            </Router<AppRoute>>
+            </ContextProvider<MutableContext<ApplicationContext>>>
         )
     }
 }

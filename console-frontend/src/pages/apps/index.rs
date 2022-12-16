@@ -1,7 +1,8 @@
 use crate::backend::{
     ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, Nothing, RequestHandle,
 };
-use crate::utils::context::ContextListener;
+use crate::pages::apps::ApplicationContext;
+use crate::utils::context::{ContextListener, MutableContext};
 use crate::{
     console::AppRoute,
     error::{error, ErrorNotification, ErrorNotifier},
@@ -81,6 +82,7 @@ pub struct Index {
 
     backdropper: ContextListener<Backdropper>,
     toaster: ContextListener<Toaster>,
+    app_ctx: ContextListener<MutableContext<ApplicationContext>>,
     router: ContextListener<RouterContext<AppRoute>>,
 }
 
@@ -96,6 +98,7 @@ impl Component for Index {
             paging_options: PagingOptions::default(),
             backdropper: ContextListener::unwrap(ctx),
             toaster: ContextListener::unwrap(ctx),
+            app_ctx: ContextListener::unwrap(ctx),
             router: ContextListener::unwrap(ctx),
         }
     }
@@ -114,6 +117,9 @@ impl Component for Index {
                 msg.toast(&self.toaster.get());
             }
             Msg::ShowOverview(name) => {
+                self.app_ctx
+                    .get()
+                    .set(ApplicationContext::Single(name.clone()));
                 self.router
                     .get()
                     .push(AppRoute::Applications(Pages::Details {
@@ -125,13 +131,11 @@ impl Component for Index {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error(&self.toaster.get(), "Failed to delete", err),
             },
-            Msg::TriggerModal => self.backdropper.get().open(Backdrop {
-                content: html! {
-                    <CreateDialog
-                        backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback(move |_| Msg::Load)}
-                    />
-                },
+            Msg::TriggerModal => self.backdropper.get().open(html! {
+                <CreateDialog
+                    backend={ctx.props().backend.clone()}
+                    on_close={ctx.link().callback(move |_| Msg::Load)}
+                />
             }),
             Msg::SetLimit(limit) => {
                 self.paging_options.limit = limit;
@@ -172,9 +176,9 @@ impl Component for Index {
                             </FlexItem>
                             <FlexItem modifiers={[FlexModifier::Align(Alignement::Right).all()]}>
                                 <Button
-                                        label="New Application"
-                                        variant={Variant::Primary}
-                                        onclick={ctx.link().callback(|_|Msg::TriggerModal)}
+                                    label="New Application"
+                                    variant={Variant::Primary}
+                                    onclick={ctx.link().callback(|_|Msg::TriggerModal)}
                                 />
                             </FlexItem>
                         </Flex>

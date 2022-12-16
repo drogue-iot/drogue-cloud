@@ -46,7 +46,6 @@ impl Component for Placeholder {
 
         html!(
             <RouterSwitch<AppRoute>
-                default = { login.clone() }
                 render = {move |switch| {
                     match switch {
                         AppRoute::Overview => { login.clone() },

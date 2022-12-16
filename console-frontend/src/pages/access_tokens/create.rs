@@ -56,13 +56,11 @@ impl Component for AccessTokenCreateModal {
                 Err(err) => error(&self.toaster.get(), "Failed to create", err),
             },
             Msg::Success(token) => {
-                self.backdropper.get().open(Backdrop {
-                    content: (html! {
-                        <AccessTokenCreatedSuccessModal
-                            token_secret={token.token}
-                            on_close={ctx.props().on_close.clone()}
-                            />
-                    }),
+                self.backdropper.get().open(html! {
+                    <AccessTokenCreatedSuccessModal
+                        token_secret={token.token}
+                        on_close={ctx.props().on_close.clone()}
+                    />
                 });
             }
             Msg::Description(name) => self.description = name,

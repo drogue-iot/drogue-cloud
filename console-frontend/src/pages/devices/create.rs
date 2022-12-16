@@ -42,9 +42,9 @@ impl Component for CreateDialog {
     fn create(ctx: &Context<Self>) -> Self {
         Self {
             fetch_task: None,
-            backdropper: ContextListener::unwrap(ctx),
-            toaster: ContextListener::unwrap(ctx),
-            router: ContextListener::unwrap(ctx),
+            backdropper: ContextListener::expect(ctx, "Backdropper"),
+            toaster: ContextListener::expect(ctx, "Toaster"),
+            router: ContextListener::expect(ctx, "Router"),
             new_device_name: Default::default(),
         }
     }
