@@ -7,7 +7,7 @@ use crate::{
     utils::url_encode,
 };
 use anyhow::{anyhow, Result};
-use drogue_cloud_service_api::admin::{MemberEntry, Members, Role, TransferOwnership};
+use drogue_cloud_service_api::admin::{MemberEntry, Members, Role, Roles, TransferOwnership};
 use http::{Method, StatusCode};
 use indexmap::IndexMap;
 use patternfly_yew::*;
@@ -462,7 +462,7 @@ impl Users {
         for (user, roles) in members.members {
             new_members.push(User {
                 id: user.clone(),
-                roles: roles.roles,
+                roles: roles.roles.0,
                 on_delete: link.callback(move |_| Msg::DeleteMember(user.clone())),
             });
         }
@@ -474,7 +474,6 @@ impl Users {
         }
     }
 
-    //FIXME : remove the dependency on IndexMap by using generics for the Member struct :)
     pub fn serialize(&self) -> Members {
         let mut members: IndexMap<String, MemberEntry> = IndexMap::new();
 
@@ -482,7 +481,7 @@ impl Users {
             members.insert(
                 u.id.clone(),
                 MemberEntry {
-                    roles: u.roles.clone(),
+                    roles: Roles(u.roles.clone()),
                 },
             );
         }
