@@ -1,6 +1,7 @@
 mod v1alpha1;
 
 use actix_web::{web, HttpResponse, Responder};
+use drogue_client::user::v1::authz::ApplicationPermission;
 use drogue_client::{registry, user::v1::authz::Permission};
 use drogue_cloud_endpoint_common::{
     sender::{ExternalClientPoolConfig, UpstreamSender},
@@ -94,7 +95,7 @@ pub async fn configurator(
                     web::scope("/api/command/v1alpha1/apps/{application}/devices/{deviceId}")
                         .wrap(ApplicationAuthorizer::wrapping(
                             user_auth.clone(),
-                            Permission::Read,
+                            Permission::App(ApplicationPermission::Command),
                         ))
                         .wrap(AuthN::from((
                             authenticator.clone(),

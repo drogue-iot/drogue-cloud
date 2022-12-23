@@ -1,7 +1,7 @@
 openapi: "3.0.0"
 info:
   title: Drogue Cloud API
-  version: "0.11"
+  version: "0.12"
   contact:
     url: https://drogue.io
   description: |
@@ -103,6 +103,13 @@ paths:
           description: A description to attach to the token entry.
           schema:
             type: string
+      requestBody:
+        required: false
+        description: Optional claims to limit the token permissions.
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PersonalAccessToken'
       responses:
         "200":
           description: A new access token was created.
@@ -233,8 +240,6 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schema/Patch'
             example:
               [
                 { "op": "replace", "path": "/baz", "value": "boo" },
@@ -342,8 +347,6 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/Patch'
             example:
               [
                 { "op": "replace", "path": "/baz", "value": "boo" },
@@ -359,30 +362,6 @@ paths:
   #
   # ## Admin
   #
-
-  /api/admin/v1alpha1/user/whoami:
-    get:
-      tags:
-        - User administration
-      description: Get information about the current user.
-      responses:
-        200:
-          description: Information about the current user.
-          content:
-            'application/json':
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: |
-                      The ID of the current user.
-
-                      NOTE: This ID may be different to the name of the user.
-                required:
-                  - id
-        403:
-          description: In case the user is not logged in.
 
   /api/admin/v1alpha1/apps/{application}/transfer-ownership:
     parameters:
@@ -840,11 +819,11 @@ components:
         resourceVersion: ced63698-a0da-11eb-97e8-d45d6455d2cc
         members:
           d84eb308-a0da-11eb-9e90-d45d6455d2cc:
-            role: admin
+            roles: [admin]
           03e32c1a-a0db-11eb-9e9b-d45d6455d2cc:
-            role: manager
+            roles: [manager]
           0a111dfe-a0db-11eb-a953-d45d6455d2cc:
-            role: reader
+            roles: [publisher, subscriber]
 
     MemberEntry:
       type: object
@@ -853,11 +832,67 @@ components:
         - role
       properties:
         role:
+          $ref:
+            '#/components/schemas/Roles'
+    Roles:
+      type: array
+      enum:
+        - reader
+        - manager
+        - admin
+        - publisher
+        - subscriber
+
+    PersonalAccessToken:
+      description: An access token to access drogue-cloud
+      type: object
+      additionalProperties: false
+      properties:
+        description:
           type: string
-          enum:
-            - reader
-            - writer
-            - admin
+          description: The token description
+          required: false
+        claims:
+          required: false
+          description: |
+            The permission claims for the token. If not set, the token will have the same permissions 
+            as the owner. If set but empty, the token will have no permissions.
+          type: object
+          properties:
+            create:
+              type: boolean
+              description: allow to create applications.
+              default: false
+              required: false
+            tokens:
+              type: array
+              description: Access token permissions.
+              items:
+                enum:
+                  - create
+                  - read
+                  - delete
+            applications:
+              type: object
+              description: The applications to grant permission on
+              additionalProperties:
+                  $ref: '#/components/schemas/Roles'
+      example:
+        description: my not so restricted access token
+        claims:
+          create: false
+          applications:
+            - example-app:
+                - admin
+            - other-app:
+                - publish
+                - subscribe
+            - myapp:
+                - read
+          tokens:
+            - create
+            - read
+
 
     ApplicationSpec:
       type: object

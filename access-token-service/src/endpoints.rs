@@ -1,4 +1,5 @@
 use crate::service::AccessTokenService;
+use drogue_client::registry::v1::Client;
 use drogue_client::user::v1::authn::{AuthenticationRequest, AuthenticationResponse, Outcome};
 use drogue_cloud_service_api::{
     auth::user::UserInformation,
@@ -22,12 +23,13 @@ impl<S: AccessTokenService> Deref for WebData<S> {
 pub async fn create<S>(
     user: UserInformation,
     service: web::Data<WebData<S>>,
-    opts: web::Query<AccessTokenCreationOptions>,
+    registry: web::Data<Client>,
+    opts: web::Json<AccessTokenCreationOptions>,
 ) -> Result<HttpResponse, actix_web::Error>
 where
     S: AccessTokenService + 'static,
 {
-    let result = match service.create(&user, opts.0).await {
+    let result = match service.create(&user, opts.0, &registry.into_inner()).await {
         Ok(key) => Ok(HttpResponse::Ok().json(key)),
         Err(e) => Err(e.into()),
     };

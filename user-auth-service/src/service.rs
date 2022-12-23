@@ -63,6 +63,8 @@ impl From<Context> for UserInformation {
             Some(user_id) if !user_id.is_empty() => Self::Authenticated(UserDetails {
                 user_id,
                 roles: ctx.0.roles,
+                // fixme
+                claims: None,
             }),
             _ => Self::Anonymous,
         }

@@ -1,4 +1,4 @@
-use drogue_cloud_service_api::token::AccessTokenCreated;
+use drogue_cloud_service_api::token::CreatedAccessToken;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sha3::Digest;
 
@@ -32,7 +32,7 @@ pub fn hash_token(token: &str) -> String {
     format!("{:x}", sha3::Sha3_512::digest(token.as_bytes()))
 }
 
-fn serialize_token(prefix: String, key: String) -> (AccessTokenCreated, String) {
+fn serialize_token(prefix: String, key: String) -> (CreatedAccessToken, String) {
     let token = format!("{}_{}", prefix, key);
 
     let crc = crc::crc32::checksum_ieee(token.as_bytes());
@@ -42,13 +42,13 @@ fn serialize_token(prefix: String, key: String) -> (AccessTokenCreated, String) 
 
     let hashed = hash_token(&token);
 
-    (AccessTokenCreated { prefix, token }, hashed)
+    (CreatedAccessToken { prefix, token }, hashed)
 }
 
 /// Create a new (random) AccessToken.
 ///
 /// It will return a tuple, consisting of the actual Access Token as well as the hashed version.
-pub fn generate_access_token() -> (AccessTokenCreated, String) {
+pub fn generate_access_token() -> (CreatedAccessToken, String) {
     let prefix = generate_prefix();
     let raw_key = generate_key();
 

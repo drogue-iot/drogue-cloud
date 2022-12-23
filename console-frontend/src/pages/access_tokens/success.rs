@@ -40,7 +40,7 @@ impl Component for AccessTokenCreatedSuccessModal {
                     footer={html!(
                         <Button
                             variant={Variant::Primary}
-                            r#type="submit"
+                            r#type={ButtonType::Submit}
                             onclick={ctx.link().callback(|_|Msg::Close)}
                         >
                             {"Close"}

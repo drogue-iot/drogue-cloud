@@ -4,7 +4,7 @@ use crate::{
     error::{error, ErrorNotification, ErrorNotifier},
     pages::access_tokens::success::AccessTokenCreatedSuccessModal,
 };
-use drogue_cloud_service_api::token::AccessTokenCreated;
+use drogue_cloud_service_api::token::CreatedAccessToken;
 use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
@@ -16,7 +16,7 @@ pub struct Props {
 }
 
 pub enum Msg {
-    Success(AccessTokenCreated),
+    Success(CreatedAccessToken),
     Error(ErrorNotification),
     Create,
     Description(String),
@@ -74,7 +74,7 @@ impl Component for AccessTokenCreateModal {
                         <Button
                             variant={Variant::Primary}
                             disabled={self.fetch_task.is_some()}
-                            r#type="submit"
+                            r#type={ButtonType::Submit}
                             onclick={ctx.link().callback(|_|Msg::Create)}
                             form="create-form"
                             id="confirm-create-token"
@@ -109,7 +109,7 @@ impl AccessTokenCreateModal {
             vec![("description", description)],
             Nothing,
             vec![],
-            ctx.callback_api::<Json<AccessTokenCreated>, _>(move |response| match response {
+            ctx.callback_api::<Json<CreatedAccessToken>, _>(move |response| match response {
                 ApiResponse::Success(token, _) => Msg::Success(token),
                 ApiResponse::Failure(err) => Msg::Error(err.notify("Creation failed")),
             }),

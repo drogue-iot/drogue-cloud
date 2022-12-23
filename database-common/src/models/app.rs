@@ -14,10 +14,11 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use core::pin::Pin;
 use drogue_client::{meta, registry};
-use drogue_cloud_service_api::{admin::Role, auth::user::UserInformation, labels::LabelSelector};
+use drogue_cloud_service_api::{
+    admin::MemberEntry, auth::user::UserInformation, labels::LabelSelector,
+};
 use futures::{future, Stream, TryStreamExt};
 use indexmap::map::IndexMap;
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::{hash_map::RandomState, HashMap, HashSet};
 use tokio_postgres::{
@@ -68,11 +69,10 @@ impl Resource for Application {
     fn members(&self) -> &IndexMap<String, MemberEntry> {
         &self.members
     }
-}
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MemberEntry {
-    pub role: Role,
+    fn name(&self) -> &String {
+        &self.name
+    }
 }
 
 /// Extract a section from the application data. Prevents cloning the whole struct.

@@ -84,7 +84,7 @@ impl Component for CreateDialog {
                         <Button
                             variant={Variant::Primary}
                             disabled={!is_valid || self.fetch_task.is_some()}
-                            r#type="submit"
+                            r#type={ButtonType::Submit}
                             onclick={ctx.link().callback(|_|Msg::Create)}
                             form="create-form"
                         >

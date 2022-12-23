@@ -8,6 +8,7 @@ use crate::{
 use async_trait::async_trait;
 use drogue_client::registry;
 use drogue_client::user;
+use drogue_client::user::v1::authz::ApplicationPermission;
 use drogue_cloud_endpoint_common::sender::UpstreamSender;
 use drogue_cloud_event_common::stream::CustomAck;
 use drogue_cloud_integration_common::{
@@ -164,7 +165,7 @@ impl Session {
                 self.authorize(
                     app.to_string(),
                     user_auth,
-                    user::v1::authz::Permission::Read,
+                    user::v1::authz::Permission::App(ApplicationPermission::Subscribe),
                 )
                 .await
                 .map_err(|_| v5::codec::SubscribeAckReason::NotAuthorized)?;
@@ -273,7 +274,7 @@ impl mqtt::Session for Session {
                 self.authorize(
                     app.to_string(),
                     user_auth,
-                    user::v1::authz::Permission::Write,
+                    user::v1::authz::Permission::App(ApplicationPermission::Command),
                 )
                 .await
                 .map_err(|_| PublishError::NotAuthorized)?;

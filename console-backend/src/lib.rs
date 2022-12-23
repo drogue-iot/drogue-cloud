@@ -1,4 +1,3 @@
-mod admin;
 mod api;
 mod demos;
 mod info;
@@ -10,11 +9,13 @@ use actix_web::{
 };
 use anyhow::Context;
 use drogue_client::{registry, user};
+use drogue_cloud_access_token_service::authz::TokenOperationAuthorizer;
 use drogue_cloud_access_token_service::{endpoints as keys, service::KeycloakAccessTokenService};
 use drogue_cloud_service_api::{
     endpoints::Endpoints, health::HealthChecked, kafka::KafkaClientConfig,
     webapp::web::ServiceConfig,
 };
+use drogue_cloud_service_common::actix_auth::authorization::AuthZ;
 use drogue_cloud_service_common::{
     actix::http::{CorsConfig, HttpBuilder, HttpConfig},
     actix_auth::authentication::AuthN,
@@ -206,6 +207,7 @@ pub async fn configurator(
             app.app_data(web::Data::new(endpoints.clone()))
                 .service(
                     web::scope("/api/tokens/v1alpha1")
+                        .wrap(AuthZ::new(TokenOperationAuthorizer {}))
                         .wrap(auth.clone())
                         .service(
                             web::resource("")
@@ -222,19 +224,7 @@ pub async fn configurator(
                             >),
                         )),
                 )
-                .service(
-                    web::scope("/api/admin/v1alpha1")
-                        .wrap(auth.clone())
-                        .service(web::resource("/user/whoami").route(web::get().to(admin::whoami))),
-                )
                 // everything from here on is unauthenticated or not using the middleware
-                .service(
-                    web::scope("/api/console/v1alpha1").service(
-                        web::resource("/info")
-                            .wrap(auth)
-                            .route(web::get().to(info::get_info)),
-                    ),
-                )
                 .service(index)
                 .service(
                     web::scope("/.well-known")
