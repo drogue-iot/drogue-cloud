@@ -42,7 +42,7 @@ impl Component for AccessTokenCreateModal {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 msg.toast();
             }
             Msg::Create => match self.create(ctx, &self.description) {
@@ -50,7 +50,8 @@ impl Component for AccessTokenCreateModal {
                 Err(err) => error("Failed to create", err),
             },
             Msg::Success(token) => {
-                BackdropDispatcher::default().open(Backdrop {
+                let backdropper = use_backdrop().unwrap();
+                backdropper.open(Backdrop {
                     content: (html! {
                         <AccessTokenCreatedSuccessModal
                             token_secret={token.token}

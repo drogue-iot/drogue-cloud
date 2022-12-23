@@ -11,7 +11,7 @@ pub struct SharedDataHolder<T>
 where
     T: Default + Debug + Clone + PartialEq + 'static,
 {
-    link: AgentLink<Self>,
+    link: WorkerLink<Self>,
     data: T,
 
     subscribers: HashSet<HandlerId>,
@@ -27,16 +27,16 @@ pub enum Response<T> {
     State(T),
 }
 
-impl<T> Agent for SharedDataHolder<T>
+impl<T> Worker for SharedDataHolder<T>
 where
     T: Default + Debug + Clone + PartialEq + 'static,
 {
-    type Reach = Context<Self>;
+    //type Reach = Context<Self>;
     type Message = ();
     type Input = RequestState<T>;
     type Output = Response<T>;
 
-    fn create(link: AgentLink<Self>) -> Self {
+    fn create(link: WorkerLink<Self>) -> Self {
         Self {
             link,
             data: T::default(),

@@ -5,7 +5,7 @@ use crate::utils::success;
 use http::Method;
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::prelude::*;
 
 use crate::backend::{ApiResponse, AuthenticatedBackend, Json, JsonHandlerScopeExt, RequestHandle};
 use serde_json::json;
@@ -43,7 +43,7 @@ impl Component for CreateDialog {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 msg.toast();
             }
             Msg::Create => match self.create(ctx, self.new_app_name.clone()) {
@@ -52,14 +52,14 @@ impl Component for CreateDialog {
             },
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 success("Application successfully created");
-                RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
+                use_router().unwrap().push(
                     AppRoute::Applications(Pages::Details {
                         name: self.new_app_name.clone(),
                         details: DetailsSection::Overview,
-                    }),
-                )))
+                    })
+                )
             }
             Msg::NewAppName(name) => self.new_app_name = name,
         };

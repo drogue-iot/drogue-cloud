@@ -24,17 +24,13 @@ use patternfly_yew::*;
 use std::rc::Rc;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
-use yew_router::prelude::*;
+use yew_nested_router::prelude::*;
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Target)]
 pub enum Examples {
-    #[to = "/register"]
     Register,
-    #[to = "/consume"]
     Consume,
-    #[to = "/publish"]
     Publish,
-    #[to = "/commands"]
     Commands,
 }
 

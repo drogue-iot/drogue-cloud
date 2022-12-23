@@ -197,7 +197,7 @@ impl Component for Admin {
         true
     }
 
-    fn changed(&mut self, _: &Context<Self>) -> bool {
+    fn changed(&mut self, _: &Context<Self>, _: &<Self as yew::Component>::Properties) -> bool {
         !self.stop
     }
 

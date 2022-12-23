@@ -29,7 +29,7 @@ log = "0.4"
 md5 = "0.7"
 monaco = { version = "0.3", features = ["yew-components"] }
 once_cell = "1"
-patternfly-yew = "0.2.3"
+patternfly-yew = "0.3.0"
 percent-encoding = "2.1"
 pretty-hex = "0.3"
 reqwest = "0.11"
@@ -41,10 +41,10 @@ unicode-segmentation = "1"
 url = "2"
 uuid = { version = "1", features = ["v4", "js"] }
 wasm-logger = "0.2"
-yew = "0.19"
-yew-agent = "0.1"
+yew = { version = "0.20", features = ["csr"] }
+yew-agent = "0.2"
 yew-oauth2 = { version = "0.4", features = ["openid", "router"] }
-yew-router = { version = "0.16.1", package = "yew-router-nested" }
+yew-nested-router = "0.1.0"
 
 # For wasm-bindgen we need the exact version, as it will be required by the wasm-pack tool.
 # Updating this dependency requires:
@@ -95,11 +95,11 @@ lto = true
 #patternfly-yew = { git = "https://github.com/ctron/patternfly-yew", rev = "331782836f0ed67bc6ab41ef71497c970176e9d4" } # FIXME: awaiting release
 patternfly-yew = { path = "../../../patternfly-yew" }
 
-drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "fdebb42a6cbaa872a779e892fefe0f687b34fa4b" } # FIXME: awaiting release 0.12.0
-#drogue-client = { path = "../../drogue-client" }
+#drogue-client = { git = "https://github.com/drogue-iot/drogue-client", rev = "fdebb42a6cbaa872a779e892fefe0f687b34fa4b" } # FIXME: awaiting release 0.12.0
+drogue-client = { path = "../../drogue-client" }
 
-drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "8c6f6f6456a18fd8ab41ca2a64b45b154a94f4aa" } # FIXME: awaiting release 0.4.0
-#drogue-bazaar = { path = "../../drogue-bazaar" }
+#drogue-bazaar = { git = "https://github.com/drogue-iot/drogue-bazaar", rev = "8c6f6f6456a18fd8ab41ca2a64b45b154a94f4aa" } # FIXME: awaiting release 0.4.0
+drogue-bazaar = { path = "../../drogue-bazaar" }
 
 #monaco = { git = "https://github.com/siku2/rust-monaco", rev = "cb20108c317976ba8c3d05b581a84efd394c3dbe" } # FIXME: awaiting release
 #monaco = { path = "../../rust-monaco" }

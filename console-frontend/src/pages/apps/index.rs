@@ -14,7 +14,7 @@ use drogue_client::registry::v1::Application;
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::{prelude::*};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApplicationEntry {
@@ -105,21 +105,20 @@ impl Component for Index {
             Msg::Error(msg) => {
                 msg.toast();
             }
-            Msg::ShowOverview(name) => RouteAgentDispatcher::<()>::new().send(
-                RouteRequest::ChangeRoute(Route::from(AppRoute::Applications(Pages::Details {
+            Msg::ShowOverview(name) => use_router().unwrap().push(AppRoute::Applications(Pages::Details {
                     name,
                     details: DetailsSection::Overview,
-                }))),
+                }),
             ),
             Msg::Delete(name) => match self.delete(ctx, name) {
                 Ok(task) => self.fetch_task = Some(task),
                 Err(err) => error("Failed to delete", err),
             },
-            Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
+            Msg::TriggerModal => use_backdrop().unwrap().open(Backdrop {
                 content: (html! {
                     <CreateDialog
                         backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
@@ -221,12 +220,12 @@ impl Index {
                             let name = app.metadata.name.clone();
                             let name_copy = app.metadata.name.clone();
 
-                            let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
+                            let on_overview = link.callback(move |_| Msg::ShowOverview(name));
 
                             ApplicationEntry {
                                 app,
                                 on_overview,
-                                on_delete: link.callback_once(move |_| Msg::Delete(name_copy)),
+                                on_delete: link.callback(move |_| Msg::Delete(name_copy)),
                             }
                         })
                         .collect();

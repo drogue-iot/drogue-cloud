@@ -13,8 +13,7 @@ pub use yaml::*;
 use web_sys::Node;
 use yew::prelude::*;
 use yew::virtual_dom::VNode;
-use yew_router::agent::RouteRequest;
-use yew_router::prelude::*;
+use yew_nested_router::prelude::*;
 
 /// Macro to make it easier to use `html!` as value for a property.
 ///
@@ -71,7 +70,7 @@ pub fn url_decode<S: AsRef<str>>(s: S) -> String {
 /// Navigate the router to the target.
 pub fn navigate_to<SWITCH>(to: SWITCH)
 where
-    SWITCH: 'static + Switch,
+    SWITCH: 'static + Target,
 {
-    RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(to)));
+    use_router().unwrap().push(to);
 }

@@ -179,11 +179,11 @@ impl Component for Index {
             Msg::AppSearch(value) => {
                 self.app_filter = value;
             }
-            Msg::TriggerModal => BackdropDispatcher::default().open(Backdrop {
+            Msg::TriggerModal => use_backdrop().unwrap().open(Backdrop {
                 content: (html! {
                     <CreateDialog
                         backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         app={self.app.clone()}
                         />
                 }),
@@ -196,13 +196,13 @@ impl Component for Index {
                 success("Device deleted");
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::Clone(device) => BackdropDispatcher::default().open(Backdrop {
+            Msg::Clone(device) =>use_backdrop().unwrap().open(Backdrop {
                 content: (html! {
                     <CloneDialog
                         backend={ctx.props().backend.clone()}
                         data={device}
                         app={ctx.props().app.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
@@ -324,9 +324,9 @@ impl Index {
                             let name = device.metadata.name.clone();
                             let name_copy = device.metadata.name.clone();
                             let device_copy = device.clone();
-                            let on_overview = link.callback_once(move |_| Msg::ShowOverview(name));
-                            let on_delete = link.callback_once(move |_| Msg::Delete(name_copy));
-                            let on_clone = link.callback_once(move |_| Msg::Clone(device_copy));
+                            let on_overview = link.callback(move |_| Msg::ShowOverview(name));
+                            let on_delete = link.callback(move |_| Msg::Delete(name_copy));
+                            let on_clone = link.callback(move |_| Msg::Clone(device_copy));
 
                             DeviceEntry {
                                 device,

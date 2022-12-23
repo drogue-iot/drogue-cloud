@@ -21,7 +21,7 @@ use patternfly_yew::*;
 use std::ops::Deref;
 use std::rc::Rc;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::{prelude::*};
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -91,32 +91,31 @@ impl Component for Details {
                 msg.toast();
                 self.fetch_task = None;
             }
-            Msg::Delete => BackdropDispatcher::default().open(Backdrop {
+            Msg::Delete => use_backdrop().unwrap().open(Backdrop {
                 content: (html! {
                     <DeleteConfirmation
                         backend={ctx.props().backend.clone()}
                         name={ctx.props().name.clone()}
                         app_name={ctx.props().app.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
-            Msg::Clone => BackdropDispatcher::default().open(Backdrop {
+            Msg::Clone => use_backdrop().unwrap().open(Backdrop {
                 content: (html! {
                     <CloneDialog
                         backend={ctx.props().backend.clone()}
                         data={self.content.as_ref().unwrap().as_ref().clone()}
                         app={ctx.props().app.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
-            Msg::ShowApp(app) => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
-                Route::from(AppRoute::Applications(apps::Pages::Details {
+            Msg::ShowApp(app) => use_router().unwrap().push(AppRoute::Applications(apps::Pages::Details {
                     name: app,
                     details: apps::DetailsSection::Overview,
-                })),
-            )),
+                })
+            ),
         }
         true
     }
@@ -215,26 +214,11 @@ impl Details {
     fn render_content(&self, ctx: &Context<Self>, device: &Device) -> Html {
         let app = device.metadata.application.clone();
         let name = device.metadata.name.clone();
-        let transformer = SwitchTransformer::new(
-            |global| match global {
-                AppRoute::Devices(Pages::Details { details, .. }) => Some(details),
-                _ => None,
-            },
-            move |local| {
-                AppRoute::Devices(Pages::Details {
-                    app: ApplicationContext::Single(app.clone()),
-                    name: name.clone(),
-                    details: local,
-                })
-            },
-        );
 
         return html! {
             <>
                 <PageSection variant={PageSectionVariant::Light}>
-                    <DevicesTabs
-                        transformer={transformer}
-                        >
+                    <DevicesTabs>
                         <TabRouterItem<DetailsSection> to={DetailsSection::Overview} label="Overview"/>
                         <TabRouterItem<DetailsSection> to={DetailsSection::Yaml} label="YAML"/>
                         <TabRouterItem<DetailsSection> to={DetailsSection::Debug} label="Events"/>
@@ -263,7 +247,7 @@ impl Details {
                     >
                     <DescriptionList>
                         <DescriptionGroup term="Application">
-                            <a onclick={ctx.link().callback_once(move |_| Msg::ShowApp(app))}>
+                            <a onclick={ctx.link().callback(move |_| Msg::ShowApp(app))}>
                                 {&device.metadata.application}</a>
                         </DescriptionGroup>
                         <DescriptionGroup term="Name">

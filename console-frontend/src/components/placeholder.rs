@@ -3,7 +3,7 @@ use patternfly_yew::*;
 use std::collections::HashMap;
 use yew::prelude::*;
 use yew_oauth2::{openid, prelude::*};
-use yew_router::prelude::*;
+use yew_nested_router::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq, Eq)]
 pub struct Props {
@@ -37,7 +37,7 @@ impl Component for Placeholder {
         let login = self.render_login(ctx);
 
         html!(
-            <Router<AppRoute, ()>
+            <Router<AppRoute>
                 redirect = {Router::redirect(|_|AppRoute::Overview)}
                 render = {Router::render(move |switch: AppRoute| {
                     match switch {

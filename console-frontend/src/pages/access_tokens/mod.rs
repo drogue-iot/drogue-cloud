@@ -96,7 +96,8 @@ impl Component for AccessTokens {
             },
             Msg::Deleted => {
                 self.fetch_task = None;
-                ToastDispatcher::default().toast(Toast {
+                let toaster = use_toaster().expect("No toast ?");
+                toaster.toast(Toast {
                     title: "Deleted access token".into(),
                     body: html! {<p>{"Access token was successfully deleted."}</p>},
                     r#type: Type::Success,
@@ -104,14 +105,15 @@ impl Component for AccessTokens {
                 });
                 ctx.link().send_message(Msg::Load);
             }
-            Msg::CreateModal => BackdropDispatcher::default().open(Backdrop {
-                content: (html! {
+            Msg::CreateModal => use_backdrop().unwrap()
+                .open(Backdrop {
+                    content: (html! {
                     <AccessTokenCreateModal
                         backend={ctx.props().backend.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
-            }),
+                }),
         };
         true
     }
@@ -173,7 +175,7 @@ impl AccessTokens {
                         .into_iter()
                         .map(move |token| AccessTokenEntry {
                             token: token.clone(),
-                            on_delete: link.clone().callback_once(|_| Msg::Delete(token)),
+                            on_delete: link.clone().callback(|_| Msg::Delete(token)),
                         })
                         .collect();
                     Msg::SetData(tokens)

@@ -1,6 +1,6 @@
 use crate::backend::{ApiError, ApiResponse};
 use drogue_client::error::ClientError;
-use patternfly_yew::{Toast, ToastDispatcher, Type};
+use patternfly_yew::{Toast, Type, use_toaster};
 use yew::prelude::*;
 
 pub trait ErrorProvider {
@@ -28,7 +28,8 @@ pub struct ErrorNotification {
 
 impl ErrorNotification {
     pub fn toast(self) {
-        ToastDispatcher::default().toast(Toast {
+        let toaster = use_toaster().unwrap();
+        toaster.toast(Toast {
             title: self.title,
             body: html! {<p>{self.description}</p>},
             r#type: Type::Danger,

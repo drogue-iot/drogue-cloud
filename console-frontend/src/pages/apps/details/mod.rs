@@ -118,12 +118,12 @@ impl Component for Details {
                 self.fetch_role = None;
                 self.is_admin = is_admin;
             }
-            Msg::Delete => BackdropDispatcher::default().open(Backdrop {
+            Msg::Delete => use_backdrop().unwrap().open(Backdrop {
                 content: (html! {
                     <DeleteConfirmation
                         backend={ctx.props().backend.clone()}
                         name={ctx.props().name.clone()}
-                        on_close={ctx.link().callback_once(move |_| Msg::Load)}
+                        on_close={ctx.link().callback(move |_| Msg::Load)}
                         />
                 }),
             }),
@@ -231,21 +231,6 @@ impl Details {
 
     fn render_content(&self, ctx: &Context<Self>, app: &Application) -> Html {
         let name = app.metadata.name.clone();
-        let transformer = SwitchTransformer::new(
-            |global| match global {
-                AppRoute::Applications(Pages::Details {
-                    name: _name,
-                    details,
-                }) => Some(details),
-                _ => None,
-            },
-            move |local| {
-                AppRoute::Applications(Pages::Details {
-                    name: name.clone(),
-                    details: local,
-                })
-            },
-        );
 
         let mut tabs = Vec::new();
         tabs.push(html_nested! {
@@ -269,9 +254,7 @@ impl Details {
         html! (
             <>
                 <PageSection variant={PageSectionVariant::Light}>
-                    <ApplicationTabs
-                        transformer={transformer}
-                        >
+                    <ApplicationTabs>
                         { tabs }
                     </ApplicationTabs>
                 </PageSection>

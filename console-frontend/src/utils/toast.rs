@@ -45,7 +45,8 @@ impl ToastBuilder {
     }
 
     pub fn toast(self) {
-        ToastDispatcher::default().toast(self.into())
+        let toaster = use_toaster().expect("fixme ? ");
+        toaster.toast(self.into())
     }
 }
 

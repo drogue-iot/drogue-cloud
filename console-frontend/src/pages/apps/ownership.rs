@@ -13,7 +13,7 @@ use gloo_timers::callback::Timeout;
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::{prelude::*};
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
@@ -69,12 +69,11 @@ impl Component for Ownership {
             Msg::Error(msg) => {
                 msg.toast();
             }
-            Msg::Done => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
-                Route::from(AppRoute::Applications(Pages::Details {
+            Msg::Done => use_router().unwrap().push(AppRoute::Applications(Pages::Details {
                     name: ctx.props().name.clone(),
                     details: DetailsSection::Overview,
-                })),
-            )),
+                }))
+            ,
             Msg::TransferPending(pending) => {
                 self.fetch_task = None;
                 self.transfer_active = pending;

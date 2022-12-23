@@ -8,7 +8,7 @@ use drogue_client::registry::v1::Device;
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::{prelude::*};
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Props {
@@ -44,7 +44,7 @@ impl Component for CloneDialog {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 msg.toast();
             }
             Msg::Create => {
@@ -55,15 +55,14 @@ impl Component for CloneDialog {
             }
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 success("Device cloned");
-                RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
+                use_router().unwrap().push(
                     AppRoute::Devices(Pages::Details {
                         app: ApplicationContext::Single(ctx.props().app.clone()),
                         name: self.new_device_name.clone(),
                         details: DetailsSection::Overview,
-                    }),
-                )))
+                    }));
             }
             Msg::NewDeviceName(name) => self.new_device_name = name,
         };

@@ -25,7 +25,7 @@ impl Component for AccessTokenCreatedSuccessModal {
         match msg {
             Msg::Close => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
             }
         };
         true

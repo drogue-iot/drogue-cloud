@@ -5,7 +5,7 @@ use crate::utils::{success, url_encode};
 use http::{Method, StatusCode};
 use patternfly_yew::*;
 use yew::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::{prelude::*};
 
 use crate::backend::{
     ApiResponse, AuthenticatedBackend, JsonHandlerScopeExt, Nothing, RequestHandle,
@@ -40,7 +40,7 @@ impl Component for DeleteConfirmation {
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Error(msg) => {
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 msg.toast();
             }
             Msg::Delete => match self.delete(ctx) {
@@ -49,15 +49,15 @@ impl Component for DeleteConfirmation {
             },
             Msg::Success => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
                 success("Application deleted");
-                RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(Route::from(
+                use_router().unwrap().push(
                     AppRoute::Applications(Pages::Index),
-                )))
+                )
             }
             Msg::Cancel => {
                 ctx.props().on_close.emit(());
-                BackdropDispatcher::default().close();
+                use_backdrop().unwrap().close();
             }
         };
         true

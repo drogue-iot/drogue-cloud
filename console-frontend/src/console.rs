@@ -12,25 +12,23 @@ use patternfly_yew::*;
 use std::ops::Deref;
 use yew::prelude::*;
 use yew_oauth2::prelude::*;
-use yew_router::{agent::RouteRequest, prelude::*};
+use yew_nested_router::{prelude::*};
+use yew_nested_router::components::Link;
+use yew_nested_router::Target;
 
-#[derive(Switch, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Target)]
 pub enum AppRoute {
-    #[to = "/spy"]
     Spy,
-    #[to = "/examples{*}"]
     Examples(Examples),
-    #[to = "/tokens"]
+    #[target(rename = "tokens")]
     AccessTokens,
-    #[to = "/token"]
+    #[target(rename = "token")]
     CurrentToken,
-    #[to = "/transfer/{name}"]
+    #[target(rename ="transfer/{name}")]
     Ownership(String),
-    #[to = "/apps{*}"]
-    Applications(pages::apps::Pages),
-    #[to = "/devices{*}"]
-    Devices(pages::devices::Pages),
-    #[to = "/!"]
+    Applications(#[target(default)] pages::apps::Pages),
+    Devices(#[target(default)] pages::devices::Pages),
+    #[target(rename = "!")]
     Overview,
 }
 
@@ -78,16 +76,20 @@ impl Component for Console {
             Msg::Logout => {
                 ctx.props().on_logout.emit(());
             }
-            Msg::About => BackdropDispatcher::default().open(Backdrop {
+            Msg::About => {
+                let backdropper = use_backdrop().unwrap();
+                backdropper.open(Backdrop {
                 content: (html! {
                     <AboutModal
                         backend={self.backend(ctx.props())}
                         />
                 }),
-            }),
-            Msg::CurrentToken => RouteAgentDispatcher::<()>::new().send(RouteRequest::ChangeRoute(
-                Route::from(AppRoute::CurrentToken),
-            )),
+            })
+            },
+            Msg::CurrentToken => {
+                use_router().unwrap().push
+                (AppRoute::CurrentToken)
+            },
             Msg::SetAppCtx(ctx) => {
                 return if self.app_ctx != ctx {
                     self.app_ctx = ctx;
@@ -109,24 +111,24 @@ impl Component for Console {
             <PageSidebar>
                 <Nav>
                     <NavList>
-                        <NavRouterExpandable<AppRoute> title="Home">
+                        <NavExpandable<AppRoute> title="Home">
                             <NavRouterItem<AppRoute> to={AppRoute::Overview}>{"Overview"}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Applications(pages::apps::Pages::Index)}>{"Applications"}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Devices(pages::devices::Pages::Index{app})}>{"Devices"}</NavRouterItem<AppRoute>>
-                        </NavRouterExpandable<AppRoute>>
-                        <NavRouterExpandable<AppRoute> title="Getting started">
+                        </NavExpandable<AppRoute>>
+                        <NavExpandable<AppRoute> title="Getting started">
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Register)}>{Examples::Register.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Consume)}>{Examples::Consume.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Publish)}>{Examples::Publish.title()}</NavRouterItem<AppRoute>>
                             <NavRouterItem<AppRoute> to={AppRoute::Examples(Examples::Commands)}>{Examples::Commands.title()}</NavRouterItem<AppRoute>>
-                        </NavRouterExpandable<AppRoute>>
-                        <NavRouterExpandable<AppRoute> title="Tools">
+                        </NavExpandable<AppRoute>>
+                        <NavExpandable<AppRoute> title="Tools">
                             <NavRouterItem<AppRoute> to={AppRoute::Spy}>{"Spy"}</NavRouterItem<AppRoute>>
-                        </NavRouterExpandable<AppRoute>>
-                        <NavRouterExpandable<AppRoute> title="API">
+                        </NavExpandable<AppRoute>>
+                        <NavExpandable<AppRoute> title="API">
                             <NavRouterItem<AppRoute> to={AppRoute::AccessTokens}>{"Access tokens"}</NavRouterItem<AppRoute>>
                             <NavItem to="/api" target="_blank">{"API specification"}<span class="pf-u-ml-sm pf-u-font-size-sm">{Icon::ExternalLinkAlt}</span></NavItem>
-                        </NavRouterExpandable<AppRoute>>
+                        </NavExpandable<AppRoute>>
                     </NavList>
                 </Nav>
             </PageSidebar>
@@ -244,10 +246,10 @@ impl Component for Console {
                 {sidebar}
                 tools={Children::new(tools)}
                 >
-                    <Router<AppRoute, ()>
+                    <Router<AppRoute>
                             redirect = {Router::redirect(|_|AppRoute::Overview)}
-                            render = {Router::render(move |switch: AppRoute| {
-                                match switch {
+                            render = {Router::render(move |route: AppRoute| {
+                                match route {
                                     AppRoute::Overview => html!{<pages::Overview
                                         endpoints={endpoints.clone()}/>},
                                     AppRoute::Applications(pages::apps::Pages::Index) => html!{<pages::apps::Index

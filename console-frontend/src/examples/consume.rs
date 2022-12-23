@@ -6,11 +6,10 @@ use crate::{
 use drogue_cloud_service_api::endpoints::Endpoints;
 use patternfly_yew::*;
 use yew::prelude::*;
+use yew_nested_router::prelude::use_router;
 use yew_oauth2::prelude::*;
-use yew_router::{
-    agent::{RouteAgentDispatcher, RouteRequest},
-    route::Route,
-};
+use crate::console::AppRoute;
+//use yew_nested_router::prelude::*;
 
 #[derive(Clone, Debug, Properties, PartialEq)]
 pub struct Props {
@@ -61,8 +60,7 @@ impl Component for ConsumeData {
             Self::Message::SetDrgToken(drg_token) => self
                 .data_agent
                 .update(move |data| data.drg_token = drg_token),
-            Self::Message::OpenSpy => RouteAgentDispatcher::<()>::new()
-                .send(RouteRequest::ChangeRoute(Route::new_default_state("/spy"))),
+            Self::Message::OpenSpy => use_router().unwrap().push(AppRoute::Spy),
         }
         false
     }
@@ -125,14 +123,14 @@ impl Component for ConsumeData {
                         <Switch
                             checked={ctx.props().data.binary_mode}
                             label="Binary content mode" label_off="Structured content mode"
-                            on_change={ctx.link().callback(Msg::SetBinaryMode)}
+                            onchange={ctx.link().callback(Msg::SetBinaryMode)}
                             />
                     </div>
                     <div>
                         <Switch
                             checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change={ctx.link().callback(Msg::SetDrgToken)}
+                            onchange={ctx.link().callback(Msg::SetDrgToken)}
                             />
                     </div>
                     <div>
@@ -142,7 +140,7 @@ impl Component for ConsumeData {
                                 <Switch
                                     checked={ctx.props().data.consumer_group.is_some()}
                                     label="Shared consumer: " label_off="Default consumer"
-                                    on_change={ctx.link().callback(Msg::SetSharedConsumerMode)}
+                                    onchange={ctx.link().callback(Msg::SetSharedConsumerMode)}
                                     />
                                 </div>
                             </SplitItem>
@@ -195,7 +193,7 @@ impl Component for ConsumeData {
                         <Switch
                             checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change={ctx.link().callback(Msg::SetDrgToken)}
+                            onchange={ctx.link().callback(Msg::SetDrgToken)}
                             />
                     </div>
                     <div>
