@@ -161,7 +161,7 @@ impl Component for CoreExampleData {
                             checked={data.enable_local_cert}
                             label="Use local test certificates"
                             label_off="Use system default certificates"
-                            on_change={ctx.link().callback(Msg::LocalCerts)}
+                            onchange={ctx.link().callback(Msg::LocalCerts)}
                             />
                     </Card>
                 </StackItem>

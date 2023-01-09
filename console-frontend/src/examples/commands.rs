@@ -129,7 +129,7 @@ impl Component for CommandAndControl {
                         <Switch
                             checked={ctx.props().data.cmd_empty_message}
                             label="Send empty message" label_off="Send example payload"
-                            on_change={ctx.link().callback(Msg::CommandEmptyMessage)}
+                            onchange={ctx.link().callback(Msg::CommandEmptyMessage)}
                             />
                     </div>
                     <Alert title="Hurry up!" inline=true>
@@ -178,7 +178,7 @@ impl Component for CommandAndControl {
                         <Switch
                             checked={ctx.props().data.cmd_empty_message}
                             label="Send empty message" label_off="Send example payload"
-                            on_change={ctx.link().callback(Msg::CommandEmptyMessage)}
+                            onchange={ctx.link().callback(Msg::CommandEmptyMessage)}
                             />
                     </div>
                     <Alert title="Hurry up!" inline=true>
@@ -274,7 +274,7 @@ impl Component for CommandAndControl {
                             <Switch
                                 checked={ctx.props().data.drg_token}
                                 label="Use 'drg' to get the access token" label_off="Show current token in example"
-                                on_change={ctx.link().callback(Msg::DrgToken)}
+                                onchange={ctx.link().callback(Msg::DrgToken)}
                                 />
                         </FormGroup>
                     </Form>
@@ -315,7 +315,7 @@ impl Component for CommandAndControl {
                         <Switch
                             checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change={ctx.link().callback(Msg::DrgToken)}
+                            onchange={ctx.link().callback(Msg::DrgToken)}
                             />
                     </div>
                     <div>

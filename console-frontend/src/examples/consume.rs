@@ -129,14 +129,14 @@ impl Component for ConsumeData {
                         <Switch
                             checked={ctx.props().data.binary_mode}
                             label="Binary content mode" label_off="Structured content mode"
-                            on_change={ctx.link().callback(Msg::SetBinaryMode)}
+                            onchange={ctx.link().callback(Msg::SetBinaryMode)}
                             />
                     </div>
                     <div>
                         <Switch
                             checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change={ctx.link().callback(Msg::SetDrgToken)}
+                            onchange={ctx.link().callback(Msg::SetDrgToken)}
                             />
                     </div>
                     <div>
@@ -146,7 +146,7 @@ impl Component for ConsumeData {
                                 <Switch
                                     checked={ctx.props().data.consumer_group.is_some()}
                                     label="Shared consumer: " label_off="Default consumer"
-                                    on_change={ctx.link().callback(Msg::SetSharedConsumerMode)}
+                                    onchange={ctx.link().callback(Msg::SetSharedConsumerMode)}
                                     />
                                 </div>
                             </SplitItem>
@@ -199,7 +199,7 @@ impl Component for ConsumeData {
                         <Switch
                             checked={ctx.props().data.drg_token}
                             label="Use 'drg' to get the access token" label_off="Show current token in example"
-                            on_change={ctx.link().callback(Msg::SetDrgToken)}
+                            onchange={ctx.link().callback(Msg::SetDrgToken)}
                             />
                     </div>
                     <div>
