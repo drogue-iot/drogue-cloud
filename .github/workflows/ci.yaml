@@ -248,10 +248,11 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-server-${{ hashFiles('**/Cargo.lock') }}
 
+      - run: brew update
+
       - name: Install dependencies
         shell: bash
         run: |
-          brew update
           brew install librdkafka openssl
 
       - name: Build postgres
