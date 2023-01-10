@@ -40,7 +40,7 @@ ntex = { version = "0.5", optional = true }
 ntex-tls = { version = "0.1.7", optional = true }
 tokio-openssl = { version = "0.6", optional = true }
 tokio-rustls = { version = "0.23", optional = true }
-tokio-dtls-stream-sink = { version = "0.5", optional = true }
+tokio-dtls-stream-sink = { version = "0.6", optional = true }
 
 drogue-cloud-service-api = { path = "../service-api", features = ["rdkafka"] }
 drogue-cloud-service-common = { path = "../service-common" }
