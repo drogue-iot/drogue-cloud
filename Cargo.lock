@@ -5528,9 +5528,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-dtls-stream-sink"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91b22c7c50bda21a68e11bd85d1ac3ee023b50e2e70edbc749272ea264e39580"
+checksum = "2e5bc8aaeeb3f94240154c786c41e1d3976d20d5122d681ba9029bb767ff7f2c"
 dependencies = [
  "bytes",
  "futures",

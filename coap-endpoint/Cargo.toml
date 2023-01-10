@@ -28,7 +28,7 @@ serde_urlencoded= "^0.7"
 tokio = "1.21"
 tokio-openssl = "0.6"
 tokio-util = "0.7"
-tokio-dtls-stream-sink = "0.5"
+tokio-dtls-stream-sink = "0.6"
 humantime-serde = "1"
 
 drogue-cloud-endpoint-common = { path = "../endpoint-common" }

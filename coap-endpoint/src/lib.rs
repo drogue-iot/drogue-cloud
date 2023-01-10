@@ -205,6 +205,7 @@ pub async fn run(config: Config, startup: &mut dyn Startup) -> anyhow::Result<()
                 }
                 Err(e) => {
                     log::warn!("Error when accepting session: {:?}", e);
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
         }
