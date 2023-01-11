@@ -18,7 +18,9 @@ use yew_oauth2::prelude::*;
 pub enum AppRoute {
     Spy,
     Examples(Examples),
+    #[target(rename = "tokens")]
     AccessTokens,
+    #[target(rename = "token")]
     CurrentToken,
     #[target(rename = "transfer")]
     Ownership(#[target(value)] String),
