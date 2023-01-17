@@ -26,10 +26,10 @@ impl Session {
         let timeout = self.expiry - Instant::now();
         select! {
             _ = self.process() => {
-                log::trace!("Processing stopped, stopping");
+                log::info!("Processing stopped, stopping");
             }
             _ = tokio::time::sleep(timeout) => {
-                log::trace!("Session expired, stopping");
+                log::info!("Session expired, stopping");
             }
         }
     }
@@ -68,7 +68,7 @@ impl Session {
                     }
                 },
                 Err(e) => {
-                    log::trace!("Processing stopped: {:?}", e);
+                    log::info!("Processing stopped: {:?}", e);
                     break;
                 }
             }
