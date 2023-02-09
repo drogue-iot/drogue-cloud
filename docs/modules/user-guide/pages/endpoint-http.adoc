@@ -33,12 +33,12 @@ a| * Credentials: `<username>@<application>:<password>`
 | Standard username/password authentication using `<username>@<application>` as HTTP username. The `<username>` can
 either be a device name, device alias, or unique username.
 
-a|* Credentials: `<username>@<password>`
+a|* Credentials: `<username>:<password>`
 * Query: `application=<application>`
 | Use a standard username and provide the application as part of the HTTP query. The `<username>` can
 either be a device name, device alias, or unique username.
 
-a|* Credentials: `<username>@<password>`
+a|* Credentials: `<username>:<password>`
 * Query: `application=<application>&device=<device>`
 | Use a non-unique username, provide application and device using query parameters.
 
