@@ -24,7 +24,7 @@ In any case, you will need:
   In any case, you need to be sure that you install at least the version of Rust mentioned above. If you installed
   Rust using `rustup` and default options, then performing an upgrade should be as easy as running `rustup update`.
 
-* **Kubernetes** - Some form of Kubernetes cluster
+* **Kubernetes** - Some form of Kubernetes cluster (~1.25)
   ** **Minikube** is what seems to work best for development, and is easy to get started with.
   ** **Kind** also works, uses less resources, but is less tested.
   ** **OpenShift** also works and make several things easier (like proper DNS names and certs), but is
@@ -152,7 +152,7 @@ run `tunnel` in a separate shell
 
 [source,shell]
 ----
-minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress
+minikube start --cpus 4 --memory 16384 --disk-size 20gb --addons ingress --kubernetes-version 1.25.9
 # in a separate terminal, as it keeps running
 minikube tunnel
 ----
