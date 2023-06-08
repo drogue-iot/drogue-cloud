@@ -254,7 +254,7 @@ impl Session {
 #[async_trait(?Send)]
 impl mqtt::Session for Session {
     async fn publish(&self, publish: Publish<'_>) -> Result<(), PublishError> {
-        let topic = publish.topic().path().split('/').collect::<Vec<_>>();
+        let topic = publish.topic().path().splitn(4, '/').collect::<Vec<_>>();
 
         if topic.len() != 4 || !topic[0].eq_ignore_ascii_case("command") {
             log::info!("Invalid topic name {:?}", topic);

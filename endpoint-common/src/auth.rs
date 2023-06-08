@@ -263,11 +263,7 @@ impl DeviceAuthenticator {
         C: AsRef<str> + Debug,
     {
         log::debug!(
-            "Authenticate MQTT - username: {:?}, password: {:?}, client_id: {:?}, certs: {:?}",
-            username,
-            password,
-            client_id,
-            certs
+            "Authenticate MQTT - username: {username:?}, password: {password:?}, client_id: {client_id:?}, certs: {certs:?}, verified_identity: {verified_identity:?}",
         );
 
         match (
@@ -303,6 +299,8 @@ impl DeviceAuthenticator {
             }
             // Client cert only
             (None, None, _, Some(certs), None) => self.authenticate_cert(certs.0).await,
+            // Client cert plus username
+            (Some(_username), None, _, Some(certs), None) => self.authenticate_cert(certs.0).await,
             // TLS-PSK verified identity
             (None, None, _, None, Some(verified_identity)) => {
                 self.authenticate_verified_identity(verified_identity)

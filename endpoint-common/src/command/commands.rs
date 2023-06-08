@@ -111,6 +111,7 @@ pub struct Subscription {
 
 impl Commands {
     pub fn new() -> Self {
+        log::info!("New internal command broker");
         Self {
             devices: Arc::new(Mutex::new(HashMap::new())),
             wildcards: Arc::new(Mutex::new(HashMap::new())),
@@ -218,7 +219,7 @@ impl Commands {
     {
         log::debug!("Adding entry for: {key:?}");
 
-        let map = match map.entry(key) {
+        let entry_map = match map.entry(key) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(HashMap::new()),
         };
@@ -226,13 +227,14 @@ impl Commands {
         loop {
             let id: usize = rand::random();
 
-            match map.entry(id) {
+            match entry_map.entry(id) {
                 Entry::Vacant(entry) => {
                     // entry was free, we can insert
                     entry.insert(value);
                     break id;
                 }
                 Entry::Occupied(_) => {
+                    log::debug!("ID clash, retrying");
                     // entry is occupied, we need to re-try
                 }
             }
@@ -263,9 +265,11 @@ impl CommandDispatcher for Commands {
 
         log::debug!("Dispatching command to {:?}", msg.address);
 
+        let mut possible: usize = 0;
         let mut num: usize = 0;
 
         if let Some(senders) = self.devices.lock().await.get(&msg.address) {
+            possible += senders.len();
             log::debug!(
                 "Sending command {:?} sent to device {:?}",
                 msg.command,
@@ -278,6 +282,7 @@ impl CommandDispatcher for Commands {
             msg.address.app_id.clone(),
             msg.address.gateway_id.clone(),
         )) {
+            possible += senders.len();
             log::debug!(
                 "Sending command {:?} sent to wildcard {:?}",
                 msg.command,
@@ -286,7 +291,7 @@ impl CommandDispatcher for Commands {
             num += dispatch_command(senders.values(), &msg).await;
         }
 
-        log::debug!("Sent to {} receivers", num);
+        log::debug!("Sent to {num} receivers of {possible}");
     }
 }
 

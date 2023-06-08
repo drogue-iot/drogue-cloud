@@ -38,6 +38,8 @@ impl KafkaCommandSource {
     where
         D: CommandDispatcher + Send + Sync + 'static,
     {
+        log::info!("Starting Kafka command source");
+
         let mut source = EventStream::<AutoAck>::new(EventStreamConfig {
             kafka: KafkaConfig {
                 topic: config.topic,

@@ -1,5 +1,5 @@
 mod cache;
-mod dialect;
+pub mod dialect;
 mod disconnect;
 mod inbox;
 
@@ -7,9 +7,7 @@ use self::disconnect::*;
 use crate::{
     auth::DeviceAuthenticator,
     config::EndpointConfig,
-    service::session::dialect::{
-        DefaultTopicParser, ParsedSubscribeTopic, SubscriptionTopicEncoder,
-    },
+    service::session::dialect::{Dialect, ParsedSubscribeTopic, SubscriptionTopicEncoder},
     CONNECTIONS_COUNTER,
 };
 use async_trait::async_trait;
@@ -39,6 +37,7 @@ use ntex_mqtt::{
     types::QoS,
     v5::codec::{self, DisconnectReasonCode},
 };
+use std::borrow::Cow;
 use std::{
     cell::Cell,
     collections::{hash_map::Entry, HashMap},
@@ -46,11 +45,17 @@ use std::{
 };
 use tracing::instrument;
 
+pub struct PublishRequest {
+    pub channel: String,
+    pub device: Arc<registry::v1::Device>,
+    pub extensions: HashMap<String, String>,
+}
+
 pub struct Session {
     sender: DownstreamSender,
     application: registry::v1::Application,
     device: Arc<registry::v1::Device>,
-    dialect: registry::v1::MqttDialect,
+    dialect: Dialect,
     commands: Commands,
     auth: DeviceAuthenticator,
     sink: Sink,
@@ -68,7 +73,7 @@ impl Session {
         sender: DownstreamSender,
         sink: Sink,
         application: registry::v1::Application,
-        dialect: registry::v1::MqttDialect,
+        dialect: Dialect,
         device: registry::v1::Device,
         commands: Commands,
         state: State,
@@ -152,36 +157,61 @@ impl Session {
     }
 
     #[instrument(level = "debug", skip(self), fields(self.id = ?self.id), err)]
-    async fn eval_device(
-        &self,
-        publish: &Publish<'_>,
-    ) -> Result<(String, Arc<registry::v1::Device>), PublishError> {
+    async fn eval_device(&self, publish: &Publish<'_>) -> Result<PublishRequest, PublishError> {
         match self.dialect.parse_publish(publish.topic().path()) {
-            Ok(topic) => match topic.device {
-                None => Ok((topic.channel.to_string(), self.device.clone())),
-                Some(device) if device == self.id.device_id => {
-                    Ok((topic.channel.to_string(), self.device.clone()))
+            Ok(topic) => {
+                let channel = topic.channel.to_string();
+                let extensions = into_extensions(topic.properties);
+
+                match topic.device {
+                    // publish as device
+                    None => Ok(PublishRequest {
+                        channel,
+                        device: self.device.clone(),
+                        extensions,
+                    }),
+                    // also publish as device
+                    Some(device) if device == self.id.device_id => Ok(PublishRequest {
+                        channel,
+                        device: self.device.clone(),
+                        extensions,
+                    }),
+                    // publish as someone else
+                    Some(device) => self
+                        .device_cache
+                        .fetch(device, |device| {
+                            self.auth
+                                .authorize_as(
+                                    &self.application.metadata.name,
+                                    &self.device.metadata.name,
+                                    device,
+                                )
+                                .map_ok(|result| match result.outcome {
+                                    GatewayOutcome::Pass { r#as } => Some(r#as),
+                                    _ => None,
+                                })
+                        })
+                        .await
+                        .map(|r| PublishRequest {
+                            channel,
+                            device: r,
+                            extensions,
+                        }),
                 }
-                Some(device) => self
-                    .device_cache
-                    .fetch(device, |device| {
-                        self.auth
-                            .authorize_as(
-                                &self.application.metadata.name,
-                                &self.device.metadata.name,
-                                device,
-                            )
-                            .map_ok(|result| match result.outcome {
-                                GatewayOutcome::Pass { r#as } => Some(r#as),
-                                _ => None,
-                            })
-                    })
-                    .await
-                    .map(|r| (topic.channel.to_string(), r)),
-            },
+            }
             Err(_) => Err(PublishError::TopicNameInvalid),
         }
     }
+}
+
+fn into_extensions(properties: Vec<(Cow<str>, Cow<str>)>) -> HashMap<String, String> {
+    let mut result = HashMap::with_capacity(properties.len());
+
+    for (k, v) in properties {
+        result.insert(k.as_ref().to_string(), v.as_ref().to_string());
+    }
+
+    result
 }
 
 #[async_trait(? Send)]
@@ -195,7 +225,11 @@ impl mqtt::Session for Session {
             .and_then(|p| p.content_type.as_ref())
             .map(|s| s.to_string());
 
-        let (channel, device) = self.eval_device(&publish).await?;
+        let PublishRequest {
+            channel,
+            device,
+            extensions,
+        } = self.eval_device(&publish).await?;
 
         log::debug!(
             "Publish as {} / {} ({}) to {}",
@@ -215,6 +249,7 @@ impl mqtt::Session for Session {
                     sender: self.device.metadata.to_id(),
                     options: PublishOptions {
                         content_type,
+                        extensions,
                         ..Default::default()
                     },
                 },

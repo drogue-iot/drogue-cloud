@@ -1,46 +1,49 @@
+mod az;
+mod c8y;
+mod drogue;
+mod encoder;
+mod plain;
 mod wot;
 
+pub use az::*;
+pub use c8y::*;
+pub use drogue::*;
+pub use encoder::*;
+pub use plain::*;
 pub use wot::*;
 
 use drogue_client::registry::v1::MqttDialect;
-use drogue_cloud_endpoint_common::command::{Command, CommandFilter};
+use drogue_cloud_endpoint_common::command::CommandFilter;
+use drogue_cloud_mqtt_common::error::ServerError;
+use drogue_cloud_mqtt_common::mqtt::Connect;
 use drogue_cloud_service_common::Id;
-use std::fmt::Debug;
-use std::ops::Deref;
+use std::{borrow::Cow, fmt::Debug, sync::Arc};
 use thiserror::Error;
 
-/// A topic parser for the default session.
-pub trait DefaultTopicParser {
+pub trait ConnectValidator {
+    fn validate_connect(&self, connect: &Connect) -> Result<(), ServerError>;
+}
+
+/// Reject cleanSession=false
+pub struct RejectResumeSession;
+
+impl ConnectValidator for RejectResumeSession {
+    fn validate_connect(&self, connect: &Connect) -> Result<(), ServerError> {
+        match connect.clean_session() {
+            true => Ok(()),
+            false => Err(ServerError::UnsupportedOperation),
+        }
+    }
+}
+
+pub trait PublishTopicParser {
     /// Parse a topic from a PUB request
     fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError>;
+}
 
+pub trait SubscribeTopicParser {
     /// Parse a topic from a SUB request
     fn parse_subscribe<'a>(&self, path: &'a str) -> Result<ParsedSubscribeTopic<'a>, ParseError>;
-}
-
-#[derive(Debug)]
-pub struct SubscriptionTopicEncoder(Box<dyn TopicEncoder>);
-
-impl Deref for SubscriptionTopicEncoder {
-    type Target = dyn TopicEncoder;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref()
-    }
-}
-
-impl SubscriptionTopicEncoder {
-    pub fn new<T>(encoder: T) -> Self
-    where
-        T: TopicEncoder + 'static,
-    {
-        Self(Box::new(encoder))
-    }
-}
-
-pub trait TopicEncoder: Debug {
-    /// Encode a topic from a command, requested originally by a SUB request
-    fn encode_command_topic(&self, command: &Command) -> String;
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -55,6 +58,7 @@ pub enum ParseError {
 pub struct ParsedPublishTopic<'a> {
     pub channel: &'a str,
     pub device: Option<&'a str>,
+    pub properties: Vec<(Cow<'a, str>, Cow<'a, str>)>,
 }
 
 #[derive(Debug)]
@@ -96,118 +100,98 @@ pub enum DeviceFilter<'a> {
     ProxiedDevice(&'a str),
 }
 
-#[derive(Debug)]
-pub struct DefaultCommandTopicEncoder(bool);
+pub trait DialectBuilder {
+    fn create(&self) -> Dialect;
+}
 
-impl DefaultTopicParser for MqttDialect {
-    fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError> {
-        match self {
-            Self::DrogueV1 => {
-                // This should mimic the behavior of the current parser
-                let topic = path.split('/').collect::<Vec<_>>();
-                log::debug!("Topic: {:?}", topic);
+#[derive(Clone)]
+pub struct Dialect {
+    connect: Arc<dyn ConnectValidator>,
+    publish: Arc<dyn PublishTopicParser>,
+    subscribe: Arc<dyn SubscribeTopicParser>,
+}
 
-                match topic.as_slice() {
-                    [""] => Err(ParseError::Empty),
-                    [channel] => Ok(ParsedPublishTopic {
-                        channel,
-                        device: None,
-                    }),
-                    [channel, as_device] => Ok(ParsedPublishTopic {
-                        channel,
-                        device: Some(as_device),
-                    }),
-                    _ => Err(ParseError::Syntax),
-                }
-            }
-            Self::PlainTopic {
-                device_prefix: false,
-            } => {
-                // Plain topic, just take the complete path
-                match path {
-                    "" => Err(ParseError::Empty),
-                    path => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: None,
-                    }),
-                }
-            }
-            Self::PlainTopic {
-                device_prefix: true,
-            } => {
-                // Plain topic (with device prefix). Strip the device, and then just take the complete path
-
-                let topic = path.split_once('/');
-                log::debug!("Topic: {:?}", topic);
-
-                match topic {
-                    // No topic at all
-                    None if path.is_empty() => Err(ParseError::Empty),
-                    None => Err(ParseError::Syntax),
-                    Some(("", path)) => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: None,
-                    }),
-                    Some((device, path)) => Ok(ParsedPublishTopic {
-                        channel: path,
-                        device: Some(device),
-                    }),
-                }
-            }
+impl Dialect {
+    pub fn new<C, P, S>(connect: C, publish: P, subscribe: S) -> Self
+    where
+        C: ConnectValidator + 'static,
+        P: PublishTopicParser + 'static,
+        S: SubscribeTopicParser + 'static,
+    {
+        Self {
+            connect: Arc::new(connect),
+            publish: Arc::new(publish),
+            subscribe: Arc::new(subscribe),
         }
     }
 
-    fn parse_subscribe<'a>(&self, path: &'a str) -> Result<ParsedSubscribeTopic<'a>, ParseError> {
-        // TODO: replace .collect() with .as_slice() after "split_as_slice" #96137
-        match self {
-            Self::DrogueV1 | Self::PlainTopic { .. } => {
-                match path.split('/').collect::<Vec<_>>().as_slice() {
-                    // subscribe to commands for all proxied devices and ourself
-                    ["command", "inbox", "#"] | ["command", "inbox", "+", "#"] => {
-                        Ok(ParsedSubscribeTopic {
-                            filter: SubscribeFilter {
-                                device: DeviceFilter::Wildcard,
-                                command: None,
-                            },
-                            encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(
-                                false,
-                            )),
-                        })
-                    }
-                    // subscribe to commands directly for us
-                    ["command", "inbox", "", "#"] => Ok(ParsedSubscribeTopic {
-                        filter: SubscribeFilter {
-                            device: DeviceFilter::Device,
-                            command: None,
-                        },
-                        encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(false)),
-                    }),
-                    // subscribe to commands for a specific device
-                    ["command", "inbox", device, "#"] => Ok(ParsedSubscribeTopic {
-                        filter: SubscribeFilter {
-                            device: DeviceFilter::ProxiedDevice(device),
-                            command: None,
-                        },
-                        encoder: SubscriptionTopicEncoder::new(DefaultCommandTopicEncoder(true)),
-                    }),
-                    _ => Err(ParseError::Syntax),
-                }
-            }
+    /// Parse a topic from a PUB request
+    pub fn parse_publish<'a>(&self, path: &'a str) -> Result<ParsedPublishTopic<'a>, ParseError> {
+        self.publish.parse_publish(path)
+    }
+
+    /// Parse a topic from a SUB request
+    pub fn parse_subscribe<'a>(
+        &self,
+        path: &'a str,
+    ) -> Result<ParsedSubscribeTopic<'a>, ParseError> {
+        self.subscribe.parse_subscribe(path)
+    }
+
+    pub fn validate_connect(&self, connect: &Connect) -> Result<(), ServerError> {
+        self.connect.validate_connect(connect)
+    }
+}
+
+impl<CSP> From<CSP> for Dialect
+where
+    CSP: ConnectValidator + PublishTopicParser + SubscribeTopicParser + 'static,
+{
+    fn from(composite: CSP) -> Self {
+        let subscribe = Arc::new(composite);
+        Self {
+            connect: subscribe.clone(),
+            publish: subscribe.clone(),
+            subscribe,
         }
     }
 }
 
-impl TopicEncoder for DefaultCommandTopicEncoder {
-    fn encode_command_topic(&self, command: &Command) -> String {
-        // if we are forced to report the device part, or the device id is not equal to the
-        // connected device, then we need to add it.
-        if self.0 || command.address.gateway_id != command.address.device_id {
-            format!(
-                "command/inbox/{}/{}",
-                command.address.device_id, command.command
+impl<C, SP> From<(C, SP)> for Dialect
+where
+    C: ConnectValidator + 'static,
+    SP: PublishTopicParser + SubscribeTopicParser + 'static,
+{
+    fn from((connect, composite): (C, SP)) -> Self {
+        let subscribe = Arc::new(composite);
+        Self {
+            connect: Arc::new(connect),
+            publish: subscribe.clone(),
+            subscribe,
+        }
+    }
+}
+
+impl DialectBuilder for MqttDialect {
+    fn create(&self) -> Dialect {
+        match self {
+            Self::DrogueV1 => (RejectResumeSession, DrogueV1).into(),
+            Self::PlainTopic { device_prefix } => Dialect::new(
+                RejectResumeSession,
+                PlainTopic {
+                    device_prefix: *device_prefix,
+                },
+                DrogueV1,
+            ),
+            Self::WebOfThings { node_wot_bug } => (
+                RejectResumeSession,
+                WebOfThings {
+                    node_wot_bug: *node_wot_bug,
+                },
             )
-        } else {
-            format!("command/inbox//{}", command.command)
+                .into(),
+            Self::Cumulocity => (RejectResumeSession, Cumulocity).into(),
+            Self::Azure => Azure.into(),
         }
     }
 }
@@ -233,6 +217,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "foo",
                 device: None,
+                properties: vec![],
             }),
         );
         // channel for another device
@@ -242,6 +227,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "foo",
                 device: Some("device"),
+                properties: vec![],
             }),
         );
     }
@@ -263,6 +249,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "foo",
                 device: None,
+                properties: vec![],
             }),
         );
         assert_parse(
@@ -271,6 +258,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "foo/bar",
                 device: None,
+                properties: vec![],
             }),
         );
         assert_parse(
@@ -279,6 +267,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "/bar",
                 device: None,
+                properties: vec![],
             }),
         );
     }
@@ -301,6 +290,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "bar",
                 device: Some("foo"),
+                properties: vec![],
             }),
         );
         // device may be empty though
@@ -310,6 +300,7 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "bar",
                 device: None,
+                properties: vec![],
             }),
         );
         // longer topic
@@ -319,11 +310,42 @@ mod test {
             Ok(ParsedPublishTopic {
                 channel: "bar/baz//bam/bum",
                 device: Some("foo"),
+                properties: vec![],
+            }),
+        );
+    }
+
+    #[test]
+    fn test_azure_prefix() {
+        let spec: MqttSpec = serde_json::from_value(json!({"dialect":{
+            "type": "azure",
+        }}))
+        .unwrap();
+
+        assert_parse(&spec, "", Err(ParseError::Empty));
+        // simple
+        assert_parse(
+            &spec,
+            "foo/bar/baz",
+            Ok(ParsedPublishTopic {
+                channel: "foo/bar/baz",
+                device: None,
+                properties: vec![],
+            }),
+        );
+        // properties
+        assert_parse(
+            &spec,
+            "foo/bar/baz/?foo=bar&bar=baz",
+            Ok(ParsedPublishTopic {
+                channel: "foo/bar/baz",
+                device: None,
+                properties: vec![("foo".into(), "bar".into()), ("bar".into(), "baz".into())],
             }),
         );
     }
 
     fn assert_parse(spec: &MqttSpec, path: &str, expected: Result<ParsedPublishTopic, ParseError>) {
-        assert_eq!(spec.dialect.parse_publish(path), expected);
+        assert_eq!(spec.dialect.create().parse_publish(path), expected);
     }
 }

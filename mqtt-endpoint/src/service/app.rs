@@ -1,4 +1,8 @@
-use crate::{auth::DeviceAuthenticator, config::EndpointConfig, service::session::Session};
+use crate::{
+    auth::DeviceAuthenticator,
+    config::EndpointConfig,
+    service::session::{dialect::DialectBuilder, Session},
+};
 use async_trait::async_trait;
 use drogue_client::{
     registry::v1::{Application, Device, MqttSpec},
@@ -13,7 +17,7 @@ use drogue_cloud_endpoint_common::{
 };
 use drogue_cloud_mqtt_common::{
     error::ServerError,
-    mqtt::{AckOptions, Connect, ConnectAck, Service, Sink},
+    mqtt::{AckOptions, Connect, ConnectAck, Service},
 };
 use drogue_cloud_service_api::{
     auth::device::authn::Outcome as AuthOutcome,
@@ -36,7 +40,13 @@ pub struct App {
 
 impl App {
     /// authenticate a client
-    #[instrument]
+    #[instrument(skip_all, fields(
+        username,
+        has_password = password.is_some(),
+        client_id,
+        has_certs = certs.is_some(),
+        has_verified_identity = verified_identity.is_some(),
+    ), err)]
     pub async fn authenticate(
         &self,
         username: Option<&str>,
@@ -71,7 +81,6 @@ impl App {
         fields(
             application = %application.metadata.name,
             device = %device.metadata.name,
-            lwt = ?lwt,
         ),
         err(Debug)
     )]
@@ -79,8 +88,7 @@ impl App {
         &self,
         application: Application,
         device: Device,
-        sink: Sink,
-        lwt: Option<LastWillTestament>,
+        connect: &Connect<'_>,
     ) -> Result<Session, ServerError> {
         // eval dialect
         let dialect = match device
@@ -99,6 +107,19 @@ impl App {
         };
 
         log::debug!("MQTT dialect: {dialect:?}");
+
+        // validate
+
+        let dialect = dialect.create();
+
+        dialect.validate_connect(connect)?;
+
+        // prepare
+
+        let sink = connect.sink();
+
+        let lwt = Self::make_lwt(&connect);
+        log::debug!("LWT: {lwt:?}");
 
         // acquire session
 
@@ -135,6 +156,7 @@ impl App {
         ))
     }
 
+    /// Build a LWT from the connect request.
     fn make_lwt(connect: &Connect<'_>) -> Option<LastWillTestament> {
         match connect {
             Connect::V3(handshake) => match &handshake.packet().last_will {
@@ -156,6 +178,7 @@ impl App {
         }
     }
 
+    #[instrument(skip(self))]
     async fn lookup_identity(&self, identity: &Identity) -> Option<VerifiedIdentity> {
         if let Ok(PreSharedKeyResponse {
             outcome:
@@ -177,23 +200,10 @@ impl App {
             None
         }
     }
-}
 
-#[async_trait(?Send)]
-impl Service<Session> for App {
-    #[instrument]
-    async fn connect<'a>(
-        &'a self,
-        mut connect: Connect<'a>,
-    ) -> Result<ConnectAck<Session>, ServerError> {
-        log::info!("new connection: {:?}", connect);
-
-        if !connect.clean_session() {
-            return Err(ServerError::UnsupportedOperation);
-        }
-
-        let certs = connect.io().client_certs();
-        let verified_identity = if self.disable_psk {
+    /// Find the (optional) TLS-PSK identity from the underlying I/O system.
+    async fn find_verified_identity(&self, connect: &mut Connect<'_>) -> Option<VerifiedIdentity> {
+        if self.disable_psk {
             None
         } else {
             use ntex_tls::PskIdentity;
@@ -213,7 +223,21 @@ impl Service<Session> for App {
             } else {
                 None
             }
-        };
+        }
+    }
+}
+
+#[async_trait(?Send)]
+impl Service<Session> for App {
+    #[instrument]
+    async fn connect<'a>(
+        &'a self,
+        mut connect: Connect<'a>,
+    ) -> Result<ConnectAck<Session>, ServerError> {
+        log::info!("new connection: {:?}", connect);
+
+        let certs = connect.io().client_certs();
+        let verified_identity = self.find_verified_identity(&mut connect).await;
         let (username, password) = connect.credentials();
 
         match self
@@ -231,14 +255,7 @@ impl Service<Session> for App {
                 device,
                 r#as: _,
             }) => {
-                let session = self
-                    .create_session(
-                        application,
-                        device,
-                        connect.sink(),
-                        Self::make_lwt(&connect),
-                    )
-                    .await?;
+                let session = self.create_session(application, device, &connect).await?;
 
                 Ok(ConnectAck {
                     session,
@@ -246,6 +263,7 @@ impl Service<Session> for App {
                         wildcard_subscription_available: Some(true),
                         shared_subscription_available: Some(false),
                         subscription_identifiers_available: Some(false),
+                        session_present: false,
                         ..Default::default()
                     },
                 })
